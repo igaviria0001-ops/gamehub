@@ -286,6 +286,11 @@ html.lt720 .logo-rope { display: none; }
   .btn, .mode { transition: none; }
 }
 
+/* Vestidor */
+.vnew { display: inline-block; margin-left: 4px; font-size: 12px; padding: 1px 7px; border-radius: 999px; background: rgba(58,34,22,.12); }
+.vnew.hot { background: #ff4f7a; color: #fff; animation: vnewP 1.4s ease-in-out infinite; }
+@keyframes vnewP { 50% { transform: scale(1.12); } }
+.vst h2, .vst-rvbox h3 { font-family: "Fredoka", system-ui, sans-serif; }
 /* GameHub: botón para volver (solo dentro de GameHub) */
 html.in-hub .fs-auto { display: none !important; }
 .hub-home { display: none; }
@@ -323,6 +328,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
           <button class="btn menta" data-act="retos">Retos de técnica</button>
           <button class="btn fresa" data-act="entreno">Entrenamiento</button>
           <button class="btn" data-act="records">Jugadores y logros</button>
+          <button class="btn sol vest" data-act="vest">Vestidor <span id="vestNew" class="vnew"></span></button>
         </div>
       </div>
       <p class="foot"><b style="color:var(--fresa)">Fresa</b>: <kbd>A</kbd><kbd>D</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>Q</kbd> &nbsp;·&nbsp; <b style="color:var(--menta)">Menta</b>: <kbd>J</kbd><kbd>L</kbd> <kbd>I</kbd> <kbd>K</kbd> <kbd>O</kbd> <kbd>U</kbd> &nbsp;·&nbsp; también con mandos</p>
@@ -454,6 +460,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
           <div class="opt match-only"><label id="l-wins">Rondas para ganar</label><div class="seg" role="group" aria-labelledby="l-wins" data-opt="wins"><button id="o-wins-3" data-v="3">3</button><button id="o-wins-5" data-v="5">5</button></div></div>
           <div class="opt match-only"><label id="l-bot">La máquina</label><div class="seg" role="group" aria-labelledby="l-bot" data-opt="bot"><button id="o-bot-0" data-v="0">Novato</button><button id="o-bot-1" data-v="1">Masticador</button><button id="o-bot-2" data-v="2">Leyenda</button></div></div>
           <div class="opt"><label id="l-theme">Ambiente</label><div class="seg" role="group" aria-labelledby="l-theme" data-opt="theme"><button data-v="dia">Día</button><button data-v="tarde">Tarde</button><button data-v="noche">Noche</button></div></div>
+          <div class="opt"><label>Sabores y accesorios especiales</label><button class="btn" data-act="vest">Abrir el Vestidor</button></div>
           <div class="opt"><label id="l-f1">Sabor del jugador 1</label><button class="btn cyc flavor" id="o-f1" data-cyc="f0" aria-labelledby="l-f1"><span class="dot"></span><span class="val">Fresa</span><span class="arrow" aria-hidden="true">›</span></button></div>
           <div class="opt"><label id="l-f2">Sabor del jugador 2</label><button class="btn cyc flavor" id="o-f2" data-cyc="f1" aria-labelledby="l-f2"><span class="dot"></span><span class="val">Menta</span><span class="arrow" aria-hidden="true">›</span></button></div>
           <div class="opt"><label id="l-hc0">Ventaja del jugador 1 <small>(para jugar parejo)</small></label><div class="seg" role="group" aria-labelledby="l-hc0" data-opt="hc0"><button data-v="0">No</button><button data-v="1">Poca</button><button data-v="2">Mucha</button></div></div>
@@ -1058,7 +1065,7 @@ const Vest = (() => {
 @keyframes vstRb2{to{background-position:0 0,300% 0}}
 @media (max-width:760px),(max-height:520px){.vst-box{padding:10px;border-radius:16px}.vst-head h2{font-size:19px}.vst-main{grid-template-columns:1fr;grid-template-rows:minmax(150px,42%) minmax(0,1fr)}.vst-sel{padding:8px 10px 10px}.vst-sel b{font-size:17px}.vst-grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}}
 @media (max-height:520px) and (orientation:landscape){.vst-main{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);grid-template-rows:minmax(0,1fr)}.vst-sel p{display:none}.vst-box{gap:6px;padding:8px 10px}.vst-head h2{font-size:17px}.vst-count{font-size:11.5px}.vst-tabs button{padding:5px 10px;font-size:13px}.vst-pl button{padding:5px 11px}.vst-x{padding:6px 12px}.vst-sel{gap:4px;padding:6px 10px 8px}.vst-sel b{font-size:15px}.vst-eq{padding:7px 14px;font-size:13px}.vst-card .n{font-size:11px}}
-.vst-rv{display:grid;place-items:center;background:radial-gradient(ellipse at 50% 45%,rgba(var(--rgb),.35),rgba(4,2,12,.94) 62%);overflow:hidden;animation:vstIn .35s ease-out}
+.vst-rv{display:grid;place-items:center;background:radial-gradient(ellipse at 50% 45%,rgba(var(--rgb),.32),rgba(var(--rgb),0) 62%),rgba(4,2,12,.94);overflow:hidden;animation:vstIn .35s ease-out}
 @keyframes vstIn{from{opacity:0}}
 .vst-rays{position:absolute;left:50%;top:44%;width:240vmax;height:240vmax;margin:-120vmax 0 0 -120vmax;background:repeating-conic-gradient(rgba(var(--rgb),.18) 0 7deg,transparent 7deg 18deg);animation:vstSpin 22s linear infinite;-webkit-mask:radial-gradient(circle,#000 0,transparent 45%);mask:radial-gradient(circle,#000 0,transparent 45%)}
 @keyframes vstSpin{to{transform:rotate(360deg)}}
@@ -1124,7 +1131,7 @@ const Vest = (() => {
       if (!queue.length) { if (done) done(); return false; }
       css(); const it = queue.shift(), R = RAR[it.rar] || RAR.comun, s = slotOf(it.slot), el = document.createElement('div');
       el.className = 'vst-rv'; el.style.setProperty('--rgb', R.rgb); el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Nuevo: ' + it.name);
-      const pcs = cfg.pcolors || ['#ffd36b', '#6fd0ff'];
+      const pcs = (typeof cfg.pcolors === 'function' ? cfg.pcolors() : cfg.pcolors) || ['#ffd36b', '#6fd0ff'];
       el.innerHTML = `<div class="vst-rays"></div><div class="vst-flash"></div><div class="vst-rvbox"><div class="vst-rvk">¡${esc((s.newWord || 'NUEVO').toUpperCase())} ${esc((s.one || '').toUpperCase())}!</div><canvas width="600" height="600"></canvas><span class="vst-rar ${it.rar}" style="--rc:${R.c};--rg:${R.c}">${R.name}</span><h3>${esc(it.name)}</h3><p>${esc(it.how || it.desc || '')}</p>
         <div class="vst-rvb">${[0, 1].map(p => `<button class="p" data-p="${p}" style="--pc:${pcs[p]}">Ponérselo a ${esc(pname(p))}</button>`).join('')}<button class="go" data-go>${queue.length ? 'Siguiente ›' : 'Seguir'}</button></div>${queue.length ? `<div class="vst-more">y ${queue.length} más por ver</div>` : ''}</div>`;
       document.body.appendChild(el);
@@ -1142,7 +1149,7 @@ const Vest = (() => {
     /* ---- pantalla del vestidor ---- */
     function wardrobe(opts = {}) {
       css(); let P = opts.player || 0, slot = opts.slot || slots[0].id, selId = null, hover = null;
-      const pcs = cfg.pcolors || ['#ffd36b', '#6fd0ff'], el = document.createElement('div'); el.className = 'vst'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', cfg.title || 'Vestidor');
+      const pcs = (typeof cfg.pcolors === 'function' ? cfg.pcolors() : cfg.pcolors) || ['#ffd36b', '#6fd0ff'], el = document.createElement('div'); el.className = 'vst'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', cfg.title || 'Vestidor');
       document.body.appendChild(el);
       const list = () => { const ch = cfg.charOf ? cfg.charOf(P) : null, s = slotOf(slot); return items.filter(it => it.slot === slot && (!s.perChar || !it.char || it.char === ch)).sort((a, b) => RORDER.indexOf(a.rar) - RORDER.indexOf(b.rar) || (a.order || 0) - (b.order || 0)); };
       const total = () => items.filter(it => !it.free && (!it.char || !slotOf(it.slot).perChar || true)).length, gotN = () => items.filter(it => !it.free && S.got[it.id]).length;
@@ -1256,7 +1263,24 @@ const FLAVORS = {
 FLAVORS.algodon = { id: 'algodon', name: 'Algodón', base: '#ff9ed8', light: '#ffe0f4', dark: '#e070b8', deep: '#8a2f6e', glow: '#fff0fa', accent: '#9fd8ff', hat: '#f2e6d0', hatDark: '#a98c62', pattern: 'fluff', hatType: 'stick', camp: 'arte' };
 FLAVORS.cola = { id: 'cola', name: 'Cola', base: '#8a4a26', light: '#d9a074', dark: '#6a3416', deep: '#3a1a08', glow: '#ffe6cc', accent: '#ffffff', hat: '#e5533d', hatDark: '#9a2a1c', pattern: 'fizz', hatType: 'cap', camp: 'biblioteca' };
 FLAVORS.oro = { id: 'oro', name: 'Oro', base: '#f2c230', light: '#fff0a8', dark: '#cf9a12', deep: '#7a5408', glow: '#fff8d6', accent: '#ffffff', hat: '#ffffff', hatDark: '#b08a2a', pattern: 'shine', hatType: 'star', camp: 'torre' };
-const FLAVOR_ORDER = ['fresa', 'menta', 'uva', 'limon', 'mango', 'mora', 'algodon', 'cola', 'oro'];
+/* sabores especiales del Vestidor: cada uno con su material (Vest.material) y, los más altos, aura y estela.
+   Se ganan con la campaña, los jefes, los logros y las partidas (ver 09b-vest.js). */
+const GAL3 = ['255,110,210', '170,100,255', '90,150,255'];
+Object.assign(FLAVORS, {
+  kiwi: { id: 'kiwi', name: 'Kiwi escamado', base: '#7ac23a', light: '#c8f08a', dark: '#4e8a1e', deep: '#2a4e0e', glow: '#eaffd0', accent: '#ffffff', hat: '#6b4a2a', hatDark: '#3a2814', pattern: 'none', hatType: 'stem', mat: 'escamas', matC: ['#6cb83a', '#d8ff9a', '#2a5a12'] },
+  maracuya: { id: 'maracuya', name: 'Maracuyá atigrado', base: '#f2b62a', light: '#ffe28a', dark: '#d48a12', deep: '#7a4a06', glow: '#fff2c4', accent: '#ffffff', hat: '#6bbf59', hatDark: '#3d7f34', pattern: 'none', hatType: 'leaf', mat: 'jaguar', matC: ['#f0b02a', '#ffe08a', '#3a1e06', '#8a4a10'] },
+  mora_runa: { id: 'mora_runa', name: 'Mora rúnica', base: '#5a2a9a', light: '#c9a2ff', dark: '#36146a', deep: '#1a0638', glow: '#efe0ff', accent: '#ffffff', hat: '#56c25f', hatDark: '#2f8a3a', pattern: 'none', hatType: 'crown', mat: 'runas', matC: ['#2a0e4a', '#e2c4ff', '220,170,255'] },
+  menta_polar: { id: 'menta_polar', name: 'Menta polar', base: '#9fe6ff', light: '#e8fbff', dark: '#5ab8e8', deep: '#1e5a7a', glow: '#ffffff', accent: '#ffffff', hat: '#e8fbff', hatDark: '#5ab8e8', pattern: 'none', hatType: 'leaf', mat: 'cristal', matC: ['#bfeeff', '#7ac8f0', '#f4fdff'] },
+  boreal: { id: 'boreal', name: 'Arándano boreal', base: '#1e3a5a', light: '#7ae8d0', dark: '#0e1e34', deep: '#06101e', glow: '#c8fff0', accent: '#ffffff', hat: '#56c25f', hatDark: '#2f8a3a', pattern: 'none', hatType: 'stem', mat: 'aurora', matC: ['#08162a', '110,255,190', '170,110,255'] },
+  uva_electrica: { id: 'uva_electrica', name: 'Uva eléctrica', base: '#3a3a6a', light: '#9aa8f0', dark: '#22224a', deep: '#0e0e26', glow: '#e0e8ff', accent: '#ffffff', hat: '#ffe84a', hatDark: '#b08a12', pattern: 'none', hatType: 'star', mat: 'tormenta', matC: ['#22284a', '140,150,210'], aura2: 'rayos' },
+  chile: { id: 'chile', name: 'Chile de lava', base: '#c8321a', light: '#ff9a5a', dark: '#7a1406', deep: '#3a0804', glow: '#ffd2a0', accent: '#ffffff', hat: '#3fa34d', hatDark: '#24702f', pattern: 'none', hatType: 'stem', mat: 'lava', matC: ['#3a0e06', '#120402'], aura2: 'brasas', trail2: 'fuego' },
+  fatuo: { id: 'fatuo', name: 'Fuego fatuo', base: '#1a4aa0', light: '#9ff0ff', dark: '#0a2050', deep: '#041030', glow: '#d8faff', accent: '#ffffff', hat: '#9ff0ff', hatDark: '#2a6ab0', pattern: 'none', hatType: 'star', mat: 'llamas', matC: ['#0a2050', '#030a1e', '150,230,255', '40,90,255'], aura2: 'fuego_azul', trail2: 'hielo' },
+  dragon: { id: 'dragon', name: 'Fruta del dragón', base: '#1f9a7a', light: '#a8ffe0', dark: '#0e5a46', deep: '#06302a', glow: '#e0fff4', accent: '#ffd36a', hat: '#ff4fa3', hatDark: '#a0206a', pattern: 'none', hatType: 'crown', mat: 'escamas', matC: ['#1f9a7a', '#b8ffe8', '#0a3a2e'], aura2: 'dragon' },
+  galaxia: { id: 'galaxia', name: 'Chicle galáctico', base: '#2a1a5a', light: '#ff9be6', dark: '#120a2e', deep: '#06041a', glow: '#ffe0fa', accent: '#ffffff', hat: '#ffd6f6', hatDark: '#a865ff', pattern: 'none', hatType: 'star', mat: 'galaxia', matC: GAL3, aura2: 'galaxia', trail2: 'cometa' },
+  agujero: { id: 'agujero', name: 'Agujero negro', base: '#14081e', light: '#c88aff', dark: '#08020e', deep: '#000000', glow: '#e8c8ff', accent: '#ffffff', hat: '#c88aff', hatDark: '#5a1a9a', pattern: 'none', hatType: 'star', mat: 'vacio', matC: ['#3a0a5a', '200,120,255'], aura2: 'vacio', trail2: 'sombra' },
+  holo: { id: 'holo', name: 'Holográfico', base: '#d8dcec', light: '#ffffff', dark: '#9aa4bc', deep: '#4a5470', glow: '#ffffff', accent: '#ff9be6', hat: '#ffffff', hatDark: '#9aa4bc', pattern: 'none', hatType: 'star', mat: 'holo', matC: [], aura2: 'prisma', trail2: 'arcoiris' },
+});
+const FLAVOR_ORDER = ['fresa', 'menta', 'uva', 'limon', 'mango', 'mora', 'algodon', 'cola', 'oro', 'kiwi', 'maracuya', 'mora_runa', 'menta_polar', 'boreal', 'uva_electrica', 'chile', 'fatuo', 'dragon', 'galaxia', 'agujero', 'holo'];
 /* ambientes: tinte del escenario (los personajes y el hilo no se oscurecen, para que se lean bien) */
 const THEMES = {
   dia: { name: 'Día', tint: null },
@@ -5601,6 +5625,9 @@ class Player {
       ctx.beginPath(); ctx.arc(g.x, g.y, g.r * 0.92, 0, TAU); ctx.fill();
     }
 
+    // estela y aura de los sabores más altos del Vestidor
+    if (c.trail2 && typeof Vest !== 'undefined') { const now = performance.now() / 1000, key = 'tya' + this.id + (this.preview ? 'p' : ''); if (!this.preview) Vest.trailPush(key, cx, cy, now, 4); Vest.drawTrail(ctx, c.trail2, key, r * 0.32, now); }
+    if (c.aura2 && typeof Vest !== 'undefined') Vest.drawAura(ctx, c.aura2, cx, cy, r * 1.05, t, 0);
     // hebras pegajosas hacia la superficie
     if (this.stuck) this.drawGoo(ctx, cx, cy, t);
 
@@ -5655,6 +5682,7 @@ class Player {
     this.drawHeadAcc(ctx, r, topY, t);
     this.drawFace(ctx, r, t);
     ctx.restore();
+    if (c.aura2 && typeof Vest !== 'undefined') Vest.drawAura(ctx, c.aura2, cx, cy, r * 1.05, t, 1);
 
     // medidor de pegajosidad
     if (this.alive && (this.stuck || this.sticky < 0.999)) {
@@ -5742,6 +5770,12 @@ class Player {
   }
 
   drawPattern(ctx, r) {
+    // sabores del Vestidor: el material cubre el chicle y se le devuelve el volumen con luz y sombra
+    if (this.col.mat && typeof Vest !== 'undefined') {
+      Vest.material(ctx, this.col.mat, this.col.matC || [], -r * 1.45, -r * 1.45, r * 2.9, r * 2.9, performance.now() / 1000, 0.95, Store.get('quality', 'alta') !== 'ligera');
+      const sh = ctx.createRadialGradient(-r * 0.35, -r * 0.45, r * 0.1, 0, 0, r * 1.25); sh.addColorStop(0, 'rgba(255,255,255,0.28)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.42)');
+      ctx.fillStyle = sh; ctx.fillRect(-r * 1.5, -r * 1.5, r * 3, r * 3); return;
+    }
     const pat = this.col.pattern || (this.id === 0 ? 'seeds' : 'stripes');
     if (pat === 'grapes') {
       // uvitas: burbujas más claras dentro del cuerpo
@@ -6033,7 +6067,31 @@ class Player {
     const ink = PALETTE.ink;
     ctx.save();
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    if (a === 'gorra') {
+    if (a === 'cuernos') {
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * r * 0.42, topY + r * 0.28); ctx.quadraticCurveTo(s * r * 0.78, topY - r * 0.05, s * r * 0.62, topY - r * 0.5); ctx.quadraticCurveTo(s * r * 0.5, topY - r * 0.1, s * r * 0.18, topY + r * 0.2); ctx.closePath(); const g = ctx.createLinearGradient(0, topY + r * 0.3, 0, topY - r * 0.5); g.addColorStop(0, '#7a1420'); g.addColorStop(1, '#ff5a4a'); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = ink; ctx.stroke(); }
+    } else if (a === 'aureola') {
+      const y = topY - r * 0.42 + Math.sin(t * 2.2 + this.id) * r * 0.06;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; if (typeof Vest !== 'undefined') Vest.put(ctx, Vest.glow('255,220,120'), 0, y, r * 1.8, 0.55); ctx.restore();
+      ctx.beginPath(); ctx.ellipse(0, y, r * 0.55, r * 0.15, 0, 0, TAU); ctx.lineWidth = r * 0.12; ctx.strokeStyle = '#ffe9a0'; ctx.stroke(); ctx.lineWidth = r * 0.04; ctx.strokeStyle = '#fffbe8'; ctx.stroke();
+    } else if (a === 'corona_fuego') {
+      const s = r * 0.52, y = topY + r * 0.1;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let k = 0; k < 5; k++) { const x0 = (k - 2) * s * 0.45, h = s * (0.9 + 0.35 * Math.sin(t * 9 + k * 1.7)) * (k === 2 ? 1.3 : 1); const g = ctx.createLinearGradient(0, y, 0, y - h); g.addColorStop(0, 'rgba(255,240,170,0.95)'); g.addColorStop(0.5, 'rgba(255,140,40,0.85)'); g.addColorStop(1, 'rgba(255,60,20,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x0 - s * 0.24, y); ctx.quadraticCurveTo(x0 - s * 0.2, y - h * 0.6, x0 + Math.sin(t * 7 + k) * s * 0.1, y - h); ctx.quadraticCurveTo(x0 + s * 0.2, y - h * 0.6, x0 + s * 0.24, y); ctx.fill(); } ctx.restore();
+      ctx.beginPath(); ctx.ellipse(0, y, s, s * 0.22, 0, 0, TAU); ctx.fillStyle = '#ffb030'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = ink; ctx.stroke();
+      for (const gx of [-s * 0.55, 0, s * 0.55]) { ctx.beginPath(); ctx.arc(gx, y, s * 0.1, 0, TAU); ctx.fillStyle = '#ff3a2a'; ctx.fill(); }
+    } else if (a === 'orbita') {
+      const y = topY - r * 0.12;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath(); ctx.ellipse(0, y, r * 1.0, r * 0.26, -0.08, 0, TAU); ctx.lineWidth = r * 0.05; ctx.strokeStyle = 'rgba(190,170,255,0.55)'; ctx.stroke();
+      if (typeof Vest !== 'undefined') for (let k = 0; k < 5; k++) { const an = t * 0.8 + k * 1.26; Vest.put(ctx, Vest.star('230,220,255'), Math.cos(an) * r * 1.0, y + Math.sin(an) * r * 0.26, r * 0.22 * (0.5 + 0.5 * Math.sin(t * 3 + k)), 0.9); }
+      ctx.restore();
+      for (let k = 0; k < 3; k++) {
+        const an = t * (1.1 + k * 0.35) + k * 2.1, front = Math.sin(an) > 0, px = Math.cos(an) * r * 1.0, py = y + Math.sin(an) * r * 0.26 - (k - 1) * r * 0.04, pr = r * (0.15 + k * 0.02) * (front ? 1 : 0.72), col = ['#ffb35a', '#7ad0ff', '#d79bff'][k], rgb = ['255,180,90', '120,210,255', '215,155,255'][k];
+        ctx.save(); ctx.globalAlpha = front ? 1 : 0.55; ctx.globalCompositeOperation = 'lighter'; if (typeof Vest !== 'undefined') Vest.put(ctx, Vest.glow(rgb), px, py, pr * 5, 0.8); ctx.restore();
+        ctx.save(); ctx.globalAlpha = front ? 1 : 0.6; const pg = ctx.createRadialGradient(px - pr * 0.4, py - pr * 0.4, 0, px, py, pr); pg.addColorStop(0, '#ffffff'); pg.addColorStop(0.35, col); pg.addColorStop(1, '#2a1a4a'); ctx.beginPath(); ctx.arc(px, py, pr, 0, TAU); ctx.fillStyle = pg; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.stroke();
+        if (k === 1) { ctx.beginPath(); ctx.ellipse(px, py, pr * 1.7, pr * 0.45, -0.3, 0, TAU); ctx.lineWidth = 1.6; ctx.strokeStyle = '#e8f6ff'; ctx.stroke(); }
+        ctx.restore();
+      }
+    } else if (a === 'gorra') {
       const f = this.facing || 1;
       ctx.beginPath(); ctx.arc(0, topY + r * 0.42, r * 0.78, Math.PI * 1.08, Math.PI * 1.92);
       ctx.closePath(); ctx.fillStyle = '#e0483a'; ctx.fill(); ctx.lineWidth = 3.5; ctx.strokeStyle = ink; ctx.stroke();
@@ -7469,6 +7527,7 @@ const Game = (() => {
     setFlavor(i, id) {
       if (!FLAVORS[id] || G.flavors[1 - i] === id) return false;
       if (FLAVORS[id].camp && !(Campaign.data.rewards || {})[FLAVORS[id].camp]) return false; // premio de la campaña aún sin ganar
+      if (typeof Vestidor !== 'undefined' && Vestidor.V.BY[id] && !Vestidor.V.has(id)) return false; // del Vestidor: todavía no se ha ganado
       G.flavors[i] = id; Store.set('flavors', G.flavors.slice()); applyFlavors(); return true;
     },
     setBotLevel(n) { G.botLevel = n; Store.set('botLevel', n); },
@@ -8608,6 +8667,11 @@ const Progress = (() => {
     { id: 'birrete', name: 'Birrete (campaña)', need: 1e9, camp: 'salon' },
     { id: 'vincha', name: 'Vincha deportiva (campaña)', need: 1e9, camp: 'gimnasio' },
     { id: 'chef', name: 'Gorro de chef (campaña)', need: 1e9, camp: 'cafeteria' },
+    // del Vestidor (se ganan con partidas, retos, jefes y logros: ver 09b-vest.js)
+    { id: 'cuernos', name: 'Cuernitos', need: 1e9, vest: true },
+    { id: 'aureola', name: 'Aureola', need: 1e9, vest: true },
+    { id: 'corona_fuego', name: 'Corona de fuego', need: 1e9, vest: true },
+    { id: 'orbita', name: 'Órbita de planetas', need: 1e9, vest: true },
   ];
 
   const S = {
@@ -8830,7 +8894,7 @@ const Progress = (() => {
   }
 
   /* ---------------- accesorios ---------------- */
-  function accUnlocked(i, id) { const a = ACCESSORIES.find(x => x.id === id); if (!a) return false; if (a.camp) return !!(typeof Campaign !== 'undefined' && Campaign.data.rewards && Campaign.data.rewards[a.camp]); return count(S.names[i]) >= a.need; }
+  function accUnlocked(i, id) { const a = ACCESSORIES.find(x => x.id === id); if (!a) return false; if (id !== 'ninguno' && typeof Vestidor !== 'undefined' && Vestidor.V.BY['acc.' + id]) return Vestidor.V.has('acc.' + id); if (a.camp) return !!(typeof Campaign !== 'undefined' && Campaign.data.rewards && Campaign.data.rewards[a.camp]); return count(S.names[i]) >= a.need; }
   function setAcc(i, id) { if (!accUnlocked(i, id)) return false; S.acc[i] = id; save('acc'); return true; }
   function accOf(i) { const id = S.acc[i]; return accUnlocked(i, id) ? id : 'ninguno'; }
 
@@ -13106,7 +13170,10 @@ const UI = (() => {
   function screenEl(name) { return name ? $('#' + SCREENS[name]) : null; }
   function focusables(el) { return el ? $$('button:not([disabled])', el).filter(b => b.offsetParent !== null) : []; }
 
+  function vestBadge() { const b = $('#vestNew'); if (!b || typeof Vestidor === 'undefined') return; const n = Vestidor.V.fresh(); b.textContent = n ? n + (n === 1 ? ' nuevo' : ' nuevos') : Vestidor.V.count().join('/'); b.classList.toggle('hot', n > 0); }
   function show(name, push = true) {
+    if (name === 'results' && typeof Vestidor !== 'undefined') Vestidor.after();
+    if (name === 'title') setTimeout(vestBadge, 0);
     if (push && current && current !== name) stack.push(current);
     $$('.screen').forEach(s => { s.hidden = true; });
     current = name;
@@ -13250,6 +13317,7 @@ const UI = (() => {
     rematch() { stack = []; show(null, false); Game.restart(); },
     changemode() { if (Game.G.mode === 'campana' || Game.G.campBoss != null) { stack = ['title', 'modes']; fillCampaign(); show('campana', false); return; } vsBot = lastRes ? lastRes.vsBot : vsBot; Game.G.daily = null; Fiesta.force(null); stack = []; show('modes', false); stack = ['title']; },
     fullscreen() { FS.toggle(); },
+    vest() { if (typeof Vestidor !== 'undefined') Vestidor.open(0, () => { syncOptions(); vestBadge(); }); },
   };
 
   function syncFiesta() {
@@ -13771,7 +13839,7 @@ const UI = (() => {
     show(null, false);
     Game.startMatch(ev.mode, false, ev.map && ev.map !== 'random' ? ev.map : 'random', !!(ev.opts && ev.opts.fiesta));
   }
-  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay };
+  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge };
 })();
 
 /* =========================================================================
@@ -13836,6 +13904,97 @@ const UI = (() => {
   Hub.onPlay(ev => UI.hubPlay(ev));
   Hub.ready();
 })();
+
+/* ===== 09b-vest.js ===== */
+/* =========================================================================
+   VESTIDOR DE TIRA Y AFLOJA — sabores y accesorios que se ganan jugando.
+   · Sabores: los 6 de siempre, los 3 premios de la campaña y 12 especiales
+     con material propio (escamas, jaguar, runas, cristal, aurora, tormenta,
+     lava, fuego azul, dragón, galaxia, agujero negro, holográfico).
+   · Accesorios: los de los logros, los de la campaña y 4 nuevos.
+   · Se ganan con la campaña (cada jefe), el modo Jefes, los retos con oro,
+     las partidas ganadas y los logros. Lo ganado vale para los dos jugadores.
+   El vestidor (pantalla, ceremonia y guardado) es el común de GameHub.
+   ========================================================================= */
+const Vestidor = (() => {
+  const ctx = () => {
+    const ach = Store.get('ach', {}), ps = Store.get('pstats', {}), cd = Campaign.data || {}, rew = cd.rewards || {};
+    const stars = Object.values(cd.stars || {}).reduce((a, b) => a + (+b || 0), 0);
+    const maxAch = Math.max(0, ...Object.values(ach).map(o => Object.keys(o || {}).length));
+    const wins = Object.values(ps).reduce((a, s) => a + ((s && s.wins) || 0), 0);
+    const jf = Store.get('jefes', null) || { wins: {} }, jw = jf.wins || {}, jbeat = Object.keys(jw).filter(k => jw[k] > 0).length;
+    const rt = Store.get('retos', null) || { medal: {} }, golds = Object.values(rt.medal || {}).filter(m => m === 3).length;
+    return { maxAch, wins, rew, stars, jbeat, jw, golds };
+  };
+  const items = [], NA = Progress.ACH.length;
+  const F = (id, rar, how, desc, test, prog) => items.push({ id, slot: 'flavor', rar, name: FLAVORS[id].name, how, desc, test, prog, free: !test });
+  ['fresa', 'menta', 'uva', 'limon', 'mango', 'mora'].forEach(id => F(id, 'comun', '', 'Un sabor de siempre.'));
+  const Z = (zone, boss) => [c => !!c.rew[zone], `Vence ${boss} en la campaña.`];
+  const R = (id, rar, desc, [test, how], prog) => F(id, rar, how, desc, test, prog);
+  R('kiwi', 'raro', 'Escamas verdes que brillan cuando se mueve.', Z('salon', 'a la Aspiradora'));
+  F('maracuya', 'raro', 'Gana 10 partidas.', 'Piel de tigre con manchas de jaguar.', c => c.wins >= 10, c => [c.wins, 10]);
+  R('algodon', 'raro', 'Premio de la zona de Arte.', Z('arte', 'al Sacapuntas eléctrico'));
+  R('cola', 'raro', 'Premio de la Biblioteca.', Z('biblioteca', 'a la Fotocopiadora'));
+  R('mora_runa', 'epico', 'Runas que laten con luz violeta.', Z('arte', 'al Sacapuntas eléctrico'));
+  R('menta_polar', 'epico', 'Cristal de hielo tallado que destella.', Z('gimnasio', 'al Aseador'));
+  R('boreal', 'epico', 'Una aurora boreal moviéndose adentro.', Z('biblioteca', 'a la Fotocopiadora'));
+  F('uva_electrica', 'epico', 'Vence a 3 jefes en el modo Jefes.', 'Nubes de tormenta con relámpagos, y rayos alrededor.', c => c.jbeat >= 3, c => [c.jbeat, 3]);
+  R('oro', 'epico', 'El premio de la Torre del Reloj.', Z('torre', 'al Reloj de la torre'));
+  R('chile', 'legendario', 'Roca de lava con grietas vivas, aura de brasas y estela de fuego.', Z('cafeteria', 'al Microondas'));
+  F('fatuo', 'legendario', 'Consigue 30 logros (cualquier jugador).', 'Llamas azules por dentro, aura de fuego fatuo y estela de escarcha.', c => c.maxAch >= 30, c => [c.maxAch, 30]);
+  F('dragon', 'legendario', 'Vence a los 6 jefes en el modo Jefes.', 'Escamas de jade y un dragón espíritu que lo rodea.', c => c.jbeat >= 6, c => [c.jbeat, 6]);
+  R('galaxia', 'mitico', 'Una galaxia entera adentro, aura con planetas y estela de cometa.', Z('torre', 'al Reloj de la torre (el final)'));
+  F('agujero', 'mitico', 'Junta 100 estrellas en la campaña.', 'Negro de agujero negro con su disco de luz girando y estela de sombra.', c => c.stars >= 100, c => [c.stars, 100]);
+  F('holo', 'mitico', `Consigue ${Math.min(45, NA)} logros (cualquier jugador).`, 'Holográfico que cambia de color, cristales de arcoíris y estela de arcoíris.', c => c.maxAch >= Math.min(45, NA), c => [c.maxAch, Math.min(45, NA)]);
+  const A = (id, rar, how, test, prog, desc) => items.push({ id: 'acc.' + id, slot: 'acc', rar, name: Progress.ACCESSORIES.find(a => a.id === id).name.replace(/ \(campaña\)$/, ''), how, desc: desc || how, test, prog, free: !test });
+  A('ninguno', 'comun', '', null, null, 'Sin nada en la cabeza.');
+  Progress.ACCESSORIES.filter(a => !a.camp && !a.vest && a.need > 0 && a.need < 1e9).forEach(a => A(a.id, a.need >= 30 ? 'epico' : a.need >= 17 ? 'raro' : 'comun', `Consigue ${a.need} logros (cualquier jugador).`, c => c.maxAch >= a.need, c => [c.maxAch, a.need]));
+  A('birrete', 'raro', 'Vence a la Aspiradora en la campaña.', c => !!c.rew.salon);
+  A('vincha', 'raro', 'Vence al Aseador en la campaña.', c => !!c.rew.gimnasio);
+  A('chef', 'raro', 'Vence al Microondas en la campaña.', c => !!c.rew.cafeteria);
+  A('cuernos', 'raro', 'Gana 25 partidas.', c => c.wins >= 25, c => [c.wins, 25], 'Cuernitos de diablillo.');
+  A('aureola', 'epico', 'Gana medalla de oro en 5 retos de técnica.', c => c.golds >= 5, c => [c.golds, 5], 'Aureola de luz que flota.');
+  A('corona_fuego', 'legendario', 'Vence al Reloj en el modo Jefes.', c => (c.jw.reloj || 0) > 0, null, 'Corona de llamas vivas.');
+  A('orbita', 'mitico', 'Gana 100 partidas.', c => c.wins >= 100, c => [c.wins, 100], 'Tres planetas que le dan la vuelta a la cabeza.');
+
+  // vista previa: un chicle en una vitrina oscura (así brillan los materiales y las auras)
+  const prevP = [null, null];
+  function pp(p) { if (!prevP[p]) { prevP[p] = new Player(p, FLAVORS.fresa); prevP[p].preview = true; } return prevP[p]; }
+  function preview(x, W, H, t, p, over, it, live) {
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#22184a'); g.addColorStop(0.68, '#3a2a6a'); g.addColorStop(0.69, '#8a5a34'); g.addColorStop(1, '#4a2e18'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const sp = x.createRadialGradient(W / 2, H * 0.1, 0, W / 2, H * 0.55, H * 0.75); sp.addColorStop(0, 'rgba(255,240,210,0.35)'); sp.addColorStop(1, 'rgba(255,240,210,0)'); x.fillStyle = sp; x.fillRect(0, 0, W, H);
+    const fl = over.flavor || Game.G.flavors[p], ac = over.acc ? over.acc.slice(4) : Progress.accOf(p), P = pp(p), col = FLAVORS[fl] || FLAVORS.fresa;
+    P.col = col; P.acc = ac; P.facing = p ? -1 : 1;
+    const k = (H * 0.24) / P.r; let ox = 0, oy = 0;
+    if (live && col.trail2) { ox = Math.sin(t * 1.7) * W * 0.24 / k; oy = Math.sin(t * 3.4) * H * 0.06 / k; Vest.trailPush('tya' + p + 'p', ox, oy, performance.now() / 1000, 3); }
+    x.save(); x.translate(W / 2, H * 0.6); x.scale(k, k);
+    const sh = x.createRadialGradient(ox, P.r * 1.05, 0, ox, P.r * 1.05, P.r * 1.2); sh.addColorStop(0, 'rgba(0,0,0,0.45)'); sh.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = sh; x.beginPath(); x.ellipse(ox, P.r * 1.05, P.r * 1.2, P.r * 0.3, 0, 0, Math.PI * 2); x.fill();
+    const mk = Player.marks; Player.marks = false; P.x = ox; P.y = oy; P.trail = []; P.stuck = false; P.stun = 0; P.alive = true; P.sticky = 1; P.charge = 0;
+    try { P.draw(x, t); } catch (e) { /* nada */ }
+    Player.marks = mk; x.restore();
+  }
+  const V = Vest.create({
+    prefix: GAME_META.storagePrefix, title: 'Vestidor',
+    slots: [{ id: 'flavor', name: 'Sabores', one: 'sabor', newWord: 'nuevo' }, { id: 'acc', name: 'Accesorios', one: 'accesorio', newWord: 'nuevo' }],
+    items, ctx, preview,
+    pcolors: () => [FLAVORS[Game.G.flavors[0]].base, FLAVORS[Game.G.flavors[1]].base],
+    pnames: () => Progress.names,
+    sound: { reveal: r => Sound.play(r === 'mitico' || r === 'legendario' ? 'win' : 'golden'), open: () => Sound.play('select'), pick: () => Sound.play('select'), equip: () => Sound.play('stick') },
+    onEquip(p, slot, id) {
+      if (slot === 'flavor') { const Fl = Game.G.flavors; if (Fl[1 - p] === id) Fl[1 - p] = Fl[p]; Fl[p] = id; Store.set('flavors', Fl.slice()); Game.applyFlavors(); }
+      else Progress.setAcc(p, id.slice(4)) && Game.applyFlavors();
+    },
+  });
+  // lo de siempre: lo que el juego ya tiene puesto es lo que el vestidor muestra como «puesto»
+  const sync = () => { for (let p = 0; p < 2; p++) { V.S.eq[p] = V.S.eq[p] || {}; V.S.eq[p].flavor = Game.G.flavors[p]; V.S.eq[p].acc = 'acc.' + Progress.accOf(p); } };
+  V.check(true);
+  return {
+    V, sync,
+    open(p, after) { sync(); V.wardrobe({ player: p || 0, onClose() { Game.applyFlavors(); if (after) after(); } }); },
+    after() { const got = V.check(); if (got.length) setTimeout(() => { sync(); V.reveal(() => { Game.applyFlavors(); if (UI.vestBadge) UI.vestBadge(); }); }, 1300); },
+  };
+})();
+if (UI.vestBadge) UI.vestBadge();
 
 </script>
 </body>

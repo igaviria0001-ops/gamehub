@@ -339,7 +339,7 @@ const Vest = (() => {
 @keyframes vstRb2{to{background-position:0 0,300% 0}}
 @media (max-width:760px),(max-height:520px){.vst-box{padding:10px;border-radius:16px}.vst-head h2{font-size:19px}.vst-main{grid-template-columns:1fr;grid-template-rows:minmax(150px,42%) minmax(0,1fr)}.vst-sel{padding:8px 10px 10px}.vst-sel b{font-size:17px}.vst-grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}}
 @media (max-height:520px) and (orientation:landscape){.vst-main{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);grid-template-rows:minmax(0,1fr)}.vst-sel p{display:none}.vst-box{gap:6px;padding:8px 10px}.vst-head h2{font-size:17px}.vst-count{font-size:11.5px}.vst-tabs button{padding:5px 10px;font-size:13px}.vst-pl button{padding:5px 11px}.vst-x{padding:6px 12px}.vst-sel{gap:4px;padding:6px 10px 8px}.vst-sel b{font-size:15px}.vst-eq{padding:7px 14px;font-size:13px}.vst-card .n{font-size:11px}}
-.vst-rv{display:grid;place-items:center;background:radial-gradient(ellipse at 50% 45%,rgba(var(--rgb),.35),rgba(4,2,12,.94) 62%);overflow:hidden;animation:vstIn .35s ease-out}
+.vst-rv{display:grid;place-items:center;background:radial-gradient(ellipse at 50% 45%,rgba(var(--rgb),.32),rgba(var(--rgb),0) 62%),rgba(4,2,12,.94);overflow:hidden;animation:vstIn .35s ease-out}
 @keyframes vstIn{from{opacity:0}}
 .vst-rays{position:absolute;left:50%;top:44%;width:240vmax;height:240vmax;margin:-120vmax 0 0 -120vmax;background:repeating-conic-gradient(rgba(var(--rgb),.18) 0 7deg,transparent 7deg 18deg);animation:vstSpin 22s linear infinite;-webkit-mask:radial-gradient(circle,#000 0,transparent 45%);mask:radial-gradient(circle,#000 0,transparent 45%)}
 @keyframes vstSpin{to{transform:rotate(360deg)}}
@@ -405,7 +405,7 @@ const Vest = (() => {
       if (!queue.length) { if (done) done(); return false; }
       css(); const it = queue.shift(), R = RAR[it.rar] || RAR.comun, s = slotOf(it.slot), el = document.createElement('div');
       el.className = 'vst-rv'; el.style.setProperty('--rgb', R.rgb); el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Nuevo: ' + it.name);
-      const pcs = cfg.pcolors || ['#ffd36b', '#6fd0ff'];
+      const pcs = (typeof cfg.pcolors === 'function' ? cfg.pcolors() : cfg.pcolors) || ['#ffd36b', '#6fd0ff'];
       el.innerHTML = `<div class="vst-rays"></div><div class="vst-flash"></div><div class="vst-rvbox"><div class="vst-rvk">¡${esc((s.newWord || 'NUEVO').toUpperCase())} ${esc((s.one || '').toUpperCase())}!</div><canvas width="600" height="600"></canvas><span class="vst-rar ${it.rar}" style="--rc:${R.c};--rg:${R.c}">${R.name}</span><h3>${esc(it.name)}</h3><p>${esc(it.how || it.desc || '')}</p>
         <div class="vst-rvb">${[0, 1].map(p => `<button class="p" data-p="${p}" style="--pc:${pcs[p]}">Ponérselo a ${esc(pname(p))}</button>`).join('')}<button class="go" data-go>${queue.length ? 'Siguiente ›' : 'Seguir'}</button></div>${queue.length ? `<div class="vst-more">y ${queue.length} más por ver</div>` : ''}</div>`;
       document.body.appendChild(el);
@@ -423,7 +423,7 @@ const Vest = (() => {
     /* ---- pantalla del vestidor ---- */
     function wardrobe(opts = {}) {
       css(); let P = opts.player || 0, slot = opts.slot || slots[0].id, selId = null, hover = null;
-      const pcs = cfg.pcolors || ['#ffd36b', '#6fd0ff'], el = document.createElement('div'); el.className = 'vst'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', cfg.title || 'Vestidor');
+      const pcs = (typeof cfg.pcolors === 'function' ? cfg.pcolors() : cfg.pcolors) || ['#ffd36b', '#6fd0ff'], el = document.createElement('div'); el.className = 'vst'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', cfg.title || 'Vestidor');
       document.body.appendChild(el);
       const list = () => { const ch = cfg.charOf ? cfg.charOf(P) : null, s = slotOf(slot); return items.filter(it => it.slot === slot && (!s.perChar || !it.char || it.char === ch)).sort((a, b) => RORDER.indexOf(a.rar) - RORDER.indexOf(b.rar) || (a.order || 0) - (b.order || 0)); };
       const total = () => items.filter(it => !it.free && (!it.char || !slotOf(it.slot).perChar || true)).length, gotN = () => items.filter(it => !it.free && S.got[it.id]).length;

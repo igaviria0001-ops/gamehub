@@ -19,7 +19,10 @@ const UI = (() => {
   function screenEl(name) { return name ? $('#' + SCREENS[name]) : null; }
   function focusables(el) { return el ? $$('button:not([disabled])', el).filter(b => b.offsetParent !== null) : []; }
 
+  function vestBadge() { const b = $('#vestNew'); if (!b || typeof Vestidor === 'undefined') return; const n = Vestidor.V.fresh(); b.textContent = n ? n + (n === 1 ? ' nuevo' : ' nuevos') : Vestidor.V.count().join('/'); b.classList.toggle('hot', n > 0); }
   function show(name, push = true) {
+    if (name === 'results' && typeof Vestidor !== 'undefined') Vestidor.after();
+    if (name === 'title') setTimeout(vestBadge, 0);
     if (push && current && current !== name) stack.push(current);
     $$('.screen').forEach(s => { s.hidden = true; });
     current = name;
@@ -163,6 +166,7 @@ const UI = (() => {
     rematch() { stack = []; show(null, false); Game.restart(); },
     changemode() { if (Game.G.mode === 'campana' || Game.G.campBoss != null) { stack = ['title', 'modes']; fillCampaign(); show('campana', false); return; } vsBot = lastRes ? lastRes.vsBot : vsBot; Game.G.daily = null; Fiesta.force(null); stack = []; show('modes', false); stack = ['title']; },
     fullscreen() { FS.toggle(); },
+    vest() { if (typeof Vestidor !== 'undefined') Vestidor.open(0, () => { syncOptions(); vestBadge(); }); },
   };
 
   function syncFiesta() {
@@ -684,7 +688,7 @@ const UI = (() => {
     show(null, false);
     Game.startMatch(ev.mode, false, ev.map && ev.map !== 'random' ? ev.map : 'random', !!(ev.opts && ev.opts.fiesta));
   }
-  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay };
+  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge };
 })();
 
 /* =========================================================================

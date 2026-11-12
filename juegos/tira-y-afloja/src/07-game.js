@@ -1195,6 +1195,7 @@ const Game = (() => {
     setFlavor(i, id) {
       if (!FLAVORS[id] || G.flavors[1 - i] === id) return false;
       if (FLAVORS[id].camp && !(Campaign.data.rewards || {})[FLAVORS[id].camp]) return false; // premio de la campaña aún sin ganar
+      if (typeof Vestidor !== 'undefined' && Vestidor.V.BY[id] && !Vestidor.V.has(id)) return false; // del Vestidor: todavía no se ha ganado
       G.flavors[i] = id; Store.set('flavors', G.flavors.slice()); applyFlavors(); return true;
     },
     setBotLevel(n) { G.botLevel = n; Store.set('botLevel', n); },

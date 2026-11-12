@@ -79,6 +79,11 @@ const Progress = (() => {
     { id: 'birrete', name: 'Birrete (campaña)', need: 1e9, camp: 'salon' },
     { id: 'vincha', name: 'Vincha deportiva (campaña)', need: 1e9, camp: 'gimnasio' },
     { id: 'chef', name: 'Gorro de chef (campaña)', need: 1e9, camp: 'cafeteria' },
+    // del Vestidor (se ganan con partidas, retos, jefes y logros: ver 09b-vest.js)
+    { id: 'cuernos', name: 'Cuernitos', need: 1e9, vest: true },
+    { id: 'aureola', name: 'Aureola', need: 1e9, vest: true },
+    { id: 'corona_fuego', name: 'Corona de fuego', need: 1e9, vest: true },
+    { id: 'orbita', name: 'Órbita de planetas', need: 1e9, vest: true },
   ];
 
   const S = {
@@ -301,7 +306,7 @@ const Progress = (() => {
   }
 
   /* ---------------- accesorios ---------------- */
-  function accUnlocked(i, id) { const a = ACCESSORIES.find(x => x.id === id); if (!a) return false; if (a.camp) return !!(typeof Campaign !== 'undefined' && Campaign.data.rewards && Campaign.data.rewards[a.camp]); return count(S.names[i]) >= a.need; }
+  function accUnlocked(i, id) { const a = ACCESSORIES.find(x => x.id === id); if (!a) return false; if (id !== 'ninguno' && typeof Vestidor !== 'undefined' && Vestidor.V.BY['acc.' + id]) return Vestidor.V.has('acc.' + id); if (a.camp) return !!(typeof Campaign !== 'undefined' && Campaign.data.rewards && Campaign.data.rewards[a.camp]); return count(S.names[i]) >= a.need; }
   function setAcc(i, id) { if (!accUnlocked(i, id)) return false; S.acc[i] = id; save('acc'); return true; }
   function accOf(i) { const id = S.acc[i]; return accUnlocked(i, id) ? id : 'ninguno'; }
 

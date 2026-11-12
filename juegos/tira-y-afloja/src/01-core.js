@@ -60,7 +60,24 @@ const FLAVORS = {
 FLAVORS.algodon = { id: 'algodon', name: 'Algodón', base: '#ff9ed8', light: '#ffe0f4', dark: '#e070b8', deep: '#8a2f6e', glow: '#fff0fa', accent: '#9fd8ff', hat: '#f2e6d0', hatDark: '#a98c62', pattern: 'fluff', hatType: 'stick', camp: 'arte' };
 FLAVORS.cola = { id: 'cola', name: 'Cola', base: '#8a4a26', light: '#d9a074', dark: '#6a3416', deep: '#3a1a08', glow: '#ffe6cc', accent: '#ffffff', hat: '#e5533d', hatDark: '#9a2a1c', pattern: 'fizz', hatType: 'cap', camp: 'biblioteca' };
 FLAVORS.oro = { id: 'oro', name: 'Oro', base: '#f2c230', light: '#fff0a8', dark: '#cf9a12', deep: '#7a5408', glow: '#fff8d6', accent: '#ffffff', hat: '#ffffff', hatDark: '#b08a2a', pattern: 'shine', hatType: 'star', camp: 'torre' };
-const FLAVOR_ORDER = ['fresa', 'menta', 'uva', 'limon', 'mango', 'mora', 'algodon', 'cola', 'oro'];
+/* sabores especiales del Vestidor: cada uno con su material (Vest.material) y, los más altos, aura y estela.
+   Se ganan con la campaña, los jefes, los logros y las partidas (ver 09b-vest.js). */
+const GAL3 = ['255,110,210', '170,100,255', '90,150,255'];
+Object.assign(FLAVORS, {
+  kiwi: { id: 'kiwi', name: 'Kiwi escamado', base: '#7ac23a', light: '#c8f08a', dark: '#4e8a1e', deep: '#2a4e0e', glow: '#eaffd0', accent: '#ffffff', hat: '#6b4a2a', hatDark: '#3a2814', pattern: 'none', hatType: 'stem', mat: 'escamas', matC: ['#6cb83a', '#d8ff9a', '#2a5a12'] },
+  maracuya: { id: 'maracuya', name: 'Maracuyá atigrado', base: '#f2b62a', light: '#ffe28a', dark: '#d48a12', deep: '#7a4a06', glow: '#fff2c4', accent: '#ffffff', hat: '#6bbf59', hatDark: '#3d7f34', pattern: 'none', hatType: 'leaf', mat: 'jaguar', matC: ['#f0b02a', '#ffe08a', '#3a1e06', '#8a4a10'] },
+  mora_runa: { id: 'mora_runa', name: 'Mora rúnica', base: '#5a2a9a', light: '#c9a2ff', dark: '#36146a', deep: '#1a0638', glow: '#efe0ff', accent: '#ffffff', hat: '#56c25f', hatDark: '#2f8a3a', pattern: 'none', hatType: 'crown', mat: 'runas', matC: ['#2a0e4a', '#e2c4ff', '220,170,255'] },
+  menta_polar: { id: 'menta_polar', name: 'Menta polar', base: '#9fe6ff', light: '#e8fbff', dark: '#5ab8e8', deep: '#1e5a7a', glow: '#ffffff', accent: '#ffffff', hat: '#e8fbff', hatDark: '#5ab8e8', pattern: 'none', hatType: 'leaf', mat: 'cristal', matC: ['#bfeeff', '#7ac8f0', '#f4fdff'] },
+  boreal: { id: 'boreal', name: 'Arándano boreal', base: '#1e3a5a', light: '#7ae8d0', dark: '#0e1e34', deep: '#06101e', glow: '#c8fff0', accent: '#ffffff', hat: '#56c25f', hatDark: '#2f8a3a', pattern: 'none', hatType: 'stem', mat: 'aurora', matC: ['#08162a', '110,255,190', '170,110,255'] },
+  uva_electrica: { id: 'uva_electrica', name: 'Uva eléctrica', base: '#3a3a6a', light: '#9aa8f0', dark: '#22224a', deep: '#0e0e26', glow: '#e0e8ff', accent: '#ffffff', hat: '#ffe84a', hatDark: '#b08a12', pattern: 'none', hatType: 'star', mat: 'tormenta', matC: ['#22284a', '140,150,210'], aura2: 'rayos' },
+  chile: { id: 'chile', name: 'Chile de lava', base: '#c8321a', light: '#ff9a5a', dark: '#7a1406', deep: '#3a0804', glow: '#ffd2a0', accent: '#ffffff', hat: '#3fa34d', hatDark: '#24702f', pattern: 'none', hatType: 'stem', mat: 'lava', matC: ['#3a0e06', '#120402'], aura2: 'brasas', trail2: 'fuego' },
+  fatuo: { id: 'fatuo', name: 'Fuego fatuo', base: '#1a4aa0', light: '#9ff0ff', dark: '#0a2050', deep: '#041030', glow: '#d8faff', accent: '#ffffff', hat: '#9ff0ff', hatDark: '#2a6ab0', pattern: 'none', hatType: 'star', mat: 'llamas', matC: ['#0a2050', '#030a1e', '150,230,255', '40,90,255'], aura2: 'fuego_azul', trail2: 'hielo' },
+  dragon: { id: 'dragon', name: 'Fruta del dragón', base: '#1f9a7a', light: '#a8ffe0', dark: '#0e5a46', deep: '#06302a', glow: '#e0fff4', accent: '#ffd36a', hat: '#ff4fa3', hatDark: '#a0206a', pattern: 'none', hatType: 'crown', mat: 'escamas', matC: ['#1f9a7a', '#b8ffe8', '#0a3a2e'], aura2: 'dragon' },
+  galaxia: { id: 'galaxia', name: 'Chicle galáctico', base: '#2a1a5a', light: '#ff9be6', dark: '#120a2e', deep: '#06041a', glow: '#ffe0fa', accent: '#ffffff', hat: '#ffd6f6', hatDark: '#a865ff', pattern: 'none', hatType: 'star', mat: 'galaxia', matC: GAL3, aura2: 'galaxia', trail2: 'cometa' },
+  agujero: { id: 'agujero', name: 'Agujero negro', base: '#14081e', light: '#c88aff', dark: '#08020e', deep: '#000000', glow: '#e8c8ff', accent: '#ffffff', hat: '#c88aff', hatDark: '#5a1a9a', pattern: 'none', hatType: 'star', mat: 'vacio', matC: ['#3a0a5a', '200,120,255'], aura2: 'vacio', trail2: 'sombra' },
+  holo: { id: 'holo', name: 'Holográfico', base: '#d8dcec', light: '#ffffff', dark: '#9aa4bc', deep: '#4a5470', glow: '#ffffff', accent: '#ff9be6', hat: '#ffffff', hatDark: '#9aa4bc', pattern: 'none', hatType: 'star', mat: 'holo', matC: [], aura2: 'prisma', trail2: 'arcoiris' },
+});
+const FLAVOR_ORDER = ['fresa', 'menta', 'uva', 'limon', 'mango', 'mora', 'algodon', 'cola', 'oro', 'kiwi', 'maracuya', 'mora_runa', 'menta_polar', 'boreal', 'uva_electrica', 'chile', 'fatuo', 'dragon', 'galaxia', 'agujero', 'holo'];
 /* ambientes: tinte del escenario (los personajes y el hilo no se oscurecen, para que se lean bien) */
 const THEMES = {
   dia: { name: 'Día', tint: null },

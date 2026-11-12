@@ -283,6 +283,11 @@ html.lt720 .logo-rope { display: none; }
   .btn, .mode { transition: none; }
 }
 
+/* Vestidor */
+.vnew { display: inline-block; margin-left: 4px; font-size: 12px; padding: 1px 7px; border-radius: 999px; background: rgba(58,34,22,.12); }
+.vnew.hot { background: #ff4f7a; color: #fff; animation: vnewP 1.4s ease-in-out infinite; }
+@keyframes vnewP { 50% { transform: scale(1.12); } }
+.vst h2, .vst-rvbox h3 { font-family: "Fredoka", system-ui, sans-serif; }
 /* GameHub: botón para volver (solo dentro de GameHub) */
 html.in-hub .fs-auto { display: none !important; }
 .hub-home { display: none; }
@@ -320,6 +325,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
           <button class="btn menta" data-act="retos">Retos de técnica</button>
           <button class="btn fresa" data-act="entreno">Entrenamiento</button>
           <button class="btn" data-act="records">Jugadores y logros</button>
+          <button class="btn sol vest" data-act="vest">Vestidor <span id="vestNew" class="vnew"></span></button>
         </div>
       </div>
       <p class="foot"><b style="color:var(--fresa)">Fresa</b>: <kbd>A</kbd><kbd>D</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>Q</kbd> &nbsp;·&nbsp; <b style="color:var(--menta)">Menta</b>: <kbd>J</kbd><kbd>L</kbd> <kbd>I</kbd> <kbd>K</kbd> <kbd>O</kbd> <kbd>U</kbd> &nbsp;·&nbsp; también con mandos</p>
@@ -451,6 +457,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
           <div class="opt match-only"><label id="l-wins">Rondas para ganar</label><div class="seg" role="group" aria-labelledby="l-wins" data-opt="wins"><button id="o-wins-3" data-v="3">3</button><button id="o-wins-5" data-v="5">5</button></div></div>
           <div class="opt match-only"><label id="l-bot">La máquina</label><div class="seg" role="group" aria-labelledby="l-bot" data-opt="bot"><button id="o-bot-0" data-v="0">Novato</button><button id="o-bot-1" data-v="1">Masticador</button><button id="o-bot-2" data-v="2">Leyenda</button></div></div>
           <div class="opt"><label id="l-theme">Ambiente</label><div class="seg" role="group" aria-labelledby="l-theme" data-opt="theme"><button data-v="dia">Día</button><button data-v="tarde">Tarde</button><button data-v="noche">Noche</button></div></div>
+          <div class="opt"><label>Sabores y accesorios especiales</label><button class="btn" data-act="vest">Abrir el Vestidor</button></div>
           <div class="opt"><label id="l-f1">Sabor del jugador 1</label><button class="btn cyc flavor" id="o-f1" data-cyc="f0" aria-labelledby="l-f1"><span class="dot"></span><span class="val">Fresa</span><span class="arrow" aria-hidden="true">›</span></button></div>
           <div class="opt"><label id="l-f2">Sabor del jugador 2</label><button class="btn cyc flavor" id="o-f2" data-cyc="f1" aria-labelledby="l-f2"><span class="dot"></span><span class="val">Menta</span><span class="arrow" aria-hidden="true">›</span></button></div>
           <div class="opt"><label id="l-hc0">Ventaja del jugador 1 <small>(para jugar parejo)</small></label><div class="seg" role="group" aria-labelledby="l-hc0" data-opt="hc0"><button data-v="0">No</button><button data-v="1">Poca</button><button data-v="2">Mucha</button></div></div>

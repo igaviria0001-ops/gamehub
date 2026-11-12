@@ -399,6 +399,9 @@ class Player {
       ctx.beginPath(); ctx.arc(g.x, g.y, g.r * 0.92, 0, TAU); ctx.fill();
     }
 
+    // estela y aura de los sabores más altos del Vestidor
+    if (c.trail2 && typeof Vest !== 'undefined') { const now = performance.now() / 1000, key = 'tya' + this.id + (this.preview ? 'p' : ''); if (!this.preview) Vest.trailPush(key, cx, cy, now, 4); Vest.drawTrail(ctx, c.trail2, key, r * 0.32, now); }
+    if (c.aura2 && typeof Vest !== 'undefined') Vest.drawAura(ctx, c.aura2, cx, cy, r * 1.05, t, 0);
     // hebras pegajosas hacia la superficie
     if (this.stuck) this.drawGoo(ctx, cx, cy, t);
 
@@ -453,6 +456,7 @@ class Player {
     this.drawHeadAcc(ctx, r, topY, t);
     this.drawFace(ctx, r, t);
     ctx.restore();
+    if (c.aura2 && typeof Vest !== 'undefined') Vest.drawAura(ctx, c.aura2, cx, cy, r * 1.05, t, 1);
 
     // medidor de pegajosidad
     if (this.alive && (this.stuck || this.sticky < 0.999)) {
@@ -540,6 +544,12 @@ class Player {
   }
 
   drawPattern(ctx, r) {
+    // sabores del Vestidor: el material cubre el chicle y se le devuelve el volumen con luz y sombra
+    if (this.col.mat && typeof Vest !== 'undefined') {
+      Vest.material(ctx, this.col.mat, this.col.matC || [], -r * 1.45, -r * 1.45, r * 2.9, r * 2.9, performance.now() / 1000, 0.95, Store.get('quality', 'alta') !== 'ligera');
+      const sh = ctx.createRadialGradient(-r * 0.35, -r * 0.45, r * 0.1, 0, 0, r * 1.25); sh.addColorStop(0, 'rgba(255,255,255,0.28)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.42)');
+      ctx.fillStyle = sh; ctx.fillRect(-r * 1.5, -r * 1.5, r * 3, r * 3); return;
+    }
     const pat = this.col.pattern || (this.id === 0 ? 'seeds' : 'stripes');
     if (pat === 'grapes') {
       // uvitas: burbujas más claras dentro del cuerpo
@@ -831,7 +841,31 @@ class Player {
     const ink = PALETTE.ink;
     ctx.save();
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    if (a === 'gorra') {
+    if (a === 'cuernos') {
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * r * 0.42, topY + r * 0.28); ctx.quadraticCurveTo(s * r * 0.78, topY - r * 0.05, s * r * 0.62, topY - r * 0.5); ctx.quadraticCurveTo(s * r * 0.5, topY - r * 0.1, s * r * 0.18, topY + r * 0.2); ctx.closePath(); const g = ctx.createLinearGradient(0, topY + r * 0.3, 0, topY - r * 0.5); g.addColorStop(0, '#7a1420'); g.addColorStop(1, '#ff5a4a'); ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = ink; ctx.stroke(); }
+    } else if (a === 'aureola') {
+      const y = topY - r * 0.42 + Math.sin(t * 2.2 + this.id) * r * 0.06;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; if (typeof Vest !== 'undefined') Vest.put(ctx, Vest.glow('255,220,120'), 0, y, r * 1.8, 0.55); ctx.restore();
+      ctx.beginPath(); ctx.ellipse(0, y, r * 0.55, r * 0.15, 0, 0, TAU); ctx.lineWidth = r * 0.12; ctx.strokeStyle = '#ffe9a0'; ctx.stroke(); ctx.lineWidth = r * 0.04; ctx.strokeStyle = '#fffbe8'; ctx.stroke();
+    } else if (a === 'corona_fuego') {
+      const s = r * 0.52, y = topY + r * 0.1;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let k = 0; k < 5; k++) { const x0 = (k - 2) * s * 0.45, h = s * (0.9 + 0.35 * Math.sin(t * 9 + k * 1.7)) * (k === 2 ? 1.3 : 1); const g = ctx.createLinearGradient(0, y, 0, y - h); g.addColorStop(0, 'rgba(255,240,170,0.95)'); g.addColorStop(0.5, 'rgba(255,140,40,0.85)'); g.addColorStop(1, 'rgba(255,60,20,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x0 - s * 0.24, y); ctx.quadraticCurveTo(x0 - s * 0.2, y - h * 0.6, x0 + Math.sin(t * 7 + k) * s * 0.1, y - h); ctx.quadraticCurveTo(x0 + s * 0.2, y - h * 0.6, x0 + s * 0.24, y); ctx.fill(); } ctx.restore();
+      ctx.beginPath(); ctx.ellipse(0, y, s, s * 0.22, 0, 0, TAU); ctx.fillStyle = '#ffb030'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = ink; ctx.stroke();
+      for (const gx of [-s * 0.55, 0, s * 0.55]) { ctx.beginPath(); ctx.arc(gx, y, s * 0.1, 0, TAU); ctx.fillStyle = '#ff3a2a'; ctx.fill(); }
+    } else if (a === 'orbita') {
+      const y = topY - r * 0.12;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath(); ctx.ellipse(0, y, r * 1.0, r * 0.26, -0.08, 0, TAU); ctx.lineWidth = r * 0.05; ctx.strokeStyle = 'rgba(190,170,255,0.55)'; ctx.stroke();
+      if (typeof Vest !== 'undefined') for (let k = 0; k < 5; k++) { const an = t * 0.8 + k * 1.26; Vest.put(ctx, Vest.star('230,220,255'), Math.cos(an) * r * 1.0, y + Math.sin(an) * r * 0.26, r * 0.22 * (0.5 + 0.5 * Math.sin(t * 3 + k)), 0.9); }
+      ctx.restore();
+      for (let k = 0; k < 3; k++) {
+        const an = t * (1.1 + k * 0.35) + k * 2.1, front = Math.sin(an) > 0, px = Math.cos(an) * r * 1.0, py = y + Math.sin(an) * r * 0.26 - (k - 1) * r * 0.04, pr = r * (0.15 + k * 0.02) * (front ? 1 : 0.72), col = ['#ffb35a', '#7ad0ff', '#d79bff'][k], rgb = ['255,180,90', '120,210,255', '215,155,255'][k];
+        ctx.save(); ctx.globalAlpha = front ? 1 : 0.55; ctx.globalCompositeOperation = 'lighter'; if (typeof Vest !== 'undefined') Vest.put(ctx, Vest.glow(rgb), px, py, pr * 5, 0.8); ctx.restore();
+        ctx.save(); ctx.globalAlpha = front ? 1 : 0.6; const pg = ctx.createRadialGradient(px - pr * 0.4, py - pr * 0.4, 0, px, py, pr); pg.addColorStop(0, '#ffffff'); pg.addColorStop(0.35, col); pg.addColorStop(1, '#2a1a4a'); ctx.beginPath(); ctx.arc(px, py, pr, 0, TAU); ctx.fillStyle = pg; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.stroke();
+        if (k === 1) { ctx.beginPath(); ctx.ellipse(px, py, pr * 1.7, pr * 0.45, -0.3, 0, TAU); ctx.lineWidth = 1.6; ctx.strokeStyle = '#e8f6ff'; ctx.stroke(); }
+        ctx.restore();
+      }
+    } else if (a === 'gorra') {
       const f = this.facing || 1;
       ctx.beginPath(); ctx.arc(0, topY + r * 0.42, r * 0.78, Math.PI * 1.08, Math.PI * 1.92);
       ctx.closePath(); ctx.fillStyle = '#e0483a'; ctx.fill(); ctx.lineWidth = 3.5; ctx.strokeStyle = ink; ctx.stroke();
