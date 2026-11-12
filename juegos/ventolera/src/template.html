@@ -128,6 +128,13 @@ kbd { font: 700 13px var(--font); padding: 2px 7px; border-radius: 7px; backgrou
 #s-title .menu { grid-template-columns: repeat(12, 1fr); }
 #s-title .menu .btn { grid-column: span 3; }
 #s-title .menu .btn.big { grid-column: span 4; }
+/* Logros, Hangar y Opciones: tres iguales abajo (en celular de lado, Logros y Hangar arriba a la izquierda) */
+#s-title .tside { display: contents; }
+#s-title .menu .logbtn, #s-title .menu .vestbtn, #s-title .menu .optbtn { grid-column: span 4; }
+.vestbtn, .hang { position: relative; }
+.btn.vestbtn { background: linear-gradient(135deg, rgba(255,120,210,.32), rgba(120,140,255,.32)); }
+.brow { grid-template-columns: auto 1fr auto auto; }
+.btn.hang { background: linear-gradient(135deg, rgba(255,120,210,.3), rgba(120,140,255,.3)); }
 .btn.trav { background: linear-gradient(135deg, rgba(110,230,170,.5), rgba(255,207,90,.45)); flex-direction: column; gap: 2px; }
 .btn .tsub { font-style: normal; font-size: .62em; opacity: .85; font-weight: 600; }
 .osub { display: block; font-size: 11px; opacity: .7; font-weight: 600; margin-top: 1px; }
@@ -187,7 +194,8 @@ kbd { font: 700 13px var(--font); padding: 2px 7px; border-radius: 7px; backgrou
   .tdetail { font-size: 10.5px !important; line-height: 1.25; margin-top: 5px !important; } .stage small { line-height: 1.15; }
   .tintro { display: none; } .tdetail { margin-top: 6px; font-size: 11.5px; } #s-trav .phead { margin-bottom: 6px; }
   #s-title .optbtn { position: absolute; top: 12px; right: 14px; min-height: 34px; padding: 4px 14px; font-size: 13px; }
-  #s-title .logbtn { position: absolute; top: 12px; left: 14px; min-height: 34px; padding: 4px 14px; font-size: 13px; }
+  #s-title .tside { display: flex; gap: 8px; position: absolute; top: 12px; left: 14px; }
+  #s-title .menu .tside .btn { min-height: 34px; padding: 4px 14px; font-size: 13px; }
   .lstats { grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
   .lstats b { font-size: 15px; } .lstats span { font-size: 9.5px; } .lstats div { padding: 3px; }
   .lgrid { gap: 4px; } .ach { padding: 3px 6px; } .ach b { font-size: 11px; } .ach span { font-size: 9.5px; }
@@ -295,7 +303,8 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
         <button class="btn" data-act="school"><span>Escuela de vuelo</span><em class="newbadge" id="schoolBadge" hidden>¡empieza aquí!</em></button>
         <button class="btn" data-act="practice">Práctica</button>
         <button class="btn" data-act="howto">Cómo se juega</button>
-        <button class="btn logbtn" data-act="logros">Logros</button>
+        <div class="tside"><button class="btn logbtn" data-act="logros">Logros</button>
+        <button class="btn vestbtn" data-act="vest"><span>Hangar</span><em class="newbadge vestNew" hidden></em></button></div>
         <button class="btn optbtn" data-act="options">Opciones</button>
       </div>
       <div class="foot" id="ver"></div>
@@ -313,10 +322,10 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
       <p class="msub" id="modeSub"></p>
       <div class="birds">
         <div class="bcol p0"><canvas id="bprev0"></canvas><div class="bname" id="bname0"></div><div class="blook" id="blook0"></div>
-          <div class="brow"><button class="btn" data-act="prev0" aria-label="Piloto anterior, jugador 1">◀</button><button class="btn" data-act="look0">Pintura</button><button class="btn" data-act="next0" aria-label="Piloto siguiente, jugador 1">▶</button></div>
+          <div class="brow"><button class="btn" data-act="prev0" aria-label="Piloto anterior, jugador 1">◀</button><button class="btn" data-act="look0">Pintura</button><button class="btn hang" data-act="vest0" aria-label="Hangar del jugador 1"><span>Hangar</span><em class="newbadge vestNew" hidden></em></button><button class="btn" data-act="next0" aria-label="Piloto siguiente, jugador 1">▶</button></div>
           <div class="bstats" id="bstats0"></div></div>
         <div class="bcol p1"><canvas id="bprev1"></canvas><div class="bname" id="bname1"></div><div class="blook" id="blook1"></div>
-          <div class="brow"><button class="btn" data-act="prev1" aria-label="Piloto anterior, jugador 2">◀</button><button class="btn" data-act="look1">Pintura</button><button class="btn" data-act="next1" aria-label="Piloto siguiente, jugador 2">▶</button></div>
+          <div class="brow"><button class="btn" data-act="prev1" aria-label="Piloto anterior, jugador 2">◀</button><button class="btn" data-act="look1">Pintura</button><button class="btn hang" data-act="vest1" aria-label="Hangar del jugador 2"><span>Hangar</span><em class="newbadge vestNew" hidden></em></button><button class="btn" data-act="next1" aria-label="Piloto siguiente, jugador 2">▶</button></div>
           <div class="bstats" id="bstats1"></div></div>
       </div>
     </div>

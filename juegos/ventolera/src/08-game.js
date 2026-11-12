@@ -14,7 +14,8 @@ const Game = (() => {
   const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
   let dpr = 1, sw = 1, sh = 1, acc = 0, last = 0, quality = Store.get('quality', 'alta');
   const cam = { x: 1400, y: 1100, z: 0.4 };
-  const cfg = { species: Store.get('species', ['guacamaya', 'condor']), looks: Store.get('looks', [0, 0]), arena: Store.get('arena', 'medellin'), mode: Store.get('mode', 'duel') };
+  // looks: la pintura de cada jugador (número de antes, «especie.n» o «u.clave»); trails: la estela del vestidor
+  const cfg = { species: Store.get('species', ['guacamaya', 'condor']), looks: Store.get('looks', [0, 0]), trails: ['t.ninguna', 't.ninguna'], arena: Store.get('arena', 'medellin'), mode: Store.get('mode', 'duel') };
   if (!MODES[cfg.mode]) cfg.mode = 'duel';
   if (cfg.arena !== 'azar' && !ARENAS[cfg.arena]) cfg.arena = 'medellin';
   if (!SPECIES[cfg.species[0]]) cfg.species = ['guacamaya', 'condor'];
@@ -36,6 +37,8 @@ const Game = (() => {
     G.time = 0; G.events = []; G.rng = makeRng(opts.seed || 1); G.paused = false;
     G.birds = [0, 1].map(i => new Bird(i, opts.species[i], opts.looks[i]));
     G.birds.forEach(b => { b.G = G; });
+    G.vtr = (opts.trails || []).map(id => (id ? String(id).replace(/^t\./, '') : null)); trailT = [0, 0];
+    if (typeof Vest !== 'undefined') { Vest.trailReset('vto0'); Vest.trailReset('vto1'); }
     G.bots = [null, null]; G.targets = []; G.boss = null;
     FX.clear();
   }
@@ -57,7 +60,9 @@ const Game = (() => {
   }
   function startAttract() {
     attractN = (attractN + 1) % ARENA_ORDER.length;
-    setup({ species: ['guacamaya', 'condor'], looks: [0, 0], seed: 7, arena: cfg.arena === 'azar' ? ARENA_ORDER[attractN] : cfg.arena });
+    // de vez en cuando, los de la portada lucen pinturas y estelas del vestidor (para antojar)
+    const show = Math.random() < 0.45, pk = () => 'u.' + PAINT_ORDER[Math.floor(Math.random() * PAINT_ORDER.length)], tk = () => ATTRACT_TRAILS[Math.floor(Math.random() * ATTRACT_TRAILS.length)];
+    setup({ species: ['guacamaya', 'condor'], looks: show ? [pk(), pk()] : [0, 0], trails: show ? [tk(), tk()] : null, seed: 7, arena: cfg.arena === 'azar' ? ARENA_ORDER[attractN] : cfg.arena });
     G.state = 'attract'; G.mode = 'free'; G.players = 0;
     placeBirds(); G.freeze = false; G.canFight = true; G.cratesOn = true;
     G.bots = [new Bot(G.birds[0], 11, 1), new Bot(G.birds[1], 29, 1)];
@@ -71,7 +76,7 @@ const Game = (() => {
     G.players = players; G.mode = mode;
     const seed = (Date.now() & 0xffff) || 1;
     G.arena = over && over.arena ? over.arena : cfg.arena === 'azar' ? ARENA_ORDER[seed % ARENA_ORDER.length] : cfg.arena;
-    setup({ species: cfg.species, looks: cfg.looks, seed, arena: G.arena });
+    setup({ species: cfg.species, looks: cfg.looks, trails: cfg.trails, seed, arena: G.arena });
     const lvl = over && over.level != null ? over.level : G.botLevel;
     G.trav = over && over.id ? over.id : null; G.playT = 0; G.lvl = lvl; G.copa = over && over.copa ? over.copa : null;
     // Travesía para dos: G.duo; en las etapas «juntos» (Blancos) G.coop con la meta entre los dos
@@ -318,6 +323,20 @@ const Game = (() => {
   }
 
   /* ---------- dibujo ---------- */
+  // estelas del vestidor: salen de las toberas y se dibujan detrás de los pilotos
+  const ATTRACT_TRAILS = ['fuego', 'neon', 'cometa', 'arcoiris', 'galaxia', 'hielo', 'rayo', 'sombra', 'chispas'];
+  let trailT = [0, 0];
+  function drawVestTrails(vs) {
+    if (typeof Vest === 'undefined' || !G.vtr) return;
+    G.birds.forEach((b, i) => {
+      const kind = G.vtr[i]; if (!kind || kind === 'ninguna') return;
+      const key = 'vto' + i;
+      if (G.time < trailT[i] - 0.01) Vest.trailReset(key);
+      trailT[i] = G.time;
+      if (b.alive) { const r = b.r * 1.15; Vest.trailPush(key, b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, G.time, LOWFX ? 14 : 9); }
+      Vest.drawTrail(ctx, kind, key, b.r * 0.34 * Math.sqrt(vs), G.time, PLAYER_COLORS[i].glow);
+    });
+  }
   // en celular el HUD va un poco más grande (las pantallas son chicas y los textos tienen que leerse)
   function hudUnit() { return Touch.enabled ? clamp(Math.min(sh / 330, sw / 740), 0.92, 2.1) : clamp(Math.min(sh / 400, sw / 860), 0.8, 2.1); }
   function render() {
@@ -332,6 +351,7 @@ const Game = (() => {
     // de lejos (zoom chico, celular) los pilotos y proyectiles se dibujan más grandes para que se lean
     const vs = G.vs = clamp(Math.pow(0.92 / cam.z, 0.62), 1, 1.95);
     G.birds.forEach((b, i) => ArtPilot.drawTrail(ctx, b, G.time, PLAYER_COLORS[i], vs));
+    drawVestTrails(vs);
     Weather.drawWorld(ctx, G);
     Coast.drawWorld(ctx, G);
     FX.drawCombat(ctx, G);
