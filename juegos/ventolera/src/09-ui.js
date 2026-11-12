@@ -212,7 +212,7 @@ const UI = (() => {
   }
   // pinturas: las bloqueadas (dorada) se saltan hasta ganar su logro; dos pilotos iguales no comparten pintura
   // (las pinturas viven en el Hangar: cada piloto recuerda la suya; el botón «Pintura» pasa por las ganadas)
-  const VV = () => (typeof Vestidor !== 'undefined' ? Vestidor : null);
+  const VV = () => { try { return Vestidor; } catch (e) { return null; } }; // (el Hangar se carga después del menú)
   const same = (i, sp, id) => sp === Game.cfg.species[1 - i] && String(id) === String(Game.cfg.looks[1 - i]);
   function pickLook(i, sp, step) {
     const V = VV(); if (!V) return 0;

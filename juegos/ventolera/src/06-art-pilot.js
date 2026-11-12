@@ -34,13 +34,13 @@ const PAINT_GAL = ['255,110,210', '170,100,255', '90,150,255'];
 const PAINTS = {
   jaguar: { name: 'Piel de jaguar', wingA: '#d99a2a', wingB: '#6a3a0a', stripe: '#2a1606', stripe2: '#ffd27a', mat: 'jaguar', matC: ['#d99a2a', '#ffd27a', '#2a1606', '#7a3e0a'] },
   caiman: { name: 'Escamas de caimán', wingA: '#2f8a5a', wingB: '#0e3a24', stripe: '#d8f5a0', stripe2: '#9be8b0', mat: 'escamas', matC: ['#2f8a5a', '#9be8b0', '#0e3a24'] },
-  llamarada: { name: 'Llamarada', wingA: '#3a0c06', wingB: '#120202', stripe: '#ffd23f', stripe2: '#ff7a1a', mat: 'llamas', matC: ['#2a0a04', '#0c0202', '255,210,90', '255,70,10'], rot: true },
+  llamarada: { name: 'Llamarada', wingA: '#3a0c06', wingB: '#120202', stripe: '#ffd23f', stripe2: '#ff7a1a', mat: 'llamas', matC: ['#4a0c06', '#140302', '255,226,110', '255,84,16'], rot: true },
   tormenta: { name: 'Tormenta eléctrica', wingA: '#3a4660', wingB: '#0a0e18', stripe: '#bfe4ff', stripe2: '#5ab8ff', mat: 'tormenta', matC: ['#1a2234', '120,140,180'] },
   aurora: { name: 'Aurora boreal', wingA: '#0a2a3a', wingB: '#02080c', stripe: '#9affd8', stripe2: '#c79aff', mat: 'aurora', matC: ['#06121e', '110,255,190', '170,110,255'] },
   cristal: { name: 'Hielo tallado', wingA: '#bfeeff', wingB: '#3a7aa8', stripe: '#ffffff', stripe2: '#7ae0ff', mat: 'cristal', matC: ['#bfeeff', '#6ab8e8', '#f2fdff'] },
   magma: { name: 'Magma', wingA: '#3a1208', wingB: '#0a0404', stripe: '#ff9a3a', stripe2: '#ffcf6a', mat: 'lava', matC: ['#2a0e08', '#0a0404'], edge: '255,120,40' },
   oro: { name: 'Filigrana de oro', wingA: '#e8b030', wingB: '#7a4a08', stripe: '#fff6d0', stripe2: '#8a2a14', mat: 'oro', matC: ['#e8b030', '#fff0a8', '#9a6410'], edge: '255,226,140' },
-  fatuo: { name: 'Fuego fatuo', wingA: '#0a2a5a', wingB: '#020814', stripe: '#9ff0ff', stripe2: '#4ab8ff', mat: 'llamas', matC: ['#061a3a', '#020814', '140,230,255', '40,90,255'], rot: true, edge: '120,210,255' },
+  fatuo: { name: 'Fuego fatuo', wingA: '#0a2a5a', wingB: '#020814', stripe: '#9ff0ff', stripe2: '#4ab8ff', mat: 'llamas', matC: ['#0a2458', '#030a1c', '160,240,255', '50,110,255'], rot: true, edge: '120,210,255' },
   galaxia: { name: 'Galaxia', wingA: '#1a0e40', wingB: '#05020e', stripe: '#ffd6f6', stripe2: '#ff6fd8', mat: 'galaxia', matC: PAINT_GAL, edge: '255,140,230' },
   agujero: { name: 'Agujero negro', wingA: '#120618', wingB: '#000000', stripe: '#c88aff', stripe2: '#8a3aff', mat: 'vacio', matC: ['#3a0a5a', '200,120,255'], edge: '190,110,255' },
   holo: { name: 'Holográfica', wingA: '#dfe4f0', wingB: '#6a7490', stripe: '#ffffff', stripe2: '#ff9be6', mat: 'holo', matC: [], edge: 'holo' },
@@ -227,7 +227,7 @@ const ArtPilot = (() => {
     ctx.save(); wingPath(); ctx.clip();
     // pintura especial: el diseño entero sobre el ala (las llamas corren de la nariz a la cola)
     if (L.mat && typeof Vest !== 'undefined') {
-      if (L.rot) { ctx.save(); ctx.rotate(-Math.PI / 2); Vest.material(ctx, L.mat, L.matC, -21 * s, -24, 42 * s, 36, t, 0.96, !LOWFX); ctx.restore(); }
+      if (L.rot) { ctx.save(); ctx.rotate(-Math.PI / 2); Vest.material(ctx, L.mat, L.matC, -21 * s, -50, 42 * s, 62, t, 0.96, !LOWFX); ctx.restore(); }
       else Vest.material(ctx, L.mat, L.matC, -24, -21 * s, 36, 42 * s, t, 0.96, !LOWFX);
     }
     // de la nariz a la cola se oscurece un poco
@@ -270,7 +270,7 @@ const ArtPilot = (() => {
       const pul = 0.6 + 0.4 * Math.sin(t * 3.2 + (b.id === 1 ? 1.7 : 0)), ec = L.edge === 'holo' ? (() => { const h = (t * 90) % 360, f = n => { const k = (n + h / 30) % 12; return Math.round(255 * (0.62 - 0.38 * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); }; return `${f(0)},${f(8)},${f(4)}`; })() : L.edge;
       const edges = () => { ctx.beginPath(); ctx.moveTo(TF.x + 1.4, TF.y + 0.8); ctx.quadraticCurveTo(F.x - 2, F.y - 2.6, F.x - 0.4, F.y); ctx.quadraticCurveTo(F.x - 2, F.y + 3, TN.x + 1.4, TN.y - 0.8); };
       for (const [lw, a] of [[5.2, 0.16], [2.6, 0.42], [1, 0.95]]) { ctx.strokeStyle = lw < 2 ? `rgba(255,255,255,${(a * pul).toFixed(3)})` : `rgba(${ec},${(a * pul).toFixed(3)})`; ctx.lineWidth = lw; edges(); ctx.stroke(); }
-      for (const T2 of [TF, TN]) { const g4 = ctx.createRadialGradient(T2.x - 2, T2.y, 0, T2.x - 2, T2.y, 9); g4.addColorStop(0, `rgba(${ec},${(0.55 * pul).toFixed(3)})`); g4.addColorStop(1, `rgba(${ec},0)`); ctx.fillStyle = g4; ctx.beginPath(); ctx.arc(T2.x - 2, T2.y, 9, 0, TAU); ctx.fill(); }
+      for (const T2 of [TF, TN]) { const g4 = ctx.createRadialGradient(T2.x - 1, T2.y, 0, T2.x - 1, T2.y, 6); g4.addColorStop(0, `rgba(${ec},${(0.45 * pul).toFixed(3)})`); g4.addColorStop(1, `rgba(${ec},0)`); ctx.fillStyle = g4; ctx.beginPath(); ctx.arc(T2.x - 1, T2.y, 6, 0, TAU); ctx.fill(); }
     }
     // luces de navegación: roja en la punta lejana, verde en la cercana, destello blanco en la cola
     const nav = (p, col, on) => { if (!on) return; const g3 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 7); g3.addColorStop(0, `rgba(${col},1)`); g3.addColorStop(0.35, `rgba(${col},0.55)`); g3.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g3; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, TAU); ctx.fill(); };

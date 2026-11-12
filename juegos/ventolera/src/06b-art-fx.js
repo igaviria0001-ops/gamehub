@@ -67,7 +67,7 @@ const FX = (() => {
         break;
       case 'down': {
         explosion(b.x, b.y, 1.5);
-        const L = PILOT_ART[b.sp.id].looks[b.look % 2];
+        const L = ArtPilot.look(b.sp.id, b.look); // (también las pinturas del Hangar)
         debris(b.x, b.y, b.vx, b.vy, [L.wingA, L.wingB, L.stripe, '#5b6170']);
         break;
       }

@@ -66,8 +66,8 @@ const Vestidor = (() => {
     const sp = it && it.char ? it.char : Game.cfg.species[p], S = SPECIES[sp];
     const lk = over.paint || V.eq(p, 'paint', sp), tr = String(over.trail || V.eq(p, 'trail') || 't.ninguna').replace(/^t\./, '');
     // escala: el piloto ocupa como medio cuadro; el mundo se mueve a SPD unidades por segundo
-    const s = Math.min(W / 120, H / 78) / S.size, SPD = 170, path = tt => ({ x: tt * SPD, y: Math.sin(tt * 1.7) * 16 + Math.sin(tt * 0.6) * 6 });
-    const P0 = path(t), camX = P0.x + (W * 0.1) / s, camY = 0;
+    const s = Math.min(W / 138, H / 92) / S.size, SPD = 170, path = tt => ({ x: tt * SPD, y: Math.sin(tt * 1.7) * 16 + Math.sin(tt * 0.6) * 6 });
+    const P0 = path(t), camX = P0.x - (W * 0.14) / s, camY = 0;
     sky(x, W, H, camX * s);
     x.save(); x.translate(W / 2, H / 2); x.scale(s, s); x.translate(-camX, -camY);
     // la estela: puntos sobre el camino ya recorrido (alineados en el tiempo para que no tiemblen)
@@ -78,7 +78,7 @@ const Vestidor = (() => {
       Vest.drawTrail(x, tr, key, S.r * 0.34, t, PLAYER_COLORS[p].glow);
     }
     const q2 = path(t + 0.01), a = Math.atan2(q2.y - P0.y, q2.x - P0.x);
-    const fake = { id: live ? 'pv' + p : null, sp: S, look: lk, x: P0.x, y: P0.y, a, c: 1, s: 600, perch: null, flapPh: t * 9, rollT: 0, stun: 0, facing: 1, boosting: Math.sin(t * 1.1 + p * 2) > 0.2, hitT: 0, shield: 0, legendT: 0, flipT: 0, spin: 0, mis: 0, stalled: false };
+    const fake = { id: null, sp: S, look: lk, x: P0.x, y: P0.y, a, c: 1, s: 600, perch: null, flapPh: t * 9, rollT: 0, stun: 0, facing: 1, boosting: Math.sin(t * 1.1 + p * 2) > 0.2, hitT: 0, shield: 0, legendT: 0, flipT: 0, spin: 0, mis: 0, stalled: false };
     try { ArtPilot.draw(x, fake, t, PLAYER_COLORS[p]); } catch (e) { /* nada */ }
     x.restore();
   }

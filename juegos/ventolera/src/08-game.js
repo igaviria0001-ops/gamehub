@@ -37,7 +37,7 @@ const Game = (() => {
     G.time = 0; G.events = []; G.rng = makeRng(opts.seed || 1); G.paused = false;
     G.birds = [0, 1].map(i => new Bird(i, opts.species[i], opts.looks[i]));
     G.birds.forEach(b => { b.G = G; });
-    G.vtr = (opts.trails || []).map(id => (id ? String(id).replace(/^t\./, '') : null)); trailT = [0, 0];
+    G.vtr = (opts.trails || []).map(id => (id ? String(id).replace(/^t\./, '') : null)); trailT = [0, 0]; trailP = [null, null];
     if (typeof Vest !== 'undefined') { Vest.trailReset('vto0'); Vest.trailReset('vto1'); }
     G.bots = [null, null]; G.targets = []; G.boss = null;
     FX.clear();
@@ -325,16 +325,24 @@ const Game = (() => {
   /* ---------- dibujo ---------- */
   // estelas del vestidor: salen de las toberas y se dibujan detrás de los pilotos
   const ATTRACT_TRAILS = ['fuego', 'neon', 'cometa', 'arcoiris', 'galaxia', 'hielo', 'rayo', 'sombra', 'chispas'];
-  let trailT = [0, 0];
+  // (los jets van muy rápido: el reloj de la estela corre más rápido y se rellenan puntos cada pocas
+  //  unidades, para que se vea tupida y del largo justo, como en la vista previa del Hangar)
+  let trailT = [0, 0], trailP = [null, null];
+  const TCLK = 1.6;
   function drawVestTrails(vs) {
     if (typeof Vest === 'undefined' || !G.vtr) return;
     G.birds.forEach((b, i) => {
       const kind = G.vtr[i]; if (!kind || kind === 'ninguna') return;
-      const key = 'vto' + i;
-      if (G.time < trailT[i] - 0.01) Vest.trailReset(key);
-      trailT[i] = G.time;
-      if (b.alive) { const r = b.r * 1.15; Vest.trailPush(key, b.x - Math.cos(b.a) * r, b.y - Math.sin(b.a) * r, G.time, LOWFX ? 14 : 9); }
-      Vest.drawTrail(ctx, kind, key, b.r * 0.34 * Math.sqrt(vs), G.time, PLAYER_COLORS[i].glow);
+      const key = 'vto' + i, now = G.time * TCLK, step = LOWFX ? 10 : 6;
+      if (now < trailT[i] - 0.01) { Vest.trailReset(key); trailP[i] = null; }
+      if (b.alive) {
+        const r = b.r * 1.15, X = b.x - Math.cos(b.a) * r, Y = b.y - Math.sin(b.a) * r, L = trailP[i];
+        const d = L ? Math.hypot(X - L.x, Y - L.y) : 0;
+        if (!L || d > 260) { if (L) Vest.trailReset(key); Vest.trailPush(key, X, Y, now, 0); trailP[i] = { x: X, y: Y, t: now }; }
+        else if (d >= step) { const n = Math.min(14, Math.floor(d / step)); for (let k = 1; k <= n; k++) { const u = k / n; Vest.trailPush(key, L.x + (X - L.x) * u, L.y + (Y - L.y) * u, L.t + (now - L.t) * u, 0); } trailP[i] = { x: X, y: Y, t: now }; }
+      } else trailP[i] = null;
+      trailT[i] = now;
+      Vest.drawTrail(ctx, kind, key, b.r * 0.42 * Math.sqrt(vs), now, PLAYER_COLORS[i].glow);
     });
   }
   // en celular el HUD va un poco más grande (las pantallas son chicas y los textos tienen que leerse)
