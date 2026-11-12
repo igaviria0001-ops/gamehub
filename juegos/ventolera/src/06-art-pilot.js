@@ -28,7 +28,36 @@ const PILOT_ART = {
     { name: 'Dorada', wingA: '#f5c542', wingB: '#a87a12', stripe: '#1c1c22', stripe2: '#f2efe8', locked: 'leyenda5' } ] },
 };
 
+// pinturas especiales del vestidor: sirven para cualquier piloto. mat = diseño del ala (los del vestidor
+// común de GameHub); rot = el diseño va de la nariz a la cola (llamas); edge = bordes de ataque que brillan
+const PAINT_GAL = ['255,110,210', '170,100,255', '90,150,255'];
+const PAINTS = {
+  jaguar: { name: 'Piel de jaguar', wingA: '#d99a2a', wingB: '#6a3a0a', stripe: '#2a1606', stripe2: '#ffd27a', mat: 'jaguar', matC: ['#d99a2a', '#ffd27a', '#2a1606', '#7a3e0a'] },
+  caiman: { name: 'Escamas de caimán', wingA: '#2f8a5a', wingB: '#0e3a24', stripe: '#d8f5a0', stripe2: '#9be8b0', mat: 'escamas', matC: ['#2f8a5a', '#9be8b0', '#0e3a24'] },
+  llamarada: { name: 'Llamarada', wingA: '#3a0c06', wingB: '#120202', stripe: '#ffd23f', stripe2: '#ff7a1a', mat: 'llamas', matC: ['#2a0a04', '#0c0202', '255,210,90', '255,70,10'], rot: true },
+  tormenta: { name: 'Tormenta eléctrica', wingA: '#3a4660', wingB: '#0a0e18', stripe: '#bfe4ff', stripe2: '#5ab8ff', mat: 'tormenta', matC: ['#1a2234', '120,140,180'] },
+  aurora: { name: 'Aurora boreal', wingA: '#0a2a3a', wingB: '#02080c', stripe: '#9affd8', stripe2: '#c79aff', mat: 'aurora', matC: ['#06121e', '110,255,190', '170,110,255'] },
+  cristal: { name: 'Hielo tallado', wingA: '#bfeeff', wingB: '#3a7aa8', stripe: '#ffffff', stripe2: '#7ae0ff', mat: 'cristal', matC: ['#bfeeff', '#6ab8e8', '#f2fdff'] },
+  magma: { name: 'Magma', wingA: '#3a1208', wingB: '#0a0404', stripe: '#ff9a3a', stripe2: '#ffcf6a', mat: 'lava', matC: ['#2a0e08', '#0a0404'], edge: '255,120,40' },
+  oro: { name: 'Filigrana de oro', wingA: '#e8b030', wingB: '#7a4a08', stripe: '#fff6d0', stripe2: '#8a2a14', mat: 'oro', matC: ['#e8b030', '#fff0a8', '#9a6410'], edge: '255,226,140' },
+  fatuo: { name: 'Fuego fatuo', wingA: '#0a2a5a', wingB: '#020814', stripe: '#9ff0ff', stripe2: '#4ab8ff', mat: 'llamas', matC: ['#061a3a', '#020814', '140,230,255', '40,90,255'], rot: true, edge: '120,210,255' },
+  galaxia: { name: 'Galaxia', wingA: '#1a0e40', wingB: '#05020e', stripe: '#ffd6f6', stripe2: '#ff6fd8', mat: 'galaxia', matC: PAINT_GAL, edge: '255,140,230' },
+  agujero: { name: 'Agujero negro', wingA: '#120618', wingB: '#000000', stripe: '#c88aff', stripe2: '#8a3aff', mat: 'vacio', matC: ['#3a0a5a', '200,120,255'], edge: '190,110,255' },
+  holo: { name: 'Holográfica', wingA: '#dfe4f0', wingB: '#6a7490', stripe: '#ffffff', stripe2: '#ff9be6', mat: 'holo', matC: [], edge: 'holo' },
+};
+const PAINT_ORDER = Object.keys(PAINTS);
+
 const ArtPilot = (() => {
+  // la pintura puede venir como número (las de antes), como «especie.n» o como «u.clave» (para cualquier piloto)
+  const LOOKS = {};
+  function look(spid, lk) {
+    const key = spid + '|' + lk; if (LOOKS[key]) return LOOKS[key];
+    const A = PILOT_ART[spid] || PILOT_ART.guacamaya; let L = A.looks[0];
+    if (typeof lk === 'number') L = A.looks[((lk % A.looks.length) + A.looks.length) % A.looks.length];
+    else if (typeof lk === 'string' && lk.startsWith('u.') && PAINTS[lk.slice(2)]) L = PAINTS[lk.slice(2)];
+    else if (typeof lk === 'string') L = A.looks[+lk.split('.')[1] || 0] || A.looks[0];
+    return (LOOKS[key] = L);
+  }
   const SUIT = '#3a4154', SUIT2 = '#242936', BOOT = '#171a22';
   const L2 = (A, B, u) => ({ x: A.x + (B.x - A.x) * u, y: A.y + (B.y - A.y) * u });
   // luz del escenario que pega en el borde del ala (cálida al atardecer, fría de noche)
@@ -103,7 +132,7 @@ const ArtPilot = (() => {
   let G0 = null; function setGame(G) { G0 = G; }
   // dibuja un piloto; «fake» sirve para las vistas previas del menú; vs = aumento de lejos
   function draw(ctx, b, t, pc, vs = 1) {
-    const sp = b.sp, A = PILOT_ART[sp.id], L = A.looks[b.look % A.looks.length], s = A.span;
+    const sp = b.sp, A = PILOT_ART[sp.id], L = look(sp.id, b.look), s = A.span;
     const k = sp.size * 1.24 * vs, V = b.perch ? null : vis(b, t, k), rim = RIM[(G0 && G0.world && G0.world.id) || 'cocora'] || RIM.cocora;
     if (V) drawScarf(ctx, V.scarf, pc, k);
     ctx.save();
@@ -196,6 +225,11 @@ const ArtPilot = (() => {
     wg.addColorStop(0, ArtWorld.mix(L.wingA, '#ffffff', 0.2)); wg.addColorStop(0.5, L.wingA); wg.addColorStop(1, ArtWorld.mix(L.wingB, '#000000', 0.25));
     wingPath(); ctx.fillStyle = wg; ctx.fill();
     ctx.save(); wingPath(); ctx.clip();
+    // pintura especial: el diseño entero sobre el ala (las llamas corren de la nariz a la cola)
+    if (L.mat && typeof Vest !== 'undefined') {
+      if (L.rot) { ctx.save(); ctx.rotate(-Math.PI / 2); Vest.material(ctx, L.mat, L.matC, -21 * s, -24, 42 * s, 36, t, 0.96, !LOWFX); ctx.restore(); }
+      else Vest.material(ctx, L.mat, L.matC, -24, -21 * s, 36, 42 * s, t, 0.96, !LOWFX);
+    }
     // de la nariz a la cola se oscurece un poco
     const cg = ctx.createLinearGradient(F.x, 0, TC.x, 0); cg.addColorStop(0, 'rgba(255,255,255,0.1)'); cg.addColorStop(0.5, 'rgba(0,0,0,0)'); cg.addColorStop(1, 'rgba(0,0,12,0.3)'); ctx.fillStyle = cg; ctx.fillRect(-26, -26, 42, 52);
     // superficies de control en el borde de fuga, como plumas (con sus divisiones)
@@ -205,8 +239,12 @@ const ArtPilot = (() => {
     }
     // pintura: banda ancha junto a cada borde de ataque y galón interior
     const band = (T2, col, o0, o1) => { const a1 = L2(F, T2, 0.1), a2 = L2(F, T2, 0.93), i1 = L2(a1, TC, o0), i2 = L2(a2, TC, o0), j1 = L2(a1, TC, o1), j2 = L2(a2, TC, o1); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(i1.x, i1.y); ctx.lineTo(i2.x, i2.y); ctx.lineTo(j2.x, j2.y); ctx.lineTo(j1.x, j1.y); ctx.closePath(); ctx.fill(); };
-    band(TF, ArtWorld.mix(L.stripe, '#000000', 0.32), 0.1, 0.22); band(TN, L.stripe, 0.1, 0.23);
-    band(TF, ArtWorld.mix(L.stripe2, '#000000', 0.38), 0.29, 0.345); band(TN, L.stripe2, 0.29, 0.35);
+    // (las pinturas especiales solo llevan un filete fino: el diseño es el protagonista)
+    if (L.mat) { band(TF, ArtWorld.mix(L.stripe, '#000000', 0.3), 0.06, 0.1); band(TN, L.stripe, 0.06, 0.105); }
+    else {
+      band(TF, ArtWorld.mix(L.stripe, '#000000', 0.32), 0.1, 0.22); band(TN, L.stripe, 0.1, 0.23);
+      band(TF, ArtWorld.mix(L.stripe2, '#000000', 0.38), 0.29, 0.345); band(TN, L.stripe2, 0.29, 0.35);
+    }
     // líneas de panel
     ctx.strokeStyle = 'rgba(0,0,10,0.2)'; ctx.lineWidth = 0.5; ctx.beginPath(); for (const T2 of [TF, TN]) { const m1 = L2(F, T2, 0.5), m2 = L2(TC, T2, 0.45); ctx.moveTo(m1.x, m1.y); ctx.lineTo(m2.x, m2.y); } ctx.stroke();
     // escarapela del jugador en el ala cercana
@@ -227,6 +265,13 @@ const ArtPilot = (() => {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${rim},0.85)`; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(F.x - 0.6, F.y - 0.8); ctx.quadraticCurveTo(F.x - 2, F.y - 2.6, TF.x + 1.6, TF.y + 0.9); ctx.stroke();
     ctx.strokeStyle = `rgba(${rim},0.5)`; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(15, 2, 5.6, -2.6, -0.6); ctx.stroke();
+    // pinturas legendarias y míticas: los bordes de ataque y las derivas brillan con su luz
+    if (L.edge) {
+      const pul = 0.6 + 0.4 * Math.sin(t * 3.2 + (b.id === 1 ? 1.7 : 0)), ec = L.edge === 'holo' ? (() => { const h = (t * 90) % 360, f = n => { const k = (n + h / 30) % 12; return Math.round(255 * (0.62 - 0.38 * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); }; return `${f(0)},${f(8)},${f(4)}`; })() : L.edge;
+      const edges = () => { ctx.beginPath(); ctx.moveTo(TF.x + 1.4, TF.y + 0.8); ctx.quadraticCurveTo(F.x - 2, F.y - 2.6, F.x - 0.4, F.y); ctx.quadraticCurveTo(F.x - 2, F.y + 3, TN.x + 1.4, TN.y - 0.8); };
+      for (const [lw, a] of [[5.2, 0.16], [2.6, 0.42], [1, 0.95]]) { ctx.strokeStyle = lw < 2 ? `rgba(255,255,255,${(a * pul).toFixed(3)})` : `rgba(${ec},${(a * pul).toFixed(3)})`; ctx.lineWidth = lw; edges(); ctx.stroke(); }
+      for (const T2 of [TF, TN]) { const g4 = ctx.createRadialGradient(T2.x - 2, T2.y, 0, T2.x - 2, T2.y, 9); g4.addColorStop(0, `rgba(${ec},${(0.55 * pul).toFixed(3)})`); g4.addColorStop(1, `rgba(${ec},0)`); ctx.fillStyle = g4; ctx.beginPath(); ctx.arc(T2.x - 2, T2.y, 9, 0, TAU); ctx.fill(); }
+    }
     // luces de navegación: roja en la punta lejana, verde en la cercana, destello blanco en la cola
     const nav = (p, col, on) => { if (!on) return; const g3 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 7); g3.addColorStop(0, `rgba(${col},1)`); g3.addColorStop(0.35, `rgba(${col},0.55)`); g3.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g3; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, TAU); ctx.fill(); };
     nav({ x: TF.x - 4.4, y: TF.y - 2.6 }, '255,70,60', true); nav({ x: TN.x - 4.4, y: TN.y - 2.6 }, '80,255,140', true); nav({ x: TC.x + 1, y: TC.y }, '255,255,255', (t * 1.3 + (b.id || 0) * 0.37) % 1 < 0.08);
@@ -273,5 +318,5 @@ const ArtPilot = (() => {
     }
     ctx.restore();
   }
-  return { draw, drawTrail, setGame };
+  return { draw, drawTrail, setGame, look };
 })();

@@ -23,7 +23,7 @@ const UI = (() => {
     if (name === 'trav') fillTrav();
     if (name === 'title') { const ts = $('#travSub'), tt = Travesia.total(); if (ts) ts.textContent = tt ? `de uno o de dos · ${tt}/30 ★` : 'de uno o de dos · 10 etapas'; }
     if (name === 'pause') { const K = Input.keymap; for (let i = 0; i < 2; i++) { const el = $('#pk' + i); if (el) el.innerHTML = `<b>J${i + 1}</b> ` + keyHint(i); } }
-    if (name === 'title') { const bd = $('#schoolBadge'); if (bd) bd.hidden = !!Store.get('schoolSeen', false); }
+    if (name === 'title') { const bd = $('#schoolBadge'); if (bd) bd.hidden = !!Store.get('schoolSeen', false); if (VV()) VV().after(700); }
     if (name === 'title') { const md = Game.cfg.mode, m = MODES[md].name; $('[data-act="play2"]').textContent = `${m} · 2 jugadores`; $('[data-act="play1"]').textContent = md === 'boss' ? 'Jefe · con la máquina de compañera' : `${m} · contra la máquina`; }
     if (name !== 'keys') cancelCapture();
   }
@@ -162,6 +162,7 @@ const UI = (() => {
     if (hubEv) ['#r-next', '#r-copa', '#r-rematch', '#r-birds', '#r-trav', '#s-results [data-act="toTitle"]'].forEach(q => { const e = $(q); if (e) e.hidden = true; });
     else { const e = $('#s-results [data-act="toTitle"]'); if (e) e.hidden = false; }
     stack = []; show('results', false);
+    if (VV()) VV().after();
   }
   function pause() {
     if (current !== null || !['play', 'countdown', 'roundEnd'].includes(Game.G.state)) return;
@@ -176,7 +177,7 @@ const UI = (() => {
     const ev = hubPending; hubPick(null); if (!ev) return;
     stack = []; paused = false; Game.G.paused = false; Copa.end();
     const C = Game.cfg, keep = [C.species.slice(), C.looks.slice()];
-    if (ev.chars === 'random') { const L = Object.keys(SPECIES); for (let i = 0; i < 2; i++) { C.species[i] = L[Math.floor(Math.random() * L.length)]; C.looks[i] = 0; } }
+    if (ev.chars === 'random') { const L = Object.keys(SPECIES); for (let i = 0; i < 2; i++) { C.species[i] = L[Math.floor(Math.random() * L.length)]; C.looks[i] = VV() ? VV().V.eq(i, 'paint', C.species[i]) : 0; } }
     const map = ev.map && ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
     Game.start(ev.mode, 2, { arena: map, wins: ev.rounds || 3 });
     C.species = keep[0]; C.looks = keep[1];
@@ -193,9 +194,9 @@ const UI = (() => {
   const STATS = { guacamaya: [3, 4, 3, 3], colibri: [1, 5, 5, 2], tucan: [4, 2, 3, 5], condor: [5, 2, 2, 4] };
   function fillBirds() {
     for (let i = 0; i < 2; i++) {
-      const sp = Game.cfg.species[i], A = PILOT_ART[sp], look = Game.cfg.looks[i] % A.looks.length;
+      const sp = Game.cfg.species[i], L = ArtPilot.look(sp, Game.cfg.looks[i]), tr = Game.cfg.trails[i], T = VV() && tr && tr !== 't.ninguna' ? VV().V.BY[tr] : null;
       $(`#bname${i}`).textContent = SPECIES[sp].name;
-      $(`#blook${i}`).textContent = 'Pintura ' + A.looks[look].name.toLowerCase() + (A.looks.some(L => L.locked && !Progress.has(L.locked)) ? ' · la dorada se gana' : '');
+      $(`#blook${i}`).textContent = L.name + (T ? ' · ' + T.name : '');
       const st = STATS[sp];
       $(`#bstats${i}`).innerHTML = ['Blindaje', 'Giro', 'Velocidad', 'Fuego'].map((n, k) => `<div class="stat"><span>${n}</span><i style="--v:${st[k] / 5}"></i></div>`).join('');
     }
@@ -210,26 +211,33 @@ const UI = (() => {
     if (Game.G.state === 'attract') Game.startAttract();
   }
   // pinturas: las bloqueadas (dorada) se saltan hasta ganar su logro; dos pilotos iguales no comparten pintura
-  const usable = (sp, k) => { const L = PILOT_ART[sp].looks[k]; return !L.locked || Progress.has(L.locked); };
-  function pickLook(i, sp, from, step) {
-    const n = PILOT_ART[sp].looks.length;
-    for (let s = 0; s < n; s++) {
-      const k = ((from + s * step) % n + n) % n;
-      if (!usable(sp, k)) continue;
-      if (sp === Game.cfg.species[1 - i] && k === Game.cfg.looks[1 - i] % n) continue;
-      return k;
-    }
-    return 0;
+  // (las pinturas viven en el Hangar: cada piloto recuerda la suya; el botón «Pintura» pasa por las ganadas)
+  const VV = () => (typeof Vestidor !== 'undefined' ? Vestidor : null);
+  const same = (i, sp, id) => sp === Game.cfg.species[1 - i] && String(id) === String(Game.cfg.looks[1 - i]);
+  function pickLook(i, sp, step) {
+    const V = VV(); if (!V) return 0;
+    const L = V.paints(sp), cur = V.V.eq(i, 'paint', sp), k0 = Math.max(0, L.indexOf(cur));
+    for (let s = step ? 1 : 0; s <= L.length; s++) { const id = L[(k0 + s) % L.length]; if (!same(i, sp, id)) return id; }
+    return cur;
   }
   function cycle(i, d) {
     const k = SPECIES_ORDER.indexOf(Game.cfg.species[i]);
     const sp = SPECIES_ORDER[(k + d + SPECIES_ORDER.length) % SPECIES_ORDER.length];
-    Game.setSpecies(i, sp, pickLook(i, sp, Game.cfg.looks[i] % PILOT_ART[sp].looks.length, 1)); fillBirds();
+    Game.setSpecies(i, sp, Game.cfg.looks[i]);
+    const id = pickLook(i, sp, 0); if (VV()) VV().V.setEq(i, 'paint', id, sp); else Game.setSpecies(i, sp, 0);
+    fillBirds();
   }
   function recolor(i) {
-    const sp = Game.cfg.species[i];
-    Game.setSpecies(i, sp, pickLook(i, sp, Game.cfg.looks[i] + 1, 1)); fillBirds();
+    const sp = Game.cfg.species[i], id = pickLook(i, sp, 1);
+    if (VV()) VV().V.setEq(i, 'paint', id, sp);
+    fillBirds();
   }
+  function openVest(i) { const V = VV(); if (!V) return; V.open(i, () => { if (current === 'birds') fillBirds(); }); }
+  function vestBadge() {
+    const V = VV(), n = V ? V.V.fresh() : 0;
+    $$('.vestNew').forEach(e => { e.hidden = !n; e.textContent = n === 1 ? '¡1 nueva!' : `¡${n} nuevas!`; });
+  }
+  function refreshBirds() { if (current === 'birds') fillBirds(); }
   function startPreview() {
     fillBirds(); fillArena(); fillMode(); stopPreview();
     const t0 = performance.now();
@@ -315,6 +323,7 @@ const UI = (() => {
     fullscreen: () => FS.toggle(),
     'prev0': () => cycle(0, -1), 'next0': () => cycle(0, 1), 'prev1': () => cycle(1, -1), 'next1': () => cycle(1, 1),
     'look0': () => recolor(0), 'look1': () => recolor(1),
+    vest: () => openVest(0), 'vest0': () => openVest(0), 'vest1': () => openVest(1),
     arenaPrev: () => cycleArena(-1), arenaNext: () => cycleArena(1), modePrev: () => cycleMode(-1), modeNext: () => cycleMode(1),
   };
   function init() {
@@ -363,7 +372,7 @@ const UI = (() => {
       document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
     }
   }
-  return { init, show, pause, resume, results, hubPlay, get current() { return current; } };
+  return { init, show, pause, resume, results, hubPlay, vestBadge, refreshBirds, get current() { return current; } };
 })();
 
 // para las pruebas automáticas
