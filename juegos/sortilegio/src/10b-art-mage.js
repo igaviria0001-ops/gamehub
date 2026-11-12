@@ -49,8 +49,37 @@ const ArtMage = (() => {
     tota: [{ name: 'Lago hondo' }, { name: 'Totora', robe: '#5a5a2a', robe2: '#1c1c0a', cape: '#7a7a3a', cape2: '#22220c', trim: '#f0e6a0', panel: '#2e2e12', lining: '#9ad85a', eye: '#e8ff9a' }, { name: 'Escarcha del páramo', robe: '#9ab4c4', robe2: '#3a5262', cape: '#c4d8e2', cape2: '#44606e', trim: '#ffffff', panel: '#54707e', lining: '#9ff0ff', eye: '#d8fbff' }],
   });
   const SKIN_NEED = [0, 2, 6];
+  /* atuendos para cualquier mago (se ganan en la campaña, el grimorio, los duelos…): cada uno trae su
+     material (Vest.material) y, los más altos, su aura y su estela. El mago conserva su tocado y su seña. */
+  const GAL = ['255,110,210', '170,100,255', '90,150,255'];
+  const OUTFITS = {
+    jaguar: { name: 'Manto de jaguar', look: { robe: '#3a2414', robe2: '#120804', panel: '#24140a', trim: '#f0c24a', lining: '#ff9a3a', eye: '#ffd27a', cape: '#c88a2a', cape2: '#5a3410' }, capeMat: 'jaguar', capeC: ['#d99a2a', '#ffd27a', '#2a1606', '#7a3e0a'] },
+    caiman: { name: 'Escamas de caimán', look: { robe: '#2a5a3a', robe2: '#0a1e12', panel: '#123a22', trim: '#c8f0a0', lining: '#7ad86a', eye: '#d8ff7a', cape: '#1e3a26', cape2: '#081408' }, mat: 'escamas', matC: ['#2f8a5a', '#9be8b0', '#0e3a24'] },
+    runico: { name: 'Vestidura rúnica', look: { robe: '#1a0e34', robe2: '#06020e', panel: '#120828', trim: '#d9b8ff', lining: '#a86bff', eye: '#e8d4ff', cape: '#160a2e', cape2: '#05020c' }, mat: 'runas', matC: ['#160a2e', '#c99aff', '200,150,255'], capeMat: 'runas', capeC: ['#120826', '#b98aff', '190,140,255'] },
+    cristal: { name: 'Manto de cristal', look: { robe: '#cfe8f6', robe2: '#5a88a8', panel: '#8ab8d4', trim: '#ffffff', lining: '#7ae0ff', eye: '#e8fbff', cape: '#9fd8f0', cape2: '#2a5a7a' }, capeMat: 'cristal', capeC: ['#bfeeff', '#6ab8e8', '#f2fdff'] },
+    aurora: { name: 'Aurora del páramo', look: { robe: '#0a1e2a', robe2: '#02080c', panel: '#06141e', trim: '#9affd8', lining: '#7affc8', eye: '#c8ffe8', cape: '#0a1a26', cape2: '#02060a' }, mat: 'aurora', matC: ['#06121e', '110,255,190', '170,110,255'], capeMat: 'aurora', capeC: ['#040e18', '110,255,190', '170,110,255'] },
+    tormenta: { name: 'Ojo de la tormenta', look: { robe: '#2a3448', robe2: '#0a0e18', panel: '#141a28', trim: '#bfe4ff', lining: '#5ab8ff', eye: '#bfeaff', cape: '#1e2638', cape2: '#06080e' }, mat: 'tormenta', matC: ['#1a2234', '120,140,180'], capeMat: 'tormenta', capeC: ['#141a2a', '110,130,170'], aura2: 'rayos' },
+    lava: { name: 'Manto de magma', look: { robe: '#2a0e08', robe2: '#0a0404', panel: '#1a0806', trim: '#ff9a3a', lining: '#ff5a1a', eye: '#ffb04a', cape: '#24100a', cape2: '#080302' }, mat: 'lava', matC: ['#2a0e08', '#0a0404'], capeMat: 'lava', capeC: ['#220c06', '#080302'], aura2: 'brasas', trail2: 'fuego' },
+    oro: { name: 'Hilo de oro', look: { robe: '#e8b030', robe2: '#7a4a08', panel: '#8a2a14', trim: '#fff6d0', lining: '#ff6a2a', eye: '#fff2b0', cape: '#e0a028', cape2: '#6a3a08' }, mat: 'oro', matC: ['#e8b030', '#fff0a8', '#9a6410'], capeMat: 'oro', capeC: ['#d89a20', '#ffe68a', '#8a5408'], aura2: 'corona' },
+    fatuo: { name: 'Fuego fatuo', look: { robe: '#061a3a', robe2: '#020814', panel: '#04102a', trim: '#9ff0ff', lining: '#4ab8ff', eye: '#bff6ff', cape: '#0a1a3a', cape2: '#020612' }, mat: 'llamas', matC: ['#061a3a', '#020814', '140,230,255', '40,90,255'], aura2: 'fuego_azul', trail2: 'hielo' },
+    dragon: { name: 'Piel de dragón', look: { robe: '#1a6a54', robe2: '#062a20', panel: '#0a3a2e', trim: '#ffd36a', lining: '#ffb03a', eye: '#ffe07a', cape: '#145a46', cape2: '#04201a' }, mat: 'escamas', matC: ['#1f9a7a', '#a8ffe0', '#0a3a2e'], capeMat: 'escamas', capeC: ['#17806a', '#8ef0d0', '#062a22'], aura2: 'dragon' },
+    galaxia: { name: 'Manto galáctico', look: { robe: '#120a2e', robe2: '#04020c', panel: '#0a0620', trim: '#ffd6f6', lining: '#ff6fd8', eye: '#ffffff', cape: '#1a0e40', cape2: '#05020e' }, mat: 'galaxia', matC: GAL, capeMat: 'galaxia', capeC: GAL, aura2: 'galaxia', trail2: 'cometa' },
+    abismo: { name: 'Abismo', look: { robe: '#0c0414', robe2: '#000000', panel: '#08020e', trim: '#c88aff', lining: '#8a3aff', eye: '#ff5a9a', cape: '#0a0410', cape2: '#000000' }, mat: 'vacio', matC: ['#3a0a5a', '200,120,255'], capeMat: 'vacio', capeC: ['#2a0846', '180,100,255'], aura2: 'vacio', trail2: 'sombra' },
+    prisma: { name: 'Prisma', look: { robe: '#dfe4f0', robe2: '#6a7490', panel: '#9aa4bc', trim: '#ffffff', lining: '#ff9be6', eye: '#ffffff', cape: '#cfd6e6', cape2: '#5a6480' }, mat: 'holo', matC: [], capeMat: 'holo', capeC: [], aura2: 'prisma', trail2: 'arcoiris' },
+  };
+  const OUTFIT_ORDER = Object.keys(OUTFITS);
   const looks = {};
-  function look(cid, skin = 0) { const k = cid + skin; if (looks[k]) return looks[k]; const sk = (SKINS[cid] || [])[skin] || {}; return (looks[k] = Object.assign({}, L[cid], sk)); }
+  // el atuendo puede venir como número (los de antes: 0, 1, 2), como «mago.n» o como «u.clave» (para cualquier mago)
+  function look(cid, skin = 0) {
+    const k = cid + '|' + skin; if (looks[k]) return looks[k];
+    let sk = {};
+    if (typeof skin === 'number') sk = (SKINS[cid] || [])[skin] || {};
+    else if (typeof skin === 'string' && skin.startsWith('u.')) { const O = OUTFITS[skin.slice(2)]; if (O) sk = Object.assign({ name: O.name }, O.look, { mat: O.mat || null, matC: O.matC, capeMat: O.capeMat || null, capeC: O.capeC, aura2: O.aura2 || null, trail2: O.trail2 || null }); }
+    else if (typeof skin === 'string') { const n = +skin.split('.')[1] || 0; sk = (SKINS[cid] || [])[n] || {}; }
+    return (looks[k] = Object.assign({}, L[cid], { mat: null, capeMat: null, aura2: null, trail2: null }, sk));
+  }
+  // material de la prenda (el que llama ya recortó con su forma)
+  const matOn = (x, kind, c, bx, by, bw, bh, t) => { if (kind && typeof Vest !== 'undefined') Vest.material(x, kind, c || [], bx, by, bw, bh, t, 0.92, !LOWFX); };
   const EC = el => ELEMENTS[el] || ELEMENTS.wind;
   function fillOL(x, fill, lw = 1.1) { x.fillStyle = fill; x.fill(); x.strokeStyle = OL; x.lineWidth = lw; x.stroke(); }
   /* ---------- orbe de una mano ---------- */
@@ -113,6 +142,7 @@ const ArtMage = (() => {
     g.addColorStop(0, front ? shade(Lk.cape, 0.1) : shade(Lk.cape, -0.12)); g.addColorStop(0.5, front ? Lk.cape : shade(Lk.cape, -0.38)); g.addColorStop(1, Lk.cape2);
     fillInk(x, g, Lk.cape, 1.2);
     x.save(); x.clip();
+    if (Lk.capeMat) { const X0 = Math.min(a[0], left[0][0], b[0], right[0][0]) - 6, X1 = Math.max(a[0], left[0][0], b[0], right[0][0]) + 6; matOn(x, Lk.capeMat, Lk.capeC, X0, top - 6, X1 - X0, bot - top + 22, t); }
     // volumen: luz de luna por la izquierda, sombra propia por la derecha
     const cx0 = Math.min(a[0], left[0][0]) - 2, cx1 = Math.max(b[0], right[0][0]) + 2, vg = x.createLinearGradient(cx0, 0, cx1, 0);
     vg.addColorStop(0, 'rgba(190,210,255,0.16)'); vg.addColorStop(0.3, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,14,0.42)'); x.fillStyle = vg; x.fillRect(cx0 - 20, top - 10, cx1 - cx0 + 40, bot - top + 40);
@@ -184,6 +214,7 @@ const ArtMage = (() => {
     x.bezierCurveTo(HX + hw * 0.76, HY - pk + 4.5, HX + hw + 4.6, HY - 2, HX + hw + 2.6, HY + 12);
     x.quadraticCurveTo(HX, HY + 17, HX - hw - 2.6, HY + 12); fillInk(x, hg, Lk.cape, 1.15);
     x.save(); x.clip();
+    if (Lk.capeMat) matOn(x, Lk.capeMat, Lk.capeC, HX - hw - 6, HY - pk - 3, hw * 2 + 12, pk + 22, t);
     const hl = x.createRadialGradient(HX - 6.5, HY - pk * 0.45, 0, HX - 6.5, HY - pk * 0.45, 13); hl.addColorStop(0, 'rgba(215,228,255,0.26)'); hl.addColorStop(1, 'rgba(215,228,255,0)'); x.fillStyle = hl; x.fillRect(HX - 22, HY - pk - 4, 44, pk + 24);
     const hs = x.createLinearGradient(HX - 2, 0, HX + hw + 4, 0); hs.addColorStop(0, 'rgba(0,0,12,0)'); hs.addColorStop(1, 'rgba(0,0,12,0.46)'); x.fillStyle = hs; x.fillRect(HX - 2, HY - pk - 4, hw + 8, pk + 24);
     fold(x, tipX - 1, tipY + 3, HX - hw + 1.5, HY + 12, 2.6, 0.26, 0.1); fold(x, tipX + 1, tipY + 3, HX + hw - 1, HY + 13, 2.8, 0.3, 0);
@@ -293,6 +324,7 @@ const ArtMage = (() => {
     robePath(x, sh, wa, hem, top, bot, sway, fx, t);
     fillInk(x, g, Lk.robe, 1.25);
     x.save(); x.clip();
+    if (Lk.mat) matOn(x, Lk.mat, Lk.matC, -hem - 6 + sway, top - 2, hem * 2 + 12, bot - top + 10, t);
     // la luz viene de arriba: la falda se oscurece hacia el suelo; sombra del manto sobre el pecho
     const vg = x.createLinearGradient(0, -34, 0, bot + 4); vg.addColorStop(0, rgbaOf(Lk.robe2, 0)); vg.addColorStop(1, rgbaOf(Lk.robe2, 0.72)); x.fillStyle = vg; x.fillRect(-hem - 6, -34, hem * 2 + 12, 40);
     const ao = x.createLinearGradient(0, -53, 0, -41); ao.addColorStop(0, 'rgba(0,0,10,0.5)'); ao.addColorStop(1, 'rgba(0,0,10,0)'); x.fillStyle = ao; x.fillRect(-hem, -56, hem * 2, 16);
@@ -339,6 +371,7 @@ const ArtMage = (() => {
     x.beginPath(); x.moveTo(w + fx, -48.5); x.bezierCurveTo(w + 2.6 + fx, -59, 10.5 + fx, -67, fx + 5, -67); x.lineTo(fx - 5, -67); x.bezierCurveTo(-10.5 + fx, -67, -w - 2.6 + fx, -59, -w + fx, -48.5);
     x.quadraticCurveTo(-w * 0.55 + fx, -43.2, fx, cy); x.quadraticCurveTo(w * 0.55 + fx, -43.2, w + fx, -48.5); x.closePath(); fillInk(x, g, Lk.cape, 1.15);
     x.save(); x.clip();
+    if (Lk.capeMat) matOn(x, Lk.capeMat, Lk.capeC, -w - 4 + fx, -69, w * 2 + 8, 30, t);
     // hombros redondos: brillo de luna a la izquierda, sombra a la derecha y bajo la capucha
     const hl = x.createRadialGradient(fx - w * 0.6, -60, 0, fx - w * 0.6, -58, 9 * B); hl.addColorStop(0, 'rgba(215,228,255,0.3)'); hl.addColorStop(1, 'rgba(215,228,255,0)'); x.fillStyle = hl; x.fillRect(fx - w - 4, -70, w + 8, 30);
     const sg = x.createLinearGradient(fx, 0, fx + w + 2, 0); sg.addColorStop(0, 'rgba(0,0,12,0)'); sg.addColorStop(1, 'rgba(0,0,12,0.44)'); x.fillStyle = sg; x.fillRect(fx, -70, w + 4, 30);
@@ -379,6 +412,7 @@ const ArtMage = (() => {
     x.beginPath(); x.moveTo(Lp[0][0], Lp[0][1]); for (let i = 1; i <= N; i++) x.lineTo(Lp[i][0], Lp[i][1]); for (let i = N; i >= 0; i--) x.lineTo(Rp[i][0], Rp[i][1]); x.closePath();
     const g = x.createLinearGradient(sx, sy - 4, sx, Math.max(sy, hy) + 10); g.addColorStop(0, shade(Lk.robe, behind ? -0.3 : 0.2)); g.addColorStop(0.5, shade(Lk.robe, behind ? -0.45 : -0.04)); g.addColorStop(1, shade(Lk.robe, behind ? -0.62 : -0.42));
     fillInk(x, g, Lk.robe, 1.05);
+    if (Lk.mat) { x.save(); x.clip(); matOn(x, Lk.mat, Lk.matC, Math.min(sx, hx) - 12, Math.min(sy, hy) - 12, Math.abs(hx - sx) + 24, Math.abs(hy - sy) + 34, performance.now() / 1000); x.restore(); }
     // pliegues de la manga
     x.strokeStyle = 'rgba(0,0,10,0.3)'; x.lineWidth = 0.9; x.beginPath(); for (const [i0, f0, i1, f1] of [[2, 0.5, N, 0.3], [4, 0.72, N, 0.62]]) { x.moveTo(lerp(Lp[i0][0], Rp[i0][0], f0), lerp(Lp[i0][1], Rp[i0][1], f0)); x.quadraticCurveTo(lerp(Lp[i1 - 2][0], Rp[i1 - 2][0], (f0 + f1) / 2), lerp(Lp[i1 - 2][1], Rp[i1 - 2][1], (f0 + f1) / 2), lerp(Lp[i1][0], Rp[i1][0], f1), lerp(Lp[i1][1], Rp[i1][1], f1)); } x.stroke();
     if (!behind) { x.strokeStyle = 'rgba(255,255,255,0.12)'; x.lineWidth = 0.9; x.beginPath(); const hi = low === Lp ? Rp : Lp; x.moveTo(hi[1][0], hi[1][1] + 1.2); for (let i = 2; i < N; i++) x.lineTo(hi[i][0], hi[i][1] + 1.2); x.stroke(); }
@@ -459,6 +493,7 @@ const ArtMage = (() => {
     const now = performance.now() / 1000, dt = clamp(now - (m._lt || now), 0, 0.05); m._lt = now;
     if (G.state !== 'roundEnd' || G.slow <= 0) aura(m, Lk, dt);
     const S = Lk.scale, B = Lk.build;
+    if (Lk.trail2 && typeof Vest !== 'undefined') { const key = 'srt' + m.idx + (G.attract ? 'a' : ''); Vest.trailPush(key, m.x, m.y - 26 * S, now, 4); Vest.drawTrail(x, Lk.trail2, key, 7.5, now); }
     x.save(); x.translate(m.x, m.y);
     // sombra suave
     const sg = x.createRadialGradient(0, 2, 2, 0, 2, 24 * S * B); sg.addColorStop(0, 'rgba(6,4,16,0.6)'); sg.addColorStop(1, 'rgba(6,4,16,0)'); x.fillStyle = sg; x.beginPath(); x.ellipse(0, 2, 24 * S * B, 9 * S, 0, 0, TAU); x.fill();
@@ -495,7 +530,9 @@ const ArtMage = (() => {
       if (gch && Math.random() < dt * 40) { const a = Math.random() * TAU, d = 50 + Math.random() * 60; FX.P({ x: m.x + Math.cos(a) * d, y: m.y + Math.sin(a) * d * 0.45, z: 6, vx: -Math.cos(a) * d * 1.8, vy: -Math.sin(a) * d * 0.8, vz: 60 + Math.random() * 90, g: -30, drag: 1, life: 0.5, size: 2.2, color: Math.random() < 0.5 ? '#ffe9a0' : (Math.random() < 0.5 ? E1.c0 : E2.c0), kind: 'ember' }); }
     }
     if (lev) x.translate(0, -lev);
+    if (Lk.aura2) Vest.drawAura(x, Lk.aura2, 0, -40 * S, 33 * S, t, 0);
     const { fx, moving } = figure(x, G, m, Lk, t, dt);
+    if (Lk.aura2) Vest.drawAura(x, Lk.aura2, 0, -40 * S, 33 * S, t, 1);
     if (ready) { x.save(); x.globalCompositeOperation = 'lighter'; const gg = x.createRadialGradient(0, -46, 4, 0, -46, 56); gg.addColorStop(0, 'rgba(255,220,130,0.22)'); gg.addColorStop(1, 'rgba(255,220,130,0)'); x.fillStyle = gg; x.beginPath(); x.ellipse(0, -46, 34 * B, 58, 0, 0, TAU); x.fill(); x.restore(); }
     // estados
     if (m.st.frozen > 0) { const ig = x.createLinearGradient(-22, -96, 22, 4); ig.addColorStop(0, 'rgba(230,250,255,0.75)'); ig.addColorStop(1, 'rgba(140,210,240,0.55)'); x.beginPath(); x.moveTo(-22, 3); x.lineTo(-26, -52); x.lineTo(-11, -98); x.lineTo(13, -96); x.lineTo(26, -50); x.lineTo(22, 3); x.closePath(); x.fillStyle = ig; x.fill(); x.strokeStyle = 'rgba(255,255,255,0.9)'; x.lineWidth = 1.5; x.stroke(); x.beginPath(); x.moveTo(-11, -98); x.lineTo(-4, -46); x.lineTo(13, -96); x.stroke(); }
@@ -614,7 +651,7 @@ const ArtMage = (() => {
     m.hands[0].hold = 0.35 + 0.1 * Math.sin(t * 1.4); m.hands[1].hold = 0.35 + 0.1 * Math.sin(t * 1.4 + 1.5); m.vx = Math.sin(t * 0.7) * 40; menuG.time = t;
     x.save(); x.translate(cx, gy); x.scale(s, s);
     const sh = x.createRadialGradient(0, 2, 2, 0, 2, 28); sh.addColorStop(0, 'rgba(0,0,0,0.75)'); sh.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = sh; x.beginPath(); x.ellipse(0, 2, 30, 10, 0, 0, TAU); x.fill();
-    m._show = true; figure(x, menuG, m, Lk, t, 1 / 60); x.restore();
+    m._show = true; if (Lk.aura2) Vest.drawAura(x, Lk.aura2, 0, -40 * Lk.scale, 33 * Lk.scale, t, 0); figure(x, menuG, m, Lk, t, 1 / 60); if (Lk.aura2) Vest.drawAura(x, Lk.aura2, 0, -40 * Lk.scale, 33 * Lk.scale, t, 1); x.restore();
     // bruma de color a los pies
     x.globalCompositeOperation = 'lighter'; for (const [E_, ox] of [[E, -0.3], [E2, 0.3]]) { const fx0 = cx + H * ox + Math.sin(t * 0.5 + ox * 9) * H * 0.05, g = x.createRadialGradient(fx0, gy + H * 0.04, 0, fx0, gy + H * 0.04, H * 0.34); g.addColorStop(0, E_.c1 + '2e'); g.addColorStop(1, E_.c1 + '00'); x.fillStyle = g; x.save(); x.translate(0, gy + H * 0.04); x.scale(1, 0.4); x.translate(0, -(gy + H * 0.04)); x.beginPath(); x.arc(fx0, gy + H * 0.04, H * 0.34, 0, TAU); x.fill(); x.restore(); }
     x.globalCompositeOperation = 'source-over';
@@ -633,8 +670,10 @@ const ArtMage = (() => {
     dais(x, 44 * s, t, E, E2);
     x.globalAlpha = al; x.scale(s, s);
     const sh = x.createRadialGradient(0, 2, 2, 0, 2, 28); sh.addColorStop(0, 'rgba(0,0,0,0.75)'); sh.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = sh; x.beginPath(); x.ellipse(0, 2, 30, 10, 0, 0, TAU); x.fill();
+    if (Lk.aura2) Vest.drawAura(x, Lk.aura2, 0, -40 * Lk.scale, 33 * Lk.scale, t, 0);
     figure(x, menuG, m, Lk, t, 1 / 60);
+    if (Lk.aura2) Vest.drawAura(x, Lk.aura2, 0, -40 * Lk.scale, 33 * Lk.scale, t, 1);
     x.restore();
   }
-  return { draw, marker, portrait, showcase, hero, orb, L, SKINS, SKIN_NEED, look };
+  return { draw, marker, portrait, showcase, hero, orb, L, SKINS, SKIN_NEED, OUTFITS, OUTFIT_ORDER, look };
 })();

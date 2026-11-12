@@ -35,7 +35,7 @@ const Game = (() => {
   function start(mode, players, over = {}) {
     lastOver = over; G.mode = mode; G.players = players; G.attract = false; G.state = 'count'; G.copaTag = null; G.aimSpots = null; G.objs = null; G.boss = null; G.L = null; G.dummy = null; G.school = null;
     G.arenaId = over.arena || cfg.arena; if (G.arenaId === 'random') G.arenaId = ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
-    G.chars = over.chars || cfg.chars.slice(); G.skins = (over.skins || cfg.skins || [0, 0]).slice(); if (G.chars[0] === G.chars[1] && G.skins[0] === G.skins[1]) G.skins[1] = (G.skins[0] + 1) % 3; G.level = over.level != null ? over.level : cfg.level;
+    G.chars = over.chars || cfg.chars.slice(); G.skins = (over.skins || (typeof Vestidor !== 'undefined' ? [0, 1].map(p => Vestidor.V.eq(p, 'skin', G.chars[p])) : [0, 0])).slice(); if (G.chars[0] === G.chars[1] && G.skins[0] === G.skins[1]) { const s0 = G.skins[0]; G.skins[1] = typeof s0 === 'number' ? (s0 + 1) % 3 : /\.0$/.test(String(s0)) ? G.chars[1] + '.1' : G.chars[1] + '.0'; } G.level = over.level != null ? over.level : cfg.level;
     G.winsNeeded = mode === 'duel' ? (over.wins || cfg.wins) : 1; G.campLevel = over.level != null && mode === 'camp' ? over.level : G.campLevel || 0; G.coop = mode === 'camp'; G.wins = [0, 0]; G.round = 0; G.paused = false;
     G.matchStats = [Mage.newStats(), Mage.newStats()];
     newRound(true);
@@ -48,7 +48,7 @@ const Game = (() => {
     G.wind = null; G.current = null; G.rain = false; G.embMul = 1;
     const prev = G.mages;
     G.mages = G.chars.map((cid, i) => {
-      const [x, y] = G.A.spawns[i], m = new Mage(G, i, cid, x, y, i); m.skin = G.state === 'attract' ? (Math.random() * 3) | 0 : (G.skins || [])[i] || 0;
+      const [x, y] = G.A.spawns[i], m = new Mage(G, i, cid, x, y, i); m.skin = G.state === 'attract' ? (Math.random() < 0.4 ? 'u.' + ArtMage.OUTFIT_ORDER[(Math.random() * ArtMage.OUTFIT_ORDER.length) | 0] : (Math.random() * 3) | 0) : (G.skins || [])[i] || 0;
       if (!first && prev[i]) { m.emb = prev[i].emb * 0.5; m.stats = prev[i].stats; }
       const bot = G.state === 'attract' || i >= G.players; if (bot) m.ctrl = new Bot(G.state === 'attract' ? 1 : G.mode === 'camp' ? 2 : G.level);
       return m;

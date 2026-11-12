@@ -34,9 +34,16 @@ const UI = (() => {
     const prev = stack.pop() || 'title'; show(prev, false);
   }
   /* ---------- preparar duelo ---------- */
-  const pick = Game.cfg.chars.slice(), skins = (Game.cfg.skins || [0, 0]).slice();
-  const skinOpen = (cid, k) => k === 0 || ((Progress.data.wins || {})[cid] || 0) >= ArtMage.SKIN_NEED[k];
-  function cycleSkin(p) { const cid = pick[p]; for (let d = 1; d <= 3; d++) { const k = (skins[p] + d) % 3; if (skinOpen(cid, k)) { if (k !== skins[p]) { skins[p] = k; Sound.play('select'); Game.cfg.skins = skins.slice(); Store.set('cfg', Game.cfg); fillCard(p); } return; } } }
+  const pick = Game.cfg.chars.slice(), skins = [pick[0] + '.0', pick[1] + '.0'];
+  // atuendos: los maneja el vestidor (13b-vest.js); aquí solo se elige entre los que ya se ganaron
+  const VV = () => (typeof Vestidor !== 'undefined' ? Vestidor.V : null);
+  function syncSkins() { const V = VV(); if (V) for (let p = 0; p < 2; p++) skins[p] = V.eq(p, 'skin', pick[p]); }
+  function skinList(cid) { const V = VV(); return V ? V.items.filter(it => it.slot === 'skin' && (!it.char || it.char === cid) && V.has(it.id)).sort((a, b) => Vest.RORDER.indexOf(a.rar) - Vest.RORDER.indexOf(b.rar)) : []; }
+  function cycleSkin(p) { const V = VV(); if (!V) return; const L = skinList(pick[p]); if (L.length < 2) { Sound.play('deny'); return; } const k = L.findIndex(it => it.id === skins[p]), nx = L[(k + 1) % L.length]; V.setEq(p, 'skin', nx.id, pick[p]); skins[p] = nx.id; Sound.play('select'); fillCard(p); }
+  function openVest(p, after) { const V = VV(); if (!V) return; V.wardrobe({ player: p || 0, onClose() { syncSkins(); if (current === 'setup') { fillCard(0); fillCard(1); } vestBadge(); if (after) after(); } }); }
+  function vestBadge() { const V = VV(), b = $('#vestNew'); if (!V || !b) return; const n = V.fresh(); b.textContent = n ? n + (n === 1 ? ' nuevo' : ' nuevos') : V.count().join(' / '); b.classList.toggle('hot', n > 0); }
+  // después de una partida: revisa qué se ganó y lo muestra con su ceremonia (encima de los resultados)
+  function vestAfter() { const V = VV(); if (!V) return; const got = V.check(); if (got.length) setTimeout(() => { V.reveal(() => vestBadge()); }, 1100); }
   // medallones de elemento (dibujados una vez)
   const medals = {};
   function medal(el) {
@@ -53,9 +60,11 @@ const UI = (() => {
     return (medals[el] = c.toDataURL());
   }
   function skinRow(p) {
-    const cid = pick[p], S = ArtMage.SKINS[cid], wins = (Progress.data.wins || {})[cid] || 0, nextLocked = [1, 2].find(k => !skinOpen(cid, k));
+    const V = VV(); if (!V) return '';
+    const cid = pick[p], it = V.BY[skins[p]] || V.BY[cid + '.0'], R = Vest.RAR[it.rar], L = skinList(cid), all = V.items.filter(i => i.slot === 'skin' && (!i.char || i.char === cid) && !i.free).length;
     const keys = touch() ? '' : p === 0 ? ' (W)' : setup.players === 1 ? '' : ' (↑)';
-    return `<div class="skins"><button class="btn small skinBtn">Atuendo: ${S[skins[p]].name}${keys}</button>${nextLocked ? `<span class="lock" title="Gana duelos con ${CHARS[cid].name} para desbloquear">🔒 ${S[nextLocked].name}: ${ArtMage.SKIN_NEED[nextLocked] - wins} victoria${ArtMage.SKIN_NEED[nextLocked] - wins === 1 ? '' : 's'} más</span>` : ''}</div>`;
+    if (p === 1 && setup.players === 1) return '';
+    return `<div class="skins"><button class="btn small skinBtn" style="border-color:${R.c};box-shadow:0 0 12px ${R.c}55" title="Cambiar de atuendo">Atuendo: ${it.name}${keys}</button><button class="btn small vestBtn" title="Ver todos los atuendos">Vestidor · ${L.length - 1}/${all}</button></div>`;
   }
   const elTag = el => `<span class="el"><img alt="" src="${medal(el)}">${ELEMENTS[el].name}</span>`;
   const bar = (lbl, v) => `<span class="bar"><span>${lbl}</span><b><i style="width:${Math.round(clamp(v, 0.08, 1) * 100)}%"></i></b></span>`;
@@ -71,13 +80,14 @@ const UI = (() => {
       <div class="bars">${bar('Vida', (C.hp - 80) / 90)}${bar('Rapidez', (C.speed - 0.82) / 0.36)}</div>
       <div class="tr"><b>${FUSIONS[C.sig].name}:</b> ${C.trait}</div>${skinRow(p)}</div>`;
     const sb = card.querySelector('.skinBtn'); if (sb) sb.onclick = () => cycleSkin(p);
+    const vb = card.querySelector('.vestBtn'); if (vb) vb.onclick = () => openVest(p);
     card.querySelectorAll('[data-d]').forEach(b => b.onclick = () => cycle(p, +b.dataset.d));
     card.classList.remove('swap'); void card.offsetWidth; card.classList.add('swap');
     startShow();
   }
   // portada: dos magos grandes a los lados, que cambian cada tanto
   let titleRaf = 0; const heroes = { a: null, b: null, t0: 0 };
-  function heroPick() { const L = CHAR_ORDER.slice(); const a = L.splice((Math.random() * L.length) | 0, 1)[0], b = L[(Math.random() * L.length) | 0]; heroes.a = a; heroes.b = b; heroes.t0 = performance.now() / 1000; }
+  function heroPick() { const L = CHAR_ORDER.slice(); const a = L.splice((Math.random() * L.length) | 0, 1)[0], b = L[(Math.random() * L.length) | 0]; heroes.a = a; heroes.b = b; heroes.t0 = performance.now() / 1000; const O = ArtMage.OUTFIT_ORDER, rs = () => Math.random() < 0.55 ? 'u.' + O[(Math.random() * O.length) | 0] : (Math.random() * 3) | 0; heroes.sa = rs(); heroes.sb = rs(); }
   function startHeroes() {
     if (titleRaf) return; if (!heroes.a) heroPick();
     const cv = $('#t-heroes'); let lay = null, n = 0;
@@ -93,7 +103,7 @@ const UI = (() => {
         for (const d of [0, 1]) { const g = x.createLinearGradient(d ? W : 0, 0, d ? W - W * 0.3 : W * 0.3, 0); g.addColorStop(0, 'rgba(4,3,14,0.82)'); g.addColorStop(1, 'rgba(4,3,14,0)'); x.fillStyle = g; x.fillRect(d ? W * 0.7 : 0, 0, W * 0.3, H); }
         const age = t - heroes.t0, al = clamp(Math.min(age / 0.8, (11 - age) / 0.8), 0, 1); if (age > 11) heroPick();
         const X = Math.max(34 * s, lay.main / 2), Y = H - Math.max(12, H * 0.045);
-        ArtMage.hero(x, heroes.a, X, Y, s, t, 1, 0, al); ArtMage.hero(x, heroes.b, W - X, Y, s, t + 3.1, -1, 0, al);
+        ArtMage.hero(x, heroes.a, X, Y, s, t, 1, heroes.sa || 0, al); ArtMage.hero(x, heroes.b, W - X, Y, s, t + 3.1, -1, heroes.sb || 0, al);
       }
       titleRaf = requestAnimationFrame(loop);
     };
@@ -115,7 +125,7 @@ const UI = (() => {
     };
     showRaf = requestAnimationFrame(loop);
   }
-  function cycle(p, d) { const i = CHAR_ORDER.indexOf(pick[p]); pick[p] = CHAR_ORDER[(i + d + CHAR_ORDER.length) % CHAR_ORDER.length]; if (!skinOpen(pick[p], skins[p])) skins[p] = 0; Sound.play('select'); fillCard(p); Game.cfg.chars = pick.slice(); Store.set('cfg', Game.cfg); }
+  function cycle(p, d) { const i = CHAR_ORDER.indexOf(pick[p]); pick[p] = CHAR_ORDER[(i + d + CHAR_ORDER.length) % CHAR_ORDER.length]; syncSkins(); Sound.play('select'); fillCard(p); Game.cfg.chars = pick.slice(); Store.set('cfg', Game.cfg); }
   function seg(id, val, onPick) { $$(`#${id} button`).forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.v === String(val))); b.onclick = () => { Sound.play('select'); onPick(b.dataset.v); seg(id, b.dataset.v, onPick); }; }); }
   function fillSetup() {
     fillCard(0); fillCard(1);
@@ -135,7 +145,7 @@ const UI = (() => {
     const ev = hubPending; hubPick(null); if (!ev) return;
     Sound.init(); Sound.play('go'); paused = false; Game.G.paused = false; stack = []; Copa.on = false; setup.players = 2; setup.mode = ev.mode;
     let ch = pick.slice(), sk = skins.slice();
-    if (ev.chars === 'random') { ch = [0, 1].map(() => CHAR_ORDER[Math.floor(Math.random() * CHAR_ORDER.length)]); if (ch[0] === ch[1]) ch[1] = CHAR_ORDER[(CHAR_ORDER.indexOf(ch[0]) + 1 + Math.floor(Math.random() * (CHAR_ORDER.length - 1))) % CHAR_ORDER.length]; sk = [0, 0]; }
+    if (ev.chars === 'random') { ch = [0, 1].map(() => CHAR_ORDER[Math.floor(Math.random() * CHAR_ORDER.length)]); if (ch[0] === ch[1]) ch[1] = CHAR_ORDER[(CHAR_ORDER.indexOf(ch[0]) + 1 + Math.floor(Math.random() * (CHAR_ORDER.length - 1))) % CHAR_ORDER.length]; const V = VV(); sk = V ? ch.map((c, p) => V.eq(p, 'skin', c)) : [0, 0]; }
     const map = ev.map && ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
     Game.start(ev.mode, 2, { chars: ch, skins: sk, arena: map, wins: ev.rounds || 2, level: Game.cfg.level });
     show(null, false);
@@ -224,11 +234,11 @@ const UI = (() => {
   }
   Game.onMatchEnd = r => {
     const w = r.winner;
-    if (r.camp) { campResults(r); return; }
+    if (r.camp) { campResults(r); vestAfter(); return; }
     const hubEv = !!Hub.ev && !r.vsBot && r.mode !== 'school';
     if (hubEv) { Hub.result(w === 0 || w === 1 ? w : -1, { score: r.mode === 'duel' ? r.wins.join(' – ') : r.score.join(' – ') }); Hub.release(); }
     $('#r-hub').hidden = !hubEv; $('#s-results').classList.toggle('hubres', hubEv);
-    if (r.mode === 'school') { stack = []; Game.startAttract(); show('title', false); return; }
+    if (r.mode === 'school') { stack = []; Game.startAttract(); show('title', false); vestAfter(); return; }
     $('#r-title').textContent = w < 0 ? '¡Empate!' : `¡Gana ${r.names[w].split(' · ')[0]}!`;
     $('#r-title').style.color = w >= 0 ? PLAYER_COLORS[w].main : '';
     $('#r-score').innerHTML = `<span style="color:var(--j1)">${r.names[0]}</span> &nbsp;${r.wins[0]} – ${r.wins[1]}&nbsp; <span style="color:var(--j2)">${r.names[1]}</span>`;
@@ -244,7 +254,7 @@ const UI = (() => {
     } else $('#r-rematch').hidden = false;
     $('#r-stats').innerHTML = rowS('Daño hecho', 'dmg') + rowS('Golpes', 'hits') + rowS('Fusiones', 'fusions') + rowS('Combinaciones', 'combos') + rowS('Esquives al rozar', 'grazes') + rowS('Grandes Sortilegios', 'gran') + rowS('Elementos bebidos', 'absorbs');
     hero(w >= 0 ? r.chars ? r.chars[w] : Game.G.chars[w] : Game.G.chars[0], w >= 0 ? (Copa.on ? '' : '¡Victoria!') : 'Empate', w);
-    paused = false; show('results', false); startHero();
+    paused = false; show('results', false); startHero(); vestAfter();
   };
   function campResults(r) {
     const c = r.camp, L = Camp.LEVELS[c.level], rec = c.win ? Camp.record(Game.G) : null;
@@ -294,6 +304,7 @@ const UI = (() => {
     toTitle: () => { if (Hub.ev) Hub.leave(); hubPick(null); paused = false; Game.G.paused = false; Music.duck(false); stack = []; Game.startAttract(); show('title', false); },
     hubhome: () => Hub.exit(), hubback: () => Hub.exit(),
     fullscreen: () => FS.toggle(),
+    vest: () => openVest(0),
   };
   document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b) return; Sound.init(); if (b.dataset.act !== 'back') Sound.play('select'); ACT[b.dataset.act] && ACT[b.dataset.act](); });
   addEventListener('pointerdown', () => Sound.init(), { once: true });
@@ -326,7 +337,7 @@ const UI = (() => {
   getInsets = insets; isTouch = touch;
   $('#ver').textContent = 'v' + GAME_META.version;
   Game.startAttract(); show('title', false);
-  return { show, insets, touch, hubPlay, get current() { return current; } };
+  return { show, insets, touch, hubPlay, syncSkins, vestBadge, vestAfter, pickOf: p => pick[p], get current() { return current; } };
 })();
 Hub.onPlay(ev => UI.hubPlay(ev));
 Hub.ready();

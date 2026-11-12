@@ -16,6 +16,7 @@ if (!soloApp) for (const [id] of GAMES) {
   const dir = srcDir(id);
   fs.copyFileSync(path.join(ROOT, 'shared', 'hub-link.js'), path.join(dir, 'src', '00h-hub.js'));
   fs.copyFileSync(path.join(ROOT, 'shared', 'fullscreen.js'), path.join(dir, 'src', '00i-fs.js'));
+  fs.copyFileSync(path.join(ROOT, 'shared', 'vestidor.js'), path.join(dir, 'src', '00j-vest.js'));
   execFileSync(process.execPath, [path.join(dir, 'build.js'), path.join(OUT, 'games', id + '.html')], { stdio: 'inherit' });
 }
 

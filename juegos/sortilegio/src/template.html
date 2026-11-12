@@ -83,6 +83,11 @@ p { line-height: 1.45; margin: 6px 0; color: #e6dcfa; }
 .card .tr { font-size: 12px; color: #e2d8f8; line-height: 1.3; text-align: center; }
 .card .tr b { color: var(--gold2); }
 .card .skins { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.btn.vest { border-color: #ffd36b; box-shadow: 0 0 14px rgba(255,211,107,.35); }
+.vnew { display: inline-block; margin-left: 4px; font-size: 11px; font-weight: 900; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,.14); }
+.vnew.hot { background: #ff4f7a; color: #fff; box-shadow: 0 0 10px #ff4f7a; animation: vnewP 1.4s ease-in-out infinite; }
+@keyframes vnewP { 50% { transform: scale(1.12); } }
+:root { --vst-font: var(--font, inherit); }
 .card .skinBtn { font-size: 12px; padding: 5px 10px; border-radius: 9px; }
 .card .lock { font-size: 11px; color: var(--mute); }
 .vs { display: flex; align-items: center; justify-content: center; }
@@ -207,6 +212,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
     </div>
     <div class="row">
       <button class="btn small" data-act="school">Escuela de magia</button>
+      <button class="btn small vest" data-act="vest">Vestidor <span id="vestNew" class="vnew"></span></button>
       <button class="btn small" data-act="grim">Grimorio y logros</button>
       <button class="btn small" data-act="practice">Práctica libre</button>
       <button class="btn small" data-act="howto">Cómo se juega</button>
