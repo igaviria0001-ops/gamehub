@@ -687,10 +687,12 @@
     const hosted = (/^https:$/.test(location.protocol) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) && !/(^|\.)claude\.(ai|site)$|claudeusercontent|anthropic/.test(location.hostname);
     const installed = () => { try { return matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true; } catch (e) { return false; } };
     const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const android = /Android/i.test(navigator.userAgent);
     const PREFIXES = ['tya_', 'vto_', 'srt_', 'vtg_', PRE];
     let deferred = null, persisted = false, pendingUpdate = false;
     const btn = $('#instbtn');
-    const refreshBtn = () => { btn.hidden = !hosted || installed() || !(deferred || ios); };
+    // en Android el botón siempre está (si Chrome no da su ventanita de instalar, se explica cómo)
+    const refreshBtn = () => { btn.hidden = !hosted || installed() || !(deferred || ios || android); };
     addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; refreshBtn(); if (view === 'ajustes') renderSettings(); });
     addEventListener('appinstalled', () => { deferred = null; refreshBtn(); persist(); notify('¡GameHub quedó instalada! Ábrela desde su ícono.'); if (view === 'ajustes') renderSettings(); });
     btn.addEventListener('click', () => { Snd.click(); install(); });
@@ -703,6 +705,12 @@
       if (ios) {
         openModal(`<h3>Instalar GameHub en ${/iPad/.test(navigator.userAgent) || navigator.maxTouchPoints > 1 && !/iPhone/.test(navigator.userAgent) ? 'el iPad' : 'el iPhone'}</h3><p>Así queda con su ícono, a pantalla completa y funcionando sin internet:</p>
           <ol class="steps-ios"><li>Abre esta página en <b>Safari</b>.</li><li>Toca <b>Compartir</b> ${ICON.share} (abajo o arriba).</li><li>Elige <b>«Agregar a inicio»</b> ${ICON.plus} y luego <b>Agregar</b>.</li></ol><div class="mbtns"><button class="btn gold" data-mclose>Entendido</button></div>`);
+        return;
+      }
+      if (android) {
+        openModal(`<h3>Instalar GameHub en Android</h3><p>Para que quede como app propia, con su ícono y sin el logo de Chrome en la esquina:</p>
+          <ol class="steps-ios"><li>Si la abriste desde otra app (WhatsApp, Gmail, Claude…), toca <b>⋮</b> arriba a la derecha → <b>«Abrir en Chrome»</b>.</li><li>Ya en Chrome, toca este mismo botón <b>Instalar</b> (o <b>⋮</b> → <b>«Instalar app»</b>) y confirma con <b>Instalar</b>.</li><li>Si Chrome pregunta entre <b>Instalar</b> y <b>Crear acceso directo</b>, elige <b>Instalar</b>: el acceso directo es el que sale con el logo de Chrome.</li></ol>
+          <p>¿Ya tienes un ícono con el logo de Chrome? Bórralo primero (déjalo presionado → <b>Eliminar</b>) y vuelve a instalar. Tu progreso no se pierde.</p><div class="mbtns"><button class="btn gold" data-mclose>Entendido</button></div>`);
         return;
       }
       openModal(`<h3>Instalar GameHub</h3><p>Tu navegador no mostró el botón directo. Se puede igual:</p><ol class="steps-ios"><li>En <b>Chrome</b> o <b>Edge</b>: menú <b>⋮</b> → <b>«Instalar GameHub»</b> (o «Agregar a la pantalla principal» en el celular).</li><li>En <b>Safari</b> del Mac: menú <b>Archivo → Agregar al Dock</b>.</li></ol><div class="mbtns"><button class="btn gold" data-mclose>Entendido</button></div>`);
