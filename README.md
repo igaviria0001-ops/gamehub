@@ -90,6 +90,8 @@ En un computador sin tarjeta gráfica, VÉRTIGO va muy lento en las pruebas: usa
 2. *Settings → Pages → Build and deployment*: **Deploy from a branch**, rama `main`, carpeta **`/docs`**, *Save*.
 3. En uno o dos minutos queda en `https://<usuario>.github.io/gamehub/`.
 
+Si Pages quedó publicando desde la raíz (`/ (root)`) en vez de `/docs`, igual funciona: el `index.html` de la raíz lleva a `docs/` (y `.nojekyll` evita que GitHub procese los archivos).
+
 Cada vez que se sube un cambio a `main`, GitHub vuelve a publicar solo, y las apps instaladas se enteran.
 
 ## Enlace GameHub ↔ juego
