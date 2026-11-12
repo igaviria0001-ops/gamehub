@@ -1,0 +1,12 @@
+index.html σ=16px  aciertos 95.8% · equivocado 4.0% (● sin querer 1, del otro jugador 0) · ignorados 0.2%
+  errores: 1left->right ×2, 1stick->release ×2, 1jump->pull ×2, 2stick->release ×2, 1release->pull ×1, 1release->jump ×1, 1pull->release ×1, 1pull->jump ×1
+index.html σ=10px  aciertos 99.6% · equivocado 0.4% (● sin querer 0, del otro jugador 0) · ignorados 0.0%
+  errores: 1left->right ×1, 2stick->release ×1
+old.html σ=10px  aciertos 98.5% · equivocado 1.0% (● sin querer 1, del otro jugador 0) · ignorados 0.4%
+  errores: 1left->right ×1, 1right->stick ×1, 1jump->pull ×1, 2stick->jump ×1, 2jump->pull ×1
+index.html σ=16px  aciertos 98.1% · equivocado 1.9% (● sin querer 1, del otro jugador 1) · ignorados 0.0%
+  errores: 1stick->release ×2, 1left->right ×1, 1release->pull ×1, 1jump->release ×1, 2pull->(otro) ×1, 2jump->stick ×1, 2stick->jump ×1, 2stick->release ×1
+index.html σ=16px  aciertos 95.0% · equivocado 5.0% (● sin querer 0, del otro jugador 0) · ignorados 0.0%
+  errores: 1left->right ×2, 1stick->release ×2, 1jump->pull ×2, 1release->pull ×1, 1release->jump ×1, 1pull->release ×1, 1pull->jump ×1, 1stick->jump ×1
+old.html σ=16px  aciertos 88.8% · equivocado 5.8% (● sin querer 2, del otro jugador 0) · ignorados 5.4%
+  errores: 1jump->pull ×5, 1left->right ×2, 1release->stick ×2, 1stick->release ×2, 1release->pull ×1, 1pull->release ×1, 1jump->release ×1

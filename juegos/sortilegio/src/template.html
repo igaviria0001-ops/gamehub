@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Sortilegio</title>
+<style>
+/*__FONTS__*/
+:root { --gold: #e8c46e; --gold2: #ffe9a0; --ink: #f3eaff; --mute: #b8acd8; --glass: rgba(18, 12, 40, 0.78); --glass2: rgba(32, 22, 66, 0.85); --line: rgba(232, 196, 110, 0.45); --j1: #ffc94a; --j2: #62e0ff; color-scheme: dark; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: #05060e; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; font-family: "Nunito", "Trebuchet MS", system-ui, sans-serif; color: var(--ink); }
+canvas#game { position: fixed; inset: 0; display: block; }
+.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); z-index: 10; }
+.screen[hidden], [hidden], .btn[hidden] { display: none !important; }
+.veil { background: radial-gradient(ellipse at 50% 40%, rgba(20, 12, 50, 0.25), rgba(4, 3, 14, 0.78)); }
+.panel { background: var(--glass); border: 1.5px solid var(--line); border-radius: 22px; padding: 22px 26px; max-width: min(940px, 100%); max-height: 100%; overflow: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.04); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); position: relative; }
+.panel::before { content: ""; position: absolute; left: 18px; right: 18px; top: 7px; height: 6px; border-radius: 3px; background: repeating-linear-gradient(90deg, rgba(232, 196, 110, 0.55) 0 8px, transparent 8px 12px, rgba(232, 196, 110, 0.3) 12px 14px, transparent 14px 20px); opacity: 0.7; }
+h1, h2, h3 { font-family: "Macondo", Georgia, serif; font-weight: 400; margin: 0; }
+h2 { font-size: 30px; color: var(--gold2); text-shadow: 0 0 18px rgba(255, 200, 100, 0.35); }
+h3 { font-size: 21px; color: var(--gold); }
+p { line-height: 1.45; margin: 6px 0; color: #e6dcfa; }
+.btn { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: 14px; font-weight: 800; font-size: 16px; color: var(--ink); background: linear-gradient(180deg, rgba(70, 52, 130, 0.9), rgba(40, 28, 84, 0.95)); border: 1.5px solid rgba(232, 196, 110, 0.55); box-shadow: 0 4px 0 rgba(10, 6, 26, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15); transition: transform 0.08s, filter 0.15s; text-align: center; }
+.btn:hover, .btn:focus-visible { filter: brightness(1.2); outline: 2px solid var(--gold2); outline-offset: 2px; }
+.btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(10, 6, 26, 0.7); }
+.btn.gold { background: linear-gradient(180deg, #f5d27a, #c08a2a); color: #2a1606; border-color: #fff0c0; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4); }
+.btn.big { font-size: 20px; padding: 15px 26px; border-radius: 18px; }
+.btn.small { font-size: 14px; padding: 8px 14px; border-radius: 11px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: center; }
+/* título */
+#s-title { flex-direction: column; justify-content: space-between; overflow-y: auto; gap: 8px; padding-top: max(4vh, env(safe-area-inset-top)); padding-bottom: max(4vh, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at 50% 35%, rgba(10, 6, 30, 0) 30%, rgba(4, 3, 14, 0.7)); }
+.logo { text-align: center; }
+.logo h1 { font-size: clamp(54px, 11vw, 120px); line-height: 0.95; color: #ffe2a0; letter-spacing: 1px; text-shadow: 0 0 24px rgba(255, 190, 90, 0.55), 0 0 60px rgba(160, 120, 255, 0.45), 0 4px 0 rgba(60, 30, 10, 0.7); }
+.logo .sub { font-family: "Macondo", Georgia, serif; font-size: clamp(15px, 2.4vw, 22px); color: #d9ccff; margin-top: 6px; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7); }
+.menu { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.menu .main { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.menu .main .btn { min-width: 210px; flex-direction: column; gap: 2px; }
+.menu .main .btn small { font-weight: 600; font-size: 12.5px; opacity: 0.8; }
+/* portada más épica */
+#t-heroes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+#s-title .logo, #s-title .menu { position: relative; z-index: 1; } #s-title .ver { z-index: 1; }
+.logo h1 { position: relative; }
+.logo h1::after { content: "Sortilegio"; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.95) 50%, transparent 58%) 130% 0 / 260% 100% no-repeat; -webkit-background-clip: text; background-clip: text; color: transparent; animation: logoS 6.5s ease-in-out infinite; pointer-events: none; }
+@keyframes logoS { 0%, 55% { background-position: 130% 0; } 85%, 100% { background-position: -40% 0; } }
+.menu .main .btn { position: relative; }
+.menu .main .btn::before { content: ""; position: absolute; left: 12%; right: 12%; top: 5px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 233, 160, 0.75), transparent); pointer-events: none; }
+.menu .main .btn::after { content: ""; position: absolute; left: 50%; bottom: 4px; width: 6px; height: 6px; margin-left: -3px; transform: rotate(45deg); background: rgba(255, 233, 160, 0.7); box-shadow: -12px 12px 0 -1.5px rgba(255, 233, 160, 0.45), 12px -12px 0 -1.5px rgba(255, 233, 160, 0.45); pointer-events: none; }
+.menu .main .btn.gold::before { background: linear-gradient(90deg, transparent, rgba(120, 60, 0, 0.55), transparent); }
+.menu .main .btn.gold::after { background: rgba(110, 56, 0, 0.6); box-shadow: -12px 12px 0 -1.5px rgba(110, 56, 0, 0.4), 12px -12px 0 -1.5px rgba(110, 56, 0, 0.4); }
+#s-title { background: radial-gradient(ellipse at 50% 50%, rgba(4, 3, 14, 0) 35%, rgba(4, 3, 14, 0.6) 100%); }
+.logo h1 { background: linear-gradient(180deg, #fff8dc 0%, #ffd77a 45%, #c58a30 78%, #8a5418 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 0 16px rgba(255, 190, 90, 0.55)) drop-shadow(0 0 38px rgba(150, 110, 255, 0.5)) drop-shadow(0 3px 0 rgba(50, 24, 8, 0.85)); animation: logoG 4s ease-in-out infinite; }
+@keyframes logoG { 50% { filter: drop-shadow(0 0 24px rgba(255, 200, 100, 0.8)) drop-shadow(0 0 60px rgba(150, 110, 255, 0.65)) drop-shadow(0 3px 0 rgba(50, 24, 8, 0.85)); } }
+.logo::after { content: ""; display: block; width: min(380px, 62vw); height: 12px; margin: 4px auto 0; background: radial-gradient(circle, #ffe9a0 0 3px, rgba(255, 233, 160, 0.4) 4px, transparent 6px) center / 14px 12px no-repeat, linear-gradient(90deg, transparent, var(--gold) 30%, var(--gold) 70%, transparent) center / 100% 1.5px no-repeat; }
+.menu .btn { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 0 0 1px rgba(232, 196, 110, 0.22), 0 4px 0 rgba(10, 6, 26, 0.7), 0 10px 22px rgba(0, 0, 0, 0.45); background: linear-gradient(180deg, rgba(84, 62, 150, 0.95), rgba(36, 24, 78, 0.97)); }
+.menu .btn.gold { background: linear-gradient(180deg, #ffe08a, #d39a34 55%, #a8701c); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 0 rgba(80, 44, 6, 0.8), 0 0 26px rgba(255, 200, 100, 0.45); }
+.menu .btn:hover, .menu .btn:focus-visible { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 0 0 1px rgba(255, 233, 160, 0.6), 0 4px 0 rgba(10, 6, 26, 0.7), 0 0 24px rgba(180, 140, 255, 0.55); }
+.panel { background: radial-gradient(ellipse at 50% 0%, rgba(70, 50, 140, 0.35), transparent 60%), var(--glass); }
+.ver { position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: max(8px, env(safe-area-inset-bottom)); font-size: 11px; color: rgba(220, 210, 255, 0.45); }
+/* preparar duelo */
+.pick { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; margin-top: 10px; align-items: stretch; }
+.card { position: relative; background: linear-gradient(180deg, rgba(30, 20, 64, 0.9), rgba(12, 8, 30, 0.95)); border-radius: 18px; padding: 0; border: 2px solid rgba(255, 255, 255, 0.08); min-width: 0; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.04); }
+.card.p0 { border-color: rgba(255, 201, 74, 0.7); box-shadow: 0 0 26px rgba(255, 201, 74, 0.18), 0 10px 30px rgba(0, 0, 0, 0.5); } .card.p1 { border-color: rgba(98, 224, 255, 0.7); box-shadow: 0 0 26px rgba(98, 224, 255, 0.18), 0 10px 30px rgba(0, 0, 0, 0.5); }
+.card.swap .hero canvas { animation: swapIn 0.35s ease-out; }
+@keyframes swapIn { from { opacity: 0.2; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+.card .hero { position: relative; }
+.card canvas.show { display: block; width: 100%; height: 208px; }
+.card .who { position: absolute; left: 12px; top: 9px; font-weight: 900; font-size: 13px; letter-spacing: 1.5px; text-shadow: 0 2px 6px #000; display: flex; gap: 8px; align-items: baseline; }
+.card .who small { font-size: 10.5px; letter-spacing: 0.5px; opacity: 0.75; color: var(--ink); font-weight: 700; }
+.card.p0 .who { color: var(--j1); } .card.p1 .who { color: var(--j2); }
+.card .arrow { position: absolute; top: 56%; transform: translateY(-50%); padding: 10px 12px; font-size: 18px; border-radius: 50%; background: rgba(14, 10, 34, 0.6); backdrop-filter: blur(2px); }
+.card .arrow.l { left: 8px; } .card .arrow.r { right: 8px; }
+.card .info { position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 14px 8px; background: linear-gradient(180deg, rgba(6, 4, 16, 0), rgba(6, 4, 16, 0.92)); text-align: center; pointer-events: none; }
+.card .nm { font-family: "Macondo", Georgia, serif; font-size: 34px; color: var(--gold2); line-height: 1; text-shadow: 0 0 16px rgba(255, 200, 100, 0.45), 0 2px 4px #000; }
+.card .tt { font-size: 13px; color: var(--mute); letter-spacing: 0.5px; font-style: italic; }
+.card .cnt { position: absolute; right: 12px; top: 10px; font-size: 11px; font-weight: 900; letter-spacing: 1px; color: var(--mute); pointer-events: none; } .card .cnt i { font-style: normal; color: #1a1030; background: linear-gradient(180deg, #ffe9a0, #e8b130); border-radius: 6px; padding: 1px 5px; margin-left: 3px; }
+.card .meta { padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+.card .els { display: flex; gap: 12px; justify-content: center; align-items: center; font-size: 13px; font-weight: 900; letter-spacing: 0.5px; }
+.card .el { display: inline-flex; align-items: center; gap: 6px; }
+.card .el img { width: 30px; height: 30px; filter: drop-shadow(0 0 6px rgba(255, 220, 140, 0.35)); }
+.card .bars { display: flex; gap: 12px; }
+.card .bar { flex: 1; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 900; letter-spacing: 1px; color: var(--gold); text-transform: uppercase; min-width: 0; }
+.card .bar b { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.card .bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #c08a2a, #ffe9a0); box-shadow: 0 0 8px rgba(255, 220, 140, 0.6); }
+.card .tr { font-size: 12px; color: #e2d8f8; line-height: 1.3; text-align: center; }
+.card .tr b { color: var(--gold2); }
+.card .skins { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.card .skinBtn { font-size: 12px; padding: 5px 10px; border-radius: 9px; }
+.card .lock { font-size: 11px; color: var(--mute); }
+.vs { display: flex; align-items: center; justify-content: center; }
+.vs span { font-family: "Macondo", Georgia, serif; font-size: 30px; color: var(--gold2); width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--gold); background: radial-gradient(circle, rgba(80, 50, 140, 0.9), rgba(14, 10, 34, 0.95)); box-shadow: 0 0 22px rgba(255, 200, 100, 0.45); animation: vsP 2.2s ease-in-out infinite; }
+@keyframes vsP { 50% { box-shadow: 0 0 34px rgba(255, 200, 100, 0.75); transform: scale(1.06); } }
+.opts { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 12px; align-items: center; }
+.seg { display: inline-flex; background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 3px; gap: 3px; border: 1px solid rgba(255, 255, 255, 0.08); }
+.seg button { all: unset; cursor: pointer; padding: 7px 12px; border-radius: 9px; font-weight: 800; font-size: 13.5px; color: var(--mute); }
+.seg button[aria-pressed="true"] { background: linear-gradient(180deg, #5a44a8, #3a2a7a); color: #fff; box-shadow: inset 0 0 0 1px rgba(232, 196, 110, 0.6); }
+.lbl { font-size: 12px; font-weight: 900; letter-spacing: 1px; color: var(--gold); margin-right: 4px; }
+/* cómo se juega */
+.howto { max-width: 860px; }
+.cgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 8px; }
+.lvl { all: unset; box-sizing: border-box; cursor: pointer; position: relative; overflow: hidden; background: linear-gradient(150deg, var(--c1, #2a2050), var(--c2, #141030)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.35); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 8px 10px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lvl:hover, .lvl:focus-visible { border-color: var(--gold2); }
+.lvl b { font-family: "Macondo", Georgia, serif; font-weight: 400; font-size: 16px; color: var(--gold2); line-height: 1.1; }
+.lvl small { font-size: 11.5px; color: var(--mute); }
+.lvl .st { color: #ffd25a; font-size: 14px; letter-spacing: 1px; } .lvl .st i { color: rgba(255, 255, 255, 0.2); font-style: normal; }
+.lvl.lock { opacity: 0.5; cursor: default; filter: saturate(0.4); }
+.lvl .num { position: absolute; right: 6px; bottom: -14px; font-family: "Macondo", Georgia, serif; font-size: 64px; color: rgba(255, 255, 255, 0.07); pointer-events: none; }
+.lvl .lk { position: absolute; right: 8px; top: 6px; font-size: 14px; }
+.lvl:not(.lock):hover { transform: translateY(-2px); box-shadow: 0 0 18px rgba(255, 220, 140, 0.35); }
+#c-picks > span { display: inline-flex; align-items: center; gap: 6px; } canvas.mini { width: 36px; height: 36px; }
+.lvl.boss { border-color: rgba(255, 120, 100, 0.6); box-shadow: inset 0 0 22px rgba(255, 80, 60, 0.25), 0 6px 16px rgba(0, 0, 0, 0.35); }
+.howto .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.keys { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+.keys td, .keys th { padding: 5px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-align: left; }
+.keys th { color: var(--gold); font-weight: 900; font-size: 12px; letter-spacing: 1px; }
+kbd { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.25); font-family: inherit; font-weight: 900; font-size: 12.5px; text-align: center; }
+.fus { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+.fus div { background: linear-gradient(160deg, rgba(70, 50, 140, 0.35), rgba(20, 14, 44, 0.6)); border: 1px solid rgba(232, 196, 110, 0.25); border-radius: 12px; padding: 7px 9px; font-size: 12.5px; position: relative; }
+.fus .pair { float: right; display: inline-flex; margin-left: 4px; } .fus .pair img { width: 22px; height: 22px; margin-left: -5px; }
+.fus .ach { padding-left: 38px; } .fus .tro { position: absolute; left: 8px; top: 8px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 900; background: rgba(255, 255, 255, 0.08); color: var(--mute); }
+.fus .ach.got { border-color: rgba(255, 210, 90, 0.7); box-shadow: 0 0 14px rgba(255, 210, 90, 0.2); } .fus .ach.got .tro { background: radial-gradient(circle at 35% 30%, #fff2b0, #d9a43a 60%, #7a4a08); color: #3a2006; }
+.fus b { color: var(--gold2); }
+.fus .no { opacity: 0.45; }
+.fus .ach b { color: #ffd25a; }
+#o-keys button { all: unset; cursor: pointer; padding: 3px 9px; border-radius: 7px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); font-weight: 900; font-size: 12.5px; }
+#o-keys button.wait { background: var(--gold); color: #2a1606; }
+/* resultados */
+.res h2 { text-align: center; font-size: 40px; }
+.res { width: min(980px, 100%); }
+.resGrid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 18px; align-items: center; }
+.heroWrap { position: relative; border-radius: 16px; overflow: hidden; border: 2px solid var(--gold); box-shadow: 0 0 30px rgba(255, 200, 100, 0.3); }
+#r-hero { display: block; width: 100%; height: 360px; }
+.heroTag { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font-family: "Macondo", Georgia, serif; font-size: 26px; color: var(--gold2); text-shadow: 0 0 14px rgba(255, 200, 100, 0.6), 0 2px 4px #000; pointer-events: none; }
+.resInfo { min-width: 0; }
+.res .score { text-align: center; font-family: "Macondo", Georgia, serif; font-size: 26px; margin: 4px 0 10px; }
+.stats { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stats td { padding: 4px 10px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.stats td:first-child { text-align: left; color: var(--mute); }
+.stats .h0 { color: var(--j1); font-weight: 900; } .stats .h1 { color: var(--j2); font-weight: 900; }
+/* pausa y botoncito */
+#pauseBtn { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 9; width: 40px; height: 40px; border-radius: 50%; padding: 0; font-size: 15px; display: none; }
+#goTop { display: none; }
+@media (max-height: 520px) {
+  #goTop { display: inline-flex; } .goRow { display: none !important; } #o-modeTxt { display: none !important; }
+  .seg button { padding: 5px 9px; font-size: 12.5px; } .lbl { font-size: 10.5px; }
+  .panel { padding: 12px 16px; border-radius: 16px; }
+  h2 { font-size: 22px; }
+  .card .lock { display: none; } .card .skinBtn { font-size: 11px; padding: 4px 8px; }
+  .card canvas.show { height: clamp(96px, 36vh, 200px); } .card .nm { font-size: 25px; } .card .info { padding: 14px 10px 4px; } .card .tr { display: none; } .card .meta { padding: 5px 8px 7px; gap: 4px; } .card .el img { width: 24px; height: 24px; } .card .arrow { padding: 7px 9px; font-size: 15px; }
+  .vs span { width: 40px; height: 40px; font-size: 21px; }
+  .opts { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; } .opts > span { flex: none; display: inline-flex; align-items: center; }
+  .pick { gap: 8px; margin-top: 6px; } .opts { margin-top: 6px; gap: 6px; }
+  .menu .main .btn { min-width: 160px; padding: 10px 14px; font-size: 16px; }
+  .btn.big { font-size: 17px; padding: 10px 18px; }
+  .res h2 { font-size: 26px; } .res .score { font-size: 18px; margin: 0 0 4px; } #r-hero { height: min(300px, calc(100vh - 60px)); } .resGrid { grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 10px; } .heroTag { font-size: 18px; } .stats { font-size: 12px; } .stats td { padding: 2px 6px; }
+  .howto .cols { gap: 8px; } .cgrid { gap: 5px; margin-top: 4px; } .lvl { padding: 5px 8px; } .lvl b { font-size: 13.5px; } .lvl small { font-size: 10.5px; } #c-detail { display: none; } .fus { grid-template-columns: repeat(5, 1fr); } .fus div { font-size: 11px; padding: 4px; }
+}
+@media (max-height: 430px) {
+  .logo h1 { font-size: clamp(30px, 17vh, 92px); }
+  .logo .sub { font-size: clamp(11px, 4.2vh, 18px); margin-top: 0; }
+  #s-title { padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  .menu { gap: clamp(4px, 2vh, 10px); }
+  .menu .main { gap: clamp(6px, 1.4vw, 12px); flex-wrap: nowrap; }
+  .menu .main .btn { min-width: 0; flex: 1 1 0; max-width: 240px; font-size: clamp(13px, 4.6vh, 18px); padding: clamp(5px, 2.2vh, 12px) clamp(8px, 1.6vw, 18px); border-radius: 14px; }
+  .menu .main .btn small { font-size: clamp(10px, 3.2vh, 12.5px); }
+  .menu .row { gap: clamp(4px, 1vw, 10px); flex-wrap: nowrap; }
+  .menu .row .btn { font-size: clamp(11px, 3.8vh, 14px); padding: clamp(4px, 1.6vh, 8px) clamp(7px, 1.3vw, 14px); white-space: nowrap; }
+  .ver { display: none; }
+  .stats td { padding: 1px 6px; font-size: 11px; } #r-hero { height: calc(100vh - 58px); }
+  .card canvas.show { height: clamp(70px, 31vh, 150px); } .card .tt { font-size: 11px; } .card .nm { font-size: clamp(17px, 6.5vh, 24px); } .card .bar { font-size: 9px; letter-spacing: 0.5px; } .card .els { font-size: 11.5px; } .card .el img { width: clamp(16px, 6vh, 24px); height: clamp(16px, 6vh, 24px); }
+  #s-setup .panel { padding: 8px 12px; } #s-setup h2 { font-size: clamp(16px, 6vh, 22px); }
+}
+@media (max-height: 300px) { .logo .sub { display: none; } .menu .main .btn small { display: none; } .card .tt, .card .bars { display: none; } .card .info { padding: 8px 8px 2px; } .pick { margin-top: 4px; }
+  #r-stats { display: none; } .res h2 { font-size: 20px; } .res .score { font-size: 15px; } #r-hero { height: calc(100vh - 58px); } .res .row { margin-top: 6px !important; gap: 6px; } .res .btn { padding: 7px 12px; font-size: 14px; }
+  #s-pause .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px !important; } #s-pause .btn { padding: 7px 12px; font-size: 14px; } #s-pause h2 { font-size: 20px; } }
+@media (max-height: 430px) { .menu .main .btn::after { display: none; } .menu .main .btn::before { top: 3px; } }
+@media (max-height: 430px) and (max-width: 720px) { .menu .row .btn { font-size: 11px; padding: 5px 7px; } }
+#rotate { position: fixed; inset: 0; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0a0818; color: var(--ink); font-family: "Macondo", Georgia, serif; font-size: 24px; text-align: center; padding: 24px; }
+#rotate .ph { width: 70px; height: 116px; border: 4px solid var(--gold); border-radius: 14px; animation: rot 2s ease-in-out infinite; }
+@keyframes rot { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+@media (pointer: coarse) and (orientation: portrait) { #rotate { display: flex; } }
+@media (max-width: 640px) { .cgrid { grid-template-columns: repeat(2, 1fr); } .pick { gap: 6px; } .vs span { width: 32px; height: 32px; font-size: 17px; } .card .els { gap: 6px; } .card .bars { gap: 6px; } .card .arrow { padding: 6px 8px; font-size: 13px; } .card .who small { display: none; } .howto .cols { grid-template-columns: 1fr; } }
+
+/* GameHub: volver a la colección y elegir magos para una prueba del torneo */
+html.in-hub .fs-auto { display: none !important; }
+.hub-home { display: none; }
+html.in-hub .hub-home { display: inline-flex; align-items: center; gap: .35em; position: absolute; z-index: 30; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); padding: .45em .95em; border-radius: 999px; border: 1.5px solid rgba(255,214,120,.55); background: rgba(14,8,26,.6); color: #ffe7b0; font: 700 15px/1 "Nunito", system-ui, sans-serif; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: rgba(14,8,26,.85); border-color: #ffd36b; outline: none; }
+.hubTitle { display: none; }
+#s-setup.hubpick .hubTitle { display: block; text-align: center; font: 700 15px/1.3 "Nunito", sans-serif; color: #ffe7b0; letter-spacing: .04em; margin: -2px 0 8px; }
+#s-setup.hubpick .opts { display: none; }
+#s-results.hubres [data-act="rematch"], #s-results.hubres [data-act="setupAgain"], #s-results.hubres [data-act="toTitle"], #s-results.hubres #r-copaNext { display: none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="rotate"><div class="ph"></div>Gira el teléfono para jugar<small style="font-family:Nunito,sans-serif;font-size:14px;color:var(--mute)">Sortilegio se juega de lado: dos jugadores, cada uno en su mitad</small></div>
+<button class="btn small" id="pauseBtn" data-act="pause" aria-label="Pausa">❚❚</button>
+
+<section class="screen" id="s-title">
+  <button class="hub-home" data-act="hubhome" aria-label="Volver a GameHub">⌂ GameHub</button>
+  <canvas id="t-heroes" aria-hidden="true"></canvas>
+  <div class="logo"><h1>Sortilegio</h1><div class="sub">Duelo de magos en la Colombia de los mitos</div></div>
+  <div class="menu">
+    <div class="main">
+      <button class="btn gold big" data-act="play2">2 jugadores<small>en un teclado</small></button>
+      <button class="btn big" data-act="play1">Contra la máquina<small>un jugador</small></button>
+      <button class="btn big" data-act="camp">Campaña en equipo<small id="campStars">la Travesía de los Tunjos</small></button>
+    </div>
+    <div class="row">
+      <button class="btn small" data-act="school">Escuela de magia</button>
+      <button class="btn small" data-act="grim">Grimorio y logros</button>
+      <button class="btn small" data-act="practice">Práctica libre</button>
+      <button class="btn small" data-act="howto">Cómo se juega</button>
+      <button class="btn small" data-act="options">Opciones</button>
+    </div>
+  </div>
+  <div class="ver" id="ver"></div>
+</section>
+
+<section class="screen veil" id="s-setup" hidden>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between"><h2>Elige a tus magos</h2><span class="row" style="gap:8px"><button class="btn gold small" data-act="go" id="goTop">¡A pelear!</button><button class="btn small" data-act="back">Volver</button></span></div>
+    <div class="hubTitle"></div>
+    <div class="pick">
+      <div class="card p0" data-p="0"></div>
+      <div class="vs"><span>VS</span></div>
+      <div class="card p1" data-p="1"></div>
+    </div>
+    <div class="opts">
+      <span><span class="lbl">MODO</span><span class="seg" id="o-mode"></span></span>
+    </div>
+    <div class="opts" id="o-modeTxt" style="margin-top:4px;font-size:13px;color:var(--mute)"></div>
+    <div class="opts">
+      <span><span class="lbl">ESCENARIO</span><span class="seg" id="o-arena"></span></span>
+      <span id="o-winsw"><span class="lbl">RONDAS</span><span class="seg" id="o-wins"><button data-v="2">al mejor de 3</button><button data-v="3">al mejor de 5</button></span></span>
+      <span id="o-lvlw"><span class="lbl">MÁQUINA</span><span class="seg" id="o-lvl"><button data-v="0">fácil</button><button data-v="1">normal</button><button data-v="2">difícil</button></span></span>
+    </div>
+    <div class="row goRow" style="margin-top:12px"><button class="btn gold big" data-act="go">¡A pelear!</button></div>
+  </div>
+</section>
+
+<section class="screen veil" id="s-camp" hidden>
+  <div class="panel" style="width:min(940px,100%)">
+    <div class="row" style="justify-content:space-between"><h2 id="c-title">La Travesía de los Tunjos</h2><span class="row" style="gap:8px"><span class="seg" id="c-players"><button data-v="2">2 jugadores</button><button data-v="1">1 + compañero</button></span><button class="btn small" data-act="back">Volver</button></span></div>
+    <div class="row" id="c-picks" style="justify-content:flex-start;gap:14px;margin:6px 0 2px;font-size:13.5px"></div>
+    <div class="seg" id="c-world" style="margin:2px 0 4px"></div>
+    <div class="cgrid" id="c-grid"></div>
+    <p id="c-detail" style="font-size:13.5px;min-height:2.6em"></p>
+  </div>
+</section>
+
+<section class="screen veil" id="s-grim" hidden>
+  <div class="panel" style="width:min(940px,100%)">
+    <div class="row" style="justify-content:space-between"><h2>Grimorio y logros</h2><button class="btn small" data-act="back">Volver</button></div>
+    <h3 style="margin-top:6px" id="g-fcount"></h3>
+    <div class="fus" id="g-fus" style="grid-template-columns:repeat(5,1fr)"></div>
+    <h3 style="margin-top:10px" id="g-acount"></h3>
+    <div class="fus" id="g-ach" style="grid-template-columns:repeat(4,1fr)"></div>
+  </div>
+</section>
+
+<section class="screen veil" id="s-howto" hidden>
+  <div class="panel howto">
+    <div class="row" style="justify-content:space-between"><h2>Cómo se juega</h2><button class="btn small" data-act="back">Volver</button></div>
+    <div class="cols">
+      <div>
+        <p>Cada mago lleva un <b>elemento en cada mano</b>. Gana quien tumbe al otro.</p>
+        <p><b>Tocar</b> una mano lanza rápido · <b>sostener</b> carga un hechizo más grande · <b>las dos manos</b> juntas funden los elementos.</p>
+        <p>Sobre una <b>fuente mágica</b>, sostén una mano para beber su elemento (sirve 3 veces). <b>Esquivar</b> (2 cargas) te hace intocable un instante; si algo pasa rozando, ganas Embrujo.</p>
+        <p><b>Puntería:</b> el hechizo va a quien tengas al frente (la retícula lo marca). Con varios enemigos, <b>camina un instante hacia el que quieres</b>: quieto ya no te volteas solo. Mientras cargas, <b>señala a otro con la palanca</b> y el objetivo cambia. En el celular, <b>toca al enemigo</b> para marcarlo. Justo después de esquivar, tu hechizo carga el doble de rápido.</p>
+        <p><b>Luz y Sombra</b> (fuentes doradas y moradas en cada escenario): la <b>Luz</b> es rapidísima, atraviesa y <b>encandila</b> (el rival apunta mal un momento); la <b>Sombra</b> deja <b>maleficio</b> (su siguiente golpe duele 35 % más) y su hechizo cargado es el <b>Paso de sombra</b>, que te lleva detrás del rival. Algunas fusiones <b>silencian</b>: no se puede lanzar un instante.</p>
+        <p><b>Duelo más vivo:</b> esquiva un proyectil en el último instante y lo devuelves (<b>¡Contraconjuro!</b>) · esquiva a través del rival para una <b>Embestida</b> · golpes seguidos suben tu <b>Racha</b> (más daño) · en el centro aparecen <b>runas</b>: prisa, escudo, embrujo y vida.</p>
+        <p>Las <b>combinaciones</b> (rayo al mojado, ventisca al mojado, rebotar con viento, incendios…) llenan el <b>Embrujo</b>: lleno, tu siguiente fusión es un <b>Gran Sortilegio</b>: te elevas un instante sin que nada te toque, la fusión sale mucho más fuerte y grande, una onda empuja a los enemigos cercanos y deshace sus hechizos, y quedas con un escudo dorado.</p>
+        <p><b>Modos:</b> Duelo · Tejo encantado (mete el tejo en el bocín del rival empujándolo con hechizos) · Cacería de espantos (cada espanto cae con su contrario: mira el ícono sobre su cabeza) · El Altar · Copa del Páramo. <b>Campaña en equipo:</b> Mundo 1 (10 niveles) y, al vencer a Tragaluz, el <b>Mundo 2: Cielo e Infierno</b> (8 niveles más, con islas flotantes, puentes de luz y dos jefes nuevos); si los hechizos de los dos se cruzan, hacen <b>Resonancia</b>.</p>
+        <p><b>13 magos</b>: los seis de siempre, tres de elementos clásicos (Cocuy agua+viento, Tatacoa viento+tierra, Galeras fuego+rayo) y cuatro de Luz y Sombra (Zuhé, Chía, Mapalé y Tota).</p>
+        <p><b>Atuendos:</b> gana 2 y 6 duelos con un mago para desbloquear sus otros dos atuendos (se cambian en «Elige a tus magos» con W y ↑). <b>5 escenarios</b>, cada uno con su evento: neblina, tormenta, erupción, guardianes y la creciente de Caño Cristales.</p>
+        <table class="keys" id="keysTable"></table>
+      </div>
+      <div><h3>Las 28 fusiones</h3><div class="fus" id="fusList"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen veil" id="s-options" hidden>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between"><h2>Opciones</h2><button class="btn small" data-act="back">Volver</button></div>
+    <div class="opts" style="flex-direction:column;align-items:flex-start">
+      <span><span class="lbl">SONIDO</span><span class="seg" id="o-sound"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
+      <span><span class="lbl">MÚSICA</span><span class="seg" id="o-music"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
+      <span><span class="lbl">CALIDAD</span><span class="seg" id="o-quality"><button data-v="alta">alta</button><button data-v="media">media</button><button data-v="ligera">ligera</button></span></span>
+      <span><span class="lbl">PRESAGIOS</span><span class="seg" id="o-presage"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
+      <span><span class="lbl">PANTALLA COMPLETA</span><button class="btn small" id="o-fs" data-act="fullscreen">Activar</button></span>
+      <span class="fs-auto"><span class="lbl">AUTOMÁTICA</span><span class="seg" id="o-fsauto"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
+    </div>
+    <h3 style="margin-top:10px">Teclas</h3>
+    <table class="keys" id="o-keys"></table>
+    <div class="row" style="justify-content:flex-start;margin-top:6px"><button class="btn small" id="o-keysReset">Teclas de fábrica</button><span id="o-keyMsg" style="font-size:13px;color:var(--gold2)"></span></div>
+  </div>
+</section>
+
+<section class="screen veil" id="s-pause" hidden>
+  <div class="panel" style="text-align:center">
+    <h2>Pausa</h2>
+    <div class="menu" style="margin-top:12px">
+      <button class="btn gold" data-act="resume">Seguir</button>
+      <button class="btn" data-act="rematch">Reiniciar</button>
+      <button class="btn" data-act="options">Opciones</button>
+      <button class="btn" data-act="toTitle">Salir al inicio</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen veil" id="s-results" hidden>
+  <div class="panel res"><div class="resGrid"><div class="heroWrap"><canvas id="r-hero"></canvas><div class="heroTag" id="r-heroTag"></div></div><div class="resInfo">
+    <h2 id="r-title"></h2>
+    <div class="score" id="r-score"></div>
+    <table class="stats" id="r-stats"></table>
+    <div class="score" id="r-copa" hidden></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn gold" data-act="hubback" id="r-hub" hidden>Continuar torneo ▸</button>
+      <button class="btn gold" data-act="copaNext" id="r-copaNext" hidden>Siguiente prueba</button>
+      <button class="btn gold" data-act="rematch" id="r-rematch">Revancha</button>
+      <button class="btn" data-act="setupAgain">Cambiar magos</button>
+      <button class="btn" data-act="toTitle">Inicio</button>
+    </div>
+  </div></div></div>
+</section>
+
+<script>
+/*__SCRIPTS__*/
+</script>
+</body>
+</html>

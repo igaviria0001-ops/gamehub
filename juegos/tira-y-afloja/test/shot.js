@@ -1,0 +1,33 @@
+const { chromium } = require('playwright');
+const path = require('path');
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  const errors = [];
+  page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  await page.goto('file://' + path.resolve(__dirname, 'index.html'));
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: 'shots/01-title.png' });
+  await page.click('[data-act="play2"]');
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: 'shots/02-modes.png' });
+  await page.click('[data-act="mode-caneca"]');
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: 'shots/02b-arenas.png' });
+  await page.click('.arena[data-arena="pupitre"]');
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: 'shots/03-countdown.png' });
+  await page.waitForTimeout(2400);
+  await page.screenshot({ path: 'shots/04-start.png' });
+  // mover: Fresa a la derecha, Menta a la izquierda y aflojar
+  await page.evaluate(() => { TYA.over[0] = { left:false, right:false, jump:false, stick:false, pull:false, release:true }; TYA.over[1] = { left:false,right:true,jump:false,stick:false,pull:false,release:false }; });
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: 'shots/05-moving.png' });
+  await page.evaluate(() => { TYA.over[0] = { left:false, right:false, jump:false, stick:true, pull:true, release:false }; });
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: 'shots/06-pull.png' });
+  console.log(JSON.stringify(await page.evaluate(() => { const G = TYA.Game.G; return { state: G.state, p: G.players.map(p => ({ x: p.x|0, y: p.y|0, m: +p.mass.toFixed(2), alive: p.alive, stuck: p.stuck })), rope: { len: G.rope.len|0, path: G.rope.pathLen|0, T: G.rope.tension|0 } }; })));
+  console.log('ERRORS:', errors.slice(0, 20).join('\n'));
+  await browser.close();
+})();

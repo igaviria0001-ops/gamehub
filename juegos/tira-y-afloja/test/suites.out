@@ -1,0 +1,24 @@
+== crawl
+opciones: todo               ok
+jugadores y logros           ok
+táctil: contra la máquina    ok
+táctil: dos en tableta       ok
+
+SIN PROBLEMAS
+== mobile2
+ERR 
+== entui
+tras R {"ui":null,"train":"defensa","state":"play","tries":0,"rep":0.12}
+pausa {"ui":"pause","train":"defensa","state":"play","tries":0,"rep":0.15} Elegir otro ejercicio Empezar de cero
+volver {"ui":"entreno","train":null,"state":"attract","tries":-1,"rep":-1}
+de cero {"ui":null,"train":"subita","state":"countdown","tries":0,"rep":0}
+menú {"ui":"title","train":null,"state":"attract","tries":-1,"rep":-1}
+ERR 
+== desk
+ERR 
+== chaos
+{"mode":"jefe:microondas","arena":null,"fiesta":true,"ok":true,"play":3251,"rope":747,"mass":[2.3,2.1]}
+{"mode":"jefe:reloj","arena":null,"fiesta":false,"ok":true,"play":2901,"rope":498,"mass":[3.1,3.1]}
+{"mode":"jefe:reloj","arena":null,"fiesta":true,"ok":true,"play":3076,"rope":420,"mass":[3.2,3.8]}
+ERR 
+done

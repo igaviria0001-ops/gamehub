@@ -1,0 +1,4 @@
+const { chromium } = require('playwright'); const path = require('path');
+(async () => { const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 720 } }); await p.goto('file://' + path.resolve(__dirname, 'index.html')); await p.waitForTimeout(700);
+  console.log(await p.evaluate(() => { Game.start('duel', 2, { arena: 'paramo' }); UI.show(null, false); Game.advance(3); const G = Game.G; G.paused = true; const c = document.createElement('canvas'); c.width = 1280; c.height = 720; const x = c.getContext('2d'); x.translate(300, 300);
+    const t0 = performance.now(); for (let k = 0; k < 1500; k++) ArtMage.draw(x, G, G.mages[k % 2]); x.getImageData(0, 0, 1, 1); return ((performance.now() - t0) / 1500).toFixed(3) + ' ms por mago'; })); await b.close(); })();

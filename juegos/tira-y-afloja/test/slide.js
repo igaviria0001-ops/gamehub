@@ -1,0 +1,43 @@
+// botones táctiles: deslizar el dedo de ◀ a ▶ cambia la dirección sin levantarlo; toques cerca cuentan
+const { chromium } = require('playwright');
+const path = require('path');
+const FILE = process.env.FILE || 'index.html';
+(async () => {
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext({ viewport: { width: 693, height: 272 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('file://' + path.resolve(__dirname, FILE));
+  await page.waitForTimeout(900);
+  await page.tap('#s-title [data-act="playbot"]'); await page.waitForTimeout(100);
+  await page.tap('[data-act="mode-caneca"]'); await page.waitForTimeout(200);
+  if (await page.evaluate(() => TYA.UI.current) === 'arena') await page.tap('#arena-grid .arena:nth-child(1)');
+  await page.waitForTimeout(3300);
+  const B = await page.evaluate(() => {
+    const c = sel => { const b = document.querySelector(sel).getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2, b.width]; };
+    return { L: c('#touch .tcl.move .k-left'), R: c('#touch .tcl.move .k-right'), J: c('#touch .k-jump'), K: c('#touch .k-stick') };
+  });
+  const cdp = await ctx.newCDPSession(page);
+  const pts = new Map();
+  const down = async (id, x, y) => { pts.set(id, [x, y]); await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [...pts].map(([i, p]) => ({ x: p[0], y: p[1], id: i })) }); };
+  const move = async (id, x, y) => { pts.set(id, [x, y]); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [...pts].map(([i, p]) => ({ x: p[0], y: p[1], id: i })) }); };
+  const up = async id => { const q = pts.get(id); pts.delete(id); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [{ x: q[0], y: q[1], id }] }); };
+  const out = [];
+  const snap = async tag => { await page.waitForTimeout(160); out.push(tag + ': ' + await page.evaluate(() => { const S = TYA.Touch.state[0]; return Object.keys(S).filter(k => S[k]).join(',') || '-'; })); };
+  const { L, R, J, K } = B;
+  await down(1, L[0], L[1]); await snap('abajo en ◀');
+  await move(1, (L[0] + R[0]) / 2, L[1]); await snap('en el medio');
+  await move(1, R[0], R[1]); await snap('deslizó a ▶');
+  await move(1, R[0] + R[2] * 1.2, R[1] - 10); await snap('se pasa hacia ● (no debe pegarse)');
+  await down(2, J[0], J[1]); await snap('+ otro dedo en ▲');
+  await move(2, K[0], K[1]); await snap('desliza a ●');
+  await up(1); await snap('suelta el 1');
+  await up(2); await snap('suelta el 2');
+  await down(3, L[0] - L[2] * 0.75, L[1]); await snap('toque nuevo un poco afuera de ◀ (cuenta)');
+  await up(3); await snap('suelta');
+  await down(4, (L[0] + J[0]) / 2 + 60, 40); await snap('toque arriba en el centro (no hace nada)');
+  await up(4);
+  console.log(out.join('\n'));
+  console.log('ERR', errors.join(' | '));
+  await browser.close();
+})();

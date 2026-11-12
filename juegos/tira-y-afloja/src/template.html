@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2a1710">
+<title>Tira y Afloja</title>
+<meta name="description" content="Duelo de chicle para dos jugadores en el mismo computador.">
+<style>
+/* Fredoka incrustada (funciona sin internet) */
+/*__FONTS__*/
+/* Un mundo único (el salón de clases), igual en tema claro y oscuro:
+   marco café oscuro alrededor del juego, tarjetas color crema, botones de chicle. */
+:root {
+  --frame: #2a1710;
+  --ink: #3a2216;
+  --ink-soft: #6b4632;
+  --cream: #fff6e6;
+  --paper: #fffaf0;
+  --fresa: #ff5c9d;
+  --fresa-deep: #9c1f57;
+  --fresa-soft: #ffd3e4;
+  --menta: #27d3b2;
+  --menta-deep: #0b6957;
+  --menta-soft: #c8f7ec;
+  --sol: #ffd84d;
+  --veil: rgba(42, 23, 16, 0.55);
+  --display: "Fredoka", "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; } /* sin zoom por doble toque en celular */
+body { margin: 0; background: var(--frame); color: var(--ink); font-family: var(--body); overflow: hidden; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+#app { position: fixed; inset: 0; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
+
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-content: safe center; gap: clamp(12px, 2.4vh, 26px);
+  padding-block: max(20px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  pointer-events: auto; overflow-y: auto; box-sizing: border-box; animation: fadeIn .25s ease-out; }
+.screen.veil { background: radial-gradient(ellipse at center, rgba(42,23,16,0.35), rgba(42,23,16,0.78)); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- logo ---------- */
+.logo { position: relative; isolation: isolate; text-align: center; line-height: .85; margin: 0; font-family: var(--display); font-weight: 700; letter-spacing: .01em; animation: logoIn .7s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes logoIn { from { transform: scale(.6) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.logo .w { display: inline-block; font-size: clamp(56px, 11vw, 150px); -webkit-text-stroke: clamp(5px, .9vw, 11px) var(--ink); paint-order: stroke fill; }
+.logo .tira { color: var(--fresa); text-shadow: 0 .07em 0 var(--fresa-deep), 0 .12em .2em rgba(0,0,0,.35); transform: rotate(-4deg); animation: wobA 3.2s ease-in-out infinite; }
+.logo .afloja { color: var(--menta); text-shadow: 0 .07em 0 var(--menta-deep), 0 .12em .2em rgba(0,0,0,.35); transform: rotate(3deg); animation: wobB 3.2s ease-in-out infinite; }
+.logo .y { display: inline-block; vertical-align: middle; font-size: clamp(26px, 4vw, 52px); width: 1.6em; height: 1.6em; line-height: 1.55em; border-radius: 50%; background: var(--sol); color: var(--ink); border: clamp(3px,.5vw,6px) solid var(--ink); margin: 0 .25em; box-shadow: 0 .14em 0 var(--ink); transform: translateY(-.2em); }
+@keyframes wobA { 0%,100% { transform: rotate(-4deg) scale(1,1); } 50% { transform: rotate(-3deg) scale(1.03,.97); } }
+@keyframes wobB { 0%,100% { transform: rotate(3deg) scale(1,1); } 50% { transform: rotate(4deg) scale(.97,1.03); } }
+.logo-rope { position: absolute; left: 22%; right: 22%; top: 52%; height: 40px; z-index: -1; }
+.tagline { margin: 0; background: rgba(42,23,16,.55); padding: .35em 1em; border-radius: 999px; font-size: clamp(16px, 2vw, 24px); font-weight: 600; color: var(--cream); text-shadow: 0 2px 0 var(--ink), 0 0 12px rgba(0,0,0,.5); text-align: center; }
+
+/* ---------- botones de chicle ---------- */
+.menu { display: flex; flex-wrap: wrap; gap: 14px 18px; justify-content: center; max-width: 980px; }
+.menu.col { flex-direction: column; align-items: stretch; width: min(380px, 100%); }
+.btn { font: 600 clamp(17px, 1.7vw, 22px)/1 var(--body); color: var(--ink); background: var(--cream); border: 4px solid var(--ink); border-radius: 999px; padding: .78em 1.5em; box-shadow: 0 6px 0 var(--ink); cursor: pointer; transition: transform .08s, box-shadow .08s, background .12s; display: inline-flex; align-items: center; justify-content: center; gap: .55em; white-space: nowrap; }
+.btn:hover, .btn:focus-visible { transform: translateY(-3px); box-shadow: 0 9px 0 var(--ink); background: var(--fresa-soft); outline: none; }
+.btn:focus-visible { box-shadow: 0 9px 0 var(--ink), 0 0 0 5px var(--sol); }
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+.btn.big { font-size: clamp(20px, 2.1vw, 28px); padding: .8em 1.7em; }
+.btn.fresa { background: var(--fresa); color: #fff; text-shadow: 0 2px 0 var(--fresa-deep); }
+.btn.fresa:hover, .btn.fresa:focus-visible { background: #ff7bb0; }
+.btn.menta { background: var(--menta); color: #fff; text-shadow: 0 2px 0 var(--menta-deep); }
+.btn.menta:hover, .btn.menta:focus-visible { background: #46e0c2; }
+.btn .dot { width: .8em; height: .8em; border-radius: 50%; border: 3px solid var(--ink); flex: none; }
+
+.foot { font-size: clamp(13px, 1.3vw, 16px); color: var(--cream); opacity: .9; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,.6); margin: 0; }
+.foot kbd { font: 700 .9em var(--body); background: var(--cream); color: var(--ink); border: 2px solid var(--ink); border-radius: 6px; padding: 0 .35em; box-shadow: 0 2px 0 var(--ink); }
+
+/* ---------- tarjetas / paneles ---------- */
+.card { background: var(--paper); border: 4px solid var(--ink); border-radius: 28px; box-shadow: 0 10px 0 var(--ink), 0 24px 50px rgba(0,0,0,.35); padding: clamp(18px, 2.6vw, 34px); max-width: min(1040px, 100%); box-sizing: border-box; }
+.card h2 { font: 700 clamp(28px, 3.4vw, 46px)/1.05 var(--display); margin: 0 0 .4em; text-align: center; text-wrap: balance; }
+.card p { margin: 0; line-height: 1.4; font-size: clamp(15px, 1.4vw, 18px); }
+.title-chip { font: 700 clamp(26px, 3vw, 40px)/1 var(--display); color: var(--cream); -webkit-text-stroke: 6px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); margin: 0; text-align: center; }
+
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: clamp(10px, 1.4vw, 18px); width: min(1180px, 100%); }
+.camp { width: min(1180px, 100%); display: flex; flex-direction: column; gap: 10px; }
+.camp-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--cream); font: 700 20px var(--display); text-shadow: 0 2px 0 rgba(0,0,0,.35); flex-wrap: wrap; }
+.zrow { display: grid; grid-template-columns: minmax(150px, 210px) repeat(6, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
+.zname { background: rgba(40,20,10,.55); border-radius: 14px; padding: 8px 12px; color: var(--cream); display: flex; flex-direction: column; justify-content: center; }
+.zname b { font: 700 19px var(--display); }
+.zname small { font-size: 12px; opacity: .85; }
+.stg { all: unset; box-sizing: border-box; cursor: pointer; background: var(--paper); border: 4px solid var(--ink); border-radius: 14px; box-shadow: 0 5px 0 var(--ink); padding: 6px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 66px; }
+.stg b { font: 700 18px var(--display); }
+.stg span { font-size: 15px; letter-spacing: 1px; color: #d9a300; }
+.stg small { font-size: 11px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.stg.boss { background: #ffe1d8; border-color: #8a2a1a; box-shadow: 0 5px 0 #8a2a1a; }
+.stg.boss b { color: #8a2a1a; }
+.stg:hover, .stg:focus-visible { transform: translateY(-3px); box-shadow: 0 8px 0 var(--ink), 0 0 0 4px var(--sol); }
+.stg[disabled] { background: #d9cfc0; filter: grayscale(.7); color: rgba(58,34,22,.55); cursor: default; transform: none; box-shadow: 0 5px 0 var(--ink); }
+html.lt760 .zrow { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+html.lt760 .zname { grid-column: 1 / -1; }
+.jefes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; width: min(1080px, 100%); }
+.jefes .mode .art { height: auto; }
+.jefes .mode .rec { font-size: 14px; color: var(--ink-soft); margin: 0; }
+
+html.lt760 .jefes { grid-template-columns: 1fr; }
+.modes .mode { padding: clamp(12px, 1.4vw, 18px); gap: 6px; }
+.modes .mode .art { height: auto; }
+.modes .mode h3 { font-size: clamp(21px, 2.2vw, 28px); }
+.modes .mode p { font-size: clamp(13px, 1.2vw, 16px); }
+.mode { all: unset; box-sizing: border-box; cursor: pointer; background: var(--paper); border: 4px solid var(--ink); border-radius: 28px; padding: clamp(16px, 2vw, 26px); box-shadow: 0 8px 0 var(--ink); display: flex; flex-direction: column; gap: 10px; transition: transform .1s, box-shadow .1s, background .12s; min-width: 0; }
+.mode:hover, .mode:focus-visible { transform: translateY(-4px) rotate(-.5deg); box-shadow: 0 12px 0 var(--ink), 0 0 0 5px var(--sol); }
+.mode:active { transform: translateY(4px); box-shadow: 0 3px 0 var(--ink); }
+.mode .art { width: 100%; height: auto; display: block; border-radius: 18px; border: 3px solid var(--ink); position: relative; overflow: hidden; }
+.mode h3 { font: 700 clamp(24px, 2.6vw, 34px)/1 var(--display); margin: 4px 0 0; }
+.mode p { margin: 0; color: var(--ink-soft); font-size: clamp(15px, 1.4vw, 18px); line-height: 1.35; }
+.mode .tag { align-self: flex-start; font: 700 14px/1 var(--body); background: var(--ink); color: var(--cream); padding: 6px 10px; border-radius: 999px; letter-spacing: .04em; }
+.art-caneca { background: linear-gradient(#fbe8c4, #f1d5a6 70%, #5aa797 70%); }
+.art-chicles { background: linear-gradient(#2f6150, #244c3f); }
+.art-rey { background: linear-gradient(#fbe8c4, #f1d5a6 72%, #b97a45 72%); }
+.art-jefe { background: linear-gradient(#f6ead2, #f6ead2 70%, #c98a4e 70%); }
+.art-fuga { background: linear-gradient(#cfe3f5, #cfe3f5 72%, #50aae6 72%); }
+.mode.coop .tag { background: var(--menta-deep); }
+.levels { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; width: min(900px, 100%); }
+.lvl { all: unset; box-sizing: border-box; cursor: pointer; background: var(--paper); border: 4px solid var(--ink); border-radius: 18px; box-shadow: 0 6px 0 var(--ink); padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.lvl b { font: 700 30px var(--display); }
+.lvl span { font-size: 18px; letter-spacing: 2px; color: #d9a300; }
+.lvl small { font-size: 12px; color: var(--ink-soft); }
+.lvl:hover, .lvl:focus-visible { transform: translateY(-3px); box-shadow: 0 9px 0 var(--ink), 0 0 0 5px var(--sol); }
+.lvl[disabled] { opacity: .45; cursor: default; box-shadow: 0 6px 0 var(--ink); transform: none; }
+html.lt760 .levels { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.art-escalada { background: linear-gradient(#ead6b4, #ead6b4 72%, #50aae6 72%); }
+.art-gol { background: linear-gradient(#e9eef6, #dfe5ef 70%, #e2ac6c 70%); }
+
+/* ---------- arenas ---------- */
+.arenas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: clamp(12px, 1.6vw, 20px); width: min(1180px, 100%); }
+.arenas.three { grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(1000px, 100%); }
+.arena { all: unset; box-sizing: border-box; cursor: pointer; background: var(--paper); border: 4px solid var(--ink); border-radius: 22px; padding: 10px 10px 14px; box-shadow: 0 7px 0 var(--ink); display: flex; flex-direction: column; gap: 6px; min-width: 0; transition: transform .1s, box-shadow .1s; }
+.arena:hover, .arena:focus-visible { transform: translateY(-4px) rotate(-.4deg); box-shadow: 0 11px 0 var(--ink), 0 0 0 5px var(--sol); }
+.arena:active { transform: translateY(3px); box-shadow: 0 3px 0 var(--ink); }
+.arena canvas { width: 100%; aspect-ratio: 16 / 9; height: auto; border-radius: 14px; border: 3px solid var(--ink); background: #e9dcc4; display: block; }
+.arena h3 { font: 700 clamp(19px, 1.8vw, 24px)/1.1 var(--display); margin: 4px 4px 0; }
+.arena p { margin: 0 4px; color: var(--ink-soft); font-size: clamp(13px, 1.2vw, 15px); line-height: 1.3; }
+.arena.picked { box-shadow: 0 11px 0 var(--ink), 0 0 0 6px var(--sol); transform: translateY(-4px); }
+
+/* ---------- cómo jugar ---------- */
+.howto { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(14px, 2vw, 24px); }
+.keys-box { border: 3px solid var(--ink); border-radius: 20px; padding: 14px 16px 16px; min-width: 0; }
+.keys-box.p1 { background: var(--fresa-soft); }
+.keys-box.p2 { background: var(--menta-soft); }
+.keys-box h3 { margin: 0 0 10px; font: 700 22px/1 var(--display); display: flex; align-items: center; gap: 10px; }
+.keys-box h3 .blob { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--ink); }
+.kgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.k { background: var(--paper); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 0 4px 0 var(--ink); padding: 6px 4px 7px; text-align: center; }
+.k b { display: block; font: 700 24px/1.1 var(--display); }
+.k span { display: block; font: 500 13px/1.2 var(--body); color: var(--ink-soft); }
+.keys-box .alt { margin-top: 10px; font-size: 14px; color: var(--ink-soft); }
+.tips { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 22px; }
+.tip { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.tip .ico { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--ink); display: grid; place-items: center; font: 700 20px var(--display); }
+.tip p { font-size: clamp(14px, 1.3vw, 17px); }
+.tip strong { font-weight: 700; }
+
+/* ---------- opciones ---------- */
+/* controles táctiles */
+/* una sola capa recibe todos los dedos (08b-tactil.js decide a qué botón va cada uno); los botones solo se dibujan */
+.touch { position: absolute; inset: 0; pointer-events: auto; z-index: 5; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  --tb: clamp(44px, calc(11vmin + 14px), 76px); --bw: calc(var(--tb) + 6px); --gp: calc(var(--tb) * 0.3); --cg: calc(var(--tb) * 0.8 + 6px);
+  --el: max(14px, env(safe-area-inset-left, 0px)); --er: max(14px, env(safe-area-inset-right, 0px)); }
+.touch.big { --tb: clamp(52px, calc(13vmin + 16px), 88px); }
+/* dos en un celular: que quepan las dos mitades con espacio libre en el centro */
+.touch.dual { --tb: min(clamp(44px, calc(11vmin + 14px), 76px), calc((50vw - 72px) / 5.4)); }
+.touch.dual.big { --tb: min(clamp(52px, calc(13vmin + 16px), 88px), calc((50vw - 58px) / 5.4)); }
+.touch[hidden] { display: none !important; }
+.tcl { position: absolute; bottom: max(14px, env(safe-area-inset-bottom, 0px)); display: grid; gap: var(--gp); pointer-events: none; } /* botones más separados: menos dedazos al vecino */
+.tcl.move { grid-template-columns: repeat(2, auto); }
+.tcl.act { grid-template-columns: repeat(2, auto); }
+.tcl.move.left { left: var(--el); }
+.tcl.move.right { right: var(--er); }
+.single .tcl.act.right { right: var(--er); }
+/* entre el movimiento y las acciones queda un hueco claro (antes casi se tocaban: ▶ junto a ●) */
+.dual .tcl.act.left2 { left: calc(var(--el) + var(--bw) * 2 + var(--gp) + var(--cg)); }
+.dual .tcl.act.right2 { right: calc(var(--er) + var(--bw) * 2 + var(--gp) + var(--cg)); }
+.thint { position: absolute; left: 50%; top: max(6px, env(safe-area-inset-top, 0px)); transform: translateX(-50%); max-width: min(460px, calc(100% - 40px)); padding: 8px 14px; border-radius: 14px; background: rgba(255,246,230,.94); border: 3px solid var(--ink); color: var(--ink); font: 600 clamp(12px, 3.4vmin, 15px)/1.3 var(--body); text-align: center; pointer-events: none; transition: opacity .4s; }
+.thint[hidden] { display: none; }
+.tbtn { all: unset; width: var(--tb); height: var(--tb); border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,246,230,.55); border: 3px solid rgba(58,34,22,.75); color: var(--ink); font: 700 clamp(20px, 4vmin, 30px)/1 var(--display);
+  box-shadow: 0 4px 0 rgba(58,34,22,.55), inset 0 0 0 4px color-mix(in srgb, var(--pc) 45%, transparent); pointer-events: none; }
+.tbtn.on { background: color-mix(in srgb, var(--pc) 70%, white); transform: translateY(3px); box-shadow: 0 1px 0 rgba(58,34,22,.55); }
+.tbtn.k-jump { background: rgba(255,216,77,.6); }
+.tpause { all: unset; position: absolute; top: calc(min(100vw, 177.78vh) * var(--pt, 122) * var(--hk, 1) / 1920 + 4px); left: 50%; transform: translateX(-50%); width: clamp(30px, 9vmin, 44px); height: clamp(30px, 9vmin, 44px); opacity: .8; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,246,230,.7); border: 3px solid var(--ink); font: 700 clamp(13px, 3.6vmin, 18px) var(--display); color: var(--ink); pointer-events: auto; }
+.tagain { display: none; }
+.touch.corner .tpause { top: max(8px, env(safe-area-inset-top, 0px)); left: max(14px, env(safe-area-inset-left, 0px)); transform: none; }
+.touch.train .tagain { all: unset; position: absolute; top: calc(min(100vw, 177.78vh) * var(--pt, 122) * var(--hk, 1) / 1920 + 4px); left: calc(50% + clamp(30px, 9vmin, 44px) * 0.5 + 12px); width: clamp(30px, 9vmin, 44px); height: clamp(30px, 9vmin, 44px); opacity: .85; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,216,77,.85); border: 3px solid var(--ink); font: 700 clamp(15px, 4.2vmin, 22px) var(--display); color: var(--ink); pointer-events: auto; }
+.touch.corner.train .tagain { top: max(8px, env(safe-area-inset-top, 0px)); left: calc(max(14px, env(safe-area-inset-left, 0px)) + clamp(30px, 9vmin, 44px) + 10px); }
+#rotate { display: none; }
+@media (orientation: portrait) and (hover: none) and (pointer: coarse) {
+  #rotate { display: grid; place-items: center; position: absolute; inset: 0; z-index: 50; background: rgba(42,23,16,.92); color: var(--cream); text-align: center; }
+  #rotate b { display: block; font: 700 30px var(--display); }
+  #rotate span { font-size: 16px; opacity: .85; }
+}
+.minirow { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.retos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; width: min(1040px, 100%); }
+.reto { all: unset; box-sizing: border-box; cursor: pointer; background: var(--paper); border: 4px solid var(--ink); border-radius: 18px; box-shadow: 0 6px 0 var(--ink); padding: 10px 12px; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; row-gap: 2px; align-items: center; min-width: 0; }
+.reto .md { grid-row: span 2; width: 42px; height: 42px; border-radius: 50%; border: 3px solid var(--ink); display: grid; place-items: center; font: 700 18px var(--display); color: var(--ink); box-sizing: border-box; }
+.reto .md.m0 { border: 3px dashed rgba(58,34,22,.4); color: var(--ink-soft); }
+.reto .md.lv1 { background: #7fd36b; } .reto .md.lv2 { background: #ffb03b; } .reto .md.lv3 { background: #ff6b5a; box-shadow: 0 0 0 4px rgba(255,107,90,.3); }
+.reto .md.lv0 { border: 3px dashed rgba(58,34,22,.4); color: var(--ink-soft); }
+.reto .md.m1 { background: #d98a4e; } .reto .md.m2 { background: #b9c6d2; } .reto .md.m3 { background: #ffc93c; box-shadow: 0 0 0 4px rgba(255,201,60,.35); }
+.reto b { font: 700 19px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reto small { font-size: 13px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reto:hover, .reto:focus-visible { transform: translateY(-3px); box-shadow: 0 9px 0 var(--ink), 0 0 0 5px var(--sol); }
+html.lt900 .retos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+html.lt620 .retos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.btn.sol { background: var(--sol); }
+.btn.sol:hover, .btn.sol:focus-visible { background: #ffe58a; }
+.card.records { width: min(1040px, 100%); }
+.players2 { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; margin-bottom: 12px; }
+.pcard { display: flex; flex-direction: column; gap: 6px; background: rgba(58,34,22,.05); border: 3px solid var(--ink); border-radius: 18px; padding: 10px 14px; min-width: 0; }
+.pcard .lbl { font: 700 13px var(--body); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); }
+.pcard .name { font: 700 22px var(--display); color: var(--ink); background: var(--cream); border: 3px solid var(--ink); border-radius: 12px; padding: 6px 10px; min-width: 0; }
+.pcard .name:focus { outline: none; box-shadow: 0 0 0 4px var(--sol); }
+.pcard .pstat { font-size: 14px; color: var(--ink-soft); }
+.vs { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.vs span { font: 700 34px var(--display); }
+.vs small { font-size: 12px; color: var(--ink-soft); }
+.tabs { margin: 4px auto 6px; display: flex; width: fit-content; }
+.accnext { text-align: center; font-size: 14px; color: var(--ink-soft); margin: 0 0 8px; }
+.achs { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; max-height: min(44vh, 420px); overflow-y: auto; padding: 4px; }
+.ach { display: flex; gap: 8px; align-items: flex-start; border: 2px solid rgba(58,34,22,.25); border-radius: 12px; padding: 7px 9px; background: var(--cream); }
+.ach .ic { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid var(--ink); display: grid; place-items: center; font: 700 13px var(--display); background: #e6d6bf; }
+.ach.on .ic { background: var(--sol); }
+.ach b { display: block; font: 700 14px var(--body); }
+.ach span { font-size: 12px; color: var(--ink-soft); line-height: 1.25; }
+.ach:not(.on) { opacity: .62; }
+.card.daily { width: min(620px, 100%); text-align: center; }
+.daily .date { font: 700 13px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+.daily .dtitle { font: 700 24px var(--display); margin: 4px 0 8px; color: var(--fresa-deep); }
+.daily .dstate { margin-top: 10px; font-weight: 700; }
+.newach { text-align: center; font-weight: 700; color: var(--fresa-deep); margin: 0 0 10px; }
+html.lt760 .players2 { grid-template-columns: 1fr; }
+.opts { display: grid; gap: 10px; width: min(600px, 100%); }
+.btn.cyc { padding: .5em 1em; font-size: clamp(15px, 1.4vw, 18px); min-width: 12em; justify-content: space-between; }
+.btn.cyc .arrow { opacity: .55; font-weight: 700; }
+.btn.cyc .dot { width: 1em; height: 1em; border-radius: 50%; border: 3px solid var(--ink); flex: none; }
+.opt { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; border-bottom: 2px dashed rgba(58,34,22,.25); padding-bottom: 12px; }
+.opt label { font: 600 19px var(--body); }
+.opt label small { font-size: 14px; color: var(--ink-soft); }
+.opt-note { margin: 10px 0 0; font-size: 14px; color: var(--ink-soft); text-align: center; }
+html:not(.touchdev) .touch-only { display: none; }
+#s-options.inmatch .match-only { display: none; }
+#s-options:not(.inmatch) .inmatch-only { display: none; }
+.seg { display: inline-flex; border: 3px solid var(--ink); border-radius: 999px; overflow: hidden; }
+.seg button { all: unset; cursor: pointer; font: 600 16px var(--body); padding: 8px 14px; color: var(--ink); background: var(--paper); }
+.seg button + button { border-left: 3px solid var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--cream); }
+.seg button:focus-visible { box-shadow: inset 0 0 0 4px var(--sol); }
+
+/* ---------- resultados ---------- */
+.results h2 { font-size: clamp(36px, 5vw, 64px); -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill; text-shadow: 0 6px 0 var(--ink); }
+.results .score { text-align: center; font: 600 clamp(18px, 2vw, 24px) var(--body); color: var(--ink-soft); margin-bottom: 16px; }
+table.stats { border-collapse: collapse; width: 100%; font-size: clamp(15px, 1.5vw, 19px); font-variant-numeric: tabular-nums; }
+table.stats th, table.stats td { padding: 8px 12px; text-align: center; border-bottom: 2px dashed rgba(58,34,22,.2); }
+table.stats th:first-child, table.stats td:first-child { text-align: left; }
+table.stats thead th { font: 700 20px var(--display); }
+.c-fresa { color: var(--fresa-deep); } .c-menta { color: var(--menta-deep); }
+.btn.fiesta .sw { width: 2.1em; height: 1.15em; border-radius: 999px; border: 3px solid var(--ink); background: #e6d6bf; position: relative; flex: none; box-sizing: border-box; transition: background .15s; }
+.btn.fiesta .sw::after { content: ''; position: absolute; top: 50%; left: .1em; width: .78em; height: .78em; border-radius: 50%; background: var(--paper); border: 3px solid var(--ink); box-sizing: border-box; transform: translateY(-50%); transition: left .15s; }
+.btn.fiesta[aria-pressed="true"], .btn.fiesta[aria-pressed="true"]:hover, .btn.fiesta[aria-pressed="true"]:focus-visible {
+  color: #fff; text-shadow: 0 2px 0 var(--fresa-deep);
+  background: radial-gradient(circle at 12% 28%, #ffd84d 0 .17em, transparent .19em), radial-gradient(circle at 86% 72%, #27d3b2 0 .17em, transparent .19em), radial-gradient(circle at 64% 18%, #b7a4ff 0 .14em, transparent .16em), radial-gradient(circle at 38% 82%, #fff 0 .13em, transparent .15em), radial-gradient(circle at 92% 22%, #fff 0 .11em, transparent .13em), var(--fresa); }
+.btn.fiesta[aria-pressed="true"] .sw { background: var(--sol); }
+.btn.fiesta[aria-pressed="true"] .sw::after { left: calc(100% - .88em); }
+.fiesta-note { margin: 14px 0 0; color: var(--cream); font: 600 clamp(14px, 1.3vw, 17px)/1.3 var(--body); text-align: center; opacity: .9; text-shadow: 0 2px 0 rgba(40,20,10,.5); }
+.row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 18px; }
+
+#toast { position: absolute; left: 50%; bottom: max(24px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--paper); border: 3px solid var(--ink); border-radius: 16px; padding: 10px 16px; font: 600 15px var(--body); box-shadow: 0 5px 0 var(--ink); max-width: min(560px, calc(100% - 32px)); text-align: center; pointer-events: auto; }
+
+html.lt720 .modes, html.lt720 .howto, html.lt720 .tips, html.lt720 .arenas.three { grid-template-columns: 1fr; }
+html.lt720 .logo-rope { display: none; }
+@media (hover: none) and (pointer: coarse) { .foot { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .logo, .logo .tira, .logo .afloja, .screen { animation: none; }
+  .btn, .mode { transition: none; }
+}
+
+/* GameHub: botón para volver (solo dentro de GameHub) */
+html.in-hub .fs-auto { display: none !important; }
+.hub-home { display: none; }
+html.in-hub .hub-home { display: inline-flex; align-items: center; gap: .35em; position: absolute; z-index: 30; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); padding: .45em .95em; border-radius: 999px; border: 2px solid rgba(255,255,255,.55); background: rgba(20,14,30,.55); color: #fff; font: 700 15px/1 var(--display, system-ui); letter-spacing: .02em; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: rgba(20,14,30,.8); border-color: #fff; outline: none; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="rotate" aria-hidden="true"><div><b>Gira el celular</b><span>Tira y Afloja se juega en horizontal</span></div></div>
+  <canvas id="cv" tabindex="0" aria-label="Tira y Afloja: escenario del juego"></canvas>
+  <div id="ui">
+    <!-- PANTALLA DE INICIO -->
+    <section class="screen" id="s-title">
+      <button class="hub-home" data-act="hubhome" aria-label="Volver a GameHub">⌂ GameHub</button>
+      <div style="flex:1 1 0; min-height: 0"></div>
+      <h1 class="logo" aria-label="Tira y Afloja">
+        <svg class="logo-rope" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true">
+          <defs><linearGradient id="lg" x1="0" x2="1"><stop offset="0" stop-color="#ff5c9d"/><stop offset="1" stop-color="#27d3b2"/></linearGradient></defs>
+          <path d="M0 18 C 120 36, 280 36, 400 18" stroke="#3a2216" stroke-width="18" fill="none" stroke-linecap="round"/>
+          <path d="M0 18 C 120 36, 280 36, 400 18" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/>
+        </svg>
+        <span class="w tira">Tira</span><span class="y">y</span><span class="w afloja">Afloja</span>
+      </h1>
+      <p class="tagline">Un duelo de chicle para dos, en el mismo computador</p>
+      <div style="flex:1.4 1 0; min-height: 0"></div>
+      <div class="menu">
+        <button class="btn big fresa" data-act="play2"><span class="dot" style="background:#fff"></span>Jugar 2 jugadores</button>
+        <button class="btn big menta" data-act="playbot">Contra la máquina</button>
+        <button class="btn big" data-act="howto">Cómo jugar</button>
+        <button class="btn big" data-act="options">Opciones</button>
+        <div class="minirow">
+          <button class="btn sol" data-act="daily">Reto del día</button>
+          <button class="btn menta" data-act="retos">Retos de técnica</button>
+          <button class="btn fresa" data-act="entreno">Entrenamiento</button>
+          <button class="btn" data-act="records">Jugadores y logros</button>
+        </div>
+      </div>
+      <p class="foot"><b style="color:var(--fresa)">Fresa</b>: <kbd>A</kbd><kbd>D</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>E</kbd> <kbd>Q</kbd> &nbsp;·&nbsp; <b style="color:var(--menta)">Menta</b>: <kbd>J</kbd><kbd>L</kbd> <kbd>I</kbd> <kbd>K</kbd> <kbd>O</kbd> <kbd>U</kbd> &nbsp;·&nbsp; también con mandos</p>
+    </section>
+
+    <!-- MODOS -->
+    <section class="screen veil" id="s-modes" hidden>
+      <p class="title-chip" id="modes-title">Elige el modo</p>
+      <div class="modes">
+        <button class="mode" data-act="mode-caneca">
+          <canvas class="art art-caneca" data-art="caneca" width="420" height="140"></canvas>
+          <h3>¡A la caneca!</h3>
+          <p>Lanza a tu rival a la caneca usando el hilo, embestidas y tu peso. Cada caída es una ronda.</p>
+          <span class="tag" id="tag-caneca">PRIMERO A 3 RONDAS</span>
+        </button>
+        <button class="mode" data-act="mode-chicles">
+          <canvas class="art art-chicles" data-art="chicles" width="420" height="140"></canvas>
+          <h3>Atrapa chicles</h3>
+          <p>Recoge más chicles que tu rival. Los dorados valen 3 y echarlo a la caneca vale 5.</p>
+          <span class="tag">75 SEGUNDOS</span>
+        </button>
+        <button class="mode" data-act="mode-rey">
+          <canvas class="art art-rey" data-art="rey" width="420" height="140"></canvas>
+          <h3>Rey del borrador</h3>
+          <p>Un borrador gigante recorre el pupitre. Quédate tú solo encima para sumar puntos; sácalo si se sube.</p>
+          <span class="tag">PRIMERO A 20</span>
+        </button>
+        <button class="mode" data-act="mode-gol">
+          <canvas class="art art-gol" data-art="gol" width="420" height="140"></canvas>
+          <h3>Gol de canica</h3>
+          <p>En la cancha del gimnasio: patea, cabecea o barre la canica con el hilo hasta el arco del otro.</p>
+          <span class="tag">PRIMERO A 5 GOLES</span>
+        </button>
+        <button class="mode" data-act="mode-escalada">
+          <canvas class="art art-escalada" data-art="escalada" width="420" height="140"></canvas>
+          <h3>Escalada tramposa</h3>
+          <p>El agua sube por la torre del reloj. Trepa usando al otro de ancla y toca la campana primero.</p>
+          <span class="tag" id="tag-escalada">PRIMERO A 3 RONDAS</span>
+        </button>
+        <button class="mode coop" data-act="mode-fuga">
+          <canvas class="art art-fuga" data-art="fuga" width="420" height="140"></canvas>
+          <h3>Fuga del colegio</h3>
+          <p>Cooperativo: escapen juntos por la torre. Uno pisa el botón de la reja y el otro pasa. 12 niveles con estrellas.</p>
+          <span class="tag">COOPERATIVO · 12 NIVELES</span>
+        </button>
+        <button class="mode coop" data-act="mode-campana">
+          <canvas class="art art-jefe" data-art="campana" width="420" height="140"></canvas>
+          <h3>Campaña</h3>
+          <p>Cooperativo: 6 zonas del colegio con salas de acertijos y un jefe al final de cada una. Envolturas escondidas.</p>
+          <span class="tag" id="tag-campana">COOPERATIVO · 36 ETAPAS</span>
+        </button>
+        <button class="mode coop" data-act="mode-jefe">
+          <canvas class="art art-jefe" data-art="jefe" width="420" height="140"></canvas>
+          <h3>Jefes</h3>
+          <p>Cooperativo: seis jefes del colegio, de la Aspiradora al Reloj de la torre. Tres corazones compartidos.</p>
+          <span class="tag">COOPERATIVO · 6 JEFES</span>
+        </button>
+      </div>
+      <button class="btn" data-act="back">Atrás</button>
+    </section>
+
+    <!-- ARENA -->
+    <section class="screen veil" id="s-arena" hidden>
+      <p class="title-chip">Elige la arena</p>
+      <div class="arenas" id="arena-grid"></div>
+      <div class="row" id="arena-extra">
+        <button class="btn big fiesta" data-act="fiesta" id="btn-fiesta" aria-pressed="false"><span class="sw" aria-hidden="true"></span><span>Modo Fiesta</span></button>
+        <button class="btn big" data-act="arena-random">Al azar</button>
+        <button class="btn big menta" data-act="arena-torneo" id="btn-torneo">Torneo: el que pierde elige</button>
+        <button class="btn" data-act="back">Atrás</button>
+      </div>
+      <p class="fiesta-note" id="fiesta-note">Modo Fiesta: una sorpresa distinta en cada ronda (gravedad lunar, gigantes, tijeras locas, ventarrón…).</p>
+    </section>
+
+    <!-- TORNEO: ELEGIR SIGUIENTE ARENA -->
+    <section class="screen veil" id="s-pick" hidden>
+      <p class="title-chip" id="pick-title">Fresa elige la siguiente arena</p>
+      <div class="arenas three" id="pick-grid"></div>
+    </section>
+
+    <!-- CÓMO JUGAR -->
+    <section class="screen veil" id="s-howto" hidden>
+      <div class="card">
+        <h2>Cómo jugar</h2>
+        <div class="howto">
+          <div class="keys-box p1">
+            <h3><span class="blob" style="background:var(--fresa)"></span>Fresa (jugador 1)</h3>
+            <div class="kgrid">
+              <div class="k"><b>Q</b><span>aflojar</span></div><div class="k"><b>W</b><span>saltar</span></div><div class="k"><b>E</b><span>tirar</span></div>
+              <div class="k"><b>A</b><span>izquierda</span></div><div class="k"><b>S</b><span>pegarse</span></div><div class="k"><b>D</b><span>derecha</span></div>
+            </div>
+          </div>
+          <div class="keys-box p2">
+            <h3><span class="blob" style="background:var(--menta)"></span>Menta (jugador 2)</h3>
+            <div class="kgrid">
+              <div class="k"><b>U</b><span>aflojar</span></div><div class="k"><b>I</b><span>saltar</span></div><div class="k"><b>O</b><span>tirar</span></div>
+              <div class="k"><b>J</b><span>izquierda</span></div><div class="k"><b>K</b><span>pegarse</span></div><div class="k"><b>L</b><span>derecha</span></div>
+            </div>
+            <p class="alt">También sirve el teclado numérico: 7 8 9 / 4 5 6.</p>
+          </div>
+          <div class="tips">
+            <div class="tip"><div class="ico" style="background:var(--fresa)">+</div><p><strong>Tirar</strong> recoge hilo dentro de ti: creces, pesas más, empujas más fuerte y es difícil arrastrarte.</p></div>
+            <div class="tip"><div class="ico" style="background:var(--menta)">−</div><p><strong>Aflojar</strong> suelta hilo: te achicas, corres más rápido y saltas hasta el triple de alto.</p></div>
+            <div class="tip"><div class="ico" style="background:var(--sol)">S</div><p><strong>Pegarse</strong> (mantener) te ancla al piso, a una pared o al techo. El chicle se seca en unos segundos: mira el anillo.</p></div>
+            <div class="tip"><div class="ico" style="background:#fff">!</div><p><strong>Embestida:</strong> corre hacia el otro y choca con más impulso: lo tumbas. <strong>Tirachinas:</strong> pégate con el hilo tenso, espera las tres flechas y suéltate.</p></div>
+            <div class="tip"><div class="ico" style="background:#b9a8ff">↑</div><p><strong>Salto doble:</strong> salta otra vez en el aire; escupes un poquito de chicle al hilo.</p></div>
+            <div class="tip"><div class="ico" style="background:#7fe0d0">↓</div><p><strong>En el aire, «pegarse»</strong> agarra la pared o el techo cercano; si no hay nada, haces una <strong>picada</strong>. Cae encima del otro: ¡aplastón!</p></div>
+          </div>
+        </div>
+        <p style="text-align:center;margin-top:16px;color:var(--ink-soft)">Mandos: A saltar · B pegarse · gatillo derecho tirar · gatillo izquierdo aflojar · Esc o Start para pausar</p>
+        <div class="row">
+          <button class="btn big fresa" data-act="tut-pair">Tutorial en pareja</button>
+          <button class="btn big menta" data-act="tut-solo">Tutorial solo</button>
+          <button class="btn big sol" data-act="retos">Retos de técnica</button>
+          <button class="btn big" data-act="entreno">Entrenamiento avanzado</button>
+          <button class="btn" data-act="back">Entendido</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- OPCIONES -->
+    <section class="screen veil" id="s-options" hidden>
+      <div class="card">
+        <h2>Opciones</h2>
+        <div class="opts">
+          <div class="opt"><label id="l-music">Música</label><div class="seg" role="group" aria-labelledby="l-music" data-opt="music"><button id="o-music-1" data-v="1">Sí</button><button id="o-music-0" data-v="0">No</button></div></div>
+          <div class="opt"><label id="l-style">Estilo de música</label><button class="btn cyc" id="o-style" data-cyc="style" aria-labelledby="l-style"><span class="arrow" aria-hidden="true">‹</span><span class="val">Según la arena</span><span class="arrow" aria-hidden="true">›</span></button></div>
+          <div class="opt"><label id="l-sfx">Efectos de sonido</label><div class="seg" role="group" aria-labelledby="l-sfx" data-opt="sfx"><button id="o-sfx-1" data-v="1">Sí</button><button id="o-sfx-0" data-v="0">No</button></div></div>
+          <div class="opt match-only"><label id="l-wins">Rondas para ganar</label><div class="seg" role="group" aria-labelledby="l-wins" data-opt="wins"><button id="o-wins-3" data-v="3">3</button><button id="o-wins-5" data-v="5">5</button></div></div>
+          <div class="opt match-only"><label id="l-bot">La máquina</label><div class="seg" role="group" aria-labelledby="l-bot" data-opt="bot"><button id="o-bot-0" data-v="0">Novato</button><button id="o-bot-1" data-v="1">Masticador</button><button id="o-bot-2" data-v="2">Leyenda</button></div></div>
+          <div class="opt"><label id="l-theme">Ambiente</label><div class="seg" role="group" aria-labelledby="l-theme" data-opt="theme"><button data-v="dia">Día</button><button data-v="tarde">Tarde</button><button data-v="noche">Noche</button></div></div>
+          <div class="opt"><label id="l-f1">Sabor del jugador 1</label><button class="btn cyc flavor" id="o-f1" data-cyc="f0" aria-labelledby="l-f1"><span class="dot"></span><span class="val">Fresa</span><span class="arrow" aria-hidden="true">›</span></button></div>
+          <div class="opt"><label id="l-f2">Sabor del jugador 2</label><button class="btn cyc flavor" id="o-f2" data-cyc="f1" aria-labelledby="l-f2"><span class="dot"></span><span class="val">Menta</span><span class="arrow" aria-hidden="true">›</span></button></div>
+          <div class="opt"><label id="l-hc0">Ventaja del jugador 1 <small>(para jugar parejo)</small></label><div class="seg" role="group" aria-labelledby="l-hc0" data-opt="hc0"><button data-v="0">No</button><button data-v="1">Poca</button><button data-v="2">Mucha</button></div></div>
+          <div class="opt"><label id="l-hc1">Ventaja del jugador 2 <small>(para jugar parejo)</small></label><div class="seg" role="group" aria-labelledby="l-hc1" data-opt="hc1"><button data-v="0">No</button><button data-v="1">Poca</button><button data-v="2">Mucha</button></div></div>
+          <div class="opt"><label id="l-shake">Sacudida de pantalla</label><div class="seg" role="group" aria-labelledby="l-shake" data-opt="shake"><button data-v="1">Normal</button><button data-v="0.4">Suave</button><button data-v="0">No</button></div></div>
+          <div class="opt"><label id="l-auto">Pegarse solo al quedarse quieto (pantallas táctiles)</label><div class="seg" role="group" aria-labelledby="l-auto" data-opt="autostick"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+          <div class="opt touch-only"><label id="l-tbig">Botones en pantalla (celular)</label><div class="seg" role="group" aria-labelledby="l-tbig" data-opt="tbig"><button data-v="0">Normales</button><button data-v="1">Grandes</button></div></div>
+          <div class="opt touch-only"><label id="l-vib">Vibrar con los golpes (celular)</label><div class="seg" role="group" aria-labelledby="l-vib" data-opt="vib"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+          <div class="opt fs-auto"><label id="l-autofs">Pantalla completa automática</label><div class="seg" role="group" aria-labelledby="l-autofs" data-opt="autofs"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+          <div class="opt"><label id="l-marks">Marcas 1 y 2 sobre los jugadores</label><div class="seg" role="group" aria-labelledby="l-marks" data-opt="marks"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+          <div class="opt"><label id="l-quality">Calidad gráfica</label><div class="seg" role="group" aria-labelledby="l-quality" data-opt="quality"><button data-v="alta">Alta</button><button data-v="ligera">Ligera (PC sencillo)</button></div></div>
+          <div class="opt"><label>Pantalla completa</label><button class="btn" data-act="fullscreen" aria-label="Pantalla completa: activar o salir">Activar</button></div>
+        </div>
+        <p class="opt-note">Ventaja: quien la tiene empuja más fuerte, lo empujan menos y su chicle tarda más en secarse (en los duelos).</p>
+        <p class="opt-note inmatch-only">Las rondas y el nivel de la máquina se cambian desde el menú principal.</p>
+        <div class="row"><button class="btn" data-act="back">Listo</button></div>
+      </div>
+    </section>
+
+    <!-- JUGADORES Y LOGROS -->
+    <section class="screen veil" id="s-records" hidden>
+      <div class="card records">
+        <h2>Jugadores y logros</h2>
+        <div class="players2">
+          <div class="pcard" data-i="0">
+            <label class="lbl" for="n1">Jugador 1</label>
+            <input class="name" id="n1" maxlength="14" autocomplete="off" spellcheck="false">
+            <p class="pstat" id="ps1"></p>
+            <button class="btn cyc acc" data-acc="0"><span class="val">Sin accesorio</span><span class="arrow" aria-hidden="true">›</span></button>
+          </div>
+          <div class="vs"><span id="h2h">0 – 0</span><small>historial entre los dos</small></div>
+          <div class="pcard" data-i="1">
+            <label class="lbl" for="n2">Jugador 2</label>
+            <input class="name" id="n2" maxlength="14" autocomplete="off" spellcheck="false">
+            <p class="pstat" id="ps2"></p>
+            <button class="btn cyc acc" data-acc="1"><span class="val">Sin accesorio</span><span class="arrow" aria-hidden="true">›</span></button>
+          </div>
+        </div>
+        <div class="seg tabs" role="group" aria-label="Ver logros de" id="ach-tabs"><button data-t="0" aria-pressed="true">Logros de Jugador 1</button><button data-t="1" aria-pressed="false">Logros de Jugador 2</button></div>
+        <p class="accnext" id="accnext"></p>
+        <div class="achs" id="achs"></div>
+        <div class="row"><button class="btn" data-act="back">Listo</button></div>
+      </div>
+    </section>
+
+    <!-- FUGA: NIVELES -->
+    <section class="screen veil" id="s-levels" hidden>
+      <p class="title-chip">Fuga del colegio · elijan nivel</p>
+      <div class="levels" id="levels"></div>
+      <p class="fiesta-note" id="levels-note">Los dos tienen que llegar arriba. ★★★ si escapan antes del tiempo meta.</p>
+      <div class="row"><button class="btn" data-act="back">Atrás</button></div>
+    </section>
+
+    <!-- CAMPAÑA -->
+    <section class="screen veil" id="s-campana" hidden>
+      <p class="title-chip">Campaña · escapen del colegio</p>
+      <div class="camp">
+        <div class="camp-head"><span id="camp-stars">★ 0</span><span id="camp-note">Cada zona termina con un jefe: hay que vencerlo para seguir.</span></div>
+        <div id="camp-rows" class="camp"></div>
+      </div>
+      <div class="row"><button class="btn" data-act="back">Atrás</button></div>
+    </section>
+
+    <!-- JEFES -->
+    <section class="screen veil" id="s-jefes" hidden>
+      <p class="title-chip">Jefes · peleen juntos</p>
+      <div class="jefes" id="jefes"></div>
+      <p class="fiesta-note">Comparten 3 corazones: caer a la caneca o ser tragados cuesta uno. Al jefe solo le duele cuando muestra «¡AHORA!»: embístanlo, cáiganle en picada o lancen un tirachinas.</p>
+      <div class="row"><button class="btn" data-act="back">Atrás</button></div>
+    </section>
+
+    <!-- RETOS DE TÉCNICA -->
+    <section class="screen veil" id="s-retos" hidden>
+      <p class="title-chip">Retos de técnica · juega Fresa (jugador 1)</p>
+      <div class="retos" id="retos"></div>
+      <p class="fiesta-note" id="retos-note"></p>
+      <div class="row"><button class="btn fresa" data-act="entreno">Entrenamiento avanzado</button><button class="btn" data-act="back">Atrás</button></div>
+    </section>
+
+    <!-- ENTRENAMIENTO AVANZADO -->
+    <section class="screen veil" id="s-entreno" hidden>
+      <p class="title-chip">Entrenamiento avanzado · juega Fresa (jugador 1)</p>
+      <div class="retos" id="entreno"></div>
+      <p class="fiesta-note" id="entreno-note"></p>
+      <div class="row"><button class="btn" data-act="back">Atrás</button></div>
+    </section>
+
+    <!-- RETO DEL DÍA -->
+    <section class="screen veil" id="s-daily" hidden>
+      <div class="card daily">
+        <p class="date" id="d-date"></p>
+        <h2>Reto del día</h2>
+        <p class="dtitle" id="d-title"></p>
+        <p id="d-desc"></p>
+        <p class="dstate" id="d-state"></p>
+        <div class="row">
+          <button class="btn big sol" data-act="daily-go">¡A jugar!</button>
+          <button class="btn" data-act="back">Atrás</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAUSA -->
+    <section class="screen veil" id="s-pause" hidden>
+      <p class="title-chip">Pausa</p>
+      <div class="menu col">
+        <button class="btn big fresa" data-act="resume">Seguir jugando</button>
+        <button class="btn big" data-act="restart" id="btn-restart">Reiniciar partida</button>
+        <button class="btn big" data-act="retos-list" id="btn-retos-list" hidden>Elegir otro reto</button>
+        <button class="btn big" data-act="howto">Cómo jugar</button>
+        <button class="btn big" data-act="options">Opciones</button>
+        <button class="btn big" data-act="menu">Salir al menú</button>
+      </div>
+    </section>
+
+    <!-- RESULTADOS -->
+    <section class="screen veil" id="s-results" hidden>
+      <div class="card results">
+        <h2 id="r-title">¡Fresa gana!</h2>
+        <p class="score" id="r-score"></p>
+        <p class="newach" id="r-ach" hidden></p>
+        <table class="stats">
+          <thead><tr><th></th><th class="c-fresa" id="r-p1">Fresa</th><th class="c-menta" id="r-p2">Menta</th></tr></thead>
+          <tbody id="r-body"></tbody>
+        </table>
+        <div class="row">
+          <button class="btn big menta" data-act="nextlevel" id="btn-next" hidden>Siguiente nivel</button>
+          <button class="btn big sol" data-act="hubback" id="btn-hub" hidden>Continuar torneo ▸</button>
+          <button class="btn big fresa" data-act="rematch" id="btn-rematch">Revancha</button>
+          <button class="btn big" data-act="changemode">Cambiar modo</button>
+          <button class="btn big" data-act="menu">Menú</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="toast" hidden></div>
+  </div>
+</div>
+
+<script>
+/*__SCRIPTS__*/
+</script>
+</body>
+</html>

@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1b1f52">
+<title>Ventolera</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/*__FONTS__*/
+:root { color-scheme: dark; --ink: #1d1940; --sol: #ffcf5a; --cielo: #5ad8ff; --rosa: #ff9cb8; --glass: rgba(255,255,255,0.14); --glass-b: rgba(255,255,255,0.42); --font: "Comfortaa", "Varela Round", "Trebuchet MS", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #1b1f52; color: #fff; font-family: var(--font); overflow: hidden; touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+#app { position: fixed; inset: 0; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
+button { font-family: var(--font); }
+
+/* ---------- pantallas de vidrio ---------- */
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); overflow-y: auto; animation: fade .35s ease-out; z-index: 10; }
+.screen[hidden] { display: none; }
+/* «oculto» manda siempre (los botones usan all: unset, que si no lo anularía) */
+[hidden], .btn[hidden] { display: none !important; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.panel { margin: auto; width: min(680px, 100%); background: var(--glass); border: 1px solid var(--glass-b); border-radius: 28px; padding: 26px 30px; box-shadow: 0 24px 70px rgba(18,10,48,.38), inset 0 1px 0 rgba(255,255,255,.35); -webkit-backdrop-filter: blur(16px) saturate(1.25); backdrop-filter: blur(16px) saturate(1.25); }
+.phead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.phead h2 { margin: 0; }
+.phead .btn { min-height: 44px; padding: 8px 22px; }
+h2 { margin: 0 0 14px; font-size: clamp(20px, 3.4vmin + 8px, 30px); font-weight: 700; letter-spacing: .01em; text-shadow: 0 2px 10px rgba(30,15,70,.35); }
+p { margin: 8px 0; line-height: 1.5; font-size: clamp(13px, 1.4vmin + 9px, 16px); }
+.muted { opacity: .78; }
+
+/* título */
+.title { text-align: center; }
+.logo { position: relative; display: inline-block; margin: 0 auto 2px; }
+.logo h1 { margin: 0; font-size: clamp(44px, 10vmin + 10px, 104px); font-weight: 700; letter-spacing: .015em; line-height: 1; background: linear-gradient(100deg, #fff4c9 0%, #ffd27a 30%, #ffffff 52%, #b9f0ff 74%, #7fdcff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 6px 18px rgba(40,20,90,.45)); }
+.logo svg { position: absolute; left: -6%; right: -6%; width: 112%; bottom: -24%; height: 60%; overflow: visible; pointer-events: none; }
+.sub { margin: 10px 0 18px; font-size: clamp(13px, 1.6vmin + 9px, 18px); letter-spacing: .28em; text-transform: lowercase; opacity: .9; }
+.menu { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+.btn { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 12px 18px; border-radius: 18px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.45); color: #fff; font: 700 clamp(14px, 1.5vmin + 10px, 18px)/1.2 var(--font); text-align: center; cursor: pointer; transition: transform .12s, background .15s, box-shadow .15s; box-shadow: 0 6px 20px rgba(20,10,50,.18); }
+.btn:hover, .btn:focus-visible { background: rgba(255,255,255,.26); box-shadow: 0 0 0 3px rgba(255,255,255,.55), 0 10px 26px rgba(20,10,50,.28); transform: translateY(-1px); }
+.btn:active { transform: translateY(1px) scale(.99); }
+.btn.big { grid-column: span 1; min-height: 64px; font-size: clamp(16px, 1.8vmin + 11px, 22px); }
+.btn.sol { background: linear-gradient(135deg, rgba(255,207,90,.55), rgba(255,156,184,.4)); }
+.btn.cielo { background: linear-gradient(135deg, rgba(90,216,255,.5), rgba(140,120,255,.35)); }
+.btn.wide { grid-column: 1 / -1; }
+.btn .ico { width: 1.3em; height: 1.3em; flex: none; }
+.foot { margin-top: 14px; font-size: 12px; opacity: .7; letter-spacing: .04em; }
+
+/* pájaros */
+.birds { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.bcol { border-radius: 22px; padding: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.3); text-align: center; }
+.bcol.p0 { box-shadow: inset 0 0 0 2px rgba(255,207,90,.6); }
+.bcol.p1 { box-shadow: inset 0 0 0 2px rgba(90,216,255,.6); }
+.bcol canvas { width: 100%; height: clamp(70px, 18vmin, 130px); display: block; }
+.bname { font-size: clamp(16px, 1.6vmin + 11px, 22px); font-weight: 700; }
+.blook { font-size: 13px; opacity: .8; margin-bottom: 8px; }
+.brow { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+.brow .btn { min-height: 42px; padding: 6px 14px; }
+.stat { display: grid; grid-template-columns: 6.5em 1fr; gap: 8px; align-items: center; font-size: 12px; margin: 5px 4px; text-align: left; }
+.stat i { height: 7px; border-radius: 4px; background: rgba(255,255,255,.18); position: relative; overflow: hidden; }
+.stat i::after { content: ''; position: absolute; inset: 0; width: calc(var(--v) * 100%); border-radius: 4px; background: linear-gradient(90deg, #fff4c9, #ffd27a); }
+.bcol.p1 .stat i::after { background: linear-gradient(90deg, #d9f6ff, #5ad8ff); }
+
+/* opciones */
+.opt { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.18); font-size: clamp(13px, 1.3vmin + 10px, 16px); }
+.seg { display: inline-flex; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,.45); }
+.seg button { all: unset; cursor: pointer; padding: 8px 14px; font: 700 14px var(--font); color: #fff; background: rgba(255,255,255,.08); }
+.seg button[aria-pressed="true"] { background: rgba(255,255,255,.85); color: var(--ink); }
+.seg button:focus-visible { box-shadow: inset 0 0 0 2px #fff; }
+html:not(.touchdev) .touch-only { display: none; }
+html.touchdev .kb-only { display: none; }
+body:not(.in-school) .school-only { display: none; }
+.setup { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.msub { margin: -6px 0 10px; text-align: center; font-size: 13px; opacity: .75; }
+#s-birds .panel { width: min(760px, 100%); }
+@media (min-height: 461px) { #s-birds .phead { flex-wrap: wrap; } #s-birds .setup { order: 3; width: 100%; margin-top: 10px; gap: 28px; } .msub { margin-top: 2px; } }
+.arena { display: flex; align-items: center; gap: 8px; }
+.arena .btn { min-height: 38px; padding: 4px 12px; }
+.aname { display: grid; text-align: center; min-width: 9.5em; font-weight: 700; font-size: 15px; line-height: 1.15; }
+.aname small { font-size: 10.5px; font-weight: 600; opacity: .7; letter-spacing: .12em; text-transform: uppercase; }
+.pkeys { margin-top: 12px; font-size: 12.5px; opacity: .85; }
+.pkeys p { margin: 3px 0; font-size: 12.5px; }
+.btn { position: relative; }
+.newbadge { position: absolute; top: -9px; right: -6px; font: 700 11px var(--font); font-style: normal; padding: 2px 7px; border-radius: 9px; background: #ffd36b; color: #2a1a40; box-shadow: 0 2px 8px rgba(0,0,0,.3); animation: bob 1.2s ease-in-out infinite alternate; }
+@keyframes bob { to { transform: translateY(-3px); } }
+.btn.small { min-height: 38px; padding: 6px 16px; font-size: 14px; border-radius: 14px; }
+.khelp { margin: 0 0 10px; opacity: .9; }
+.keys { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px 12px; align-items: center; margin-bottom: 12px; }
+.keys .kh { font-weight: 700; text-align: center; font-size: 15px; }
+.keys .kh.c0 { color: #ffcf5a; } .keys .kh.c1 { color: #5ad8ff; }
+.keys .kl { font-size: 14px; opacity: .92; }
+.kbtn { all: unset; box-sizing: border-box; cursor: pointer; display: flex; gap: 6px; align-items: center; justify-content: center; min-height: 34px; padding: 4px 10px; border-radius: 11px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.4); font: 700 14px var(--font); color: #fff; }
+.kbtn small { font-weight: 600; font-size: 11px; opacity: .7; }
+.kbtn:hover, .kbtn:focus-visible { background: rgba(255,255,255,.26); box-shadow: 0 0 0 2px rgba(255,255,255,.6); }
+.kbtn.wait { background: rgba(255,207,90,.5); animation: pulse 0.8s ease-in-out infinite alternate; }
+@keyframes pulse { to { background: rgba(255,207,90,.2); } }
+.how .kb kbd { margin: 0 1px; }
+#s-howto .panel, #s-keys .panel, #s-logros .panel { width: min(860px, 100%); }
+.lstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.lstats div { text-align: center; padding: 6px; border-radius: 12px; background: rgba(255,255,255,.08); }
+.lstats b { display: block; font-size: 20px; color: #fff4c9; }
+.lstats span { font-size: 11.5px; opacity: .8; }
+.lgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ach { padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.18); opacity: .55; }
+.ach.on { opacity: 1; background: rgba(255,211,107,.16); border-color: rgba(255,211,107,.8); }
+.ach b { display: block; font-size: 13px; }
+.ach span { font-size: 11px; opacity: .85; line-height: 1.3; display: block; }
+@media (min-width: 1000px) { #s-howto .panel { width: min(1060px, 100%); } #s-howto .how { grid-template-columns: 1fr 1fr 1fr; } }
+kbd { white-space: nowrap; }
+@media (max-height: 330px) {
+  .screen { padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  #s-howto .panel { padding: 8px 14px; }
+  #s-howto .phead { margin-bottom: 4px; }
+  #s-howto h2 { font-size: 18px; }
+  #s-howto .phead .btn { min-height: 30px; padding: 3px 14px; font-size: 13px; }
+  #s-howto .how { gap: 5px; }
+  #s-howto .how .card { padding: 3px 8px; border-radius: 12px; }
+  #s-howto .how p { font-size: 10.5px; line-height: 1.25; margin: 1px 0; }
+}
+.how { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.how .card { border-radius: 18px; padding: 12px 14px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.28); }
+.how b { color: #fff4c9; }
+kbd { font: 700 13px var(--font); padding: 2px 7px; border-radius: 7px; background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4); }
+.row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.row .btn { flex: 1 1 160px; }
+
+/* título: tres grandes arriba (dos jugadores, contra la máquina, Travesía) y cuatro abajo */
+#s-title .menu { grid-template-columns: repeat(12, 1fr); }
+#s-title .menu .btn { grid-column: span 3; }
+#s-title .menu .btn.big { grid-column: span 4; }
+.btn.trav { background: linear-gradient(135deg, rgba(110,230,170,.5), rgba(255,207,90,.45)); flex-direction: column; gap: 2px; }
+.btn .tsub { font-style: normal; font-size: .62em; opacity: .85; font-weight: 600; }
+.osub { display: block; font-size: 11px; opacity: .7; font-weight: 600; margin-top: 1px; }
+/* Travesía */
+#s-trav .panel { width: min(980px, 100%); }
+#s-trav .phead { gap: 14px; }
+.tduo button { white-space: nowrap; }
+.tstars { color: #ffd36b; font-weight: 700; margin-left: auto; white-space: nowrap; }
+.tintro { opacity: .85; margin: 0 0 12px; font-size: clamp(12px, 1.1vmin + 9px, 15px); }
+.tgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.stage { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 16px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.4); min-height: 96px; transition: transform .12s, background .15s; }
+.stage:hover, .stage:focus-visible { background: rgba(255,255,255,.22); box-shadow: 0 0 0 3px rgba(255,255,255,.5); transform: translateY(-1px); }
+.stage .n { font-size: 12px; opacity: .75; font-weight: 700; letter-spacing: .08em; }
+.stage .nn { display: none; }
+.stage b { font-size: clamp(13px, 1.1vmin + 9px, 16px); line-height: 1.15; }
+.stage small { font-size: 11.5px; opacity: .8; }
+.stage .st { margin-top: auto; color: #ffd36b; letter-spacing: .12em; font-size: 15px; }
+.stage .st i { color: rgba(255,255,255,.28); font-style: normal; }
+.stage.lock { opacity: .45; cursor: default; }
+.stage.lock .st { color: rgba(255,255,255,.7); font-size: 12px; letter-spacing: .04em; }
+.stage.lock:hover { transform: none; background: rgba(255,255,255,.1); box-shadow: none; }
+.stage.c-cocora { border-color: rgba(150,230,140,.7); } .stage.c-medellin { border-color: rgba(255,170,110,.7); } .stage.c-bogota { border-color: rgba(170,190,230,.7); } .stage.c-cartagena { border-color: rgba(255,140,170,.75); }
+.tdetail { min-height: 1.4em; margin: 10px 0 0; opacity: .9; font-size: clamp(12px, 1.1vmin + 9px, 15px); }
+.rstars { font-size: clamp(22px, 3vmin + 12px, 34px); color: #ffd36b; letter-spacing: .14em; margin: -4px 0 6px; }
+.rstars i { color: rgba(255,255,255,.3); font-style: normal; }
+.rstars small { display: block; font-size: 13px; letter-spacing: 0; color: #fff; opacity: .85; }
+.rstars.copa { font-size: clamp(14px, 1.4vmin + 9px, 17px); letter-spacing: 0; color: #fff; }
+.rstars.copa b { font-size: 1.5em; color: #ffd36b; }
+.chist { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: center; margin-top: 4px; }
+.chist span { padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,.1); font-size: 12px; }
+.chist .c0 { color: #ffdf8a; } .chist .c1 { color: #9fe8ff; } .chist .nx { opacity: .55; }
+
+/* resultados */
+.win { font-size: clamp(26px, 5vmin + 10px, 48px); font-weight: 700; text-shadow: 0 4px 18px rgba(30,15,70,.45); }
+.score { font-size: clamp(18px, 2.4vmin + 10px, 28px); margin: 4px 0 12px; opacity: .92; letter-spacing: .06em; }
+.rtable { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 18px; margin: 0 auto 14px; max-width: 460px; text-align: left; font-size: clamp(12px, 1.2vmin + 9px, 15px); font-variant-numeric: tabular-nums; }
+.rtable .h { font-weight: 700; opacity: .9; }
+.rtable .n { text-align: right; }
+.rtable .c0 { color: #ffdf8a; } .rtable .c1 { color: #9fe8ff; }
+
+/* pantallas bajitas (celular en horizontal) */
+@media (max-height: 460px) {
+  .panel { padding: 14px 18px; border-radius: 22px; }
+  .logo h1 { font-size: clamp(38px, 15vh, 64px); }
+  .sub { margin: 4px 0 10px; letter-spacing: .2em; }
+  .menu { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .btn { min-height: 42px; padding: 8px 12px; border-radius: 14px; }
+  .btn.big { min-height: 48px; }
+  .menu .btn.big { grid-column: span 1; }
+  #s-title .panel { position: relative; }
+  #s-title .menu { grid-template-columns: repeat(12, 1fr); }
+  #s-title .menu .btn { grid-column: span 3; }
+  #s-title .menu .btn.big { grid-column: span 4; }
+  .tgrid { gap: 5px; } .stage { min-height: 0; padding: 4px 8px 3px; border-radius: 12px; gap: 0; } .stage .n { display: none; } .stage .nn { display: inline; opacity: .7; } .stage b { font-size: 12px; } .stage small { font-size: 9.5px; } .stage .st { font-size: 12px; }
+  #s-results.copa .rtable { display: none; }
+  .tpc { display: none; } .tduo button { padding: 5px 10px; font-size: 12.5px; } .tstars { font-size: 13px; }
+  .tdetail { font-size: 10.5px !important; line-height: 1.25; margin-top: 5px !important; } .stage small { line-height: 1.15; }
+  .tintro { display: none; } .tdetail { margin-top: 6px; font-size: 11.5px; } #s-trav .phead { margin-bottom: 6px; }
+  #s-title .optbtn { position: absolute; top: 12px; right: 14px; min-height: 34px; padding: 4px 14px; font-size: 13px; }
+  #s-title .logbtn { position: absolute; top: 12px; left: 14px; min-height: 34px; padding: 4px 14px; font-size: 13px; }
+  .lstats { grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
+  .lstats b { font-size: 15px; } .lstats span { font-size: 9.5px; } .lstats div { padding: 3px; }
+  .lgrid { gap: 4px; } .ach { padding: 3px 6px; } .ach b { font-size: 11px; } .ach span { font-size: 9.5px; }
+  .foot { margin-top: 8px; }
+  h2 { margin-bottom: 8px; }
+  .stat { margin: 2px 4px; }
+  .how { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .how .card { padding: 6px 10px; }
+  .how p { font-size: 11px; line-height: 1.3; margin: 2px 0; }
+  .how .card { padding: 5px 9px; }
+  kbd { font-size: 11px; padding: 1px 5px; }
+  p { margin: 4px 0; }
+  .phead { margin-bottom: 8px; }
+  .phead .btn { min-height: 36px; padding: 6px 18px; }
+  .birds { gap: 10px; }
+  .arena .btn { min-height: 30px; padding: 2px 10px; }
+  .aname { font-size: 13px; min-width: 7.6em; }
+  .setup { gap: 8px; }
+  .msub { display: none; }
+  .pkeys { display: none; }
+  .bcol { padding: 6px 8px; border-radius: 16px; }
+  .bcol canvas { height: 52px; }
+  .bname { font-size: 15px; }
+  .blook { font-size: 11px; margin-bottom: 4px; }
+  .brow .btn { min-height: 34px; padding: 4px 12px; font-size: 13px; }
+  .bstats { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; margin-top: 4px; }
+  .stat { grid-template-columns: 5.4em 1fr; font-size: 10.5px; margin: 1px 2px; }
+  .opt { padding: 5px 0; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+  .opts .opt { font-size: 12.5px; }
+  #s-results .btn.wide { grid-column: auto; }
+  #s-results .menu { margin-top: 0; }
+  .win { font-size: 24px; } .score { margin: 2px 0 6px; font-size: 16px; }
+  .rtable { font-size: 11.5px; gap: 1px 14px; margin-bottom: 8px; }
+  .seg button { padding: 6px 12px; font-size: 13px; }
+  .keys { gap: 3px 10px; margin-bottom: 6px; }
+  .kbtn { min-height: 26px; padding: 2px 8px; font-size: 12.5px; }
+  .keys .kl { font-size: 12.5px; }
+  .khelp { margin-bottom: 4px; font-size: 12px; }
+  .how { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* ---------- controles táctiles ---------- */
+.touch { position: absolute; inset: 0; z-index: 5; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  --bw: clamp(64px, calc(16vmin + 22px), 108px); --gap: 12px; --el: max(12px, env(safe-area-inset-left, 0px)); --er: max(12px, env(safe-area-inset-right, 0px)); --eb: max(12px, env(safe-area-inset-bottom, 0px)); }
+.touch[hidden] { display: none !important; }
+.tgrp { position: absolute; bottom: var(--eb); display: grid; gap: var(--gap); pointer-events: none; }
+.tstick.left { left: var(--el); }
+.tstick.right { right: var(--er); }
+.tpad { position: relative; width: calc(var(--bw) * 2.05); height: calc(var(--bw) * 2.05); }
+.tbase { position: absolute; left: 50%; top: 50%; width: calc(var(--bw) * 1.45); height: calc(var(--bw) * 1.45); margin: calc(var(--bw) * -0.725) 0 0 calc(var(--bw) * -0.725); border-radius: 50%; background: rgba(255,255,255,.07); border: 1.5px solid rgba(255,255,255,.42); box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--pc) 45%, transparent), 0 6px 18px rgba(20,10,50,.2); }
+.tknob { position: absolute; left: 50%; top: 50%; width: calc(var(--bw) * 0.62); height: calc(var(--bw) * 0.62); margin: calc(var(--bw) * -0.31) 0 0 calc(var(--bw) * -0.31); border-radius: 50%; background: rgba(255,255,255,.3); border: 1.5px solid rgba(255,255,255,.75); box-shadow: 0 3px 10px rgba(20,10,50,.3); }
+.tstick.held .tbase { background: rgba(255,255,255,.13); }
+.tstick.on .tknob { background: color-mix(in srgb, var(--pc) 65%, rgba(255,255,255,.3)); }
+.tgrp.act { grid-template-columns: auto auto; grid-template-areas: "a b" "f f"; align-items: center; justify-items: center; }
+.tgrp.act .tbtn:nth-child(1) { grid-area: a; } .tgrp.act .tbtn:nth-child(2) { grid-area: b; } .tgrp.act .k-fire { grid-area: f; }
+.single .tgrp.act.right { right: calc(var(--er) + 4px); }
+.dual .tgrp.act.left2 { left: calc(var(--el) + var(--bw) * 2.05 + 14px); }
+.dual .tgrp.act.right2 { right: calc(var(--er) + var(--bw) * 2.05 + 14px); }
+.tbtn { width: var(--bw); height: calc(var(--bw) * 1.02); border-radius: 24px; display: grid; place-items: center; color: rgba(255,255,255,.95); background: rgba(255,255,255,.13); border: 1.5px solid rgba(255,255,255,.5); box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--pc) 50%, transparent), 0 6px 18px rgba(20,10,50,.22); transition: transform .06s, background .06s; }
+.tbtn svg { width: 46%; height: 46%; filter: drop-shadow(0 2px 3px rgba(20,10,50,.35)); }
+.tbtn.k-fire { border-radius: 50%; width: calc(var(--bw) * 1.12); height: calc(var(--bw) * 1.12); background: rgba(255,120,90,.2); }
+.tbtn.k-fire svg { width: 56%; height: 56%; }
+.tbtn.k-boost, .tbtn.k-missile { border-radius: 50%; width: calc(var(--bw) * 0.74); height: calc(var(--bw) * 0.74); }
+.tbtn.k-boost svg, .tbtn.k-missile svg { width: 58%; height: 58%; }
+.tbtn.on { background: color-mix(in srgb, var(--pc) 60%, rgba(255,255,255,.25)); transform: scale(.94); }
+.tgrp.p0 { --pc: #ffcf5a; } .tgrp.p1 { --pc: #5ad8ff; }
+.tpause { all: unset; position: absolute; top: max(8px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.16); border: 1.2px solid rgba(255,255,255,.5); color: #fff; }
+.tpause svg { width: 52%; height: 52%; }
+.thint { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); max-width: min(460px, calc(100% - 40px)); padding: 8px 14px; border-radius: 14px; font: 600 13px/1.35 var(--font); text-align: center; pointer-events: none; background: rgba(30,20,70,.55); border: 1px solid rgba(255,255,255,.4); }
+.thint[hidden] { display: none; }
+
+/* celular de pie: pedir que lo giren */
+#rotate { display: none; }
+@media (orientation: portrait) and (hover: none) and (pointer: coarse) {
+  #rotate { display: grid; place-items: center; position: absolute; inset: 0; z-index: 50; background: linear-gradient(180deg, #1b1f52, #b7739f); text-align: center; padding: 24px; }
+  #rotate b { display: block; font-size: 26px; margin-bottom: 8px; }
+}
+
+/* GameHub: volver a la colección y elegir pilotos para una prueba del torneo */
+html.in-hub .fs-auto { display: none !important; }
+.hub-home { display: none; }
+html.in-hub .hub-home { display: inline-flex; align-items: center; gap: .35em; position: absolute; z-index: 30; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); padding: .45em .95em; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.5); background: rgba(10,14,34,.5); color: #fff; font: 700 15px/1 "Comfortaa", system-ui, sans-serif; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: rgba(10,14,34,.8); border-color: #fff; outline: none; }
+#s-birds.hubpick .setup { display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="cv" tabindex="-1" aria-label="Ventolera"></canvas>
+
+  <section class="screen" id="s-title" hidden>
+    <button class="hub-home" data-act="hubhome" aria-label="Volver a GameHub">⌂ GameHub</button>
+    <div class="panel title">
+      <div class="logo">
+        <h1>Ventolera</h1>
+        <svg viewBox="0 0 400 60" aria-hidden="true"><path d="M10 40 C 90 70, 160 10, 230 32 S 360 52, 392 18" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="3" stroke-linecap="round"/><path d="M40 52 C 110 66, 170 34, 236 44" fill="none" stroke="rgba(255,207,90,.7)" stroke-width="2" stroke-linecap="round"/><path d="M200 22 C 260 6, 320 28, 380 10" fill="none" stroke="rgba(90,216,255,.7)" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="sub">duelo de alas de chorro</div>
+      <div class="menu">
+        <button class="btn big sol" data-act="play2">Duelo · 2 jugadores</button>
+        <button class="btn big cielo" data-act="play1">Contra la máquina</button>
+        <button class="btn big trav" data-act="trav"><span>Travesía</span><em class="tsub" id="travSub">para uno · 10 etapas</em></button>
+        <button class="btn" data-act="birds">Preparar partida</button>
+        <button class="btn" data-act="school"><span>Escuela de vuelo</span><em class="newbadge" id="schoolBadge" hidden>¡empieza aquí!</em></button>
+        <button class="btn" data-act="practice">Práctica</button>
+        <button class="btn" data-act="howto">Cómo se juega</button>
+        <button class="btn logbtn" data-act="logros">Logros</button>
+        <button class="btn optbtn" data-act="options">Opciones</button>
+      </div>
+      <div class="foot" id="ver"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="s-birds" hidden>
+    <div class="panel">
+      <div class="phead"><h2>Partida</h2>
+        <div class="setup">
+          <div class="arena" role="group" aria-label="Modo de juego"><button class="btn" data-act="modePrev" aria-label="Modo anterior">◀</button><div class="aname"><small>modo</small><span id="modeName"></span></div><button class="btn" data-act="modeNext" aria-label="Modo siguiente">▶</button></div>
+          <div class="arena" role="group" aria-label="Escenario"><button class="btn" data-act="arenaPrev" aria-label="Escenario anterior">◀</button><div class="aname"><small>escenario</small><span id="arenaName"></span></div><button class="btn" data-act="arenaNext" aria-label="Escenario siguiente">▶</button></div>
+        </div>
+        <button class="btn sol" data-act="done">Listo</button></div>
+      <p class="msub" id="modeSub"></p>
+      <div class="birds">
+        <div class="bcol p0"><canvas id="bprev0"></canvas><div class="bname" id="bname0"></div><div class="blook" id="blook0"></div>
+          <div class="brow"><button class="btn" data-act="prev0" aria-label="Piloto anterior, jugador 1">◀</button><button class="btn" data-act="look0">Pintura</button><button class="btn" data-act="next0" aria-label="Piloto siguiente, jugador 1">▶</button></div>
+          <div class="bstats" id="bstats0"></div></div>
+        <div class="bcol p1"><canvas id="bprev1"></canvas><div class="bname" id="bname1"></div><div class="blook" id="blook1"></div>
+          <div class="brow"><button class="btn" data-act="prev1" aria-label="Piloto anterior, jugador 2">◀</button><button class="btn" data-act="look1">Pintura</button><button class="btn" data-act="next1" aria-label="Piloto siguiente, jugador 2">▶</button></div>
+          <div class="bstats" id="bstats1"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="s-howto" hidden>
+    <div class="panel">
+      <div class="phead"><h2>Cómo se juega</h2><button class="btn sol" data-act="back">Volver</button></div>
+      <div class="how">
+        <div class="card"><p><b>Apunta</b> y el ala gira hacia allá, pero la inercia sigue: derrapa, vuela de espaldas o frena en seco con una <b>cobra</b>.</p><p><b>Picar acelera, subir frena.</b></p></div>
+        <div class="card"><p><b>Turbo:</b> empuja hacia donde apuntas: sube en vertical como cohete (aunque vengas cayendo) o sal disparado. Volar <b>rasante</b> lo recarga.</p><p><b>Tonel:</b> esquive rápido; balas y misiles te atraviesan.</p></div>
+        <div class="card"><p><b>Ráfaga:</b> mantén disparar (se recalienta).</p><p><b>Misil:</b> mantén al rival en la mira hasta fijarlo. Esquívalo con un tonel a tiempo o contra las palmas y edificios.</p><p><b>Bengalas</b> (estrellitas junto a tus misiles; empiezas cada ronda con 1 y las cajas naranjas dan 2 más): <b>salen solas</b>, disparadas hacia el misil, cuando uno fijado viene a pegarte, y casi siempre lo engañan. No hay que oprimir nada.</p></div>
+        <div class="card"><p><b>Maniobras distintas</b> (derrape, cobra, rizo, martillo, rasante, por un pelo…) llenan la <b>Adrenalina</b>; repetir la misma vale menos.</p><p>Llena: <b>MODO LEYENDA</b>.</p></div>
+        <div class="card"><p><b>Cajas del cielo:</b> misiles, bengalas, reparación, escudo, ráfaga doble y cohete (turbo sin fin).</p><p><b>Modos</b> («Preparar partida»): Duelo, Blancos, Maletín, Carrera, Copa y Jefe. Y la <b>Travesía</b>, de uno o de dos.</p><p><b>En Capadocia</b>, la tela de los globos rebota (y encima te puedes posar y viajar), y las columnas de aire tibio te suben gratis.</p></div>
+        <div class="card kb-only"><p class="kb" id="kb0"></p><p class="kb" id="kb1"></p><p class="muted">Se cambian en Opciones → Teclas.</p></div>
+        <div class="card touch-only"><p><b>Palanca:</b> pon el dedo en tu lado y arrastra para apuntar.</p><p><b>Tonel:</b> toca dos veces y arrastra.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="s-options" hidden>
+    <div class="panel">
+      <div class="phead"><h2>Opciones</h2><button class="btn sol" data-act="back">Volver</button></div>
+      <div class="opts">
+      <div class="opt"><span id="l-sound">Sonido</span><div class="seg" role="group" aria-labelledby="l-sound" data-opt="sound"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+      <div class="opt"><span id="l-mus">Música</span><div class="seg" role="group" aria-labelledby="l-mus" data-opt="music"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+      <div class="opt"><span id="l-q">Calidad de imagen</span><div class="seg" role="group" aria-labelledby="l-q" data-opt="quality"><button data-v="alta">Alta</button><button data-v="ligera">Ligera</button></div></div>
+      <div class="opt"><span id="l-bot">La máquina</span><div class="seg" role="group" aria-labelledby="l-bot" data-opt="bot"><button data-v="0">Fácil</button><button data-v="1">Normal</button><button data-v="2">Difícil</button></div></div>
+      <div class="opt"><span id="l-adv0">Ventaja de J1<small class="osub">recibe menos daño y recarga más rápido</small></span><div class="seg" role="group" aria-labelledby="l-adv0" data-opt="adv0"><button data-v="0">No</button><button data-v="1">Poca</button><button data-v="2">Mucha</button></div></div>
+      <div class="opt"><span id="l-adv1">Ventaja de J2<small class="osub">para jugar parejo entre amigos</small></span><div class="seg" role="group" aria-labelledby="l-adv1" data-opt="adv1"><button data-v="0">No</button><button data-v="1">Poca</button><button data-v="2">Mucha</button></div></div>
+      <div class="opt touch-only"><span id="l-vib">Vibrar con los golpes</span><div class="seg" role="group" aria-labelledby="l-vib" data-opt="vib"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+      <div class="opt"><span id="l-fsb">Pantalla completa</span><button class="btn small" data-act="fullscreen" aria-labelledby="l-fsb">Activar</button></div>
+      <div class="opt fs-auto"><span id="l-fs">Pantalla completa automática</span><div class="seg" role="group" aria-labelledby="l-fs" data-opt="autofs"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+      <div class="opt kb-only"><span id="l-dtap">Tonel con doble toque</span><div class="seg" role="group" aria-labelledby="l-dtap" data-opt="dtap"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+      <div class="opt kb-only"><span>Teclas de cada jugador</span><button class="btn small" data-act="keys">Cambiar</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="s-logros" hidden>
+    <div class="panel">
+      <div class="phead"><h2>Logros y récords</h2><button class="btn sol" data-act="back">Volver</button></div>
+      <div class="lstats" id="l-stats"></div>
+      <div class="lgrid" id="l-grid"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="s-keys" hidden>
+    <div class="panel">
+      <div class="phead"><h2>Teclas</h2><button class="btn sol" data-act="back">Volver</button></div>
+      <p class="khelp" id="k-help" role="status">Elige una acción y pulsa la tecla nueva. <kbd>Esc</kbd> cancela.</p>
+      <div class="keys" id="k-grid"></div>
+      <div class="menu"><button class="btn wide" data-act="keysReset">Volver a las teclas de fábrica</button></div>
+    </div>
+  </section>
+
+  <section class="screen" id="s-pause" hidden>
+    <div class="panel title">
+      <h2>Pausa</h2>
+      <div class="menu">
+        <button class="btn big sol" data-act="resume">Seguir</button>
+        <button class="btn big" data-act="options">Opciones</button>
+        <button class="btn" data-act="rematch">Empezar de nuevo</button>
+        <button class="btn school-only" data-act="skipLesson">Saltar lección</button>
+        <button class="btn" data-act="toTitle">Volver al inicio</button>
+      </div>
+      <div class="pkeys kb-only"><p class="kb" id="pk0"></p><p class="kb" id="pk1"></p></div>
+    </div>
+  </section>
+
+  <section class="screen" id="s-trav" hidden>
+    <div class="panel">
+      <div class="phead"><h2>Travesía<span class="tpc"> por Colombia</span></h2><div class="seg tduo" role="group" aria-label="Jugadores" data-tduo><button data-v="0">1 jugador</button><button data-v="1">2 en equipo</button></div><span class="tstars" id="t-total"></span><button class="btn sol" data-act="back">Volver</button></div>
+      <p class="tintro">Diez etapas del Valle de Cocora a Cartagena. Solo, contra la máquina; o de a dos, en equipo: relevos, entregas con drones encima, oleadas y, al final, La Sombra reforzada. Cada etapa abre la siguiente y las estrellas dicen qué tan bien les fue.</p>
+      <div class="tgrid" id="t-grid"></div>
+      <p class="tdetail" id="t-detail"></p>
+    </div>
+  </section>
+
+  <section class="screen" id="s-results" hidden>
+    <div class="panel title">
+      <div class="win" id="r-title"></div>
+      <div class="score" id="r-score"></div>
+      <div class="rstars" id="r-stars" hidden></div>
+      <div class="rtable" id="r-table"></div>
+      <div class="menu">
+        <button class="btn big sol" data-act="hubback" id="r-hub" hidden>Continuar torneo ▸</button>
+        <button class="btn big trav" data-act="travNext" id="r-next" hidden>Siguiente etapa</button>
+        <button class="btn big sol" data-act="copaNext" id="r-copa" hidden>Siguiente prueba</button>
+        <button class="btn big sol" data-act="rematch" id="r-rematch">Revancha</button>
+        <button class="btn big" data-act="birds" id="r-birds">Cambiar pilotos</button>
+        <button class="btn big" data-act="trav" id="r-trav" hidden>Travesía</button>
+        <button class="btn wide" data-act="toTitle">Volver al inicio</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="rotate" aria-hidden="true"><div><b>Gira el celular</b><span>Ventolera se juega en horizontal</span></div></div>
+</div>
+<script>
+/*__SCRIPTS__*/
+</script>
+</body>
+</html>

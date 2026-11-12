@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>VÉRTIGO</title>
+<style>
+/*__FONTS__*/
+:root { --em: #19e68c; --em2: #8affc8; --hot: #ff5a36; --ink: #eef6ff; --mute: #9fb3cc; --glass: rgba(8, 14, 30, 0.78); --glass2: rgba(18, 30, 58, 0.86); --line: rgba(25, 230, 140, 0.45); --j1: #ffc94a; --j2: #62e0ff; color-scheme: dark; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: #03060d; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; font-family: "Nunito", "Trebuchet MS", system-ui, sans-serif; color: var(--ink); }
+#view, #view canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+#hud { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); z-index: 5; }
+[hidden] { display: none !important; }
+.veil { background: radial-gradient(ellipse at 50% 40%, rgba(4, 10, 24, 0.35), rgba(2, 4, 10, 0.82)); }
+.panel { position: relative; background: linear-gradient(160deg, rgba(25, 230, 140, 0.08), transparent 40%), var(--glass); border: 1.5px solid var(--line); border-radius: 6px 22px 6px 22px; padding: 22px 26px; max-width: min(860px, 100%); max-height: 100%; overflow: auto; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6); backdrop-filter: blur(6px); }
+h2 { font-family: "Russo One", system-ui, sans-serif; font-weight: 400; font-size: 30px; margin: 0 0 10px; letter-spacing: 1px; color: #fff; }
+.btn { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px; padding: 12px 22px; font-weight: 900; font-size: 16px; letter-spacing: 0.5px; color: var(--ink); background: linear-gradient(180deg, rgba(40, 66, 110, 0.95), rgba(16, 28, 56, 0.97)); border: 1.5px solid rgba(140, 200, 255, 0.28); border-radius: 4px 14px 4px 14px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 4px 0 rgba(0, 0, 0, 0.5), 0 10px 22px rgba(0, 0, 0, 0.4); transition: transform 0.08s, filter 0.1s; }
+.btn small { font-weight: 700; font-size: 12px; opacity: 0.75; }
+.btn:hover, .btn:focus-visible { filter: brightness(1.25); outline: 2px solid var(--em2); outline-offset: 2px; }
+.btn:active { transform: translateY(2px); }
+.btn.go { background: linear-gradient(180deg, #4dffb0, #12b86c 60%, #0a7a48); color: #02170c; border-color: #c8ffe6; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 0 rgba(0, 40, 20, 0.8), 0 0 28px rgba(25, 230, 140, 0.5); }
+.row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.restab td { font-size: 15px; font-weight: 800; } .restab td.p { font-family: "Russo One", sans-serif; font-size: 20px; width: 44px; } .restab tr.me td { color: #fff; } .restab .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; } .restab .tag { font-family: "Russo One", sans-serif; font-size: 12px; padding: 1px 6px; border-radius: 4px; margin-left: 8px; color: #02101c; }
+/* preparar carrera */
+.setup { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(200px, 28%) 1fr minmax(200px, 28%); grid-template-rows: 1fr auto; gap: 10px; padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+.pside { background: linear-gradient(160deg, rgba(25, 230, 140, 0.08), transparent 40%), var(--glass); border: 1.5px solid var(--line); border-radius: 6px 22px 6px 22px; padding: 12px 14px; overflow: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.pside.off { visibility: hidden; }
+.pside .who { font-family: "Russo One", sans-serif; font-size: 13px; letter-spacing: 2px; }
+.pside .pname { font-family: "Russo One", sans-serif; font-size: 30px; line-height: 1; font-style: italic; }
+.pside .pfrom { font-size: 13px; color: var(--mute); font-weight: 800; }
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.chip { all: unset; cursor: pointer; border-radius: 6px; padding: 5px 2px; text-align: center; font-weight: 900; font-size: 11px; color: #fff; text-shadow: 0 1px 2px #000; border: 2px solid rgba(255,255,255,0.15); background: var(--c); opacity: 0.75; }
+.chip.on { opacity: 1; border-color: #fff; box-shadow: 0 0 14px var(--c); transform: scale(1.06); }
+.stat { display: grid; grid-template-columns: 78px 1fr; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #cfe; }
+.bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; } .bar i { display: block; height: 100%; background: linear-gradient(90deg, #19e68c, #b8ffe0); border-radius: 4px; }
+.spec { border-left: 3px solid var(--c); padding: 4px 8px; font-size: 12.5px; color: #dfe; background: rgba(0,0,0,0.25); border-radius: 0 6px 6px 0; } .spec b { font-family: "Russo One", sans-serif; font-weight: 400; color: var(--c); letter-spacing: 1px; }
+.keyhint { font-size: 11px; color: var(--mute); }
+.sbar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; background: var(--glass); border: 1.5px solid var(--line); border-radius: 6px 18px 6px 18px; padding: 8px 12px; }
+.opt { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 900; color: var(--mute); letter-spacing: 1px; text-transform: uppercase; }
+.seg { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid rgba(140,200,255,0.3); }
+.seg button { all: unset; cursor: pointer; padding: 6px 10px; font-size: 13px; font-weight: 900; color: var(--ink); background: rgba(16,28,56,0.9); text-transform: none; letter-spacing: 0; }
+.seg button.on { background: linear-gradient(180deg, #4dffb0, #12b86c); color: #02170c; }
+.seg button[disabled] { opacity: 0.35; cursor: default; }
+.go2 .btn { padding: 9px 16px; }
+.mhelp { flex-basis: 100%; text-align: center; font-size: 13px; font-weight: 800; color: #b8ffe0; min-height: 1em; }
+.seg { flex-wrap: wrap; }
+@media (max-height: 430px) { .setup { gap: 6px; } .pside { padding: 8px 10px; gap: 5px; } .pside .pname { font-size: 22px; } .stat { font-size: 11px; grid-template-columns: 66px 1fr; } .spec { font-size: 11px; } .sbar { padding: 5px 8px; gap: 5px 10px; } .seg button { padding: 4px 8px; font-size: 12px; } .chip { font-size: 10px; padding: 3px 1px; } .keyhint { display: none; } .opt > span { display: none; } .pfrom { display: none; } .stat { gap: 4px; line-height: 1.1; } .bar { height: 5px; } .pside { gap: 3px; } .go2 .btn { padding: 6px 12px; font-size: 14px; } }
+/* portada */
+#s-title { flex-direction: column; gap: 18px; background: linear-gradient(180deg, rgba(2, 6, 14, 0.15), rgba(2, 6, 14, 0.25) 55%, rgba(2, 6, 14, 0.8)); }
+.logo { text-align: center; }
+.logo h1 { margin: 0; font-family: "Russo One", system-ui, sans-serif; font-weight: 400; font-size: clamp(56px, 12vw, 132px); line-height: 0.9; letter-spacing: 4px; font-style: italic; background: linear-gradient(180deg, #ffffff 0%, #b8ffe0 40%, #19e68c 70%, #0a8a52 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(25, 230, 140, 0.55)) drop-shadow(0 4px 0 rgba(0, 30, 16, 0.9)); transform: skewX(-8deg); }
+.logo .sub { font-family: "Russo One", system-ui, sans-serif; font-size: clamp(14px, 2.4vw, 22px); letter-spacing: 6px; color: #d8ffee; margin-top: 6px; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); }
+.menu { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.menu .main .btn { min-width: 220px; font-size: 18px; }
+.ver { position: fixed; right: 10px; bottom: 6px; font-size: 11px; color: rgba(255, 255, 255, 0.35); }
+.keys { border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+.keys td, .keys th { padding: 5px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.07); text-align: left; }
+.keys th { color: var(--em2); font-size: 12px; letter-spacing: 1px; }
+kbd { display: inline-block; min-width: 22px; padding: 1px 6px; margin: 1px; border-radius: 5px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); font: 800 12.5px "Nunito", sans-serif; text-align: center; }
+#pauseBtn { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 4; width: 42px; height: 42px; border-radius: 50%; padding: 0; font-size: 15px; display: none; }
+#rotate { position: fixed; inset: 0; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #03060d; font-family: "Russo One", system-ui, sans-serif; font-size: 22px; text-align: center; padding: 24px; }
+#rotate .ph { width: 70px; height: 116px; border: 4px solid var(--em); border-radius: 14px; animation: rot 2s ease-in-out infinite; }
+@keyframes rot { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+@media (pointer: coarse) and (orientation: portrait) { #rotate { display: flex; } }
+@media (max-height: 430px) { #s-title { justify-content: space-between; gap: 6px; } .logo h1 { font-size: clamp(34px, 12vh, 64px); letter-spacing: 2px; } .logo .sub { font-size: 11px; letter-spacing: 4px; margin-top: 2px; } .menu { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; } .menu .row { gap: 8px; flex-wrap: nowrap; } .menu .main .btn, .menu .btn { min-width: 0; font-size: 14px; padding: 8px 14px; border-width: 1.5px; } .btn small { font-size: 10px; } h2 { font-size: 22px; } .panel { padding: 12px 16px; } }
+/* celular: la vitrina de pilotos más compacta y las listas largas en una sola fila que se desliza */
+@media (max-height: 430px) { .setup { grid-template-columns: minmax(170px, 24%) 1fr minmax(170px, 24%); } .pside .pname { font-size: 19px; } .chips { gap: 3px; } .chip { font-size: 9px; padding: 3px 0; } .stat { font-size: 10px; grid-template-columns: 58px 1fr; } .spec { font-size: 10px; max-height: 3.4em; overflow: hidden; } .sbar { flex-wrap: wrap; } .seg { flex-wrap: nowrap; overflow-x: auto; max-width: calc(100vw - 60px); scrollbar-width: none; } .seg::-webkit-scrollbar { display: none; } .seg button { flex: 0 0 auto; } .mhelp { font-size: 11px; } }
+/* celulares angostos: paneles de piloto un poco más anchos y fichas en 3 columnas para que se lean los nombres */
+@media (max-width: 720px) and (max-height: 430px) { .setup { grid-template-columns: minmax(188px, 30%) 1fr minmax(188px, 30%); } .chips { grid-template-columns: repeat(3, 1fr); } .chip { font-size: 9.5px; padding: 2px 0; } .stat { font-size: 9.5px; grid-template-columns: 54px 1fr; } .pside .pname { font-size: 17px; } .spec { max-height: 2.4em; } }
+.touchhelp { display: none; } @media (pointer: coarse) { .keyshelp { display: none; } .touchhelp { display: block; } }
+/* vuelta al mundo: mapa + panel de la parada */
+.btn.world { background: linear-gradient(180deg, #ffe07a, #e0a020 60%, #9a6a08); color: #241400; border-color: #fff2b8; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 4px 0 rgba(60,36,0,0.8), 0 0 24px rgba(255,200,60,0.45); }
+#s-world { background: radial-gradient(ellipse at 50% 30%, rgba(4, 14, 30, 0.55), rgba(2, 6, 14, 0.92)); padding: 0; }
+.wgrid { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr minmax(260px, 30%); grid-template-rows: auto 1fr; gap: 10px; padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+.whead { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.whead h2 { margin: 0; font-style: italic; background: linear-gradient(180deg, #fff, #ffd23d); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 rgba(60,30,0,0.9)); }
+.whead .btn { margin-left: auto; padding: 8px 16px; }
+.wtot { font-family: "Russo One", sans-serif; font-size: 18px; color: #ffd23d; text-shadow: 0 2px 6px #000; }
+.wmap { position: relative; min-height: 0; min-width: 0; } .wmap canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; touch-action: none; }
+.wpanel { background: linear-gradient(160deg, rgba(255, 210, 61, 0.1), transparent 40%), var(--glass); border: 1.5px solid rgba(255, 210, 61, 0.45); border-radius: 6px 22px 6px 22px; padding: 14px 16px; overflow: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.wpanel h3 { margin: 0; font-family: "Russo One", sans-serif; font-weight: 400; font-size: 24px; color: #fff; line-height: 1.05; } .wpanel .wc { font-size: 12px; font-weight: 900; letter-spacing: 2px; color: #ffd23d; text-transform: uppercase; } .wpanel .wb { font-size: 13.5px; color: #cfe; line-height: 1.35; margin: 0; }
+.wch { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 9px 10px; border-radius: 10px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.08); }
+.wch.boss { border-color: rgba(255, 90, 54, 0.55); background: linear-gradient(90deg, rgba(255, 60, 30, 0.16), rgba(0,0,0,0.28)); }
+.wch .k { font-size: 10.5px; font-weight: 900; letter-spacing: 1.5px; color: var(--mute); text-transform: uppercase; } .wch .n { font-family: "Russo One", sans-serif; font-size: 16px; color: #fff; } .wch .g { grid-column: 1 / 2; font-size: 12.5px; color: #bfe; line-height: 1.25; } .wch .st { font-size: 16px; letter-spacing: 1px; color: #ffd23d; white-space: nowrap; } .wch .st i { font-style: normal; color: rgba(255,255,255,0.22); }
+.wch .btn { grid-row: 1 / span 3; grid-column: 2; padding: 9px 14px; font-size: 14px; } .wch .lock { grid-row: 1 / span 3; grid-column: 2; font-size: 20px; opacity: 0.6; }
+.wlock { font-size: 13px; color: #ffb4a0; font-weight: 800; }
+@media (max-height: 430px) { .wgrid { gap: 6px; grid-template-columns: 1fr minmax(230px, 36%); } .whead { gap: 8px; } .whead h2 { font-size: 20px; } .wtot { font-size: 14px; } .whead .btn { padding: 6px 12px; font-size: 13px; } .wpanel { padding: 9px 10px; gap: 6px; } .wpanel h3 { font-size: 18px; } .wpanel .wb { font-size: 11.5px; } .wch { padding: 6px 8px; gap: 2px 8px; } .wch .n { font-size: 13.5px; } .wch .g { font-size: 11px; } .wch .st { font-size: 13px; } .wch .btn { padding: 6px 10px; font-size: 12.5px; } }
+@media (max-width: 640px) and (min-height: 431px) { .wgrid { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; } .wpanel { max-height: 45vh; } }
+
+/* GameHub: volver a la colección y elegir pilotos para una prueba del torneo */
+.hub-home { display: none; }
+html.in-hub .hub-home { display: inline-flex; align-items: center; gap: .35em; position: absolute; z-index: 30; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); padding: .45em .95em; border-radius: 999px; border: 1.5px solid rgba(61,255,168,.5); background: rgba(4,12,10,.6); color: #dfffee; font: 800 15px/1 "Nunito", system-ui, sans-serif; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: rgba(4,12,10,.85); border-color: #3dffa8; outline: none; }
+#s-setup.hubpick #optMode, #s-setup.hubpick #optTrack, #s-setup.hubpick #optDiff, #s-setup.hubpick #optLaps { display: none; }
+#s-setup.hubpick .opt { display: none; }
+#s-setup.hubpick .mhelp { font-size: 16px; color: #dfffee; }
+/* opciones */
+.optlist { display: grid; gap: 14px; margin-top: 14px; min-width: min(520px, 78vw); }
+.orow { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 900; font-size: 15px; }
+.orow .btn { min-width: 0; padding: 8px 18px; font-size: 14px; }
+.optnote { margin: 14px 0 0; font-size: 12.5px; color: var(--mute); }
+html.in-hub .fs-auto { display: none !important; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<canvas id="hud"></canvas>
+<button class="btn" id="pauseBtn" aria-label="Pausa">❚❚</button>
+<section class="screen" id="s-title">
+  <button class="hub-home" data-act="hubhome" aria-label="Volver a GameHub">⌂ GameHub</button>
+  <div class="logo"><h1>VÉRTIGO</h1><div class="sub">LA COPA ESMERALDA</div></div>
+  <div class="menu">
+    <div class="row main">
+      <button class="btn go" data-act="play2">2 jugadores<small>pantalla dividida</small></button>
+      <button class="btn" data-act="play1">1 jugador<small>contra la máquina</small></button>
+      <button class="btn world" data-act="world">Vuelta al mundo<small>campaña · 24 retos</small></button>
+    </div>
+    <div class="row"><button class="btn" data-act="howto">Controles</button><button class="btn" data-act="opts">Opciones</button></div>
+  </div>
+  <div class="ver" id="ver"></div>
+</section>
+<section class="screen veil" id="s-opts" hidden>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between"><h2>Opciones</h2><button class="btn" data-act="back">Volver</button></div>
+    <div class="optlist">
+      <div class="orow"><span>Gráficos</span><div class="seg" id="o-gq"><button data-v="0">Ligera</button><button data-v="1">Alta</button><button data-v="2">Ultra</button></div></div>
+      <div class="orow"><span>Pantalla completa</span><button class="btn" data-act="fs">Activar</button></div>
+      <div class="orow fs-auto"><span>Pantalla completa automática</span><div class="seg" id="o-fsauto"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+    </div>
+    <p class="optnote">Ligera = más fluido en celulares y PC sencillos · Ultra = máximo detalle.</p>
+  </div>
+</section>
+<section class="screen veil" id="s-howto" hidden>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between"><h2>Controles</h2><button class="btn" data-act="back">Volver</button></div>
+    <div class="touchhelp" style="max-width:640px;font-size:14px;line-height:1.45">
+      <p><b>En el celular, de lado.</b> En 2 jugadores cada uno es dueño de su mitad de la pantalla (el J2 en espejo).</p>
+      <p><b>Palanca:</b> pon el dedo en cualquier parte libre de tu mitad y muévelo: a los lados giras. Con el ala: <b>arriba = picada</b> (más rápido), <b>abajo = subir</b>. Abajo en el piso = frenar.</p>
+      <p><b>DERRAPE</b> (el botón grande): sostenlo en las curvas mientras giras; en el aire tócalo para hacer piruetas. <b>TURBO</b> gasta un cuarto de la barra Esmeralda (la ves alrededor del botón). <b>OBJETO</b> usa lo que salga de las cajas; con la barra llena lanza la especial de tu piloto.</p>
+    </div>
+    <table class="keys keyshelp">
+      <tr><th></th><th style="color:var(--j1)">J1</th><th style="color:var(--j2)">J2</th></tr>
+      <tr><td>Girar · frenar</td><td><kbd>A</kbd><kbd>D</kbd> · <kbd>S</kbd></td><td><kbd>←</kbd><kbd>→</kbd> · <kbd>↓</kbd></td></tr>
+      <tr><td>Derrape (sostener en curva) · piruetas en el aire</td><td><kbd>F</kbd></td><td><kbd>K</kbd> o <kbd>1</kbd> num.</td></tr>
+      <tr><td>Con el ala: picada · subir</td><td><kbd>W</kbd> · <kbd>S</kbd></td><td><kbd>↑</kbd> · <kbd>↓</kbd></td></tr>
+      <tr><td>Objeto · con la barra llena, especial del piloto</td><td><kbd>G</kbd></td><td><kbd>L</kbd> o <kbd>2</kbd> num.</td></tr>
+      <tr><td>Turbo (gasta un cuarto de la barra)</td><td><kbd>H</kbd></td><td><kbd>Ñ</kbd> o <kbd>3</kbd> num.</td></tr>
+    </table>
+    <p style="font-size:14px;color:var(--mute);max-width:620px">Se acelera solo. Sostén el derrape en las curvas: la chispa pasa de azul a naranja y a esmeralda, y al soltar sale un turbo. En las rampas, toca el derrape con una dirección para hacer piruetas; si aterrizas derecho ganas turbo y barra. La barra Esmeralda también se llena con las esmeraldas de la pista.</p>
+    <p style="font-size:14px;color:var(--mute);max-width:620px">El bólido se transforma solo: en el embalse es <b>lancha</b> (resbala más y las olas grandes son rampas para piruetas) y tras la rampa grande saca el <b>ala</b>: en picada vas más rápido, subiendo frenas; cada aro da turbo y barra.</p>
+    <p style="font-size:14px;color:var(--mute);max-width:620px"><b>Vuelta al mundo</b> (botón dorado de la portada): 24 retos por 13 paradas, de a uno o de a dos; cada reto da hasta 3 estrellas y una estrella abre la parada siguiente. <b>Persecución</b>: juntos contra un jefe gigante que huye; los cohetes lo persiguen solos, embístelo con turbo, esquiva lo que suelta (los círculos rojos marcan dónde caen las balas) y recoge su botín.</p>
+    <p style="font-size:14px;color:var(--mute);max-width:620px">Las cajas de cristal dan un objeto (mejores cuanto más atrás vas): cohetes, avispa, aceite, cocos, escudo, chile, imán, niebla, esmeralda y rayo. Con <kbd>S</kbd>/<kbd>↓</kbd> el cohete sale hacia atrás. Brincar con el derrape justo a tiempo esquiva la avispa. Si no tienes objeto y la barra está llena, el botón de objeto lanza la <b>especial</b> de tu piloto.</p>
+  </div>
+</section>
+<section class="screen veil" id="s-pause" hidden>
+  <div class="panel" style="text-align:center">
+    <h2>Pausa</h2>
+    <div class="menu" style="margin-top:10px"><button class="btn go" data-act="resume">Seguir</button><button class="btn" data-act="restart">Reiniciar</button><button class="btn" data-act="fs" data-long="1">Pantalla completa: activar</button><button class="btn" data-act="toTitle">Salir</button></div>
+  </div>
+</section>
+<section class="screen" id="s-setup" hidden>
+  <div class="setup">
+    <div class="pside" id="side0"></div>
+    <div class="center"></div>
+    <div class="pside" id="side1"></div>
+    <div class="sbar">
+      <div class="opt"><span>Modo</span><div class="seg" id="optMode"></div></div>
+      <div class="opt"><span id="optTrackL">Pista</span><div class="seg" id="optTrack"></div></div>
+      <div class="opt"><span>Máquina</span><div class="seg" id="optDiff"></div></div>
+      <div class="opt"><span>Vueltas</span><div class="seg" id="optLaps"></div></div>
+      <div class="mhelp" id="modeHelp"></div>
+      <div class="row go2"><button class="btn" data-act="back">Volver</button><button class="btn go" data-act="startRace">¡A correr!</button></div>
+    </div>
+  </div>
+</section>
+<section class="screen" id="s-world" hidden>
+  <div class="wgrid">
+    <div class="whead"><h2>Vuelta al mundo</h2><div class="wtot" id="wTot"></div><div class="seg" id="wPlayers"></div><button class="btn" data-act="back">Volver</button></div>
+    <div class="wmap"><canvas id="wMap"></canvas></div>
+    <div class="wpanel" id="wPanel"></div>
+  </div>
+</section>
+<section class="screen veil" id="s-results" hidden>
+  <div class="panel res">
+    <h2 id="resTitle">Resultados</h2>
+    <table class="keys restab" id="resTable"></table>
+    <div class="row" style="margin-top:14px" id="resBtns"><button class="btn go" data-act="hubback" id="resHub" hidden>Continuar torneo ▸</button><button class="btn go" data-act="restart" id="resMain">Otra carrera</button><button class="btn" data-act="setup" id="resAlt">Cambiar pilotos</button><button class="btn" data-act="toTitle">Salir</button></div>
+  </div>
+</section>
+<div id="rotate"><div class="ph"></div>Gira el teléfono<small style="font-family:Nunito,sans-serif;font-size:14px;color:var(--mute)">VÉRTIGO se juega de lado</small></div>
+<script>
+/*__THREE__*/
+</script>
+<script>
+'use strict';
+/*__SCRIPTS__*/
+</script>
+</body>
+</html>

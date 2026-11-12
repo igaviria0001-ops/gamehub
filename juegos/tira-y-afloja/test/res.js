@@ -1,0 +1,22 @@
+const { chromium } = require('playwright');
+const path = require('path');
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const errors = [];
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  await page.goto('file://' + path.resolve(__dirname, 'index.html'));
+  await page.waitForTimeout(1000);
+  await page.click('[data-act="play2"]'); await page.waitForTimeout(300);
+  await page.click('[data-act="mode-caneca"]'); await page.waitForTimeout(3300);
+  await page.evaluate(() => { const G = TYA.Game.G; G.wins = [2, 1]; G.players[0].stats = { rams: 6, slings: 2, whips: 1, pellets: 1, dunks: 2 }; G.players[1].stats = { rams: 4, slings: 0, whips: 2, pellets: 0, dunks: 1 }; const B = G.players[1]; B.x = 1800; B.y = 900; B.vx = 0; B.vy = 300; });
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: 'shots/r-dunk.png' });
+  await page.waitForTimeout(3000);
+  await page.screenshot({ path: 'shots/r-win.png' });
+  await page.waitForTimeout(3500);
+  await page.screenshot({ path: 'shots/r-results.png' });
+  console.log('state', await page.evaluate(() => TYA.Game.G.state + ' ' + TYA.UI.current));
+  console.log('ERRORS', errors.join('\n'));
+  await browser.close();
+})();

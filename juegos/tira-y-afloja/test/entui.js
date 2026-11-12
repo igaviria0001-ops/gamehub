@@ -1,0 +1,30 @@
+// flujo de menús del entrenamiento: título → lista → ejercicio → R → pausa → elegir otro
+const { chromium } = require('playwright');
+const path = require('path');
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('file://' + path.resolve(__dirname, 'index.html'));
+  await page.waitForTimeout(900);
+  const st = () => page.evaluate(() => ({ ui: TYA.UI.current, train: TYA.Game.G.train ? TYA.Game.G.train.def.id : null, state: TYA.Game.G.state, tries: TYA.Game.G.train ? TYA.Game.G.train.tries : -1, rep: TYA.Game.G.train ? +TYA.Game.G.train.repT.toFixed(2) : -1 }));
+  await page.click('#s-title [data-act="entreno"]'); await page.waitForTimeout(200);
+  console.log('lista', JSON.stringify(await st()), await page.evaluate(() => document.querySelectorAll('#entreno .reto').length));
+  await page.click('#entreno .reto:nth-child(6)'); await page.waitForTimeout(2500);
+  console.log('jugando', JSON.stringify(await st()));
+  await page.keyboard.press('KeyR'); await page.waitForTimeout(100);
+  console.log('tras R', JSON.stringify(await st()));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  console.log('pausa', JSON.stringify(await st()), await page.textContent('#btn-retos-list'), await page.textContent('#btn-restart'));
+  await page.click('#btn-retos-list'); await page.waitForTimeout(250);
+  console.log('volver', JSON.stringify(await st()));
+  await page.click('#entreno .reto:nth-child(10)'); await page.waitForTimeout(1500);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+  await page.click('#btn-restart'); await page.waitForTimeout(300);
+  console.log('de cero', JSON.stringify(await st()));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+  await page.click('#s-pause [data-act="menu"]'); await page.waitForTimeout(250);
+  console.log('menú', JSON.stringify(await st()));
+  console.log('ERR', errors.join(' | '));
+  await browser.close();
+})();
