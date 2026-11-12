@@ -27,6 +27,7 @@ const UI = (() => {
       case 'resume': Game.pause(false); break;
       case 'restart': if (cfg.mode === 'gp') { cfg.mode = 'gp'; Game.startCfg(nH, cfg); } else Game.startCfg(nH, cfg); break;
       case 'toTitle': if (Hub.ev) hubLeave(); Game.toTitle(); break;
+      case 'garage': case 'garage0': case 'garage1': { const G2 = VG(); if (G2) G2.open(a === 'garage1' ? 1 : 0); break; }
     }
   }
   // opciones: gráficos y pantalla completa (manual y automática)
@@ -51,10 +52,20 @@ const UI = (() => {
     const lum = h => { const c = new THREE.Color(h); return 0.3 * c.r + 0.59 * c.g + 0.11 * c.b; }, nc = lum(P.color) < 0.22 ? P.color2 : P.color;
     el.innerHTML = `<div class="who" style="color:${pc}">JUGADOR ${i + 1}</div><div class="pname" style="color:${nc};text-shadow:0 2px 0 #000,0 0 18px ${nc}">${P.name}</div><div class="pfrom">${P.from} · bólido «${P.car}»</div>`
       + `<div class="chips">${PILOT_ORDER.map(k => `<button class="chip${k === pid ? ' on' : ''}" style="--c:${PILOTS[k].color}" data-pick="${i}:${k}">${PILOTS[k].name}</button>`).join('')}</div>`
+      + garBtn(i, pid)
       + STAT.map(([k, n]) => `<div class="stat"><span>${n}</span><div class="bar"><i style="width:${(P[k] || 3) * 20}%"></i></div></div>`).join('')
       + `<div class="spec" style="--c:${sp.col}"><b>${sp.name}</b> — ${sp.desc}</div>`
       + `<div class="keyhint">${isTouch() ? 'toca un piloto' : i ? '← → para cambiar' : 'A D para cambiar'}</div>`;
   }
+  // garaje (pinturas, neón y turbo): el botón de cada jugador dice lo que lleva puesto
+  const VG = () => { try { return Vestidor; } catch (e) { return null; } };
+  function garBtn(i, pid) {
+    const G2 = VG(); if (!G2) return '';
+    const V = G2.V, pt = V.BY[V.eq(i, 'paint', pid)], ne = V.BY[V.eq(i, 'neon')], tu = V.BY[V.eq(i, 'turbo')], n = V.fresh();
+    return `<button class="btn gar" data-act="garage${i}">Garaje<small>${pt ? pt.name : ''} · neón ${ne ? ne.name.toLowerCase() : ''} · turbo ${tu ? tu.name.toLowerCase() : ''}</small><em class="vbadge vestNew"${n ? '' : ' hidden'}>${n}</em></button>`;
+  }
+  function vestBadge() { const G2 = VG(), n = G2 ? G2.V.fresh() : 0; document.querySelectorAll('.vestNew').forEach(e => { e.hidden = !n; e.textContent = e.classList.contains('vbadge') ? String(n) : n === 1 ? '¡1 nuevo!' : `¡${n} nuevos!`; }); }
+  function refreshSetup() { if ($('s-setup').hidden) return; renderSetup(); for (let k = 0; k < nH; k++) Game.showPilot(k, cfg.p[k]); }
   function seg(id, items, val, fn, dis) { const el = $(id); el.innerHTML = items.map(([v, n]) => `<button data-v="${v}" class="${String(v) === String(val) ? 'on' : ''}"${dis && dis(v) ? ' disabled' : ''}>${n}</button>`).join(''); el.onclick = e => { const b = e.target.closest('button'); if (!b || b.disabled) return; Sound.ui(); fn(b.dataset.v); renderSetup(); }; }
   function renderSetup() {
     if (nH === 2 && cfg.mode === 'tt') cfg.mode = 'quick'; if (nH === 1 && cfg.mode === 'duel') cfg.mode = 'quick';
@@ -121,6 +132,7 @@ const UI = (() => {
     let hubNow = false;
     if (hubCfg && Hub.ev) { const w = hubWinner(R, G), d = G && G.duel; if (w != null) { Hub.result(w, { score: d && G.cfg.mode === 'duel' ? d.w.join(' – ') : '' }); Hub.release(); hubCfg = null; hubNow = true; } }
     results0(R, G);
+    { const G2 = VG(); if (G2) { G2.record(R, G); G2.after(); } }
     $('resHub').hidden = !hubNow; $('resMain').hidden = hubNow; $('resAlt').hidden = hubNow || !!hubCfg; const sal = document.querySelector('#resBtns [data-act="toTitle"]'); if (sal) sal.hidden = hubNow;
   }
   function results0(R, G) {
@@ -196,5 +208,5 @@ const UI = (() => {
     else if (c === 'Enter' || c === 'Space') { e.preventDefault(); const list = CAMPAIGN.map((C, i) => i).filter(i => CAMPAIGN[i].stop === STOPS[wSel].id && World.open(i)); const k = list.find(i => World.starsOf(i) < 3); if (list.length) playCh(k != null ? k : list[0]); }
     else if (c === 'Escape') Game.toTitle(); });
   $('ver').textContent = 'v' + GAME_META.version;
-  return { show, results, hubPlay, cfg: () => cfg, openWorld };
+  return { show, results, hubPlay, cfg: () => cfg, openWorld, vestBadge, refreshSetup };
 })();

@@ -4,9 +4,49 @@
    turbo, núcleo esmeralda que brilla según la barra, luz bajo el chasis y
    sombra suave. Se orienta con el marco de la pista + rumbo + inclinaciones.
    ========================================================================= */
+/* ---------- GARAJE: pinturas, neón y turbo que se ganan (el catálogo y los desbloqueos están en 11c-vest.js) ----------
+   mat = diseño del vestidor común de GameHub pintado en la carrocería (fit = de punta a punta; flip = las llamas
+   salen de la nariz); emis = cuánto brilla en la oscuridad; metal/rough = acabado; holo = cambia de color. */
+const CAR_PAINTS = {
+  jaguar: { name: 'Piel de jaguar', color: '#d99a2a', color2: '#2a1606', accent: '#ffd27a', mat: 'jaguar', matC: ['#d99a2a', '#ffd27a', '#2a1606', '#7a3e0a'] },
+  caiman: { name: 'Escamas de caimán', color: '#2f8a5a', color2: '#0e3a24', accent: '#c8f0a0', mat: 'escamas', matC: ['#2f8a5a', '#9be8b0', '#0e3a24'] },
+  llamarada: { name: 'Llamarada', color: '#2a0a04', color2: '#ff7a1a', accent: '#ffd23f', mat: 'llamas', matC: ['#3a0a04', '#0c0202', '255,226,110', '255,84,16'], fit: true, flip: true, emis: 0.55 },
+  tormenta: { name: 'Tormenta eléctrica', color: '#2a3448', color2: '#bfe4ff', accent: '#5ab8ff', mat: 'tormenta', matC: ['#1a2234', '120,140,180'], fit: true, emis: 0.25 },
+  aurora: { name: 'Aurora boreal', color: '#06121e', color2: '#9affd8', accent: '#c79aff', mat: 'aurora', matC: ['#06121e', '110,255,190', '170,110,255'], fit: true, emis: 0.6 },
+  cristal: { name: 'Hielo tallado', color: '#bfeeff', color2: '#ffffff', accent: '#7ae0ff', mat: 'cristal', matC: ['#bfeeff', '#6ab8e8', '#f2fdff'], metal: 0.25, rough: 0.12 },
+  magma: { name: 'Magma', color: '#1a0806', color2: '#ff9a3a', accent: '#ff5a1a', mat: 'lava', matC: ['#2a0e08', '#0a0404'], emis: 1.5, pulse: true, cracks: true },
+  oro: { name: 'Filigrana de oro', color: '#e8b030', color2: '#7a1a10', accent: '#fff6d0', mat: 'oro', matC: ['#e8b030', '#fff0a8', '#9a6410'], metal: 0.85, rough: 0.24 },
+  fatuo: { name: 'Fuego fatuo', color: '#061a3a', color2: '#9ff0ff', accent: '#4ab8ff', mat: 'llamas', matC: ['#0a2458', '#030a1c', '160,240,255', '50,110,255'], fit: true, flip: true, emis: 0.75 },
+  galaxia: { name: 'Galaxia', color: '#120a2e', color2: '#ff6fd8', accent: '#ffd6f6', mat: 'galaxia', matC: ['255,110,210', '170,100,255', '90,150,255'], fit: true, emis: 0.55 },
+  agujero: { name: 'Agujero negro', color: '#0c0414', color2: '#c88aff', accent: '#8a3aff', mat: 'vacio', matC: ['#3a0a5a', '200,120,255'], fit: true, emis: 0.7, pulse: true },
+  holo: { name: 'Holográfica', color: '#dfe4f0', color2: '#ffffff', accent: '#ff9be6', mat: 'holo', matC: [], fit: true, metal: 0.55, rough: 0.16, holo: true },
+};
+// neón: luz bajo el chasis, aros de las ruedas, tobera y puntas del ala (fuego y arcoíris se mueven)
+const CAR_NEONS = { piloto: null, cian: '#21e0ff', rosa: '#ff3dc8', verde: '#3dff8a', violeta: '#a35bff', oro: '#ffcf3a', fuego: '#ff5a1a', arcoiris: '#ff3d6e' };
+// turbo: color de la llama y, los mejores, una estela de partículas mientras dura el turbo
+const CAR_TURBOS = {
+  azul: { c: ['255,255,255', '120,220,255', '60,120,255', '40,60,255'] },
+  fuego: { c: ['255,255,235', '255,214,90', '255,110,30', '220,40,10'] },
+  verde: { c: ['255,255,255', '150,255,200', '40,230,130', '10,160,90'] },
+  rosa: { c: ['255,255,255', '255,170,230', '255,60,190', '200,20,140'] },
+  violeta: { c: ['255,255,255', '210,170,255', '150,80,255', '90,30,220'], trail: [[0.75, 0.55, 1], [0.95, 0.85, 1]] },
+  oro: { c: ['255,255,240', '255,236,150', '255,190,40', '220,130,10'], trail: [[1, 0.85, 0.35], [1, 0.95, 0.7], [1, 0.7, 0.15]] },
+  arcoiris: { c: ['255,255,255', '255,120,200', '120,160,255', '80,255,170'], rainbow: true, trail: [[1, 0.3, 0.4], [1, 0.75, 0.2], [0.4, 1, 0.5], [0.3, 0.7, 1], [0.75, 0.4, 1]] },
+  cometa: { c: ['255,255,255', '210,230,255', '150,180,255', '90,120,255'], trail: [[1, 1, 1], [0.8, 0.9, 1], [1, 0.95, 0.8]], stars: true },
+};
 const CarArt = (() => {
   const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), X = new THREE.Vector3(), Y = new THREE.Vector3(), Z = new THREE.Vector3(), P = new THREE.Vector3();
-  let flameTex = null, shadowTex = null;
+  let flameTex = null, shadowTex = null; const flameTexes = {};
+  function flameTexOf(kind) {
+    texes(); if (!kind || kind === 'azul' || !CAR_TURBOS[kind]) return flameTex;
+    if (flameTexes[kind]) return flameTexes[kind];
+    const C = CAR_TURBOS[kind].c;
+    return (flameTexes[kind] = GFX.canvasTex(64, 128, (x, w, h) => {
+      const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, `rgba(${C[0]},1)`); g.addColorStop(0.25, `rgba(${C[1]},0.95)`); g.addColorStop(0.6, `rgba(${C[2]},0.55)`); g.addColorStop(1, `rgba(${C[3]},0)`);
+      x.fillStyle = g; x.beginPath(); x.moveTo(w / 2 - 22, 0); x.quadraticCurveTo(w / 2 - 14, h * 0.6, w / 2, h); x.quadraticCurveTo(w / 2 + 14, h * 0.6, w / 2 + 22, 0); x.fill();
+      if (CAR_TURBOS[kind].rainbow) { x.globalCompositeOperation = 'source-atop'; const r = x.createLinearGradient(0, 0, 0, h); ['255,90,120', '255,190,60', '120,255,140', '90,170,255', '200,110,255'].forEach((c, i) => r.addColorStop(0.15 + i * 0.18, `rgba(${c},0.75)`)); x.fillStyle = r; x.fillRect(0, h * 0.12, w, h); }
+    }, false));
+  }
   function texes() {
     if (flameTex) return;
     flameTex = GFX.canvasTex(64, 128, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(120,220,255,0.95)'); g.addColorStop(0.6, 'rgba(60,120,255,0.5)'); g.addColorStop(1, 'rgba(40,60,255,0)'); x.fillStyle = g; x.beginPath(); x.moveTo(w / 2 - 22, 0); x.quadraticCurveTo(w / 2 - 14, h * 0.6, w / 2, h); x.quadraticCurveTo(w / 2 + 14, h * 0.6, w / 2 + 22, 0); x.fill(); }, false);
@@ -72,20 +112,48 @@ const CarArt = (() => {
       x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(256, 0, 10, h); x.fillRect(502, 0, 10, h);
     }, false);
   }
-  function livery(pid) {
-    if (liveryCache[pid]) return liveryCache[pid];
-    const P0 = PILOTS[pid], n = String(NUM[pid] || 0), W = 1024, H = 512;
+  // la pintura puesta: «piloto.0» de fábrica, «piloto.1» invertida, «piloto.2» fibra de carbono, «u.clave» del garaje
+  function lookOf(pid, id) {
+    const P0 = PILOTS[pid] || PILOTS.cumbia;
+    if (typeof id === 'string' && id.startsWith('u.') && CAR_PAINTS[id.slice(2)]) return Object.assign({ key: id }, CAR_PAINTS[id.slice(2)]);
+    const n = typeof id === 'string' ? +id.split('.')[1] || 0 : 0;
+    if (n === 1) return { key: pid + '.1', color: P0.color2, color2: P0.color, accent: P0.accent };
+    if (n === 2) return { key: pid + '.2', color: '#17191f', color2: P0.color, accent: P0.color2, carbon: true, metal: 0.35, rough: 0.3 };
+    return { key: pid + '.0', color: P0.color, color2: P0.color2, accent: P0.accent };
+  }
+  // diseño del garaje sobre la carrocería: la tela (u) da la vuelta al bólido y (v) va de la cola a la nariz,
+  // así que el mosaico va en celdas anchas y bajitas para que no se vea estirado
+  function paintMat(x, W, H, L) {
+    if (typeof Vest === 'undefined' || !L.mat) { x.fillStyle = L.color; x.fillRect(0, 0, W, H); return; }
+    x.save();
+    if (L.flip) { x.translate(0, H); x.scale(1, -1); }
+    if (L.fit) { x.fillStyle = L.color; x.fillRect(0, 0, W, H); Vest.material(x, L.mat, L.matC, 0, 0, W, H, 1.7, 1, true); }
+    else { const cw = W / 4, ch = cw / 3.6, gt = L.cracks && Vest.matTile ? Vest.matTile(L.mat, L.matC, true) : null; let k = 0;
+      for (let yy = 0; yy < H; yy += ch) for (let xx = 0; xx < W; xx += cw) {
+        Vest.material(x, L.mat, L.matC, xx, yy, cw + 0.5, ch + 0.5, 1.7 + (k++) * 0.37, 1, !gt);
+        // magma: roca oscura y solo las grietas encendidas (así el brillo de la noche sale de las grietas)
+        if (gt) { x.save(); x.globalCompositeOperation = 'lighter'; x.drawImage(gt, xx, yy, cw + 0.5, ch + 0.5); x.restore(); }
+      } }
+    x.restore();
+  }
+  function carbonFill(x, W, H) { x.fillStyle = '#121418'; x.fillRect(0, 0, W, H); for (let i = 0; i < W; i += 12) for (let j = 0; j < H; j += 4) { x.fillStyle = ((i / 12 + j / 4) % 2) ? 'rgba(70,76,90,0.55)' : 'rgba(30,33,40,0.6)'; x.fillRect(i, j, 12, 4); } const g = x.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.25, 'rgba(255,255,255,0.08)'); g.addColorStop(0.5, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+  function livery(pid, L0) {
+    const L = L0 || lookOf(pid), ck = pid + '|' + L.key;
+    if (liveryCache[ck]) return liveryCache[ck];
+    const P0 = Object.assign({}, PILOTS[pid], { color: L.color, color2: L.color2, accent: L.accent }), n = String(NUM[pid] || 0), W = 1024, H = 512, fancy = !!L.mat;
     const body = GFX.canvasTex(W, H, (x) => {
       const X = u => u * W, Y = v => (1 - v) * H;
-      x.fillStyle = P0.color; x.fillRect(0, 0, W, H);
+      if (fancy) paintMat(x, W, H, L); else if (L.carbon) carbonFill(x, W, H); else { x.fillStyle = P0.color; x.fillRect(0, 0, W, H); }
       // vientre de fibra (abajo) y brillo lateral
       x.fillStyle = 'rgba(10,12,16,0.85)'; x.fillRect(X(0.6), 0, X(0.3), H);
       // franja central ancha que se abre en la cabina (color 2) con filetes del color de acento
       const stripe = (u0, k, col) => { x.fillStyle = col; x.beginPath(); const pts = [[0, 0.035], [0.35, 0.07], [0.6, 0.12], [0.8, 0.07], [1, 0.05]]; pts.forEach(([v, w], i) => { const xx = X(u0 - w * k); i ? x.lineTo(xx, Y(v)) : x.moveTo(xx, Y(v)); }); for (let i = pts.length - 1; i >= 0; i--) x.lineTo(X(u0 + pts[i][1] * k), Y(pts[i][0])); x.closePath(); x.fill(); };
-      stripe(0.25, 1.25, P0.accent); stripe(0.25, 1, P0.color2);
+      // (las pinturas del garaje solo llevan dos filetes finos: el diseño es el protagonista)
+      if (fancy) { for (const du of [-0.075, 0.075]) { x.fillStyle = P0.accent; x.fillRect(X(0.25 + du) - 3, 0, 6, H); } }
+      else { stripe(0.25, 1.25, P0.accent); stripe(0.25, 1, P0.color2); }
       // banda diagonal en los costados
-      for (const u0 of [0.0, 0.5]) { x.fillStyle = P0.color2; x.beginPath(); x.moveTo(X(u0 - 0.06), Y(0.62)); x.lineTo(X(u0 + 0.06), Y(0.5)); x.lineTo(X(u0 + 0.06), Y(0.42)); x.lineTo(X(u0 - 0.06), Y(0.54)); x.closePath(); x.fill(); }
-      x.fillStyle = P0.color2; x.beginPath(); x.moveTo(X(0.94), Y(0.62)); x.lineTo(X(1.0), Y(0.55)); x.lineTo(X(1.0), Y(0.47)); x.lineTo(X(0.94), Y(0.54)); x.fill();
+      if (!fancy) for (const u0 of [0.0, 0.5]) { x.fillStyle = P0.color2; x.beginPath(); x.moveTo(X(u0 - 0.06), Y(0.62)); x.lineTo(X(u0 + 0.06), Y(0.5)); x.lineTo(X(u0 + 0.06), Y(0.42)); x.lineTo(X(u0 - 0.06), Y(0.54)); x.closePath(); x.fill(); }
+      if (!fancy) { x.fillStyle = P0.color2; x.beginPath(); x.moveTo(X(0.94), Y(0.62)); x.lineTo(X(1.0), Y(0.55)); x.lineTo(X(1.0), Y(0.47)); x.lineTo(X(0.94), Y(0.54)); x.fill(); }
       // número grande en la nariz (se lee desde atrás) y en los costados de la cubierta del motor
       const num = (u, v, size, rot) => { x.save(); x.translate(X(u), Y(v)); x.rotate(rot); x.font = `400 ${size}px "Russo One", sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = size * 0.14; x.strokeStyle = '#0a0a0c'; x.strokeText(n, 0, 0); x.fillStyle = '#ffffff'; x.fillText(n, 0, 0); x.restore(); };
       num(0.25, 0.84, 70, 0); num(0.06, 0.2, 64, Math.PI / 2); num(0.44, 0.2, 64, -Math.PI / 2);
@@ -98,20 +166,21 @@ const CarArt = (() => {
       x.strokeStyle = 'rgba(0,0,0,0.25)'; x.lineWidth = 2; for (const v of [0.3, 0.66]) { x.beginPath(); x.moveTo(0, Y(v)); x.lineTo(W, Y(v)); x.stroke(); }
     }, false);
     const pod = GFX.canvasTex(512, 256, (x, w, h) => {
-      x.fillStyle = P0.color; x.fillRect(0, 0, w, h); x.fillStyle = 'rgba(10,12,16,0.85)'; x.fillRect(w * 0.6, 0, w * 0.3, h);
-      x.fillStyle = P0.color2; x.beginPath(); x.moveTo(0, h * 0.25); x.lineTo(w, h * 0.1); x.lineTo(w, h * 0.32); x.lineTo(0, h * 0.5); x.fill();
+      if (fancy) paintMat(x, w, h, L); else if (L.carbon) carbonFill(x, w, h); else { x.fillStyle = P0.color; x.fillRect(0, 0, w, h); } x.fillStyle = 'rgba(10,12,16,0.85)'; x.fillRect(w * 0.6, 0, w * 0.3, h);
+      if (!fancy) { x.fillStyle = P0.color2; x.beginPath(); x.moveTo(0, h * 0.25); x.lineTo(w, h * 0.1); x.lineTo(w, h * 0.32); x.lineTo(0, h * 0.5); x.fill(); }
       x.fillStyle = P0.accent; x.fillRect(0, h * 0.52, w, 6);
       x.font = '900 38px "Nunito", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#fff'; x.save(); x.translate(w * 0.06, h * 0.7); x.rotate(Math.PI / 2); x.fillText(P0.name.toUpperCase(), 0, 0); x.restore(); x.save(); x.translate(w * 0.44, h * 0.7); x.rotate(-Math.PI / 2); x.fillText(P0.name.toUpperCase(), 0, 0); x.restore();
     }, false);
     for (const t of [body, pod]) t.anisotropy = 8;
-    return (liveryCache[pid] = { body, pod });
+    return (liveryCache[ck] = { body, pod });
   }
-  function build(pid, playerIdx) {
+  // sk = { paint, neon, turbo } del garaje (los bólidos de la máquina van de fábrica)
+  function build(pid, playerIdx, sk) {
     texes(); sharedTex();
-    const P0 = PILOTS[pid], root = new THREE.Group(), pivot = new THREE.Group(), body = new THREE.Group(), lv = livery(pid), lo = GQ.lv < 2, M = lo ? 22 : 32;
+    const LK = lookOf(pid, sk && sk.paint), P0 = Object.assign({}, PILOTS[pid], { color: LK.color, color2: LK.color2, accent: LK.accent }), root = new THREE.Group(), pivot = new THREE.Group(), body = new THREE.Group(), lv = livery(pid, LK), lo = GQ.lv < 2, M = lo ? 22 : 32;
     pivot.position.y = 0.62; body.position.y = -0.62; root.add(pivot); pivot.add(body); // piruetas alrededor del centro del bólido
     const Mat = lo ? THREE.MeshStandardMaterial : THREE.MeshPhysicalMaterial, gloss = lo ? { envMapIntensity: 0.5 } : { clearcoat: 0.8, clearcoatRoughness: 0.08, envMapIntensity: 0.5 };
-    const paint = new Mat(Object.assign({ map: lv.body, metalness: 0.02, roughness: 0.42 }, gloss)), pod = new Mat(Object.assign({ map: lv.pod, metalness: 0.02, roughness: 0.42 }, gloss));
+    const paint = new Mat(Object.assign({ map: lv.body, emissiveMap: lv.body, emissive: '#000000', metalness: 0.02, roughness: 0.42 }, gloss)), pod = new Mat(Object.assign({ map: lv.pod, emissiveMap: lv.pod, emissive: '#000000', metalness: 0.02, roughness: 0.42 }, gloss));
     const paintF = new Mat(Object.assign({ color: P0.color, metalness: 0.02, roughness: 0.42 }, gloss)), paint2 = new Mat(Object.assign({ color: P0.color2, metalness: 0.02, roughness: 0.4 }, gloss));
     const carbon = new THREE.MeshStandardMaterial({ map: carbonTex, metalness: 0.35, roughness: 0.42 }), black = new THREE.MeshStandardMaterial({ color: '#0b0c0e', roughness: 0.7 });
     const metal = new THREE.MeshStandardMaterial({ color: '#b8bcc4', metalness: 1, roughness: 0.25 }), visorM = new THREE.MeshStandardMaterial({ color: '#0a0a0e', metalness: 1, roughness: 0.05 });
@@ -205,7 +274,32 @@ const CarArt = (() => {
     const lamps = []; for (const sx of [-0.3, 0.3]) { const l = new THREE.Sprite(new THREE.SpriteMaterial({ map: GFX.glowTex(), color: '#fff4dc', blending: THREE.AdditiveBlending, transparent: true, depthWrite: false })); l.scale.set(1.3, 1.3, 1); l.position.set(sx, 0.36, 2.5); l.visible = false; body.add(l); lamps.push(l); }
     const beam = new THREE.Mesh(new THREE.PlaneGeometry(5, 14), new THREE.MeshBasicMaterial({ map: GFX.glowTex(), color: '#fff0c8', transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false })); beam.rotation.x = -Math.PI / 2; beam.position.set(0, 0.07, 8.5); beam.visible = false; root.add(beam); lamps.push(beam);
     GFX.linearize(root);
-    return { root, pivot, body, wheels, flames, core, coreGlow, rain, rainGlow, under, shadow: shadowRoot, spin: 0, wings: wingsL, floats: floatsL, wingK: 0, boatK: 0, lamps };
+    const m = { root, pivot, body, wheels, flames, core, coreGlow, rain, rainGlow, under, shadow: shadowRoot, spin: 0, wings: wingsL, floats: floatsL, wingK: 0, boatK: 0, lamps, mats: { paint, pod, paintF, paint2, glowM, tipM } };
+    skin(m, pid, sk);
+    return m;
+  }
+  // vestir un bólido ya armado (el garaje cambia de pintura sin rearmarlo)
+  const lin = (c, hex) => c.set(hex).convertSRGBToLinear();
+  function skin(m, pid, sk) {
+    sk = sk || {}; const L = lookOf(pid, sk.paint), lv = livery(pid, L), M = m.mats, hi = GQ.lv >= 2;
+    M.paint.map = lv.body; M.paint.emissiveMap = lv.body; M.pod.map = lv.pod; M.pod.emissiveMap = lv.pod;
+    for (const mt of [M.paint, M.pod]) { mt.metalness = L.metal != null ? L.metal : 0.02; mt.roughness = L.rough != null ? L.rough : 0.42; lin(mt.emissive, L.emis ? '#ffffff' : '#000000'); mt.emissiveIntensity = L.emis || 0; lin(mt.color, '#ffffff'); if (hi && mt.clearcoat != null) mt.clearcoat = L.metal > 0.5 ? 0.4 : 0.8; }
+    lin(M.paintF.color, L.color); lin(M.paint2.color, L.color2);
+    const nk = sk.neon && CAR_NEONS[sk.neon] ? sk.neon : 'piloto', nc = CAR_NEONS[nk] || L.accent;
+    for (const mt of [M.glowM, M.tipM, m.under.material]) lin(mt.color, nc);
+    const tk = sk.turbo && CAR_TURBOS[sk.turbo] ? sk.turbo : 'azul'; for (const f of m.flames) f.material.map = flameTexOf(tk);
+    m.look = L; m.neon = nk; m.turbo = tk; m.neonK = nk === 'piloto' ? 1 : 1.35;
+    return m;
+  }
+  // brillos que se mueven: neón de fuego o arcoíris, pintura holográfica y magma que late
+  const _hc = new THREE.Color();
+  function skinFx(m, t) {
+    if (!m.mats) return;
+    if (m.neon === 'arcoiris') { _hc.setHSL((t * 0.25) % 1, 1, 0.55); for (const mt of [m.mats.glowM, m.mats.tipM, m.under.material]) mt.color.copy(_hc); }
+    else if (m.neon === 'fuego') { const f = 0.5 + 0.5 * Math.sin(t * 13) * Math.sin(t * 7.3); _hc.setRGB(1, 0.12 + 0.3 * f, 0.02); for (const mt of [m.mats.glowM, m.mats.tipM, m.under.material]) mt.color.copy(_hc); }
+    const L = m.look; if (!L) return;
+    if (L.holo) { _hc.setHSL((t * 0.12) % 1, 0.7, 0.82); m.mats.paint.color.copy(_hc); m.mats.pod.color.copy(_hc); }
+    if (L.pulse) { const k = L.emis * (0.65 + 0.35 * Math.sin(t * 2.6)); m.mats.paint.emissiveIntensity = k; m.mats.pod.emissiveIntensity = k; }
   }
   const baseQ = new THREE.Quaternion();
   // ubicar el bólido según su estado (llamado cada cuadro de dibujo)
@@ -248,12 +342,12 @@ const CarArt = (() => {
     const g = car.gem / 4; m.core.material.emissiveIntensity = 0.4 + g * 1.8 + (car.gem >= 4 ? Math.sin(t * 10) * 0.6 : 0); m.coreGlow.scale.setScalar(1 + g * 2.2); m.coreGlow.material.opacity = 0.35 + g * 0.6;
     m.core.rotation.y = t * 3;
     const rl = (Math.sin(t * 9) > 0 ? 1 : 0.15) * (b || car.mode !== 'road' ? 1 : 0.6); m.rainGlow.material.opacity = rl; m.rain.material.color.setRGB(rl, 0.05 * rl, 0.08 * rl);
-    m.under.material.opacity = 0.35 + 0.15 * Math.sin(t * 3) + (b ? 0.3 : 0);
+    m.under.material.opacity = (0.35 + 0.15 * Math.sin(t * 3) + (b ? 0.3 : 0)) * (m.neonK || 1); skinFx(m, t);
     // sombra en el suelo (no salta con el bólido)
     const gh = T.rampH(car.s, car.u);
     T.pos(car.s, car.u, gh + 0.06, P); m.shadow.position.copy(P); m.shadow.quaternion.copy(baseQ);
     const hh = Math.max(0, car.h - gh); m.shadow.children[0].material.opacity = clamp(1 - hh / 6, 0, 1) * 0.55; m.shadow.scale.setScalar(1 + hh * 0.04);
     m.shadow.visible = !T.zone(car.s, 'gap') && car.respawnT <= 0; m.root.visible = car.respawnT <= 0;
   }
-  return { build, pose };
+  return { build, pose, skin, skinFx, lookOf };
 })();

@@ -129,6 +129,14 @@ kbd { font: 700 13px var(--font); padding: 2px 7px; border-radius: 7px; backgrou
 #s-title .menu { grid-template-columns: repeat(12, 1fr); }
 #s-title .menu .btn { grid-column: span 3; }
 #s-title .menu .btn.big { grid-column: span 4; }
+/* Logros, Hangar y Opciones: tres iguales abajo (en celular de lado, Logros y Hangar arriba a la izquierda) */
+#s-title .tside { display: contents; }
+#s-title .menu .logbtn, #s-title .menu .vestbtn, #s-title .menu .optbtn { grid-column: span 4; }
+.vestbtn, .hang { position: relative; }
+.btn.vestbtn { background: linear-gradient(135deg, rgba(255,120,210,.32), rgba(120,140,255,.32)); }
+.brow { grid-template-columns: auto 1fr auto auto; }
+.btn.hang { background: linear-gradient(135deg, rgba(255,120,210,.3), rgba(120,140,255,.3)); }
+.hang .vestNew { font-size: 0; width: 12px; height: 12px; padding: 0; top: -4px; right: -3px; background: #ff4f7a; box-shadow: 0 0 0 2px rgba(255,255,255,.85), 0 0 10px rgba(255,80,120,.8); }
 .btn.trav { background: linear-gradient(135deg, rgba(110,230,170,.5), rgba(255,207,90,.45)); flex-direction: column; gap: 2px; }
 .btn .tsub { font-style: normal; font-size: .62em; opacity: .85; font-weight: 600; }
 .osub { display: block; font-size: 11px; opacity: .7; font-weight: 600; margin-top: 1px; }
@@ -188,7 +196,9 @@ kbd { font: 700 13px var(--font); padding: 2px 7px; border-radius: 7px; backgrou
   .tdetail { font-size: 10.5px !important; line-height: 1.25; margin-top: 5px !important; } .stage small { line-height: 1.15; }
   .tintro { display: none; } .tdetail { margin-top: 6px; font-size: 11.5px; } #s-trav .phead { margin-bottom: 6px; }
   #s-title .optbtn { position: absolute; top: 12px; right: 14px; min-height: 34px; padding: 4px 14px; font-size: 13px; }
-  #s-title .logbtn { position: absolute; top: 12px; left: 14px; min-height: 34px; padding: 4px 14px; font-size: 13px; }
+  #s-title .tside { display: flex; gap: 8px; position: absolute; top: 12px; left: 14px; }
+  #s-title .menu .tside .btn { min-height: 34px; padding: 4px 11px; font-size: 12.5px; }
+  #s-title .tside { gap: 6px; } #s-title .tside .newbadge { font-size: 10px; padding: 1px 6px; top: -10px; }
   .lstats { grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
   .lstats b { font-size: 15px; } .lstats span { font-size: 9.5px; } .lstats div { padding: 3px; }
   .lgrid { gap: 4px; } .ach { padding: 3px 6px; } .ach b { font-size: 11px; } .ach span { font-size: 9.5px; }
@@ -296,7 +306,8 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
         <button class="btn" data-act="school"><span>Escuela de vuelo</span><em class="newbadge" id="schoolBadge" hidden>¡empieza aquí!</em></button>
         <button class="btn" data-act="practice">Práctica</button>
         <button class="btn" data-act="howto">Cómo se juega</button>
-        <button class="btn logbtn" data-act="logros">Logros</button>
+        <div class="tside"><button class="btn logbtn" data-act="logros">Logros</button>
+        <button class="btn vestbtn" data-act="vest"><span>Hangar</span><em class="newbadge vestNew" hidden></em></button></div>
         <button class="btn optbtn" data-act="options">Opciones</button>
       </div>
       <div class="foot" id="ver"></div>
@@ -314,10 +325,10 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
       <p class="msub" id="modeSub"></p>
       <div class="birds">
         <div class="bcol p0"><canvas id="bprev0"></canvas><div class="bname" id="bname0"></div><div class="blook" id="blook0"></div>
-          <div class="brow"><button class="btn" data-act="prev0" aria-label="Piloto anterior, jugador 1">◀</button><button class="btn" data-act="look0">Pintura</button><button class="btn" data-act="next0" aria-label="Piloto siguiente, jugador 1">▶</button></div>
+          <div class="brow"><button class="btn" data-act="prev0" aria-label="Piloto anterior, jugador 1">◀</button><button class="btn" data-act="look0">Pintura</button><button class="btn hang" data-act="vest0" aria-label="Hangar del jugador 1"><span>Hangar</span><em class="newbadge vestNew" hidden></em></button><button class="btn" data-act="next0" aria-label="Piloto siguiente, jugador 1">▶</button></div>
           <div class="bstats" id="bstats0"></div></div>
         <div class="bcol p1"><canvas id="bprev1"></canvas><div class="bname" id="bname1"></div><div class="blook" id="blook1"></div>
-          <div class="brow"><button class="btn" data-act="prev1" aria-label="Piloto anterior, jugador 2">◀</button><button class="btn" data-act="look1">Pintura</button><button class="btn" data-act="next1" aria-label="Piloto siguiente, jugador 2">▶</button></div>
+          <div class="brow"><button class="btn" data-act="prev1" aria-label="Piloto anterior, jugador 2">◀</button><button class="btn" data-act="look1">Pintura</button><button class="btn hang" data-act="vest1" aria-label="Hangar del jugador 2"><span>Hangar</span><em class="newbadge vestNew" hidden></em></button><button class="btn" data-act="next1" aria-label="Piloto siguiente, jugador 2">▶</button></div>
           <div class="bstats" id="bstats1"></div></div>
       </div>
     </div>
@@ -6425,7 +6436,36 @@ const PILOT_ART = {
     { name: 'Dorada', wingA: '#f5c542', wingB: '#a87a12', stripe: '#1c1c22', stripe2: '#f2efe8', locked: 'leyenda5' } ] },
 };
 
+// pinturas especiales del vestidor: sirven para cualquier piloto. mat = diseño del ala (los del vestidor
+// común de GameHub); rot = el diseño va de la nariz a la cola (llamas); edge = bordes de ataque que brillan
+const PAINT_GAL = ['255,110,210', '170,100,255', '90,150,255'];
+const PAINTS = {
+  jaguar: { name: 'Piel de jaguar', wingA: '#d99a2a', wingB: '#6a3a0a', stripe: '#2a1606', stripe2: '#ffd27a', mat: 'jaguar', matC: ['#d99a2a', '#ffd27a', '#2a1606', '#7a3e0a'] },
+  caiman: { name: 'Escamas de caimán', wingA: '#2f8a5a', wingB: '#0e3a24', stripe: '#d8f5a0', stripe2: '#9be8b0', mat: 'escamas', matC: ['#2f8a5a', '#9be8b0', '#0e3a24'] },
+  llamarada: { name: 'Llamarada', wingA: '#3a0c06', wingB: '#120202', stripe: '#ffd23f', stripe2: '#ff7a1a', mat: 'llamas', matC: ['#4a0c06', '#140302', '255,226,110', '255,84,16'], rot: true },
+  tormenta: { name: 'Tormenta eléctrica', wingA: '#3a4660', wingB: '#0a0e18', stripe: '#bfe4ff', stripe2: '#5ab8ff', mat: 'tormenta', matC: ['#1a2234', '120,140,180'] },
+  aurora: { name: 'Aurora boreal', wingA: '#0a2a3a', wingB: '#02080c', stripe: '#9affd8', stripe2: '#c79aff', mat: 'aurora', matC: ['#06121e', '110,255,190', '170,110,255'] },
+  cristal: { name: 'Hielo tallado', wingA: '#bfeeff', wingB: '#3a7aa8', stripe: '#ffffff', stripe2: '#7ae0ff', mat: 'cristal', matC: ['#bfeeff', '#6ab8e8', '#f2fdff'] },
+  magma: { name: 'Magma', wingA: '#3a1208', wingB: '#0a0404', stripe: '#ff9a3a', stripe2: '#ffcf6a', mat: 'lava', matC: ['#2a0e08', '#0a0404'], edge: '255,120,40' },
+  oro: { name: 'Filigrana de oro', wingA: '#e8b030', wingB: '#7a4a08', stripe: '#fff6d0', stripe2: '#8a2a14', mat: 'oro', matC: ['#e8b030', '#fff0a8', '#9a6410'], edge: '255,226,140' },
+  fatuo: { name: 'Fuego fatuo', wingA: '#0a2a5a', wingB: '#020814', stripe: '#9ff0ff', stripe2: '#4ab8ff', mat: 'llamas', matC: ['#0a2458', '#030a1c', '160,240,255', '50,110,255'], rot: true, edge: '120,210,255' },
+  galaxia: { name: 'Galaxia', wingA: '#1a0e40', wingB: '#05020e', stripe: '#ffd6f6', stripe2: '#ff6fd8', mat: 'galaxia', matC: PAINT_GAL, edge: '255,140,230' },
+  agujero: { name: 'Agujero negro', wingA: '#120618', wingB: '#000000', stripe: '#c88aff', stripe2: '#8a3aff', mat: 'vacio', matC: ['#3a0a5a', '200,120,255'], edge: '190,110,255' },
+  holo: { name: 'Holográfica', wingA: '#dfe4f0', wingB: '#6a7490', stripe: '#ffffff', stripe2: '#ff9be6', mat: 'holo', matC: [], edge: 'holo' },
+};
+const PAINT_ORDER = Object.keys(PAINTS);
+
 const ArtPilot = (() => {
+  // la pintura puede venir como número (las de antes), como «especie.n» o como «u.clave» (para cualquier piloto)
+  const LOOKS = {};
+  function look(spid, lk) {
+    const key = spid + '|' + lk; if (LOOKS[key]) return LOOKS[key];
+    const A = PILOT_ART[spid] || PILOT_ART.guacamaya; let L = A.looks[0];
+    if (typeof lk === 'number') L = A.looks[((lk % A.looks.length) + A.looks.length) % A.looks.length];
+    else if (typeof lk === 'string' && lk.startsWith('u.') && PAINTS[lk.slice(2)]) L = PAINTS[lk.slice(2)];
+    else if (typeof lk === 'string') L = A.looks[+lk.split('.')[1] || 0] || A.looks[0];
+    return (LOOKS[key] = L);
+  }
   const SUIT = '#3a4154', SUIT2 = '#242936', BOOT = '#171a22';
   const L2 = (A, B, u) => ({ x: A.x + (B.x - A.x) * u, y: A.y + (B.y - A.y) * u });
   // luz del escenario que pega en el borde del ala (cálida al atardecer, fría de noche)
@@ -6500,7 +6540,7 @@ const ArtPilot = (() => {
   let G0 = null; function setGame(G) { G0 = G; }
   // dibuja un piloto; «fake» sirve para las vistas previas del menú; vs = aumento de lejos
   function draw(ctx, b, t, pc, vs = 1) {
-    const sp = b.sp, A = PILOT_ART[sp.id], L = A.looks[b.look % A.looks.length], s = A.span;
+    const sp = b.sp, A = PILOT_ART[sp.id], L = look(sp.id, b.look), s = A.span;
     const k = sp.size * 1.24 * vs, V = b.perch ? null : vis(b, t, k), rim = RIM[(G0 && G0.world && G0.world.id) || 'cocora'] || RIM.cocora;
     if (V) drawScarf(ctx, V.scarf, pc, k);
     ctx.save();
@@ -6593,6 +6633,11 @@ const ArtPilot = (() => {
     wg.addColorStop(0, ArtWorld.mix(L.wingA, '#ffffff', 0.2)); wg.addColorStop(0.5, L.wingA); wg.addColorStop(1, ArtWorld.mix(L.wingB, '#000000', 0.25));
     wingPath(); ctx.fillStyle = wg; ctx.fill();
     ctx.save(); wingPath(); ctx.clip();
+    // pintura especial: el diseño entero sobre el ala (las llamas corren de la nariz a la cola)
+    if (L.mat && typeof Vest !== 'undefined') {
+      if (L.rot) { ctx.save(); ctx.rotate(-Math.PI / 2); Vest.material(ctx, L.mat, L.matC, -21 * s, -50, 42 * s, 62, t, 0.96, !LOWFX); ctx.restore(); }
+      else Vest.material(ctx, L.mat, L.matC, -24, -21 * s, 36, 42 * s, t, 0.96, !LOWFX);
+    }
     // de la nariz a la cola se oscurece un poco
     const cg = ctx.createLinearGradient(F.x, 0, TC.x, 0); cg.addColorStop(0, 'rgba(255,255,255,0.1)'); cg.addColorStop(0.5, 'rgba(0,0,0,0)'); cg.addColorStop(1, 'rgba(0,0,12,0.3)'); ctx.fillStyle = cg; ctx.fillRect(-26, -26, 42, 52);
     // superficies de control en el borde de fuga, como plumas (con sus divisiones)
@@ -6602,8 +6647,12 @@ const ArtPilot = (() => {
     }
     // pintura: banda ancha junto a cada borde de ataque y galón interior
     const band = (T2, col, o0, o1) => { const a1 = L2(F, T2, 0.1), a2 = L2(F, T2, 0.93), i1 = L2(a1, TC, o0), i2 = L2(a2, TC, o0), j1 = L2(a1, TC, o1), j2 = L2(a2, TC, o1); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(i1.x, i1.y); ctx.lineTo(i2.x, i2.y); ctx.lineTo(j2.x, j2.y); ctx.lineTo(j1.x, j1.y); ctx.closePath(); ctx.fill(); };
-    band(TF, ArtWorld.mix(L.stripe, '#000000', 0.32), 0.1, 0.22); band(TN, L.stripe, 0.1, 0.23);
-    band(TF, ArtWorld.mix(L.stripe2, '#000000', 0.38), 0.29, 0.345); band(TN, L.stripe2, 0.29, 0.35);
+    // (las pinturas especiales solo llevan un filete fino: el diseño es el protagonista)
+    if (L.mat) { band(TF, ArtWorld.mix(L.stripe, '#000000', 0.3), 0.06, 0.1); band(TN, L.stripe, 0.06, 0.105); }
+    else {
+      band(TF, ArtWorld.mix(L.stripe, '#000000', 0.32), 0.1, 0.22); band(TN, L.stripe, 0.1, 0.23);
+      band(TF, ArtWorld.mix(L.stripe2, '#000000', 0.38), 0.29, 0.345); band(TN, L.stripe2, 0.29, 0.35);
+    }
     // líneas de panel
     ctx.strokeStyle = 'rgba(0,0,10,0.2)'; ctx.lineWidth = 0.5; ctx.beginPath(); for (const T2 of [TF, TN]) { const m1 = L2(F, T2, 0.5), m2 = L2(TC, T2, 0.45); ctx.moveTo(m1.x, m1.y); ctx.lineTo(m2.x, m2.y); } ctx.stroke();
     // escarapela del jugador en el ala cercana
@@ -6624,6 +6673,13 @@ const ArtPilot = (() => {
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(${rim},0.85)`; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(F.x - 0.6, F.y - 0.8); ctx.quadraticCurveTo(F.x - 2, F.y - 2.6, TF.x + 1.6, TF.y + 0.9); ctx.stroke();
     ctx.strokeStyle = `rgba(${rim},0.5)`; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(15, 2, 5.6, -2.6, -0.6); ctx.stroke();
+    // pinturas legendarias y míticas: los bordes de ataque y las derivas brillan con su luz
+    if (L.edge) {
+      const pul = 0.6 + 0.4 * Math.sin(t * 3.2 + (b.id === 1 ? 1.7 : 0)), ec = L.edge === 'holo' ? (() => { const h = (t * 90) % 360, f = n => { const k = (n + h / 30) % 12; return Math.round(255 * (0.62 - 0.38 * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); }; return `${f(0)},${f(8)},${f(4)}`; })() : L.edge;
+      const edges = () => { ctx.beginPath(); ctx.moveTo(TF.x + 1.4, TF.y + 0.8); ctx.quadraticCurveTo(F.x - 2, F.y - 2.6, F.x - 0.4, F.y); ctx.quadraticCurveTo(F.x - 2, F.y + 3, TN.x + 1.4, TN.y - 0.8); };
+      for (const [lw, a] of [[5.2, 0.16], [2.6, 0.42], [1, 0.95]]) { ctx.strokeStyle = lw < 2 ? `rgba(255,255,255,${(a * pul).toFixed(3)})` : `rgba(${ec},${(a * pul).toFixed(3)})`; ctx.lineWidth = lw; edges(); ctx.stroke(); }
+      for (const T2 of [TF, TN]) { const g4 = ctx.createRadialGradient(T2.x - 1, T2.y, 0, T2.x - 1, T2.y, 6); g4.addColorStop(0, `rgba(${ec},${(0.45 * pul).toFixed(3)})`); g4.addColorStop(1, `rgba(${ec},0)`); ctx.fillStyle = g4; ctx.beginPath(); ctx.arc(T2.x - 1, T2.y, 6, 0, TAU); ctx.fill(); }
+    }
     // luces de navegación: roja en la punta lejana, verde en la cercana, destello blanco en la cola
     const nav = (p, col, on) => { if (!on) return; const g3 = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 7); g3.addColorStop(0, `rgba(${col},1)`); g3.addColorStop(0.35, `rgba(${col},0.55)`); g3.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g3; ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, TAU); ctx.fill(); };
     nav({ x: TF.x - 4.4, y: TF.y - 2.6 }, '255,70,60', true); nav({ x: TN.x - 4.4, y: TN.y - 2.6 }, '80,255,140', true); nav({ x: TC.x + 1, y: TC.y }, '255,255,255', (t * 1.3 + (b.id || 0) * 0.37) % 1 < 0.08);
@@ -6670,7 +6726,7 @@ const ArtPilot = (() => {
     }
     ctx.restore();
   }
-  return { draw, drawTrail, setGame };
+  return { draw, drawTrail, setGame, look };
 })();
 
 /* ===== 06b-art-fx.js ===== */
@@ -6743,7 +6799,7 @@ const FX = (() => {
         break;
       case 'down': {
         explosion(b.x, b.y, 1.5);
-        const L = PILOT_ART[b.sp.id].looks[b.look % 2];
+        const L = ArtPilot.look(b.sp.id, b.look); // (también las pinturas del Hangar)
         debris(b.x, b.y, b.vx, b.vy, [L.wingA, L.wingB, L.stripe, '#5b6170']);
         break;
       }
@@ -7557,7 +7613,8 @@ const Game = (() => {
   const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
   let dpr = 1, sw = 1, sh = 1, acc = 0, last = 0, quality = Store.get('quality', 'alta');
   const cam = { x: 1400, y: 1100, z: 0.4 };
-  const cfg = { species: Store.get('species', ['guacamaya', 'condor']), looks: Store.get('looks', [0, 0]), arena: Store.get('arena', 'medellin'), mode: Store.get('mode', 'duel') };
+  // looks: la pintura de cada jugador (número de antes, «especie.n» o «u.clave»); trails: la estela del vestidor
+  const cfg = { species: Store.get('species', ['guacamaya', 'condor']), looks: Store.get('looks', [0, 0]), trails: ['t.ninguna', 't.ninguna'], arena: Store.get('arena', 'medellin'), mode: Store.get('mode', 'duel') };
   if (!MODES[cfg.mode]) cfg.mode = 'duel';
   if (cfg.arena !== 'azar' && !ARENAS[cfg.arena]) cfg.arena = 'medellin';
   if (!SPECIES[cfg.species[0]]) cfg.species = ['guacamaya', 'condor'];
@@ -7579,6 +7636,8 @@ const Game = (() => {
     G.time = 0; G.events = []; G.rng = makeRng(opts.seed || 1); G.paused = false;
     G.birds = [0, 1].map(i => new Bird(i, opts.species[i], opts.looks[i]));
     G.birds.forEach(b => { b.G = G; });
+    G.vtr = (opts.trails || []).map(id => (id ? String(id).replace(/^t\./, '') : null)); trailT = [0, 0]; trailP = [null, null];
+    if (typeof Vest !== 'undefined') { Vest.trailReset('vto0'); Vest.trailReset('vto1'); }
     G.bots = [null, null]; G.targets = []; G.boss = null;
     FX.clear();
   }
@@ -7600,7 +7659,9 @@ const Game = (() => {
   }
   function startAttract() {
     attractN = (attractN + 1) % ARENA_ORDER.length;
-    setup({ species: ['guacamaya', 'condor'], looks: [0, 0], seed: 7, arena: cfg.arena === 'azar' ? ARENA_ORDER[attractN] : cfg.arena });
+    // de vez en cuando, los de la portada lucen pinturas y estelas del vestidor (para antojar)
+    const show = Math.random() < 0.45, pk = () => 'u.' + PAINT_ORDER[Math.floor(Math.random() * PAINT_ORDER.length)], tk = () => ATTRACT_TRAILS[Math.floor(Math.random() * ATTRACT_TRAILS.length)];
+    setup({ species: ['guacamaya', 'condor'], looks: show ? [pk(), pk()] : [0, 0], trails: show ? [tk(), tk()] : null, seed: 7, arena: cfg.arena === 'azar' ? ARENA_ORDER[attractN] : cfg.arena });
     G.state = 'attract'; G.mode = 'free'; G.players = 0;
     placeBirds(); G.freeze = false; G.canFight = true; G.cratesOn = true;
     G.bots = [new Bot(G.birds[0], 11, 1), new Bot(G.birds[1], 29, 1)];
@@ -7614,7 +7675,7 @@ const Game = (() => {
     G.players = players; G.mode = mode;
     const seed = (Date.now() & 0xffff) || 1;
     G.arena = over && over.arena ? over.arena : cfg.arena === 'azar' ? ARENA_ORDER[seed % ARENA_ORDER.length] : cfg.arena;
-    setup({ species: cfg.species, looks: cfg.looks, seed, arena: G.arena });
+    setup({ species: cfg.species, looks: cfg.looks, trails: cfg.trails, seed, arena: G.arena });
     const lvl = over && over.level != null ? over.level : G.botLevel;
     G.trav = over && over.id ? over.id : null; G.playT = 0; G.lvl = lvl; G.copa = over && over.copa ? over.copa : null;
     // Travesía para dos: G.duo; en las etapas «juntos» (Blancos) G.coop con la meta entre los dos
@@ -7861,6 +7922,28 @@ const Game = (() => {
   }
 
   /* ---------- dibujo ---------- */
+  // estelas del vestidor: salen de las toberas y se dibujan detrás de los pilotos
+  const ATTRACT_TRAILS = ['fuego', 'neon', 'cometa', 'arcoiris', 'galaxia', 'hielo', 'rayo', 'sombra', 'chispas'];
+  // (los jets van muy rápido: el reloj de la estela corre más rápido y se rellenan puntos cada pocas
+  //  unidades, para que se vea tupida y del largo justo, como en la vista previa del Hangar)
+  let trailT = [0, 0], trailP = [null, null];
+  const TCLK = 1.6;
+  function drawVestTrails(vs) {
+    if (typeof Vest === 'undefined' || !G.vtr) return;
+    G.birds.forEach((b, i) => {
+      const kind = G.vtr[i]; if (!kind || kind === 'ninguna') return;
+      const key = 'vto' + i, now = G.time * TCLK, step = LOWFX ? 10 : 6;
+      if (now < trailT[i] - 0.01) { Vest.trailReset(key); trailP[i] = null; }
+      if (b.alive) {
+        const r = b.r * 1.15, X = b.x - Math.cos(b.a) * r, Y = b.y - Math.sin(b.a) * r, L = trailP[i];
+        const d = L ? Math.hypot(X - L.x, Y - L.y) : 0;
+        if (!L || d > 260) { if (L) Vest.trailReset(key); Vest.trailPush(key, X, Y, now, 0); trailP[i] = { x: X, y: Y, t: now }; }
+        else if (d >= step) { const n = Math.min(14, Math.floor(d / step)); for (let k = 1; k <= n; k++) { const u = k / n; Vest.trailPush(key, L.x + (X - L.x) * u, L.y + (Y - L.y) * u, L.t + (now - L.t) * u, 0); } trailP[i] = { x: X, y: Y, t: now }; }
+      } else trailP[i] = null;
+      trailT[i] = now;
+      Vest.drawTrail(ctx, kind, key, b.r * 0.42 * Math.sqrt(vs), now, PLAYER_COLORS[i].glow);
+    });
+  }
   // en celular el HUD va un poco más grande (las pantallas son chicas y los textos tienen que leerse)
   function hudUnit() { return Touch.enabled ? clamp(Math.min(sh / 330, sw / 740), 0.92, 2.1) : clamp(Math.min(sh / 400, sw / 860), 0.8, 2.1); }
   function render() {
@@ -7875,6 +7958,7 @@ const Game = (() => {
     // de lejos (zoom chico, celular) los pilotos y proyectiles se dibujan más grandes para que se lean
     const vs = G.vs = clamp(Math.pow(0.92 / cam.z, 0.62), 1, 1.95);
     G.birds.forEach((b, i) => ArtPilot.drawTrail(ctx, b, G.time, PLAYER_COLORS[i], vs));
+    drawVestTrails(vs);
     Weather.drawWorld(ctx, G);
     Coast.drawWorld(ctx, G);
     FX.drawCombat(ctx, G);
@@ -8146,7 +8230,7 @@ const UI = (() => {
     if (name === 'trav') fillTrav();
     if (name === 'title') { const ts = $('#travSub'), tt = Travesia.total(); if (ts) ts.textContent = tt ? `de uno o de dos · ${tt}/30 ★` : 'de uno o de dos · 10 etapas'; }
     if (name === 'pause') { const K = Input.keymap; for (let i = 0; i < 2; i++) { const el = $('#pk' + i); if (el) el.innerHTML = `<b>J${i + 1}</b> ` + keyHint(i); } }
-    if (name === 'title') { const bd = $('#schoolBadge'); if (bd) bd.hidden = !!Store.get('schoolSeen', false); }
+    if (name === 'title') { const bd = $('#schoolBadge'); if (bd) bd.hidden = !!Store.get('schoolSeen', false); if (VV()) VV().after(700); }
     if (name === 'title') { const md = Game.cfg.mode, m = MODES[md].name; $('[data-act="play2"]').textContent = `${m} · 2 jugadores`; $('[data-act="play1"]').textContent = md === 'boss' ? 'Jefe · con la máquina de compañera' : `${m} · contra la máquina`; }
     if (name !== 'keys') cancelCapture();
   }
@@ -8285,6 +8369,7 @@ const UI = (() => {
     if (hubEv) ['#r-next', '#r-copa', '#r-rematch', '#r-birds', '#r-trav', '#s-results [data-act="toTitle"]'].forEach(q => { const e = $(q); if (e) e.hidden = true; });
     else { const e = $('#s-results [data-act="toTitle"]'); if (e) e.hidden = false; }
     stack = []; show('results', false);
+    if (VV()) VV().after();
   }
   function pause() {
     if (current !== null || !['play', 'countdown', 'roundEnd'].includes(Game.G.state)) return;
@@ -8299,7 +8384,7 @@ const UI = (() => {
     const ev = hubPending; hubPick(null); if (!ev) return;
     stack = []; paused = false; Game.G.paused = false; Copa.end();
     const C = Game.cfg, keep = [C.species.slice(), C.looks.slice()];
-    if (ev.chars === 'random') { const L = Object.keys(SPECIES); for (let i = 0; i < 2; i++) { C.species[i] = L[Math.floor(Math.random() * L.length)]; C.looks[i] = 0; } }
+    if (ev.chars === 'random') { const L = Object.keys(SPECIES); for (let i = 0; i < 2; i++) { C.species[i] = L[Math.floor(Math.random() * L.length)]; C.looks[i] = VV() ? VV().V.eq(i, 'paint', C.species[i]) : 0; } }
     const map = ev.map && ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
     Game.start(ev.mode, 2, { arena: map, wins: ev.rounds || 3 });
     C.species = keep[0]; C.looks = keep[1];
@@ -8316,9 +8401,9 @@ const UI = (() => {
   const STATS = { guacamaya: [3, 4, 3, 3], colibri: [1, 5, 5, 2], tucan: [4, 2, 3, 5], condor: [5, 2, 2, 4] };
   function fillBirds() {
     for (let i = 0; i < 2; i++) {
-      const sp = Game.cfg.species[i], A = PILOT_ART[sp], look = Game.cfg.looks[i] % A.looks.length;
+      const sp = Game.cfg.species[i], L = ArtPilot.look(sp, Game.cfg.looks[i]), tr = Game.cfg.trails[i], T = VV() && tr && tr !== 't.ninguna' ? VV().V.BY[tr] : null;
       $(`#bname${i}`).textContent = SPECIES[sp].name;
-      $(`#blook${i}`).textContent = 'Pintura ' + A.looks[look].name.toLowerCase() + (A.looks.some(L => L.locked && !Progress.has(L.locked)) ? ' · la dorada se gana' : '');
+      $(`#blook${i}`).textContent = L.name + (T ? ' · ' + T.name : '');
       const st = STATS[sp];
       $(`#bstats${i}`).innerHTML = ['Blindaje', 'Giro', 'Velocidad', 'Fuego'].map((n, k) => `<div class="stat"><span>${n}</span><i style="--v:${st[k] / 5}"></i></div>`).join('');
     }
@@ -8333,26 +8418,33 @@ const UI = (() => {
     if (Game.G.state === 'attract') Game.startAttract();
   }
   // pinturas: las bloqueadas (dorada) se saltan hasta ganar su logro; dos pilotos iguales no comparten pintura
-  const usable = (sp, k) => { const L = PILOT_ART[sp].looks[k]; return !L.locked || Progress.has(L.locked); };
-  function pickLook(i, sp, from, step) {
-    const n = PILOT_ART[sp].looks.length;
-    for (let s = 0; s < n; s++) {
-      const k = ((from + s * step) % n + n) % n;
-      if (!usable(sp, k)) continue;
-      if (sp === Game.cfg.species[1 - i] && k === Game.cfg.looks[1 - i] % n) continue;
-      return k;
-    }
-    return 0;
+  // (las pinturas viven en el Hangar: cada piloto recuerda la suya; el botón «Pintura» pasa por las ganadas)
+  const VV = () => { try { return Vestidor; } catch (e) { return null; } }; // (el Hangar se carga después del menú)
+  const same = (i, sp, id) => sp === Game.cfg.species[1 - i] && String(id) === String(Game.cfg.looks[1 - i]);
+  function pickLook(i, sp, step) {
+    const V = VV(); if (!V) return 0;
+    const L = V.paints(sp), cur = V.V.eq(i, 'paint', sp), k0 = Math.max(0, L.indexOf(cur));
+    for (let s = step ? 1 : 0; s <= L.length; s++) { const id = L[(k0 + s) % L.length]; if (!same(i, sp, id)) return id; }
+    return cur;
   }
   function cycle(i, d) {
     const k = SPECIES_ORDER.indexOf(Game.cfg.species[i]);
     const sp = SPECIES_ORDER[(k + d + SPECIES_ORDER.length) % SPECIES_ORDER.length];
-    Game.setSpecies(i, sp, pickLook(i, sp, Game.cfg.looks[i] % PILOT_ART[sp].looks.length, 1)); fillBirds();
+    Game.setSpecies(i, sp, Game.cfg.looks[i]);
+    const id = pickLook(i, sp, 0); if (VV()) VV().V.setEq(i, 'paint', id, sp); else Game.setSpecies(i, sp, 0);
+    fillBirds();
   }
   function recolor(i) {
-    const sp = Game.cfg.species[i];
-    Game.setSpecies(i, sp, pickLook(i, sp, Game.cfg.looks[i] + 1, 1)); fillBirds();
+    const sp = Game.cfg.species[i], id = pickLook(i, sp, 1);
+    if (VV()) VV().V.setEq(i, 'paint', id, sp);
+    fillBirds();
   }
+  function openVest(i) { const V = VV(); if (!V) return; V.open(i, () => { if (current === 'birds') fillBirds(); }); }
+  function vestBadge() {
+    const V = VV(), n = V ? V.V.fresh() : 0;
+    $$('.vestNew').forEach(e => { e.hidden = !n; e.textContent = n === 1 ? '¡1 nueva!' : `¡${n} nuevas!`; });
+  }
+  function refreshBirds() { if (current === 'birds') fillBirds(); }
   function startPreview() {
     fillBirds(); fillArena(); fillMode(); stopPreview();
     const t0 = performance.now();
@@ -8438,6 +8530,7 @@ const UI = (() => {
     fullscreen: () => FS.toggle(),
     'prev0': () => cycle(0, -1), 'next0': () => cycle(0, 1), 'prev1': () => cycle(1, -1), 'next1': () => cycle(1, 1),
     'look0': () => recolor(0), 'look1': () => recolor(1),
+    vest: () => openVest(0), 'vest0': () => openVest(0), 'vest1': () => openVest(1),
     arenaPrev: () => cycleArena(-1), arenaNext: () => cycleArena(1), modePrev: () => cycleMode(-1), modeNext: () => cycleMode(1),
   };
   function init() {
@@ -8486,7 +8579,7 @@ const UI = (() => {
       document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
     }
   }
-  return { init, show, pause, resume, results, hubPlay, get current() { return current; } };
+  return { init, show, pause, resume, results, hubPlay, vestBadge, refreshBirds, get current() { return current; } };
 })();
 
 // para las pruebas automáticas
@@ -8494,6 +8587,128 @@ window.VTO = { Game, World, Touch, Input, PHYS, SPECIES, UI, FX, Bot, Bird, Comb
 UI.init();
 Hub.onPlay(ev => UI.hubPlay(ev));
 Hub.ready();
+
+/* ===== 09b-vest.js ===== */
+/* =========================================================================
+   VESTIDOR DE VENTOLERA — pinturas del ala y estelas que se ganan volando.
+   · Pinturas de cada piloto: las dos de siempre y la dorada (Leyenda viva).
+   · Pinturas especiales (para cualquier piloto), cada vez más vistosas:
+     jaguar, caimán, llamarada, tormenta, aurora, hielo tallado, magma,
+     filigrana de oro, fuego fatuo, galaxia, agujero negro y holográfica.
+     Las legendarias y míticas llevan los bordes del ala encendidos.
+   · Estelas: salen de las toberas (chispas, neón de tu color, fuego,
+     escarcha, sombra, relámpago, arcoíris, cometa y polvo de galaxia).
+   · Se ganan con derribos, maniobras, la Escuela, el Jefe, la Copa,
+     la Travesía y los logros. El vestidor es el común de GameHub.
+   ========================================================================= */
+const Vestidor = (() => {
+  const C = () => {
+    const P = Progress.data, got = P.got || {};
+    return { n: P.n, got, nach: ACHIEVEMENTS.filter(a => got[a.id]).length, trav: Travesia.total() };
+  };
+  const items = [], A = id => c => !!c.got[id];
+  SPECIES_ORDER.forEach((sp, i) => {
+    const Lk = PILOT_ART[sp].looks, nm = SPECIES[sp].name;
+    items.push({ id: sp + '.0', slot: 'paint', char: sp, free: true, rar: 'comun', name: Lk[0].name, desc: `La pintura de siempre de ${nm}.`, order: i });
+    items.push({ id: sp + '.1', slot: 'paint', char: sp, free: true, rar: 'comun', name: Lk[1].name, desc: `La otra pintura de ${nm}.`, order: i });
+    items.push({ id: sp + '.2', slot: 'paint', char: sp, rar: 'epico', name: Lk[2].name, how: 'Entra 5 veces en Modo leyenda.', desc: `${nm} de oro: para las leyendas vivas.`, test: A('leyenda5'), prog: c => [c.n.leyendas, 5], order: i });
+  });
+  const U = (key, rar, how, desc, test, prog) => items.push({ id: 'u.' + key, slot: 'paint', rar, name: PAINTS[key].name, how, desc, test, prog, order: 100 + items.length });
+  U('jaguar', 'raro', 'Derriba 20 rivales.', 'Piel de jaguar de punta a punta del ala. Para cualquier piloto.', c => c.n.derribos >= 20, c => [c.n.derribos, 20]);
+  U('caiman', 'raro', 'Termina la Escuela de vuelo.', 'Escamas de caimán que destellan cuando el ala gira.', A('escuela'));
+  U('llamarada', 'epico', 'Rompe la barrera del sonido.', 'Llamas de carreras que salen de la nariz y se mueven con el viento.', A('sonico'));
+  U('tormenta', 'epico', 'Que te caiga un rayo… y seguir volando.', 'Nubes de tormenta en el ala, con relámpagos que la cruzan.', A('rayo'));
+  U('aurora', 'epico', 'Gana una partida de Maletín y una Carrera.', 'Una aurora boreal ondulando sobre el ala de noche.', c => !!(c.got.maletin && c.got.carrera), c => [(c.got.maletin ? 1 : 0) + (c.got.carrera ? 1 : 0), 2]);
+  U('cristal', 'epico', 'Revienta 50 blancos en total.', 'Hielo tallado en facetas que destellan.', A('globos'), c => [c.n.blancos, 50]);
+  U('magma', 'legendario', 'Derrota a La Sombra (modo Jefe).', 'Roca de volcán con grietas de magma vivo y los bordes al rojo.', A('jefe'));
+  U('oro', 'legendario', 'Gana una Copa de 5 pruebas.', 'Filigrana de oro que brilla, con los bordes encendidos. La de los campeones.', A('copa'));
+  U('fatuo', 'legendario', 'Gánale un duelo a la máquina en difícil.', 'Llamas azules de la nariz a la cola y bordes de luz fría.', A('dificil'));
+  U('galaxia', 'mitico', 'Gana el Duelo final de la Travesía.', 'Una galaxia entera moviéndose dentro del ala, con bordes de luz rosada.', A('travesia'));
+  U('agujero', 'mitico', 'Terminen la Travesía para dos.', 'Negro de agujero negro con su disco de luz girando, y bordes violeta.', A('trav2'));
+  U('holo', 'mitico', 'Saca las 30 estrellas de la Travesía.', 'Holográfica: cambia de color con la luz y los bordes pasan por todo el arcoíris.', A('estrellas'), c => [c.trav, 30]);
+
+  const T = (key, rar, name, how, desc, test, prog) => items.push({ id: 't.' + key, slot: 'trail', rar, name, how, desc, test, prog, free: !test, order: items.length });
+  T('ninguna', 'comun', 'Solo vapor', '', 'La estela de siempre: vapor blanco y la línea de tu color.');
+  T('chispas', 'raro', 'Chispas', 'Juega 10 partidas.', 'Las toberas sueltan chispas doradas.', c => c.n.partidas >= 10, c => [c.n.partidas, 10]);
+  T('neon', 'raro', 'Neón', 'Haz 100 maniobras.', 'Una cinta de neón del color de tu casco.', c => c.n.maniobras >= 100, c => [c.n.maniobras, 100]);
+  T('fuego', 'epico', 'Estela de fuego', 'Derriba 50 rivales.', 'Fuego vivo detrás de las turbinas.', c => c.n.derribos >= 50, c => [c.n.derribos, 50]);
+  T('hielo', 'epico', 'Escarcha', 'Encadena 5 maniobras distintas.', 'Luz helada y copos de nieve que se quedan en el aire.', A('combo5'));
+  T('sombra', 'epico', 'Sombra', 'Revienta una bala de cañón en el aire.', 'Humo negro con destellos violeta.', A('artillero'));
+  T('rayo', 'legendario', 'Relámpago', 'Atraviesa el avión con un tonel en Bogotá.', 'Un relámpago que te sigue a todas partes.', A('avion'));
+  T('arcoiris', 'legendario', 'Arcoíris', 'Entra 15 veces en Modo leyenda.', 'Seis cintas de colores, de punta a punta del cielo.', c => c.n.leyendas >= 15, c => [c.n.leyendas, 15]);
+  T('cometa', 'mitico', 'Cometa', 'Junta 20 estrellas en la Travesía.', 'Cabeza de luz y cola de estrellas, como un cometa.', c => c.trav >= 20, c => [c.trav, 20]);
+  T('galaxia', 'mitico', 'Polvo de galaxia', 'Consigue 18 logros.', 'Nebulosas rosadas y azules con estrellas que titilan.', c => c.nach >= 18, c => [c.nach, 18]);
+
+  /* ---- vista previa: el piloto volando en el cielo del atardecer, con su estela ---- */
+  const prevS = { s: 0.2, ok: false };
+  const sky = (x, W, H, camX) => {
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#16224e'); g.addColorStop(0.5, '#4f4a8c'); g.addColorStop(0.8, '#d98a74'); g.addColorStop(1, '#ffc887');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    const sn = x.createRadialGradient(W * 0.78, H * 0.92, 0, W * 0.78, H * 0.92, H * 0.6); sn.addColorStop(0, 'rgba(255,236,190,0.75)'); sn.addColorStop(0.25, 'rgba(255,190,130,0.3)'); sn.addColorStop(1, 'rgba(255,170,120,0)');
+    x.fillStyle = sn; x.fillRect(0, 0, W, H);
+    // nubes en dos capas que pasan (dan la sensación de velocidad)
+    for (let L = 0; L < 2; L++) for (let i = 0; i < 4; i++) {
+      const span = W + 260, cx = ((i * 197 + L * 91 - camX * (0.25 + L * 0.35)) % span + span) % span - 130, cy = H * (0.18 + 0.22 * i + L * 0.12) % H, r = (28 + 22 * L) * (H / 300);
+      x.fillStyle = L ? 'rgba(255,214,200,0.16)' : 'rgba(200,190,255,0.1)';
+      for (let k = 0; k < 3; k++) { x.beginPath(); x.ellipse(cx + (k - 1) * r * 0.9, cy + (k === 1 ? -r * 0.3 : 0), r * (k === 1 ? 1 : 0.75), r * 0.45 * (k === 1 ? 1.2 : 1), 0, 0, TAU); x.fill(); }
+    }
+  };
+  function preview(x, W, H, t, p, over, it, live) {
+    const sp = it && it.char ? it.char : Game.cfg.species[p], S = SPECIES[sp];
+    const lk = over.paint || V.eq(p, 'paint', sp), tr = String(over.trail || V.eq(p, 'trail') || 't.ninguna').replace(/^t\./, '');
+    // escala: el piloto ocupa como medio cuadro; el mundo se mueve a SPD unidades por segundo
+    const s = Math.min(W / 138, H / 92) / S.size, SPD = 170, path = tt => ({ x: tt * SPD, y: Math.sin(tt * 1.7) * 16 + Math.sin(tt * 0.6) * 6 });
+    const P0 = path(t), camX = P0.x - (W * 0.14) / s, camY = 0;
+    sky(x, W, H, camX * s);
+    x.save(); x.translate(W / 2, H / 2); x.scale(s, s); x.translate(-camX, -camY);
+    // la estela: puntos sobre el camino ya recorrido (alineados en el tiempo para que no tiemblen)
+    if (tr !== 'ninguna' && Vest.TRAIL[tr]) {
+      const key = 'vtoprev' + p, life = Vest.TRAIL[tr].life, dt = 0.022, t0 = Math.floor(t / dt) * dt, r = S.r * 1.15;
+      Vest.trailReset(key);
+      for (let tt = t0 - life - dt; tt <= t + 1e-6; tt += dt) { const q = path(Math.min(tt, t)), q2 = path(Math.min(tt, t) + 0.01), a = Math.atan2(q2.y - q.y, q2.x - q.x); Vest.trailPush(key, q.x - Math.cos(a) * r, q.y - Math.sin(a) * r, Math.min(tt, t), 0); }
+      Vest.drawTrail(x, tr, key, S.r * 0.34, t, PLAYER_COLORS[p].glow);
+    }
+    const q2 = path(t + 0.01), a = Math.atan2(q2.y - P0.y, q2.x - P0.x);
+    const fake = { id: null, sp: S, look: lk, x: P0.x, y: P0.y, a, c: 1, s: 600, perch: null, flapPh: t * 9, rollT: 0, stun: 0, facing: 1, boosting: Math.sin(t * 1.1 + p * 2) > 0.2, hitT: 0, shield: 0, legendT: 0, flipT: 0, spin: 0, mis: 0, stalled: false };
+    try { ArtPilot.draw(x, fake, t, PLAYER_COLORS[p]); } catch (e) { /* nada */ }
+    x.restore();
+  }
+
+  const V = Vest.create({
+    prefix: GAME_META.storagePrefix, title: 'Hangar',
+    slots: [{ id: 'paint', name: 'Pinturas', one: 'pintura', perChar: true, newWord: 'nueva' }, { id: 'trail', name: 'Estelas', one: 'estela', newWord: 'nueva' }],
+    items, ctx: C, preview,
+    pcolors: [PLAYER_COLORS[0].main, PLAYER_COLORS[1].main], pnames: () => ['J1', 'J2'],
+    charOf: p => Game.cfg.species[p], charName: p => SPECIES[Game.cfg.species[p]].name,
+    sound: { reveal: r => Sound.play(r === 'mitico' || r === 'legendario' ? 'legend' : 'lessonDone'), open: () => Sound.play('select'), pick: () => Sound.play('select'), equip: () => Sound.play('pickup') },
+    onEquip() { sync(); },
+  });
+  // lo puesto en el hangar es lo que usa la partida (las pinturas, por piloto)
+  function sync() {
+    const c = Game.cfg;
+    for (let p = 0; p < 2; p++) { c.looks[p] = V.eq(p, 'paint', c.species[p]); c.trails[p] = V.eq(p, 'trail'); }
+    Store.set('looks', c.looks);
+    if (UI.refreshBirds) UI.refreshBirds();
+  }
+  // lo ganado antes de que existiera el hangar queda ganado (sin ceremonia: aparece como «nueva»)
+  V.check(true);
+  // las pinturas que ya tenían puestas (números de antes) pasan al hangar
+  try { const c = Game.cfg; for (let p = 0; p < 2; p++) { const n = c.looks[p]; if (typeof n === 'number' && n > 0) V.setEq(p, 'paint', c.species[p] + '.' + (n % 3), c.species[p]); } } catch (e) { /* nada */ }
+  sync();
+  // pinturas que este jugador puede usar con ese piloto (en orden), para el botón «Pintura»
+  const paints = sp => items.filter(it => it.slot === 'paint' && (!it.char || it.char === sp) && V.has(it.id)).map(it => it.id);
+  return {
+    V, sync, paints,
+    open(p, after) { sync(); V.wardrobe({ player: p || 0, onClose() { sync(); if (UI.vestBadge) UI.vestBadge(); if (after) after(); } }); },
+    // al volver a un menú: la ceremonia de lo nuevo (si ya están jugando otra vez, espera al próximo menú)
+    after(delay = 1300) {
+      V.check(); if (UI.vestBadge) UI.vestBadge();
+      if (V.pending) setTimeout(() => { if (UI.current === null || V.isOpen || !V.pending) return; V.reveal(() => { sync(); if (UI.vestBadge) UI.vestBadge(); }); }, delay);
+    },
+  };
+})();
+if (UI.vestBadge) UI.vestBadge();
+if (UI.refreshBirds) UI.refreshBirds();
 
 </script>
 </body>

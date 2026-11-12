@@ -15,6 +15,8 @@ const Game = (() => {
     if (worldFor === tid) return; const T = getTrack(tid);
     meshes = []; show = []; scene = GFX.buildWorld(T, TRACKS[tid]); worldFor = tid; FX.init(scene, T, GQ.lv < 2);
   }
+  // lo que tiene puesto en el garaje el jugador i con ese piloto
+  const garageSkin = (i, pid) => { try { return Vestidor.skinOf(i, pid); } catch (e) { return null; } };
   const drop = m => { scene.remove(m.root); scene.remove(m.shadow); GFX.disposeScene(m.root); GFX.disposeScene(m.shadow); };
   function clearCars() { for (const m of meshes) drop(m); meshes = []; }
   function newRace(tid, humans, bots, countT, opts = {}) {
@@ -22,7 +24,7 @@ const Game = (() => {
     R = new Race(tid, Object.assign({ humans, bots, countT }, opts)); if (opts.noItems) R.boxes = []; FX.init(scene, R.track, GQ.lv < 2);
     if (opts.botSlow) for (const c of R.cars) if (c.bot) c.vmax *= opts.botSlow;
     clearCars();
-    meshes = R.cars.map(c => { const m = CarArt.build(c.pid, c.bot ? null : c.human); scene.add(m.root); scene.add(m.shadow); return m; });
+    meshes = R.cars.map(c => { const m = CarArt.build(c.pid, c.bot ? null : c.human, c.bot ? null : garageSkin(c.human, c.pid)); scene.add(m.root); scene.add(m.shadow); return m; });
     ItemArt.init(scene, R); BossArt.init(scene, R);
     const nv = Math.max(1, humans.length); cams = []; camSt = [];
     for (let i = 0; i < nv; i++) { cams.push(new THREE.PerspectiveCamera(68, 1, 0.3, 5000)); camSt.push(null); }
@@ -67,7 +69,10 @@ const Game = (() => {
   function start(n) { startCfg(n, G.cfg || UI.cfg()); }
   function demo() {
     const bots = ['cumbia', 'salsa', 'taiko', 'freestyle', 'country', 'reggae'].map((p, i) => ({ pid: p, level: 2 - (i % 2) }));
-    newRace(worldFor || TRACK_ORDER[0], [], bots, 0.01); G.mode = 'title'; G.shot = 0; G.shotT = 0; Touch.stop(); Sound.stopRace(); Music.play('menu');
+    newRace(worldFor || TRACK_ORDER[0], [], bots, 0.01); G.mode = 'title';
+    // en la portada, algunos bólidos lucen cosas del garaje (para antojar)
+    const pick = o => { const k = Object.keys(o); return k[Math.floor(Math.random() * k.length)]; };
+    meshes.forEach((m, i) => { if (Math.random() < 0.45) CarArt.skin(m, R.cars[i].pid, { paint: 'u.' + pick(CAR_PAINTS), neon: pick(CAR_NEONS), turbo: pick(CAR_TURBOS) }); }); G.shot = 0; G.shotT = 0; Touch.stop(); Sound.stopRace(); Music.play('menu');
   }
   // puntos del Gran Premio tras cada carrera
   function gpScore() { if (!G.gp || G.gp.scored === G.gp.i) return; G.gp.scored = G.gp.i; R.order.forEach((c, i) => { G.gp.pts[c.pid] = (G.gp.pts[c.pid] || 0) + (GP_PTS[i] || 0); }); }
@@ -83,7 +88,7 @@ const Game = (() => {
   function setup(n) { G.mode = 'setup'; G.nHumans = n; Touch.stop(); Sound.stopRace(); for (const m of meshes) { m.root.visible = false; m.shadow.visible = false; } resize(); }
   function showPilot(i, pid) {
     if (show[i]) drop(show[i]);
-    const m = CarArt.build(pid, G.nHumans === 2 ? i : null); scene.add(m.root); m.pid = pid; m.spin = 0; show[i] = m;
+    const m = CarArt.build(pid, G.nHumans === 2 ? i : null, garageSkin(i, pid)); scene.add(m.root); m.pid = pid; m.spin = 0; show[i] = m;
     for (let k = G.nHumans; k < show.length; k++) if (show[k]) { drop(show[k]); show[k] = null; }
   }
   function showroom(dt) {
@@ -91,7 +96,7 @@ const Game = (() => {
     T.pos(T.wrap(s0 + 9.5), 0, 2.1, V); cam.position.copy(V); T.pos(s0, 0, 0.9, V2); cam.up.copy(UP); cam.lookAt(V2); cam.fov = 50; cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix();
     show.forEach((m, i) => { if (!m) return; const u = G.nHumans === 2 ? (i ? -2.7 : 2.7) : 0; T.pos(s0, u, 0, V); m.root.position.copy(V); m.yaw = (m.yaw || (i ? -0.6 : 0.6)) + dt * 0.6; m.root.rotation.set(0, Math.atan2(o.tx, o.tz) + m.yaw, 0); m.wingK = 0; m.boatK = 0; });
   }
-  function toTitle() { clearShow(); G.gp = null; demo(); UI.show('s-title'); resize(); }
+  function toTitle() { clearShow(); G.gp = null; demo(); UI.show('s-title'); resize(); try { Vestidor.after(700); } catch (e) { /* nada */ } }
   // vista previa: al elegir pista/arena en «Preparar carrera», el fondo pasa a ser esa pista (con los bólidos elegidos en la vitrina)
   let pvT = null;
   function preview(tid) {

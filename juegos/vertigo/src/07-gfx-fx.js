@@ -81,8 +81,11 @@ const FX = (() => {
     }
     // turbo: brasas desde las toberas
     if (car.boostT > 0) {
-      const k = car.boostK > 1 ? 1.4 : 1;
-      for (const sx of [0]) for (let i = 0; i < 3; i++) { if (Math.random() > dt * 70 * k) continue; wp(m, sx + rnd(0.06), 0.64 + rnd(0.06), -2.55); const hot = Math.random(); glow.add(W.x, W.y, W.z, vx * 0.6 - fwd.x * 10 + rnd(1.5), rnd(1.5), vz * 0.6 - fwd.z * 10 + rnd(1.5), 0.45 + hot * 0.55, 0.75 + hot * 0.25, 1, 0.9, 0.55 * k, 0.16 + Math.random() * 0.12, 0, 4, -1.2); }
+      const k = car.boostK > 1 ? 1.4 : 1, TB = typeof CAR_TURBOS !== 'undefined' && m.turbo ? CAR_TURBOS[m.turbo] : null, ec = TB && m.turbo !== 'azul' ? TB.c[1].split(',').map(v => v / 255) : null;
+      for (const sx of [0]) for (let i = 0; i < 3; i++) { if (Math.random() > dt * 70 * k) continue; wp(m, sx + rnd(0.06), 0.64 + rnd(0.06), -2.55); const hot = Math.random(); glow.add(W.x, W.y, W.z, vx * 0.6 - fwd.x * 10 + rnd(1.5), rnd(1.5), vz * 0.6 - fwd.z * 10 + rnd(1.5), ec ? ec[0] * (0.7 + hot * 0.3) : 0.45 + hot * 0.55, ec ? ec[1] * (0.7 + hot * 0.3) : 0.75 + hot * 0.25, ec ? ec[2] : 1, 0.9, 0.55 * k, 0.16 + Math.random() * 0.12, 0, 4, -1.2); }
+      // turbo del garaje (épico en adelante): una estela de luz que se queda en el aire detrás del bólido
+      if (TB && TB.trail) for (let i = 0; i < 4; i++) { if (Math.random() > dt * 90) continue; wp(m, rnd(0.25), 0.62 + rnd(0.18), -2.5 - Math.random() * 0.6); const c = TB.trail[Math.floor(Math.random() * TB.trail.length)], big = TB.stars && Math.random() < 0.25;
+        glow.add(W.x, W.y, W.z, vx * 0.05 + rnd(0.6), rnd(0.5) + 0.2, vz * 0.05 + rnd(0.6), c[0], c[1], c[2], big ? 1 : 0.85, big ? 0.9 + Math.random() * 0.5 : 0.42 + Math.random() * 0.25, 0.55 + Math.random() * 0.4, 0, 1.5, big ? -0.8 : -0.25); }
     }
     // polvo fuera de pista o sobre tierra
     if (car.grounded && car.offroad && car.f > 8 && Math.random() < dt * 30) {
