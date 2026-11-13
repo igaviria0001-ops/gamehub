@@ -123,7 +123,7 @@ const Rules = {
   },
 };
 /* ---------- lecciones de la Escuela (todas se pueden jugar de a uno o de a dos) ---------- */
-const keyName = (i, k) => Touch.active ? { drift: 'DERRAPE', item: 'OBJETO', turbo: 'TURBO', steer: 'la palanca' }[k] : ({ drift: ['F', 'K'], item: ['G', 'L'], turbo: ['H', 'Ñ'], steer: ['A / D', '← / →'] }[k] || [])[i] || '';
+const keyName = (i, k) => Touch.active ? { drift: 'DERRAPE', item: 'OBJETO', turbo: 'TURBO', steer: 'la palanca' }[k] : k === 'steer' ? `${keyLabel(KEYMAP[i].left[0])} / ${keyLabel(KEYMAP[i].right[0])}` : KEYMAP[i] && KEYMAP[i][k] ? keyLabel(KEYMAP[i][k][0]) : ''; // (las teclas que eligió cada jugador)
 const LESSONS = [
   { id: 'derrape', name: 'Derrape', track: 'guatape', at: 13.3, time: 50, need: 3, gold: 16, silver: 30, goal: '3 turbos de derrape en las curvas', loopTo: 16.6,
     tip: i => `Gira con ${keyName(i, 'steer')} y SOSTÉN ${keyName(i, 'drift')} en la curva: la chispa pasa de azul a naranja y esmeralda; suelta para el turbo.`,

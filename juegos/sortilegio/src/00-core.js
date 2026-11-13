@@ -53,14 +53,15 @@ let LOWFX = false, MIDFX = false; // ligera / media (o ligera): menos efectos ca
    ENTRADA — Input.read(i) → { mx, my, h: [mano izq., mano der.], dash }
    J1: W A S D · F (o C) mano izquierda · G (o V) mano derecha · H (o Espacio) esquivar
    J2: flechas (u 8 4 5 6 numérico) · K (o 1 num.) izq. · L (o 2 num.) der. · Ñ (o 3 num.) esquivar
-   Mando: palanca · X / LB mano izq. · B / RB mano der. · A / LT esquivar
+   Mando: palanca · X / LB mano izq. · B / RB mano der. · Y / RT fusión · A / LT esquivar
    ========================================================================= */
 const DEFAULT_KEYS = [
-  { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], h0: ['KeyF', 'KeyC'], h1: ['KeyG', 'KeyV'], dash: ['KeyH', 'Space'] },
-  { up: ['ArrowUp', 'Numpad8'], down: ['ArrowDown', 'Numpad5'], left: ['ArrowLeft', 'Numpad4'], right: ['ArrowRight', 'Numpad6'], h0: ['KeyK', 'Numpad1'], h1: ['KeyL', 'Numpad2'], dash: ['Semicolon', 'Numpad3'] },
+  { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], h0: ['KeyF', 'KeyC'], h1: ['KeyG', 'KeyV'], dash: ['KeyH', 'Space'], fuse: ['KeyT', 'KeyB'] },
+  { up: ['ArrowUp', 'Numpad8'], down: ['ArrowDown', 'Numpad5'], left: ['ArrowLeft', 'Numpad4'], right: ['ArrowRight', 'Numpad6'], h0: ['KeyK', 'Numpad1'], h1: ['KeyL', 'Numpad2'], dash: ['Semicolon', 'Numpad3'], fuse: ['KeyO', 'Numpad0'] },
 ];
-const KEY_ACTIONS = ['up', 'down', 'left', 'right', 'h0', 'h1', 'dash'];
-const KEY_LABELS = { up: 'Arriba', down: 'Abajo', left: 'Izquierda', right: 'Derecha', h0: 'Mano izquierda', h1: 'Mano derecha', dash: 'Esquivar' };
+// fuse = las dos manos a la vez con una sola tecla (es lo mismo que oprimir las dos: sostener y soltar)
+const KEY_ACTIONS = ['up', 'down', 'left', 'right', 'h0', 'h1', 'fuse', 'dash'];
+const KEY_LABELS = { up: 'Arriba', down: 'Abajo', left: 'Izquierda', right: 'Derecha', h0: 'Mano izquierda', h1: 'Mano derecha', fuse: 'Fusión (las dos manos)', dash: 'Esquivar' };
 let KEYMAP = (() => {
   const saved = Store.get('keys', null), def = JSON.parse(JSON.stringify(DEFAULT_KEYS));
   if (!Array.isArray(saved) || saved.length !== 2) return def;
@@ -97,15 +98,16 @@ const Input = (() => {
     let mx = p.axes[0] || 0, my = p.axes[1] || 0;
     if (hypot(mx, my) < 0.22) { mx = 0; my = 0; }
     if (b(14)) mx = -1; if (b(15)) mx = 1; if (b(12)) my = -1; if (b(13)) my = 1;
-    return { mx, my, h: [b(2) || b(4), b(1) || b(5)], dash: b(0) || b(6) };
+    return { mx, my, h: [b(2) || b(4), b(1) || b(5)], dash: b(0) || b(6), fuse: b(3) || b(7) };
   }
   function read(i) {
     if (virt[i]) return virt[i];
     const m = KEYMAP[i];
     let mx = (any(m.right) ? 1 : 0) - (any(m.left) ? 1 : 0), my = (any(m.down) ? 1 : 0) - (any(m.up) ? 1 : 0);
     let h0 = any(m.h0), h1 = any(m.h1), dash = any(m.dash);
+    if (any(m.fuse)) { h0 = true; h1 = true; }
     const g = pad(i);
-    if (g) { if (g.mx || g.my) { mx = g.mx; my = g.my; } h0 = h0 || g.h[0]; h1 = h1 || g.h[1]; dash = dash || g.dash; }
+    if (g) { if (g.mx || g.my) { mx = g.mx; my = g.my; } h0 = h0 || g.h[0] || g.fuse; h1 = h1 || g.h[1] || g.fuse; dash = dash || g.dash; }
     const t = touch[i];
     if (t) { if (t.mx || t.my) { mx = t.mx; my = t.my; } h0 = h0 || t.h0; h1 = h1 || t.h1; dash = dash || t.dash; }
     const l = hypot(mx, my); if (l > 1) { mx /= l; my /= l; }

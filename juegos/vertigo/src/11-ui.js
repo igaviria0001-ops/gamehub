@@ -13,9 +13,9 @@ const UI = (() => {
       case 'play2': goFull(); if (cfg.mode === 'world') cfg.mode = 'quick'; openSetup(2); break;
       case 'world': goFull(); openWorld(); break;
       case 'worldNext': Game.worldNext(); break;
-      case 'howto': show('s-howto'); break;
+      case 'howto': fillHowKeys(); show('s-howto'); break;
       case 'gq': Game.requality((GQ.lv + 2) % 3); gqLabel(); break;
-      case 'opts': fillOpts(); show('s-opts'); break;
+      case 'opts': fillOpts(); fillKeys(); show('s-opts'); break;
       case 'fs': FS.toggle(); break;
       case 'back': if (hubCfg) { hubLeave(); Game.toTitle(); break; } if (!$('s-setup').hidden && cfg.mode === 'world') openWorld(); else Game.toTitle(); break;
       case 'startRace': if (hubCfg) { hubGo(); break; } Store.set('setup', cfg); Game.startCfg(nH, cfg); break;
@@ -35,6 +35,32 @@ const UI = (() => {
   function fsLabel() { document.querySelectorAll('[data-act=fs]').forEach(b => { b.textContent = b.dataset.long ? 'Pantalla completa: ' + (FS.on ? 'salir' : 'activar') : FS.label(); }); }
   FS.onChange(fsLabel);
   function fillOpts() { segOn('o-gq', GQ.lv, v => { Game.requality(+v); gqLabel(); }); segOn('o-fsauto', FS.auto ? 1 : 0, v => { FS.auto = v === '1'; }); fsLabel(); }
+  // teclas: tabla en Opciones (tocar una casilla y pulsar la tecla nueva) y la ayuda de Controles
+  const kb = list => list.length ? list.map(c => `<kbd>${keyLabel(c)}</kbd>`).join(' o ') : '<kbd>—</kbd>';
+  function fillHowKeys() {
+    const t = $('keysHelp'); if (!t) return; const K = KEYMAP, c = (i, a) => kb(K[i][a].slice(0, 1)), two = (i, a, b) => `${c(i, a)}${c(i, b)}`;
+    t.innerHTML = `<tr><th></th><th style="color:var(--j1)">J1</th><th style="color:var(--j2)">J2</th></tr>`
+      + `<tr><td>Girar · frenar</td>${[0, 1].map(i => `<td>${two(i, 'left', 'right')} · ${c(i, 'down')}</td>`).join('')}</tr>`
+      + `<tr><td>Derrape (sostener en curva) · piruetas en el aire</td>${[0, 1].map(i => `<td>${kb(K[i].drift)}</td>`).join('')}</tr>`
+      + `<tr><td>Con el ala: picada · subir</td>${[0, 1].map(i => `<td>${c(i, 'up')} · ${c(i, 'down')}</td>`).join('')}</tr>`
+      + `<tr><td>Objeto · con la barra llena, especial del piloto</td>${[0, 1].map(i => `<td>${kb(K[i].item)}</td>`).join('')}</tr>`
+      + `<tr><td>Turbo (gasta un cuarto de la barra)</td>${[0, 1].map(i => `<td>${kb(K[i].turbo)}</td>`).join('')}</tr>`;
+  }
+  let capture = null; // mientras se espera la tecla nueva, ninguna otra cosa la recibe
+  addEventListener('keydown', e => { if (!capture) return; e.preventDefault(); e.stopImmediatePropagation(); const f = capture; capture = null; Input.hook = null; f(e.code); }, true);
+  function fillKeys() {
+    const t = $('o-keys'); if (!t) return; capture = null; Input.hook = null; $('o-keyMsg').textContent = '';
+    t.innerHTML = `<tr><th></th><th style="color:var(--j1)">J1</th><th style="color:var(--j2)">J2</th></tr>` + KEY_ACTIONS.map(a => `<tr><td>${KEY_LABELS[a]}</td>${[0, 1].map(p => `<td><button class="kbtn" data-kp="${p}" data-ka="${a}">${KEYMAP[p][a].length ? KEYMAP[p][a].map(keyLabel).join(' / ') : '—'}</button></td>`).join('')}</tr>`).join('');
+    t.querySelectorAll('[data-kp]').forEach(b => b.onclick = e => {
+      e.stopPropagation(); Sound.ui(); fillKeys(); const nb = t.querySelector(`[data-kp="${b.dataset.kp}"][data-ka="${b.dataset.ka}"]`); nb.classList.add('wait'); nb.textContent = 'pulsa…';
+      $('o-keyMsg').textContent = 'Pulsa la tecla nueva (Esc cancela)';
+      Input.hook = true; capture = code => {
+        if (code !== 'Escape') { const p = +b.dataset.kp, a = b.dataset.ka; for (const m of KEYMAP) for (const k of KEY_ACTIONS) m[k] = m[k].filter(c => c !== code); KEYMAP[p][a] = [code].concat(KEYMAP[p][a]).slice(0, 2); Store.set('keys', KEYMAP); Sound.ui(); }
+        fillKeys();
+      };
+    });
+    $('o-keysReset').onclick = e => { e.stopPropagation(); Sound.ui(); const d = JSON.parse(JSON.stringify(DEFAULT_KEYS)); for (let i = 0; i < 2; i++) for (const k of KEY_ACTIONS) KEYMAP[i][k] = d[i][k]; Store.set('keys', KEYMAP); fillKeys(); };
+  }
   function gqLabel() { const b = document.querySelector('[data-act=gq]'); if (b) b.innerHTML = `Gráficos: ${GQ.names[GQ.lv]}<small>${['más fluido', 'equilibrado', 'máximo detalle'][GQ.lv]}</small>`; }
   gqLabel();
   // pantalla completa automática al empezar (en el celular, también horizontal); se puede quitar en Opciones
@@ -96,7 +122,7 @@ const UI = (() => {
   function openSetup(n) { nH = n; if (cfg.p[0] === cfg.p[1]) cfg.p[1] = PILOT_ORDER.find(k => k !== cfg.p[0]); Game.setup(n); renderSetup(); for (let k = 0; k < n; k++) Game.showPilot(k, cfg.p[k]); show('s-setup'); }
   document.addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) { const [i, k] = b.dataset.pick.split(':'); pick(+i, k); } });
   addEventListener('keydown', e => {
-    if (!$('s-setup').hidden) { const c = e.code; if (c === 'KeyA') step(0, -1); else if (c === 'KeyD') step(0, 1); else if (c === 'ArrowLeft') step(nH === 2 ? 1 : 0, -1); else if (c === 'ArrowRight') step(nH === 2 ? 1 : 0, 1); else if (c === 'Enter' || c === 'Space') act('startRace'); else if (c === 'Escape') act('back'); return; }
+    if (!$('s-setup').hidden) { const c = e.code, K = KEYMAP, j2 = nH === 2 ? 1 : 0; if (K[0].left.includes(c)) step(0, -1); else if (K[0].right.includes(c)) step(0, 1); else if (K[1].left.includes(c) || c === 'ArrowLeft') step(j2, -1); else if (K[1].right.includes(c) || c === 'ArrowRight') step(j2, 1); else if (c === 'Enter' || c === 'Space') act('startRace'); else if (c === 'Escape') act('back'); return; }
     if (e.code === 'Escape' || e.code === 'KeyP') { if (Game.mode === 'race') Game.pause(!Game.paused); }
     if (e.code === 'KeyM') Sound.toggle();
     if (e.code === 'Enter' && !$('s-results').hidden) act($('resMain').dataset.act);

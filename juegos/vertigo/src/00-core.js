@@ -48,12 +48,28 @@ const DEFAULT_KEYS = [
   { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], drift: ['KeyF', 'KeyC'], item: ['KeyG', 'KeyV'], turbo: ['KeyH', 'Space'] },
   { up: ['ArrowUp', 'Numpad8'], down: ['ArrowDown', 'Numpad5'], left: ['ArrowLeft', 'Numpad4'], right: ['ArrowRight', 'Numpad6'], drift: ['KeyK', 'Numpad1'], item: ['KeyL', 'Numpad2'], turbo: ['Semicolon', 'Numpad3', 'Quote'] },
 ];
-const KEYMAP = Store.get('keys', null) || JSON.parse(JSON.stringify(DEFAULT_KEYS));
+// teclas que se pueden cambiar en Opciones (lo guardado se completa con las de fábrica si falta algo)
+const KEY_ACTIONS = ['left', 'right', 'up', 'down', 'drift', 'item', 'turbo'];
+const KEY_LABELS = { left: 'Girar a la izquierda', right: 'Girar a la derecha', up: 'Arriba (con el ala: picada)', down: 'Abajo (frenar; con el ala: subir)', drift: 'Derrape · piruetas', item: 'Objeto · especial', turbo: 'Turbo' };
+const KEYMAP = (() => {
+  const saved = Store.get('keys', null), def = JSON.parse(JSON.stringify(DEFAULT_KEYS));
+  if (!Array.isArray(saved) || saved.length !== 2) return def;
+  return saved.map((m, i) => { const o = {}; KEY_ACTIONS.forEach(k => { o[k] = m && Array.isArray(m[k]) ? m[k].filter(c => typeof c === 'string' && c) : def[i][k]; }); return o; });
+})();
+const KEY_NAMES = { Space: 'Espacio', Semicolon: 'Ñ', Quote: '{', ShiftLeft: 'Shift izq.', ShiftRight: 'Shift der.', ControlLeft: 'Ctrl izq.', ControlRight: 'Ctrl der.', AltLeft: 'Alt', AltRight: 'Alt Gr', Enter: 'Enter', NumpadEnter: 'Enter num.', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Comma: ',', Period: '.', Slash: '-', Minus: "'", BracketLeft: '´', BracketRight: '+', Backslash: '}', IntlBackslash: '<', Tab: 'Tab', Backspace: 'Borrar' };
+function keyLabel(code) {
+  if (!code) return '—';
+  if (KEY_NAMES[code]) return KEY_NAMES[code];
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad')) return code.slice(6).replace('Add', '+').replace('Subtract', '−').replace('Multiply', '×').replace('Divide', '÷').replace('Decimal', ',') + ' num.';
+  return code;
+}
 const Input = (() => {
   const down = new Set();
   const touch = [null, null];
   const taps = new Set(), touchTaps = [{}, {}];
-  addEventListener('keydown', e => { if (Input.hook) return; down.add(e.code); taps.add(e.code); if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
+  addEventListener('keydown', e => { if (Input.hook) return; down.add(e.code); taps.add(e.code); if (e.code.startsWith('Arrow') || e.code === 'Space' || KEYMAP.some(m => KEY_ACTIONS.some(k => m[k].includes(e.code)))) e.preventDefault(); });
   addEventListener('keyup', e => down.delete(e.code));
   addEventListener('blur', () => down.clear());
   const any = list => list.some(c => down.has(c) || taps.has(c));

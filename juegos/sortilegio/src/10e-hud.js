@@ -5,7 +5,7 @@
 const HUD = (() => {
   let u = 1;
   const unit = () => u;
-  const KEY_HINT = i => [keyName(KEYMAP[i].h0[0]), keyName(KEYMAP[i].h1[0]), keyName(KEYMAP[i].dash[0])];
+  const KEY_HINT = i => [keyName(KEYMAP[i].h0[0]), keyName(KEYMAP[i].h1[0]), keyName(KEYMAP[i].dash[0]), keyName((KEYMAP[i].fuse || [])[0])];
   // iconos de elemento (blancos o del color dado)
   function icon(x, el, X, Y, r, col = '#fff') {
     x.save(); x.translate(X, Y); x.fillStyle = col; x.strokeStyle = col; x.lineCap = 'round'; x.lineJoin = 'round';
@@ -75,7 +75,7 @@ const HUD = (() => {
     x.font = fontB(7 * u, 900); x.textBaseline = 'middle'; x.textAlign = right ? 'right' : 'left'; x.fillStyle = full ? '#3a2006' : 'rgba(255,255,255,0.75)'; x.fillText('EMBRUJO', right ? bx + bw - 6 * u : bx + 6 * u, eY + eH / 2 + 0.5);
     if (full) { x.font = fontB(10 * u, 900); x.fillStyle = `rgba(255,233,160,${0.75 + 0.25 * Math.sin(now * 8)})`; x.textAlign = right ? 'right' : 'left'; x.fillText('✦ GRAN SORTILEGIO LISTO · funde las dos manos', right ? bx + bw : bx, eY + eH + 9 * u); }
     // manos y esquive
-    const keys = touch || m.ctrl ? [null, null, null] : KEY_HINT(i), HR = 13 * u, hy = Y + 84 * u + 8 * u + HR;
+    const keys = touch || m.ctrl ? [null, null, null, null] : KEY_HINT(i), HR = 13 * u, hy = Y + 84 * u + 8 * u + HR;
     const hx0 = right ? X + W - 20 * u - HR : X + 20 * u + HR;
     for (let k = 0; k < 2; k++) hand(x, m, k, hx0 + dir * k * (HR * 2 + 12 * u), hy, HR, keys[k]);
     // esquive
@@ -91,7 +91,7 @@ const HUD = (() => {
     // fusión que harían las dos manos
     const a = m.hands[0].el, b = m.hands[1].el, fn = a === b ? 'Doble ' + SPELLS[a][1].name.toLowerCase() : FUSIONS[fuseKey(a, b)].name;
     x.font = fontB(10.5 * u, 800); x.textAlign = right ? 'right' : 'left'; x.textBaseline = 'middle'; x.fillStyle = m.emb >= 100 ? '#ffe9a0' : 'rgba(230,220,255,0.8)';
-    x.fillText((m.emb >= 100 ? '✦ ' : '') + fn, dX + dir * (dR + 10 * u), hy);
+    x.fillText((m.emb >= 100 ? '✦ ' : '') + fn + (keys[3] && keys[3] !== '—' ? ' · ' + keys[3] : ''), dX + dir * (dR + 10 * u), hy);
     x.restore();
   }
   // al borde de caer: latido rojo en el lado de ese jugador

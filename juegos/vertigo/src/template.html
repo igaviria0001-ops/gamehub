@@ -106,6 +106,8 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
 .orow { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 900; font-size: 15px; }
 .orow .btn { min-width: 0; padding: 8px 18px; font-size: 14px; }
 .optnote { margin: 14px 0 0; font-size: 12.5px; color: var(--mute); }
+.kbtn { all: unset; cursor: pointer; min-width: 86px; display: inline-block; text-align: center; padding: 4px 10px; border-radius: 7px; font: 800 13px "Nunito", sans-serif; color: var(--ink); background: rgba(16, 28, 56, 0.9); border: 1px solid rgba(140, 200, 255, 0.3); }
+.kbtn:hover, .kbtn:focus-visible { border-color: var(--em2); } .kbtn.wait { background: linear-gradient(180deg, #4dffb0, #12b86c); color: #02170c; }
 html.in-hub .fs-auto { display: none !important; }
 </style>
 </head>
@@ -135,6 +137,12 @@ html.in-hub .fs-auto { display: none !important; }
       <div class="orow fs-auto"><span>Pantalla completa automática</span><div class="seg" id="o-fsauto"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
     </div>
     <p class="optnote">Ligera = más fluido en celulares y PC sencillos · Ultra = máximo detalle.</p>
+    <div class="keyshelp">
+      <h3 style="margin:16px 0 2px">Teclas</h3>
+      <p class="optnote" style="margin:0">Toca una casilla y pulsa la tecla nueva. Cada acción guarda hasta dos teclas.</p>
+      <table class="keys" id="o-keys"></table>
+      <div class="row" style="justify-content:flex-start;margin-top:8px"><button class="btn" id="o-keysReset">Teclas de fábrica</button><span id="o-keyMsg" style="font-size:13px;color:var(--em2);font-weight:800"></span></div>
+    </div>
   </div>
 </section>
 <section class="screen veil" id="s-howto" hidden>
@@ -145,14 +153,8 @@ html.in-hub .fs-auto { display: none !important; }
       <p><b>Palanca:</b> pon el dedo en cualquier parte libre de tu mitad y muévelo: a los lados giras. Con el ala: <b>arriba = picada</b> (más rápido), <b>abajo = subir</b>. Abajo en el piso = frenar.</p>
       <p><b>DERRAPE</b> (el botón grande): sostenlo en las curvas mientras giras; en el aire tócalo para hacer piruetas. <b>TURBO</b> gasta un cuarto de la barra Esmeralda (la ves alrededor del botón). <b>OBJETO</b> usa lo que salga de las cajas; con la barra llena lanza la especial de tu piloto.</p>
     </div>
-    <table class="keys keyshelp">
-      <tr><th></th><th style="color:var(--j1)">J1</th><th style="color:var(--j2)">J2</th></tr>
-      <tr><td>Girar · frenar</td><td><kbd>A</kbd><kbd>D</kbd> · <kbd>S</kbd></td><td><kbd>←</kbd><kbd>→</kbd> · <kbd>↓</kbd></td></tr>
-      <tr><td>Derrape (sostener en curva) · piruetas en el aire</td><td><kbd>F</kbd></td><td><kbd>K</kbd> o <kbd>1</kbd> num.</td></tr>
-      <tr><td>Con el ala: picada · subir</td><td><kbd>W</kbd> · <kbd>S</kbd></td><td><kbd>↑</kbd> · <kbd>↓</kbd></td></tr>
-      <tr><td>Objeto · con la barra llena, especial del piloto</td><td><kbd>G</kbd></td><td><kbd>L</kbd> o <kbd>2</kbd> num.</td></tr>
-      <tr><td>Turbo (gasta un cuarto de la barra)</td><td><kbd>H</kbd></td><td><kbd>Ñ</kbd> o <kbd>3</kbd> num.</td></tr>
-    </table>
+    <table class="keys keyshelp" id="keysHelp"></table>
+    <p class="keyshelp" style="font-size:13px;color:var(--mute);margin:4px 0 0">Las teclas se cambian en <b>Opciones → Teclas</b>.</p>
     <p style="font-size:14px;color:var(--mute);max-width:620px">Se acelera solo. Sostén el derrape en las curvas: la chispa pasa de azul a naranja y a esmeralda, y al soltar sale un turbo. En las rampas, toca el derrape con una dirección para hacer piruetas; si aterrizas derecho ganas turbo y barra. La barra Esmeralda también se llena con las esmeraldas de la pista.</p>
     <p style="font-size:14px;color:var(--mute);max-width:620px">El bólido se transforma solo: en el embalse es <b>lancha</b> (resbala más y las olas grandes son rampas para piruetas) y tras la rampa grande saca el <b>ala</b>: en picada vas más rápido, subiendo frenas; cada aro da turbo y barra.</p>
     <p style="font-size:14px;color:var(--mute);max-width:620px"><b>Vuelta al mundo</b> (botón dorado de la portada): 24 retos por 13 paradas, de a uno o de a dos; cada reto da hasta 3 estrellas y una estrella abre la parada siguiente. <b>Persecución</b>: juntos contra un jefe gigante que huye; los cohetes lo persiguen solos, embístelo con turbo, esquiva lo que suelta (los círculos rojos marcan dónde caen las balas) y recoge su botín.</p>

@@ -109,6 +109,8 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
 .orow { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 900; font-size: 15px; }
 .orow .btn { min-width: 0; padding: 8px 18px; font-size: 14px; }
 .optnote { margin: 14px 0 0; font-size: 12.5px; color: var(--mute); }
+.kbtn { all: unset; cursor: pointer; min-width: 86px; display: inline-block; text-align: center; padding: 4px 10px; border-radius: 7px; font: 800 13px "Nunito", sans-serif; color: var(--ink); background: rgba(16, 28, 56, 0.9); border: 1px solid rgba(140, 200, 255, 0.3); }
+.kbtn:hover, .kbtn:focus-visible { border-color: var(--em2); } .kbtn.wait { background: linear-gradient(180deg, #4dffb0, #12b86c); color: #02170c; }
 html.in-hub .fs-auto { display: none !important; }
 </style>
 </head>
@@ -138,6 +140,12 @@ html.in-hub .fs-auto { display: none !important; }
       <div class="orow fs-auto"><span>Pantalla completa automática</span><div class="seg" id="o-fsauto"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
     </div>
     <p class="optnote">Ligera = más fluido en celulares y PC sencillos · Ultra = máximo detalle.</p>
+    <div class="keyshelp">
+      <h3 style="margin:16px 0 2px">Teclas</h3>
+      <p class="optnote" style="margin:0">Toca una casilla y pulsa la tecla nueva. Cada acción guarda hasta dos teclas.</p>
+      <table class="keys" id="o-keys"></table>
+      <div class="row" style="justify-content:flex-start;margin-top:8px"><button class="btn" id="o-keysReset">Teclas de fábrica</button><span id="o-keyMsg" style="font-size:13px;color:var(--em2);font-weight:800"></span></div>
+    </div>
   </div>
 </section>
 <section class="screen veil" id="s-howto" hidden>
@@ -148,14 +156,8 @@ html.in-hub .fs-auto { display: none !important; }
       <p><b>Palanca:</b> pon el dedo en cualquier parte libre de tu mitad y muévelo: a los lados giras. Con el ala: <b>arriba = picada</b> (más rápido), <b>abajo = subir</b>. Abajo en el piso = frenar.</p>
       <p><b>DERRAPE</b> (el botón grande): sostenlo en las curvas mientras giras; en el aire tócalo para hacer piruetas. <b>TURBO</b> gasta un cuarto de la barra Esmeralda (la ves alrededor del botón). <b>OBJETO</b> usa lo que salga de las cajas; con la barra llena lanza la especial de tu piloto.</p>
     </div>
-    <table class="keys keyshelp">
-      <tr><th></th><th style="color:var(--j1)">J1</th><th style="color:var(--j2)">J2</th></tr>
-      <tr><td>Girar · frenar</td><td><kbd>A</kbd><kbd>D</kbd> · <kbd>S</kbd></td><td><kbd>←</kbd><kbd>→</kbd> · <kbd>↓</kbd></td></tr>
-      <tr><td>Derrape (sostener en curva) · piruetas en el aire</td><td><kbd>F</kbd></td><td><kbd>K</kbd> o <kbd>1</kbd> num.</td></tr>
-      <tr><td>Con el ala: picada · subir</td><td><kbd>W</kbd> · <kbd>S</kbd></td><td><kbd>↑</kbd> · <kbd>↓</kbd></td></tr>
-      <tr><td>Objeto · con la barra llena, especial del piloto</td><td><kbd>G</kbd></td><td><kbd>L</kbd> o <kbd>2</kbd> num.</td></tr>
-      <tr><td>Turbo (gasta un cuarto de la barra)</td><td><kbd>H</kbd></td><td><kbd>Ñ</kbd> o <kbd>3</kbd> num.</td></tr>
-    </table>
+    <table class="keys keyshelp" id="keysHelp"></table>
+    <p class="keyshelp" style="font-size:13px;color:var(--mute);margin:4px 0 0">Las teclas se cambian en <b>Opciones → Teclas</b>.</p>
     <p style="font-size:14px;color:var(--mute);max-width:620px">Se acelera solo. Sostén el derrape en las curvas: la chispa pasa de azul a naranja y a esmeralda, y al soltar sale un turbo. En las rampas, toca el derrape con una dirección para hacer piruetas; si aterrizas derecho ganas turbo y barra. La barra Esmeralda también se llena con las esmeraldas de la pista.</p>
     <p style="font-size:14px;color:var(--mute);max-width:620px">El bólido se transforma solo: en el embalse es <b>lancha</b> (resbala más y las olas grandes son rampas para piruetas) y tras la rampa grande saca el <b>ala</b>: en picada vas más rápido, subiendo frenas; cada aro da turbo y barra.</p>
     <p style="font-size:14px;color:var(--mute);max-width:620px"><b>Vuelta al mundo</b> (botón dorado de la portada): 24 retos por 13 paradas, de a uno o de a dos; cada reto da hasta 3 estrellas y una estrella abre la parada siguiente. <b>Persecución</b>: juntos contra un jefe gigante que huye; los cohetes lo persiguen solos, embístelo con turbo, esquiva lo que suelta (los círculos rojos marcan dónde caen las balas) y recoge su botín.</p>
@@ -261,12 +263,28 @@ const DEFAULT_KEYS = [
   { up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'], drift: ['KeyF', 'KeyC'], item: ['KeyG', 'KeyV'], turbo: ['KeyH', 'Space'] },
   { up: ['ArrowUp', 'Numpad8'], down: ['ArrowDown', 'Numpad5'], left: ['ArrowLeft', 'Numpad4'], right: ['ArrowRight', 'Numpad6'], drift: ['KeyK', 'Numpad1'], item: ['KeyL', 'Numpad2'], turbo: ['Semicolon', 'Numpad3', 'Quote'] },
 ];
-const KEYMAP = Store.get('keys', null) || JSON.parse(JSON.stringify(DEFAULT_KEYS));
+// teclas que se pueden cambiar en Opciones (lo guardado se completa con las de fábrica si falta algo)
+const KEY_ACTIONS = ['left', 'right', 'up', 'down', 'drift', 'item', 'turbo'];
+const KEY_LABELS = { left: 'Girar a la izquierda', right: 'Girar a la derecha', up: 'Arriba (con el ala: picada)', down: 'Abajo (frenar; con el ala: subir)', drift: 'Derrape · piruetas', item: 'Objeto · especial', turbo: 'Turbo' };
+const KEYMAP = (() => {
+  const saved = Store.get('keys', null), def = JSON.parse(JSON.stringify(DEFAULT_KEYS));
+  if (!Array.isArray(saved) || saved.length !== 2) return def;
+  return saved.map((m, i) => { const o = {}; KEY_ACTIONS.forEach(k => { o[k] = m && Array.isArray(m[k]) ? m[k].filter(c => typeof c === 'string' && c) : def[i][k]; }); return o; });
+})();
+const KEY_NAMES = { Space: 'Espacio', Semicolon: 'Ñ', Quote: '{', ShiftLeft: 'Shift izq.', ShiftRight: 'Shift der.', ControlLeft: 'Ctrl izq.', ControlRight: 'Ctrl der.', AltLeft: 'Alt', AltRight: 'Alt Gr', Enter: 'Enter', NumpadEnter: 'Enter num.', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Comma: ',', Period: '.', Slash: '-', Minus: "'", BracketLeft: '´', BracketRight: '+', Backslash: '}', IntlBackslash: '<', Tab: 'Tab', Backspace: 'Borrar' };
+function keyLabel(code) {
+  if (!code) return '—';
+  if (KEY_NAMES[code]) return KEY_NAMES[code];
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad')) return code.slice(6).replace('Add', '+').replace('Subtract', '−').replace('Multiply', '×').replace('Divide', '÷').replace('Decimal', ',') + ' num.';
+  return code;
+}
 const Input = (() => {
   const down = new Set();
   const touch = [null, null];
   const taps = new Set(), touchTaps = [{}, {}];
-  addEventListener('keydown', e => { if (Input.hook) return; down.add(e.code); taps.add(e.code); if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); });
+  addEventListener('keydown', e => { if (Input.hook) return; down.add(e.code); taps.add(e.code); if (e.code.startsWith('Arrow') || e.code === 'Space' || KEYMAP.some(m => KEY_ACTIONS.some(k => m[k].includes(e.code)))) e.preventDefault(); });
   addEventListener('keyup', e => down.delete(e.code));
   addEventListener('blur', () => down.clear());
   const any = list => list.some(c => down.has(c) || taps.has(c));
@@ -1822,7 +1840,7 @@ const Rules = {
   },
 };
 /* ---------- lecciones de la Escuela (todas se pueden jugar de a uno o de a dos) ---------- */
-const keyName = (i, k) => Touch.active ? { drift: 'DERRAPE', item: 'OBJETO', turbo: 'TURBO', steer: 'la palanca' }[k] : ({ drift: ['F', 'K'], item: ['G', 'L'], turbo: ['H', 'Ñ'], steer: ['A / D', '← / →'] }[k] || [])[i] || '';
+const keyName = (i, k) => Touch.active ? { drift: 'DERRAPE', item: 'OBJETO', turbo: 'TURBO', steer: 'la palanca' }[k] : k === 'steer' ? `${keyLabel(KEYMAP[i].left[0])} / ${keyLabel(KEYMAP[i].right[0])}` : KEYMAP[i] && KEYMAP[i][k] ? keyLabel(KEYMAP[i][k][0]) : ''; // (las teclas que eligió cada jugador)
 const LESSONS = [
   { id: 'derrape', name: 'Derrape', track: 'guatape', at: 13.3, time: 50, need: 3, gold: 16, silver: 30, goal: '3 turbos de derrape en las curvas', loopTo: 16.6,
     tip: i => `Gira con ${keyName(i, 'steer')} y SOSTÉN ${keyName(i, 'drift')} en la curva: la chispa pasa de azul a naranja y esmeralda; suelta para el turbo.`,
@@ -6107,9 +6125,9 @@ const UI = (() => {
       case 'play2': goFull(); if (cfg.mode === 'world') cfg.mode = 'quick'; openSetup(2); break;
       case 'world': goFull(); openWorld(); break;
       case 'worldNext': Game.worldNext(); break;
-      case 'howto': show('s-howto'); break;
+      case 'howto': fillHowKeys(); show('s-howto'); break;
       case 'gq': Game.requality((GQ.lv + 2) % 3); gqLabel(); break;
-      case 'opts': fillOpts(); show('s-opts'); break;
+      case 'opts': fillOpts(); fillKeys(); show('s-opts'); break;
       case 'fs': FS.toggle(); break;
       case 'back': if (hubCfg) { hubLeave(); Game.toTitle(); break; } if (!$('s-setup').hidden && cfg.mode === 'world') openWorld(); else Game.toTitle(); break;
       case 'startRace': if (hubCfg) { hubGo(); break; } Store.set('setup', cfg); Game.startCfg(nH, cfg); break;
@@ -6129,6 +6147,32 @@ const UI = (() => {
   function fsLabel() { document.querySelectorAll('[data-act=fs]').forEach(b => { b.textContent = b.dataset.long ? 'Pantalla completa: ' + (FS.on ? 'salir' : 'activar') : FS.label(); }); }
   FS.onChange(fsLabel);
   function fillOpts() { segOn('o-gq', GQ.lv, v => { Game.requality(+v); gqLabel(); }); segOn('o-fsauto', FS.auto ? 1 : 0, v => { FS.auto = v === '1'; }); fsLabel(); }
+  // teclas: tabla en Opciones (tocar una casilla y pulsar la tecla nueva) y la ayuda de Controles
+  const kb = list => list.length ? list.map(c => `<kbd>${keyLabel(c)}</kbd>`).join(' o ') : '<kbd>—</kbd>';
+  function fillHowKeys() {
+    const t = $('keysHelp'); if (!t) return; const K = KEYMAP, c = (i, a) => kb(K[i][a].slice(0, 1)), two = (i, a, b) => `${c(i, a)}${c(i, b)}`;
+    t.innerHTML = `<tr><th></th><th style="color:var(--j1)">J1</th><th style="color:var(--j2)">J2</th></tr>`
+      + `<tr><td>Girar · frenar</td>${[0, 1].map(i => `<td>${two(i, 'left', 'right')} · ${c(i, 'down')}</td>`).join('')}</tr>`
+      + `<tr><td>Derrape (sostener en curva) · piruetas en el aire</td>${[0, 1].map(i => `<td>${kb(K[i].drift)}</td>`).join('')}</tr>`
+      + `<tr><td>Con el ala: picada · subir</td>${[0, 1].map(i => `<td>${c(i, 'up')} · ${c(i, 'down')}</td>`).join('')}</tr>`
+      + `<tr><td>Objeto · con la barra llena, especial del piloto</td>${[0, 1].map(i => `<td>${kb(K[i].item)}</td>`).join('')}</tr>`
+      + `<tr><td>Turbo (gasta un cuarto de la barra)</td>${[0, 1].map(i => `<td>${kb(K[i].turbo)}</td>`).join('')}</tr>`;
+  }
+  let capture = null; // mientras se espera la tecla nueva, ninguna otra cosa la recibe
+  addEventListener('keydown', e => { if (!capture) return; e.preventDefault(); e.stopImmediatePropagation(); const f = capture; capture = null; Input.hook = null; f(e.code); }, true);
+  function fillKeys() {
+    const t = $('o-keys'); if (!t) return; capture = null; Input.hook = null; $('o-keyMsg').textContent = '';
+    t.innerHTML = `<tr><th></th><th style="color:var(--j1)">J1</th><th style="color:var(--j2)">J2</th></tr>` + KEY_ACTIONS.map(a => `<tr><td>${KEY_LABELS[a]}</td>${[0, 1].map(p => `<td><button class="kbtn" data-kp="${p}" data-ka="${a}">${KEYMAP[p][a].length ? KEYMAP[p][a].map(keyLabel).join(' / ') : '—'}</button></td>`).join('')}</tr>`).join('');
+    t.querySelectorAll('[data-kp]').forEach(b => b.onclick = e => {
+      e.stopPropagation(); Sound.ui(); fillKeys(); const nb = t.querySelector(`[data-kp="${b.dataset.kp}"][data-ka="${b.dataset.ka}"]`); nb.classList.add('wait'); nb.textContent = 'pulsa…';
+      $('o-keyMsg').textContent = 'Pulsa la tecla nueva (Esc cancela)';
+      Input.hook = true; capture = code => {
+        if (code !== 'Escape') { const p = +b.dataset.kp, a = b.dataset.ka; for (const m of KEYMAP) for (const k of KEY_ACTIONS) m[k] = m[k].filter(c => c !== code); KEYMAP[p][a] = [code].concat(KEYMAP[p][a]).slice(0, 2); Store.set('keys', KEYMAP); Sound.ui(); }
+        fillKeys();
+      };
+    });
+    $('o-keysReset').onclick = e => { e.stopPropagation(); Sound.ui(); const d = JSON.parse(JSON.stringify(DEFAULT_KEYS)); for (let i = 0; i < 2; i++) for (const k of KEY_ACTIONS) KEYMAP[i][k] = d[i][k]; Store.set('keys', KEYMAP); fillKeys(); };
+  }
   function gqLabel() { const b = document.querySelector('[data-act=gq]'); if (b) b.innerHTML = `Gráficos: ${GQ.names[GQ.lv]}<small>${['más fluido', 'equilibrado', 'máximo detalle'][GQ.lv]}</small>`; }
   gqLabel();
   // pantalla completa automática al empezar (en el celular, también horizontal); se puede quitar en Opciones
@@ -6190,7 +6234,7 @@ const UI = (() => {
   function openSetup(n) { nH = n; if (cfg.p[0] === cfg.p[1]) cfg.p[1] = PILOT_ORDER.find(k => k !== cfg.p[0]); Game.setup(n); renderSetup(); for (let k = 0; k < n; k++) Game.showPilot(k, cfg.p[k]); show('s-setup'); }
   document.addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (b) { const [i, k] = b.dataset.pick.split(':'); pick(+i, k); } });
   addEventListener('keydown', e => {
-    if (!$('s-setup').hidden) { const c = e.code; if (c === 'KeyA') step(0, -1); else if (c === 'KeyD') step(0, 1); else if (c === 'ArrowLeft') step(nH === 2 ? 1 : 0, -1); else if (c === 'ArrowRight') step(nH === 2 ? 1 : 0, 1); else if (c === 'Enter' || c === 'Space') act('startRace'); else if (c === 'Escape') act('back'); return; }
+    if (!$('s-setup').hidden) { const c = e.code, K = KEYMAP, j2 = nH === 2 ? 1 : 0; if (K[0].left.includes(c)) step(0, -1); else if (K[0].right.includes(c)) step(0, 1); else if (K[1].left.includes(c) || c === 'ArrowLeft') step(j2, -1); else if (K[1].right.includes(c) || c === 'ArrowRight') step(j2, 1); else if (c === 'Enter' || c === 'Space') act('startRace'); else if (c === 'Escape') act('back'); return; }
     if (e.code === 'Escape' || e.code === 'KeyP') { if (Game.mode === 'race') Game.pause(!Game.paused); }
     if (e.code === 'KeyM') Sound.toggle();
     if (e.code === 'Enter' && !$('s-results').hidden) act($('resMain').dataset.act);

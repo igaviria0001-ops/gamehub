@@ -197,7 +197,7 @@ const UI = (() => {
   /* ---------- cómo se juega ---------- */
   function fillHowto() {
     const row = (a, l) => `<tr><td>${l}</td><td><kbd>${KEYMAP[0][a].map(keyName).join('</kbd> o <kbd>')}</kbd></td><td><kbd>${KEYMAP[1][a].map(keyName).join('</kbd> o <kbd>')}</kbd></td></tr>`;
-    $('#keysTable').innerHTML = `<tr><th></th><th style="color:var(--j1)">J1</th><th style="color:var(--j2)">J2</th></tr><tr><td>Moverse</td><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></td></tr>` + row('h0', 'Mano izquierda') + row('h1', 'Mano derecha') + row('dash', 'Esquivar');
+    $('#keysTable').innerHTML = `<tr><th></th><th style="color:var(--j1)">J1</th><th style="color:var(--j2)">J2</th></tr><tr><td>Moverse</td><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></td></tr>` + row('h0', 'Mano izquierda') + row('h1', 'Mano derecha') + row('fuse', 'Fusión (las dos manos a la vez)') + row('dash', 'Esquivar');
     $('#fusList').innerHTML = FUSION_ORDER.map(k => { const [a, b] = k.split('+'); return `<div><b>${FUSIONS[k].name}</b><br>${ELEMENTS[a].name} + ${ELEMENTS[b].name}</div>`; }).join('');
   }
   function fillGrim() {
