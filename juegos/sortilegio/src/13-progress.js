@@ -14,7 +14,7 @@ const ACHIEVEMENTS = [
   { id: 'pelo', name: 'Por un pelo', text: 'Esquiva 10 hechizos rozándolos.' },
   { id: 'absorb', name: 'Bebedor de fuentes', text: 'Bebe 20 elementos de las fuentes.' },
   { id: 'perfect', name: 'Intocable', text: 'Gana una ronda de duelo sin recibir daño.' },
-  { id: 'hard', name: 'Más que la máquina', text: 'Gánale un duelo a la máquina en difícil.' },
+  { id: 'hard', name: 'Más que la máquina', text: 'Gánale un duelo a la máquina en Maestro, sin ventaja.' },
   { id: 'tejo', name: '¡Mecha!', text: 'Mete un tejo en el bocín del rival.' },
   { id: 'hunt', name: 'Cazador de espantos', text: 'Haz 20 puntos en una Cacería.' },
   { id: 'copa', name: 'Campeón del Páramo', text: 'Gana una Copa del Páramo.' },
@@ -50,7 +50,7 @@ const Progress = (() => {
   function onMatchEnd(G, r) {
     if (G.attract) return; P.games++;
     const w = r.winner;
-    if (G.mode === 'duel' && w >= 0 && human(G, w)) { P.wins[G.chars[w]] = (P.wins[G.chars[w]] || 0) + 1; if (CHAR_ORDER.every(c => P.wins[c])) unlock(G, 'all6'); if (G.players === 1 && w === 0 && G.level === 2) unlock(G, 'hard'); }
+    if (G.mode === 'duel' && w >= 0 && human(G, w)) { P.wins[G.chars[w]] = (P.wins[G.chars[w]] || 0) + 1; if (CHAR_ORDER.every(c => P.wins[c])) unlock(G, 'all6'); if (G.players === 1 && w === 0 && G.level >= 4 && !((Store.get('adv', [0, 0]) || [])[0] > 0)) unlock(G, 'hard'); }
     if (G.mode === 'hunt' && G.score) for (let i = 0; i < 2; i++) if (human(G, i) && G.score[i] >= 20) unlock(G, 'hunt');
     if (r.camp && r.camp.win) { unlock(G, 'camp1'); if (r.camp.level === 9) unlock(G, 'campAll'); if (r.camp.level === 17) unlock(G, 'campW2'); if (Camp.total() >= 30) unlock(G, 'stars30'); if (Camp.total() >= Camp.LEVELS.length * 3) unlock(G, 'starsAll'); }
     save();

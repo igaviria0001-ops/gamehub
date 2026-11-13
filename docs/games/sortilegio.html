@@ -196,6 +196,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
 #s-setup.hubpick .hubTitle { display: block; text-align: center; font: 700 15px/1.3 "Nunito", sans-serif; color: #ffe7b0; letter-spacing: .04em; margin: -2px 0 8px; }
 #s-setup.hubpick .opts { display: none; }
 #s-results.hubres [data-act="rematch"], #s-results.hubres [data-act="setupAgain"], #s-results.hubres [data-act="toTitle"], #s-results.hubres #r-copaNext { display: none; }
+.osub { font-size: 11px; opacity: .7; margin-left: 8px; }
 </style>
 </head>
 <body>
@@ -241,7 +242,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
     <div class="opts">
       <span><span class="lbl">ESCENARIO</span><span class="seg" id="o-arena"></span></span>
       <span id="o-winsw"><span class="lbl">RONDAS</span><span class="seg" id="o-wins"><button data-v="2">al mejor de 3</button><button data-v="3">al mejor de 5</button></span></span>
-      <span id="o-lvlw"><span class="lbl">MÁQUINA</span><span class="seg" id="o-lvl"><button data-v="0">fácil</button><button data-v="1">normal</button><button data-v="2">difícil</button></span></span>
+      <span id="o-lvlw"><span class="lbl">MÁQUINA</span><span class="seg" id="o-lvl"><button data-v="0">aprendiz</button><button data-v="1">fácil</button><button data-v="2">normal</button><button data-v="3">difícil</button><button data-v="4">maestro</button></span></span>
     </div>
     <div class="row goRow" style="margin-top:12px"><button class="btn gold big" data-act="go">¡A pelear!</button></div>
   </div>
@@ -296,6 +297,9 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
       <span><span class="lbl">SONIDO</span><span class="seg" id="o-sound"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
       <span><span class="lbl">MÚSICA</span><span class="seg" id="o-music"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
       <span><span class="lbl">CALIDAD</span><span class="seg" id="o-quality"><button data-v="alta">alta</button><button data-v="media">media</button><button data-v="ligera">ligera</button></span></span>
+      <span><span class="lbl">MÁQUINA</span><span class="seg" id="o-lvl2"><button data-v="0">aprendiz</button><button data-v="1">fácil</button><button data-v="2">normal</button><button data-v="3">difícil</button><button data-v="4">maestro</button></span></span>
+      <span><span class="lbl">VENTAJA J1</span><span class="seg" id="o-adv0"><button data-v="0">no</button><button data-v="1">poca</button><button data-v="2">mucha</button></span><small class="osub">recibe menos daño y recarga más rápido</small></span>
+      <span><span class="lbl">VENTAJA J2</span><span class="seg" id="o-adv1"><button data-v="0">no</button><button data-v="1">poca</button><button data-v="2">mucha</button></span><small class="osub">para jugar parejo entre amigos</small></span>
       <span><span class="lbl">PRESAGIOS</span><span class="seg" id="o-presage"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
       <span><span class="lbl">PANTALLA COMPLETA</span><button class="btn small" id="o-fs" data-act="fullscreen">Activar</button></span>
       <span class="fs-auto"><span class="lbl">AUTOMÁTICA</span><span class="seg" id="o-fsauto"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
@@ -1642,6 +1646,7 @@ class Unit {
     if (src.el === 'fire' || src.el === 'lava') dmg *= this.fireRes;
     if (this.st.frozen > 0 && !src.dot && src.el !== 'water') { dmg *= 1.5; this.st.frozen = 0; G.events.push({ type: 'shatter', x: this.x, y: this.y }); Combos.add(G, src.by, 'rompehielo', this); }
     if (this.dmgMul) dmg *= this.dmgMul;
+    { const bm = src.by >= 0 ? G.mages[src.by] : null; if (bm && bm.dmgOut && bm !== this) dmg *= bm.dmgOut; } // la máquina en niveles bajos pega más suave
     // maleficio: el siguiente golpe (no el daño continuo) duele más, y se gasta
     if (this.st.hex > 0 && !src.dot) { dmg *= src.by >= 0 && G.mages[src.by] && G.mages[src.by].tr.hexDmg || HEX_MUL; this.st.hex = 0; G.fx.push({ type: 'flashRing', x: this.x, y: this.y - 20, el: 'shadow', r: 60 }); }
     if (this.buff && this.buff.shield > 0) { const a = Math.min(this.buff.shield, dmg); this.buff.shield -= a; dmg -= a; if (a > 0) G.events.push({ type: 'shieldHit', x: this.x, y: this.y }); if (dmg <= 0) return 0; }
@@ -1778,7 +1783,7 @@ class Mage extends Unit {
     // Gran Sortilegio: se eleva y concentra un instante (intocable) y luego lo suelta
     if (this.granCharge > 0) { this.granCharge -= dt; this.vx *= 0.82; this.vy *= 0.82; this.x += this.vx * dt; this.y += this.vy * dt; if (this.granCharge <= 0) this.releaseGran(G); return; }
     if (this.embFlash > 0) this.embFlash -= dt;
-    for (const h of this.hands) { if (h.cd > 0) h.cd = Math.max(0, h.cd - dt); if (h.deny > 0) h.deny -= dt; }
+    for (const h of this.hands) { if (h.cd > 0) h.cd = Math.max(0, h.cd - dt * (this.cdK || 1)); if (h.deny > 0) h.deny -= dt; }
     const hk = this.buff.haste > 0 ? 2 : 1; if (this.buff.haste > 0) { this.buff.haste -= dt; for (const h of this.hands) if (h.cd > 0) h.cd = Math.max(0, h.cd - dt); }
     if (this.buff.shieldT > 0) { this.buff.shieldT -= dt; if (this.buff.shieldT <= 0) this.buff.shield = 0; }
     if (this.rec > 0) this.rec -= dt; if (this.castT > 0) this.castT -= dt; if (this.impulse > 0) this.impulse -= dt; if (this.dash.gap > 0) this.dash.gap -= dt;
@@ -2594,20 +2599,28 @@ const Spells2 = (() => {
    devuelve lo mismo que Input.read). Esquiva lo que viene, evita el suelo
    peligroso, busca su distancia, elige hechizo según la situación (rival
    mojado → rayo, enredado → golpe grande...), carga, funde y a veces va a
-   beber de una fuente. Niveles: 0 fácil, 1 normal, 2 difícil.
+   beber de una fuente. Cinco niveles para ir subiendo poco a poco:
+   0 aprendiz, 1 fácil, 2 normal, 3 difícil, 4 maestro (el difícil de antes).
+   react/think = qué tan rápido reacciona y decide · dodge = qué tanto esquiva · jit = cuánto
+   falla la puntería · gap = pausa extra entre hechizos · lead = cuánto apunta adelante del rival ·
+   dash = usa el impulso para esquivar · charge/fuse = qué tanto carga y funde · gran = usa el
+   Gran Sortilegio · dmg = cuánto pega · fool = cae en señuelos · noise = qué tan al azar elige
    ========================================================================= */
 const BOT_LV = [
-  { react: 0.42, dodge: 0.3, jit: 0.32, think: 0.32, absorb: 0.15, aggro: 0.55 },
-  { react: 0.24, dodge: 0.62, jit: 0.16, think: 0.2, absorb: 0.35, aggro: 0.8 },
-  { react: 0.12, dodge: 0.88, jit: 0.06, think: 0.12, absorb: 0.55, aggro: 1.0 },
+  { name: 'Aprendiz', react: 0.9, dodge: 0.05, jit: 0.55, think: 0.55, absorb: 0, aggro: 0.3, gap: 1.1, lead: 0.15, dash: 0, charge: 0.2, fuse: 0.25, gran: 0, dmg: 0.7, fool: 0.95, noise: 14, mines: 0, runes: 0 },
+  { name: 'Fácil', react: 0.7, dodge: 0.12, jit: 0.45, think: 0.45, absorb: 0.05, aggro: 0.4, gap: 0.7, lead: 0.4, dash: 0.3, charge: 0.5, fuse: 0.5, gran: 0.35, dmg: 0.8, fool: 0.9, noise: 11, mines: 0, runes: 0 },
+  { name: 'Normal', react: 0.42, dodge: 0.3, jit: 0.32, think: 0.32, absorb: 0.15, aggro: 0.55, gap: 0, lead: 1, dash: 1, charge: 1, fuse: 1, gran: 1, dmg: 1, fool: 0.85, noise: 9, mines: 0, runes: 0 },
+  { name: 'Difícil', react: 0.24, dodge: 0.62, jit: 0.16, think: 0.2, absorb: 0.35, aggro: 0.8, gap: 0, lead: 1, dash: 1, charge: 1, fuse: 1, gran: 1, dmg: 1, fool: 0.6, noise: 6, mines: 1, runes: 0 },
+  { name: 'Maestro', react: 0.12, dodge: 0.88, jit: 0.06, think: 0.12, absorb: 0.55, aggro: 1.0, gap: 0, lead: 1, dash: 1, charge: 1, fuse: 1, gran: 1, dmg: 1, fool: 0.35, noise: 3, mines: 1, runes: 1 },
 ];
+const BOT_MAX = BOT_LV.length - 1;
 const DIRS16 = Array.from({ length: 16 }, (_, k) => [Math.cos(k / 16 * TAU), Math.sin(k / 16 * TAU)]);
 class Bot {
-  constructor(level = 1) { this.lv = clamp(level, 0, 2); this.P = BOT_LV[this.lv]; this.inp = { mx: 0, my: 0, h: [false, false], dash: false, aim: null }; this.plan = null; this.thinkT = 0; this.castT = 0.8; this.dir = [0, 0]; this.dodged = new Set(); this.goal = null; this.absorbT = 2; this.strafe = 1; this.strafeT = 0; }
+  constructor(level = 2) { this.lv = clamp(level | 0, 0, BOT_MAX); this.P = BOT_LV[this.lv]; this.inp = { mx: 0, my: 0, h: [false, false], dash: false, aim: null }; this.plan = null; this.thinkT = 0; this.castT = 0.8; this.dir = [0, 0]; this.dodged = new Set(); this.goal = null; this.absorbT = 2; this.strafe = 1; this.strafeT = 0; }
   // rival más útil: el mago (o criatura) más cercano
   target(G, m) {
     let best = null, bd = 1e9;
-    for (const u of G.units) { if (!u.alive || u.team === m.team) continue; const dec = u.obj === 'decoy' && u.foolK < [0.85, 0.6, 0.35][this.lv]; if (u.obj && !dec) continue; if (u.isMage && u.st.hidden > 0 && G.mode !== 'camp') continue; const d = hypot(u.x - m.x, u.y - m.y) - (u.isMage || dec ? 120 : 0); if (d < bd) { bd = d; best = u; } }
+    for (const u of G.units) { if (!u.alive || u.team === m.team) continue; const dec = u.obj === 'decoy' && u.foolK < this.P.fool; if (u.obj && !dec) continue; if (u.isMage && u.st.hidden > 0 && G.mode !== 'camp') continue; const d = hypot(u.x - m.x, u.y - m.y) - (u.isMage || dec ? 120 : 0); if (d < bd) { bd = d; best = u; } }
     return best;
   }
   danger(G, x, y, m) {
@@ -2631,7 +2644,7 @@ class Bot {
       else if ((s.t === 'firenado' || s.t === 'vortex') && hypot(x - s.x, y - s.y) < s.r + 40) d += 24;
       else if ((s.t === 'storm' || s.t === 'cloud') && s.dps !== 0 && hypot(x - s.x, y - s.y) < s.r) d += s.t === 'storm' ? 16 : 6;
       else if (s.t === 'magnet' && hypot(x - s.x, y - s.y) < s.pullR) d += 10;
-      else if ((s.t === 'mine' || s.t === 'trap') && hypot(x - s.x, y - s.y) < 60) d += this.lv > 0 ? 18 : 4;
+      else if ((s.t === 'mine' || s.t === 'trap') && hypot(x - s.x, y - s.y) < 60) d += this.P.mines ? 18 : 4;
       else if (s.t === 'lob' && hypot(x - s.tx, y - s.ty) < (s.S.r || 40) + 30) d += 30;
       else if (s.t === 'beam' && !s.fired) { const dx = x - s.x, dy = y - s.y; if (Math.abs(angDiff(s.ang, Math.atan2(dy, dx))) < 0.25 && hypot(dx, dy) < 660) d += 35; }
     }
@@ -2657,7 +2670,7 @@ class Bot {
     const I = this.inp, P = this.P; I.dash = false;
     let f = this.target(G, m), modeGoal = null;
     if (G.mode !== 'duel' && G.mode !== 'free') ({ f, modeGoal } = this.modeTarget(G, m, f));
-    if (!modeGoal && G.runes && G.runes.length) { const r = G.runes[0], d = hypot(r.x - m.x, r.y - m.y), df = f ? hypot(r.x - f.x, r.y - f.y) : 999; if (d < 520 && (d < df + 80 || this.lv === 2)) modeGoal = [r.x, r.y]; }
+    if (!modeGoal && G.runes && G.runes.length) { const r = G.runes[0], d = hypot(r.x - m.x, r.y - m.y), df = f ? hypot(r.x - f.x, r.y - f.y) : 999; if (d < 520 && (d < df + 80 || P.runes)) modeGoal = [r.x, r.y]; }
     this.thinkT -= dt; this.castT -= dt; this.absorbT -= dt; this.strafeT -= dt;
     if (this.strafeT <= 0) { this.strafeT = 1 + G.rng() * 2; this.strafe = G.rng() < 0.5 ? -1 : 1; }
     // ---- seguir un plan de lanzamiento ----
@@ -2665,7 +2678,7 @@ class Bot {
       const p = this.plan; p.t += dt;
       if (f) { const lead = p.lead || 0; I.aim = Math.atan2(f.y + f.vy * lead - m.y, f.x + f.vx * lead - m.x) + p.jit; }
       I.h = [p.keys.includes(0) && p.t < p.hold, p.keys.includes(1) && p.t < p.hold];
-      if (p.t >= p.hold + 0.05) { this.plan = null; I.h = [false, false]; this.castT = P.react + G.rng() * P.react; }
+      if (p.t >= p.hold + 0.05) { this.plan = null; I.h = [false, false]; this.castT = P.react + G.rng() * P.react + P.gap * (0.6 + G.rng() * 0.8); }
     } else I.aim = null;
     // ---- esquivar ----
     const th = this.threat(G, m);
@@ -2676,7 +2689,7 @@ class Bot {
         const px = -th.s.vy, py = th.s.vx, l = hypot(px, py) || 1; let sx = px / l, sy = py / l;
         if (this.danger(G, m.x + sx * 140, m.y + sy * 140, m) > this.danger(G, m.x - sx * 140, m.y - sy * 140, m)) { sx = -sx; sy = -sy; }
         const drop = d => this.danger(G, m.x + sx * d, m.y + sy * d, m) >= 50;
-        if (m.dash.charges > 0 && roll < P.dodge * 0.75 && th.tc < 0.28 && !drop(150) && !drop(190) && !drop(110)) { I.mx = sx; I.my = sy; I.dash = true; this.dir = [sx, sy]; this.thinkT = 0.25; }
+        if (m.dash.charges > 0 && roll < P.dodge * 0.75 * P.dash && th.tc < 0.28 && !drop(150) && !drop(190) && !drop(110)) { I.mx = sx; I.my = sy; I.dash = true; this.dir = [sx, sy]; this.thinkT = 0.25; }
         else if (!drop(40) && !drop(80)) { this.dir = [sx, sy]; this.thinkT = 0.3; }
       }
     }
@@ -2865,19 +2878,19 @@ class Bot {
       if (!ready(k) || this.fuseOnly) continue; const el = H[k].el;
       const S0 = SPELLS[el][0], S1 = SPELLS[el][1];
       const q = val(S0, el, 1, false); opts.push({ keys: [k], hold: 0.06, v: q.v - S0.cd * 1.2, lead: q.lead, still: q.still });
-      const c = val(S1, el, 2, false); opts.push({ keys: [k], hold: HOLD_FULL + 0.06, v: c.v * 0.85 - S1.cd * 1.2 - (d < 160 ? 4 : 0), lead: c.lead, still: c.still });
+      if (G.rng() < P.charge) { const c = val(S1, el, 2, false); opts.push({ keys: [k], hold: HOLD_FULL + 0.06, v: c.v * 0.85 - S1.cd * 1.2 - (d < 160 ? 4 : 0), lead: c.lead, still: c.still }); }
     }
     if (ready(0) && ready(1)) {
       let S, fus = true; if (H[0].el === H[1].el) S = SPELLS[H[0].el][1]; else S = FUSIONS[fuseKey(H[0].el, H[1].el)];
-      const q = val(S, null, 2, fus); opts.push({ keys: [0, 1], hold: 0.12, v: q.v * (m.emb >= 100 ? 1.6 : 1) - S.cd * 0.8, lead: q.lead, still: q.still });
+      const q = val(S, null, 2, fus); opts.push({ keys: [0, 1], hold: 0.12, v: (q.v * (m.emb >= 100 ? 1.6 * P.gran : 1) - S.cd * 0.8) * (m.emb >= 100 && !P.gran ? 0 : P.fuse), lead: q.lead, still: q.still });
     }
     if (!opts.length) return;
     if (this.prefer && opts.some(o => o.keys.some(k => H[k].el === this.prefer))) for (const o of opts) { const els = o.keys.map(k => H[k].el); if (els.includes(this.prefer)) o.v = o.v * 2.2 + 8; else o.v *= 0.5; }
     if (this.fuseOnly) for (const o of opts) o.v = d < this.fuseR + 30 ? Math.max(o.v, 14) : 0;
-    opts.forEach(o => (o.v += G.rng() * (3 + (2 - this.lv) * 3)));
+    opts.forEach(o => (o.v += G.rng() * P.noise));
     opts.sort((a, b) => b.v - a.v);
     const o = opts[0]; if (o.v < 1) { this.castT = 0.2; return; }
-    this.plan = { keys: o.keys, hold: o.hold, t: 0, lead: o.lead, jit: (G.rng() - 0.5) * 2 * P.jit, still: o.still };
+    this.plan = { keys: o.keys, hold: o.hold, t: 0, lead: o.lead * P.lead, jit: (G.rng() - 0.5) * 2 * P.jit, still: o.still };
   }
   lineClear(G, m, f) { let ok = true; Terrain.forLine(G.T, m.x, m.y, f.x, f.y, i => { if (Terrain.solid(G.T, i)) { ok = false; return false; } }); return ok; }
 }
@@ -3805,7 +3818,9 @@ const Camp = (() => {
 const Game = (() => {
   const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
   let sw = 0, sh = 0, dpr = 1, quality = Store.get('quality', 'alta');
-  const cfg = Object.assign({ mode: 'duel', arena: 'paramo', chars: ['candela', 'yuma'], level: 1, wins: 3 }, Store.get('cfg', {}));
+  const cfg0 = Store.get('cfg', {}) || {}, cfg = Object.assign({ mode: 'duel', arena: 'paramo', chars: ['candela', 'yuma'], level: 2, wins: 3 }, cfg0);
+  // la máquina pasó de 3 a 5 niveles: lo guardado antes (fácil, normal, difícil) pasa a Fácil, Normal y Maestro
+  if (!cfg0.lv5) { if (cfg0.level != null) cfg.level = [1, 2, 4][cfg0.level] != null ? [1, 2, 4][cfg0.level] : 2; cfg.lv5 = true; }
   const cam = { x: 880, y: 500, z: 0.6, tx: 880, ty: 500, tz: 0.6, shake: 0, sx: 0, sy: 0 };
   const G = { ally(o, m) { return o >= 0 && G.mages[o] && (o === m.idx || G.mages[o].team === m.team); }, state: 'attract', mages: [], units: [], spells: [], fx: [], events: [], pops: [], time: 0, frame: 0, rng: makeRng(1), wins: [0, 0], round: 0, players: 2, mode: 'duel', paused: false, slow: 0, slowK: 1, banner: null };
   let onMatchEnd = null, onRoundEnd = null;
@@ -3841,6 +3856,8 @@ const Game = (() => {
     newRound(true);
     G.introT = ['duel', 'tejo', 'hunt', 'altar'].includes(mode) && G.mages.length === 2 ? 2.7 : 0; G.introMax = G.introT; if (G.introT) G.events.push({ type: 'intro' });
   }
+  const ADV_DMG = [1, 0.8, 0.65], ADV_CD = [1, 1.15, 1.3];
+  const advOf = i => { const A = Store.get('adv', [0, 0]); return clamp((A && A[i]) | 0, 0, 2); };
   function newRound(first) {
     G.round++; G.seed = (Math.random() * 1e9) | 0; G.rng = makeRng(G.seed);
     if (G.mode === 'camp') Camp.build(G, Camp.LEVELS[G.campLevel]); else Arena.build(G, G.arenaId);
@@ -3850,7 +3867,9 @@ const Game = (() => {
     G.mages = G.chars.map((cid, i) => {
       const [x, y] = G.A.spawns[i], m = new Mage(G, i, cid, x, y, i); m.skin = G.state === 'attract' ? (Math.random() < 0.4 ? 'u.' + ArtMage.OUTFIT_ORDER[(Math.random() * ArtMage.OUTFIT_ORDER.length) | 0] : (Math.random() * 3) | 0) : (G.skins || [])[i] || 0;
       if (!first && prev[i]) { m.emb = prev[i].emb * 0.5; m.stats = prev[i].stats; }
-      const bot = G.state === 'attract' || i >= G.players; if (bot) m.ctrl = new Bot(G.state === 'attract' ? 1 : G.mode === 'camp' ? 2 : G.level);
+      const bot = G.state === 'attract' || i >= G.players; if (bot) { const lv = G.state === 'attract' ? 3 : G.mode === 'camp' ? 4 : G.level; m.ctrl = new Bot(lv); if (G.mode !== 'camp') m.dmgOut = BOT_LV[m.ctrl.lv].dmg; }
+      // ventaja (Opciones): el jugador recibe menos daño y sus manos recargan más rápido (no en la Escuela ni en la campaña)
+      else if (G.mode !== 'school' && G.mode !== 'camp') { const a = advOf(i); if (a) { m.dmgMul = ADV_DMG[a]; m.cdK = ADV_CD[a]; } }
       return m;
     });
     G.units = G.mages.slice();
@@ -7166,6 +7185,8 @@ const UI = (() => {
   }
   function fillOptions() {
     seg('o-presage', Store.get('presage', true) ? 1 : 0, v => Store.set('presage', v === '1'));
+    seg('o-lvl2', Game.cfg.level, v => { Game.cfg.level = +v; Store.set('cfg', Game.cfg); });
+    const adv = Store.get('adv', [0, 0]); for (let i = 0; i < 2; i++) seg('o-adv' + i, adv[i] || 0, v => { const A = Store.get('adv', [0, 0]).slice(); A[i] = +v; Store.set('adv', A); });
     fillKeys();
     seg('o-sound', Sound.on ? 1 : 0, v => Sound.setOn(v === '1'));
     seg('o-music', Music.on ? 1 : 0, v => Music.setOn(v === '1'));
@@ -7241,13 +7262,13 @@ const UI = (() => {
   const ACT = {
     play2: () => { setup.players = 2; setup.mode = 'duel'; show('setup'); },
     play1: () => { setup.players = 1; setup.mode = 'duel'; show('setup'); },
-    practice: () => { Sound.init(); setup.players = 1; Game.start('free', 1, { chars: pick.slice(), arena: Game.cfg.arena === 'random' ? 'paramo' : Game.cfg.arena, level: 0 }); stack = []; show(null, false); },
+    practice: () => { Sound.init(); setup.players = 1; Game.start('free', 1, { chars: pick.slice(), arena: Game.cfg.arena === 'random' ? 'paramo' : Game.cfg.arena, level: 2 }); stack = []; show(null, false); },
     howto: () => show('howto'), options: () => show('options'), back, go,
     pause: () => pause(true), resume: () => pause(false),
     rematch: () => { Sound.init(); paused = false; Game.G.paused = false; if ($('#r-rematch').textContent === 'Otra Copa' && UI.current === 'results') { $('#r-rematch').textContent = 'Revancha'; go(); return; } Game.rematch(); show(null, false); },
     copaNext: () => { Sound.init(); $('#r-rematch').hidden = false; if (nextLevel >= 0 && Game.G.mode === 'camp') { const n = nextLevel; nextLevel = -1; $('#r-copaNext').textContent = 'Siguiente prueba'; startLevel(n); return; } copaEvent(); },
     camp: () => show('camp'), grim: () => show('grim'),
-    school: () => { Sound.init(); setup.players = 1; paused = false; Game.G.paused = false; stack = []; Copa.on = false; Game.start('school', 1, { chars: [pick[0], pick[1]], arena: 'paramo', level: 0 }); show(null, false); },
+    school: () => { Sound.init(); setup.players = 1; paused = false; Game.G.paused = false; stack = []; Copa.on = false; Game.start('school', 1, { chars: [pick[0], pick[1]], arena: 'paramo', level: 2 }); show(null, false); },
     setupAgain: () => { stack = ['title']; show(Game.G.mode === 'camp' ? 'camp' : 'setup', false); },
     toTitle: () => { if (Hub.ev) Hub.leave(); hubPick(null); paused = false; Game.G.paused = false; Music.duck(false); stack = []; Game.startAttract(); show('title', false); },
     hubhome: () => Hub.exit(), hubback: () => Hub.exit(),
@@ -7307,7 +7328,7 @@ const ACHIEVEMENTS = [
   { id: 'pelo', name: 'Por un pelo', text: 'Esquiva 10 hechizos rozándolos.' },
   { id: 'absorb', name: 'Bebedor de fuentes', text: 'Bebe 20 elementos de las fuentes.' },
   { id: 'perfect', name: 'Intocable', text: 'Gana una ronda de duelo sin recibir daño.' },
-  { id: 'hard', name: 'Más que la máquina', text: 'Gánale un duelo a la máquina en difícil.' },
+  { id: 'hard', name: 'Más que la máquina', text: 'Gánale un duelo a la máquina en Maestro, sin ventaja.' },
   { id: 'tejo', name: '¡Mecha!', text: 'Mete un tejo en el bocín del rival.' },
   { id: 'hunt', name: 'Cazador de espantos', text: 'Haz 20 puntos en una Cacería.' },
   { id: 'copa', name: 'Campeón del Páramo', text: 'Gana una Copa del Páramo.' },
@@ -7343,7 +7364,7 @@ const Progress = (() => {
   function onMatchEnd(G, r) {
     if (G.attract) return; P.games++;
     const w = r.winner;
-    if (G.mode === 'duel' && w >= 0 && human(G, w)) { P.wins[G.chars[w]] = (P.wins[G.chars[w]] || 0) + 1; if (CHAR_ORDER.every(c => P.wins[c])) unlock(G, 'all6'); if (G.players === 1 && w === 0 && G.level === 2) unlock(G, 'hard'); }
+    if (G.mode === 'duel' && w >= 0 && human(G, w)) { P.wins[G.chars[w]] = (P.wins[G.chars[w]] || 0) + 1; if (CHAR_ORDER.every(c => P.wins[c])) unlock(G, 'all6'); if (G.players === 1 && w === 0 && G.level >= 4 && !((Store.get('adv', [0, 0]) || [])[0] > 0)) unlock(G, 'hard'); }
     if (G.mode === 'hunt' && G.score) for (let i = 0; i < 2; i++) if (human(G, i) && G.score[i] >= 20) unlock(G, 'hunt');
     if (r.camp && r.camp.win) { unlock(G, 'camp1'); if (r.camp.level === 9) unlock(G, 'campAll'); if (r.camp.level === 17) unlock(G, 'campW2'); if (Camp.total() >= 30) unlock(G, 'stars30'); if (Camp.total() >= Camp.LEVELS.length * 3) unlock(G, 'starsAll'); }
     save();
@@ -7421,7 +7442,7 @@ const Vestidor = (() => {
   U('tormenta', 'epico', 'Gana una Copa del Páramo.', 'Nubes de tormenta con relámpagos, y rayos que lo rodean.', c => !!c.ach.copa);
   U('lava', 'legendario', 'Vence a Tragaluz, el jefe final del Mundo 1.', 'Roca de volcán con grietas de magma vivo. Aura de brasas y estela de fuego.', L('c10'));
   U('oro', 'legendario', 'Vence al Cóndor de Oro (Mundo 2).', 'Filigrana de oro que brilla, con corona de rayos de sol y halo.', L('c14'));
-  U('fatuo', 'legendario', 'Gánale un duelo a la máquina en difícil.', 'Llamas azules que suben por la túnica. Aura de fuego fatuo y estela de escarcha.', c => !!c.ach.hard);
+  U('fatuo', 'legendario', 'Gánale un duelo a la máquina en Maestro (sin ventaja).', 'Llamas azules que suben por la túnica. Aura de fuego fatuo y estela de escarcha.', c => !!c.ach.hard);
   U('dragon', 'legendario', 'Completa el grimorio: las 28 fusiones.', 'Escamas de jade y oro, y un dragón espíritu que lo rodea.', c => c.grim >= 28 || !!c.ach.fusion15, c => [c.grim, 28]);
   U('galaxia', 'mitico', 'Consigue 30 estrellas en la campaña.', 'Una galaxia entera en la túnica y la capa. Aura de galaxia con planetas y estela de cometa.', c => c.stars >= 30, c => [c.stars, 30]);
   U('abismo', 'mitico', 'Vence a Buziraco, el jefe final del Mundo 2.', 'Negro de agujero negro, con su disco de luz girando detrás y estela de sombra.', L('c18'));

@@ -28,7 +28,7 @@ const Vestidor = (() => {
   U('tormenta', 'epico', 'Gana una Copa del Páramo.', 'Nubes de tormenta con relámpagos, y rayos que lo rodean.', c => !!c.ach.copa);
   U('lava', 'legendario', 'Vence a Tragaluz, el jefe final del Mundo 1.', 'Roca de volcán con grietas de magma vivo. Aura de brasas y estela de fuego.', L('c10'));
   U('oro', 'legendario', 'Vence al Cóndor de Oro (Mundo 2).', 'Filigrana de oro que brilla, con corona de rayos de sol y halo.', L('c14'));
-  U('fatuo', 'legendario', 'Gánale un duelo a la máquina en difícil.', 'Llamas azules que suben por la túnica. Aura de fuego fatuo y estela de escarcha.', c => !!c.ach.hard);
+  U('fatuo', 'legendario', 'Gánale un duelo a la máquina en Maestro (sin ventaja).', 'Llamas azules que suben por la túnica. Aura de fuego fatuo y estela de escarcha.', c => !!c.ach.hard);
   U('dragon', 'legendario', 'Completa el grimorio: las 28 fusiones.', 'Escamas de jade y oro, y un dragón espíritu que lo rodea.', c => c.grim >= 28 || !!c.ach.fusion15, c => [c.grim, 28]);
   U('galaxia', 'mitico', 'Consigue 30 estrellas en la campaña.', 'Una galaxia entera en la túnica y la capa. Aura de galaxia con planetas y estela de cometa.', c => c.stars >= 30, c => [c.stars, 30]);
   U('abismo', 'mitico', 'Vence a Buziraco, el jefe final del Mundo 2.', 'Negro de agujero negro, con su disco de luz girando detrás y estela de sombra.', L('c18'));

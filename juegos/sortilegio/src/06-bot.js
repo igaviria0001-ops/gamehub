@@ -3,20 +3,28 @@
    devuelve lo mismo que Input.read). Esquiva lo que viene, evita el suelo
    peligroso, busca su distancia, elige hechizo según la situación (rival
    mojado → rayo, enredado → golpe grande...), carga, funde y a veces va a
-   beber de una fuente. Niveles: 0 fácil, 1 normal, 2 difícil.
+   beber de una fuente. Cinco niveles para ir subiendo poco a poco:
+   0 aprendiz, 1 fácil, 2 normal, 3 difícil, 4 maestro (el difícil de antes).
+   react/think = qué tan rápido reacciona y decide · dodge = qué tanto esquiva · jit = cuánto
+   falla la puntería · gap = pausa extra entre hechizos · lead = cuánto apunta adelante del rival ·
+   dash = usa el impulso para esquivar · charge/fuse = qué tanto carga y funde · gran = usa el
+   Gran Sortilegio · dmg = cuánto pega · fool = cae en señuelos · noise = qué tan al azar elige
    ========================================================================= */
 const BOT_LV = [
-  { react: 0.42, dodge: 0.3, jit: 0.32, think: 0.32, absorb: 0.15, aggro: 0.55 },
-  { react: 0.24, dodge: 0.62, jit: 0.16, think: 0.2, absorb: 0.35, aggro: 0.8 },
-  { react: 0.12, dodge: 0.88, jit: 0.06, think: 0.12, absorb: 0.55, aggro: 1.0 },
+  { name: 'Aprendiz', react: 0.9, dodge: 0.05, jit: 0.55, think: 0.55, absorb: 0, aggro: 0.3, gap: 1.1, lead: 0.15, dash: 0, charge: 0.2, fuse: 0.25, gran: 0, dmg: 0.7, fool: 0.95, noise: 14, mines: 0, runes: 0 },
+  { name: 'Fácil', react: 0.7, dodge: 0.12, jit: 0.45, think: 0.45, absorb: 0.05, aggro: 0.4, gap: 0.7, lead: 0.4, dash: 0.3, charge: 0.5, fuse: 0.5, gran: 0.35, dmg: 0.8, fool: 0.9, noise: 11, mines: 0, runes: 0 },
+  { name: 'Normal', react: 0.42, dodge: 0.3, jit: 0.32, think: 0.32, absorb: 0.15, aggro: 0.55, gap: 0, lead: 1, dash: 1, charge: 1, fuse: 1, gran: 1, dmg: 1, fool: 0.85, noise: 9, mines: 0, runes: 0 },
+  { name: 'Difícil', react: 0.24, dodge: 0.62, jit: 0.16, think: 0.2, absorb: 0.35, aggro: 0.8, gap: 0, lead: 1, dash: 1, charge: 1, fuse: 1, gran: 1, dmg: 1, fool: 0.6, noise: 6, mines: 1, runes: 0 },
+  { name: 'Maestro', react: 0.12, dodge: 0.88, jit: 0.06, think: 0.12, absorb: 0.55, aggro: 1.0, gap: 0, lead: 1, dash: 1, charge: 1, fuse: 1, gran: 1, dmg: 1, fool: 0.35, noise: 3, mines: 1, runes: 1 },
 ];
+const BOT_MAX = BOT_LV.length - 1;
 const DIRS16 = Array.from({ length: 16 }, (_, k) => [Math.cos(k / 16 * TAU), Math.sin(k / 16 * TAU)]);
 class Bot {
-  constructor(level = 1) { this.lv = clamp(level, 0, 2); this.P = BOT_LV[this.lv]; this.inp = { mx: 0, my: 0, h: [false, false], dash: false, aim: null }; this.plan = null; this.thinkT = 0; this.castT = 0.8; this.dir = [0, 0]; this.dodged = new Set(); this.goal = null; this.absorbT = 2; this.strafe = 1; this.strafeT = 0; }
+  constructor(level = 2) { this.lv = clamp(level | 0, 0, BOT_MAX); this.P = BOT_LV[this.lv]; this.inp = { mx: 0, my: 0, h: [false, false], dash: false, aim: null }; this.plan = null; this.thinkT = 0; this.castT = 0.8; this.dir = [0, 0]; this.dodged = new Set(); this.goal = null; this.absorbT = 2; this.strafe = 1; this.strafeT = 0; }
   // rival más útil: el mago (o criatura) más cercano
   target(G, m) {
     let best = null, bd = 1e9;
-    for (const u of G.units) { if (!u.alive || u.team === m.team) continue; const dec = u.obj === 'decoy' && u.foolK < [0.85, 0.6, 0.35][this.lv]; if (u.obj && !dec) continue; if (u.isMage && u.st.hidden > 0 && G.mode !== 'camp') continue; const d = hypot(u.x - m.x, u.y - m.y) - (u.isMage || dec ? 120 : 0); if (d < bd) { bd = d; best = u; } }
+    for (const u of G.units) { if (!u.alive || u.team === m.team) continue; const dec = u.obj === 'decoy' && u.foolK < this.P.fool; if (u.obj && !dec) continue; if (u.isMage && u.st.hidden > 0 && G.mode !== 'camp') continue; const d = hypot(u.x - m.x, u.y - m.y) - (u.isMage || dec ? 120 : 0); if (d < bd) { bd = d; best = u; } }
     return best;
   }
   danger(G, x, y, m) {
@@ -40,7 +48,7 @@ class Bot {
       else if ((s.t === 'firenado' || s.t === 'vortex') && hypot(x - s.x, y - s.y) < s.r + 40) d += 24;
       else if ((s.t === 'storm' || s.t === 'cloud') && s.dps !== 0 && hypot(x - s.x, y - s.y) < s.r) d += s.t === 'storm' ? 16 : 6;
       else if (s.t === 'magnet' && hypot(x - s.x, y - s.y) < s.pullR) d += 10;
-      else if ((s.t === 'mine' || s.t === 'trap') && hypot(x - s.x, y - s.y) < 60) d += this.lv > 0 ? 18 : 4;
+      else if ((s.t === 'mine' || s.t === 'trap') && hypot(x - s.x, y - s.y) < 60) d += this.P.mines ? 18 : 4;
       else if (s.t === 'lob' && hypot(x - s.tx, y - s.ty) < (s.S.r || 40) + 30) d += 30;
       else if (s.t === 'beam' && !s.fired) { const dx = x - s.x, dy = y - s.y; if (Math.abs(angDiff(s.ang, Math.atan2(dy, dx))) < 0.25 && hypot(dx, dy) < 660) d += 35; }
     }
@@ -66,7 +74,7 @@ class Bot {
     const I = this.inp, P = this.P; I.dash = false;
     let f = this.target(G, m), modeGoal = null;
     if (G.mode !== 'duel' && G.mode !== 'free') ({ f, modeGoal } = this.modeTarget(G, m, f));
-    if (!modeGoal && G.runes && G.runes.length) { const r = G.runes[0], d = hypot(r.x - m.x, r.y - m.y), df = f ? hypot(r.x - f.x, r.y - f.y) : 999; if (d < 520 && (d < df + 80 || this.lv === 2)) modeGoal = [r.x, r.y]; }
+    if (!modeGoal && G.runes && G.runes.length) { const r = G.runes[0], d = hypot(r.x - m.x, r.y - m.y), df = f ? hypot(r.x - f.x, r.y - f.y) : 999; if (d < 520 && (d < df + 80 || P.runes)) modeGoal = [r.x, r.y]; }
     this.thinkT -= dt; this.castT -= dt; this.absorbT -= dt; this.strafeT -= dt;
     if (this.strafeT <= 0) { this.strafeT = 1 + G.rng() * 2; this.strafe = G.rng() < 0.5 ? -1 : 1; }
     // ---- seguir un plan de lanzamiento ----
@@ -74,7 +82,7 @@ class Bot {
       const p = this.plan; p.t += dt;
       if (f) { const lead = p.lead || 0; I.aim = Math.atan2(f.y + f.vy * lead - m.y, f.x + f.vx * lead - m.x) + p.jit; }
       I.h = [p.keys.includes(0) && p.t < p.hold, p.keys.includes(1) && p.t < p.hold];
-      if (p.t >= p.hold + 0.05) { this.plan = null; I.h = [false, false]; this.castT = P.react + G.rng() * P.react; }
+      if (p.t >= p.hold + 0.05) { this.plan = null; I.h = [false, false]; this.castT = P.react + G.rng() * P.react + P.gap * (0.6 + G.rng() * 0.8); }
     } else I.aim = null;
     // ---- esquivar ----
     const th = this.threat(G, m);
@@ -85,7 +93,7 @@ class Bot {
         const px = -th.s.vy, py = th.s.vx, l = hypot(px, py) || 1; let sx = px / l, sy = py / l;
         if (this.danger(G, m.x + sx * 140, m.y + sy * 140, m) > this.danger(G, m.x - sx * 140, m.y - sy * 140, m)) { sx = -sx; sy = -sy; }
         const drop = d => this.danger(G, m.x + sx * d, m.y + sy * d, m) >= 50;
-        if (m.dash.charges > 0 && roll < P.dodge * 0.75 && th.tc < 0.28 && !drop(150) && !drop(190) && !drop(110)) { I.mx = sx; I.my = sy; I.dash = true; this.dir = [sx, sy]; this.thinkT = 0.25; }
+        if (m.dash.charges > 0 && roll < P.dodge * 0.75 * P.dash && th.tc < 0.28 && !drop(150) && !drop(190) && !drop(110)) { I.mx = sx; I.my = sy; I.dash = true; this.dir = [sx, sy]; this.thinkT = 0.25; }
         else if (!drop(40) && !drop(80)) { this.dir = [sx, sy]; this.thinkT = 0.3; }
       }
     }
@@ -274,19 +282,19 @@ class Bot {
       if (!ready(k) || this.fuseOnly) continue; const el = H[k].el;
       const S0 = SPELLS[el][0], S1 = SPELLS[el][1];
       const q = val(S0, el, 1, false); opts.push({ keys: [k], hold: 0.06, v: q.v - S0.cd * 1.2, lead: q.lead, still: q.still });
-      const c = val(S1, el, 2, false); opts.push({ keys: [k], hold: HOLD_FULL + 0.06, v: c.v * 0.85 - S1.cd * 1.2 - (d < 160 ? 4 : 0), lead: c.lead, still: c.still });
+      if (G.rng() < P.charge) { const c = val(S1, el, 2, false); opts.push({ keys: [k], hold: HOLD_FULL + 0.06, v: c.v * 0.85 - S1.cd * 1.2 - (d < 160 ? 4 : 0), lead: c.lead, still: c.still }); }
     }
     if (ready(0) && ready(1)) {
       let S, fus = true; if (H[0].el === H[1].el) S = SPELLS[H[0].el][1]; else S = FUSIONS[fuseKey(H[0].el, H[1].el)];
-      const q = val(S, null, 2, fus); opts.push({ keys: [0, 1], hold: 0.12, v: q.v * (m.emb >= 100 ? 1.6 : 1) - S.cd * 0.8, lead: q.lead, still: q.still });
+      const q = val(S, null, 2, fus); opts.push({ keys: [0, 1], hold: 0.12, v: (q.v * (m.emb >= 100 ? 1.6 * P.gran : 1) - S.cd * 0.8) * (m.emb >= 100 && !P.gran ? 0 : P.fuse), lead: q.lead, still: q.still });
     }
     if (!opts.length) return;
     if (this.prefer && opts.some(o => o.keys.some(k => H[k].el === this.prefer))) for (const o of opts) { const els = o.keys.map(k => H[k].el); if (els.includes(this.prefer)) o.v = o.v * 2.2 + 8; else o.v *= 0.5; }
     if (this.fuseOnly) for (const o of opts) o.v = d < this.fuseR + 30 ? Math.max(o.v, 14) : 0;
-    opts.forEach(o => (o.v += G.rng() * (3 + (2 - this.lv) * 3)));
+    opts.forEach(o => (o.v += G.rng() * P.noise));
     opts.sort((a, b) => b.v - a.v);
     const o = opts[0]; if (o.v < 1) { this.castT = 0.2; return; }
-    this.plan = { keys: o.keys, hold: o.hold, t: 0, lead: o.lead, jit: (G.rng() - 0.5) * 2 * P.jit, still: o.still };
+    this.plan = { keys: o.keys, hold: o.hold, t: 0, lead: o.lead * P.lead, jit: (G.rng() - 0.5) * 2 * P.jit, still: o.still };
   }
   lineClear(G, m, f) { let ok = true; Terrain.forLine(G.T, m.x, m.y, f.x, f.y, i => { if (Terrain.solid(G.T, i)) { ok = false; return false; } }); return ok; }
 }

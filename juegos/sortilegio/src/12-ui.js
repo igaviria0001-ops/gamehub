@@ -218,6 +218,8 @@ const UI = (() => {
   }
   function fillOptions() {
     seg('o-presage', Store.get('presage', true) ? 1 : 0, v => Store.set('presage', v === '1'));
+    seg('o-lvl2', Game.cfg.level, v => { Game.cfg.level = +v; Store.set('cfg', Game.cfg); });
+    const adv = Store.get('adv', [0, 0]); for (let i = 0; i < 2; i++) seg('o-adv' + i, adv[i] || 0, v => { const A = Store.get('adv', [0, 0]).slice(); A[i] = +v; Store.set('adv', A); });
     fillKeys();
     seg('o-sound', Sound.on ? 1 : 0, v => Sound.setOn(v === '1'));
     seg('o-music', Music.on ? 1 : 0, v => Music.setOn(v === '1'));
@@ -293,13 +295,13 @@ const UI = (() => {
   const ACT = {
     play2: () => { setup.players = 2; setup.mode = 'duel'; show('setup'); },
     play1: () => { setup.players = 1; setup.mode = 'duel'; show('setup'); },
-    practice: () => { Sound.init(); setup.players = 1; Game.start('free', 1, { chars: pick.slice(), arena: Game.cfg.arena === 'random' ? 'paramo' : Game.cfg.arena, level: 0 }); stack = []; show(null, false); },
+    practice: () => { Sound.init(); setup.players = 1; Game.start('free', 1, { chars: pick.slice(), arena: Game.cfg.arena === 'random' ? 'paramo' : Game.cfg.arena, level: 2 }); stack = []; show(null, false); },
     howto: () => show('howto'), options: () => show('options'), back, go,
     pause: () => pause(true), resume: () => pause(false),
     rematch: () => { Sound.init(); paused = false; Game.G.paused = false; if ($('#r-rematch').textContent === 'Otra Copa' && UI.current === 'results') { $('#r-rematch').textContent = 'Revancha'; go(); return; } Game.rematch(); show(null, false); },
     copaNext: () => { Sound.init(); $('#r-rematch').hidden = false; if (nextLevel >= 0 && Game.G.mode === 'camp') { const n = nextLevel; nextLevel = -1; $('#r-copaNext').textContent = 'Siguiente prueba'; startLevel(n); return; } copaEvent(); },
     camp: () => show('camp'), grim: () => show('grim'),
-    school: () => { Sound.init(); setup.players = 1; paused = false; Game.G.paused = false; stack = []; Copa.on = false; Game.start('school', 1, { chars: [pick[0], pick[1]], arena: 'paramo', level: 0 }); show(null, false); },
+    school: () => { Sound.init(); setup.players = 1; paused = false; Game.G.paused = false; stack = []; Copa.on = false; Game.start('school', 1, { chars: [pick[0], pick[1]], arena: 'paramo', level: 2 }); show(null, false); },
     setupAgain: () => { stack = ['title']; show(Game.G.mode === 'camp' ? 'camp' : 'setup', false); },
     toTitle: () => { if (Hub.ev) Hub.leave(); hubPick(null); paused = false; Game.G.paused = false; Music.duck(false); stack = []; Game.startAttract(); show('title', false); },
     hubhome: () => Hub.exit(), hubback: () => Hub.exit(),

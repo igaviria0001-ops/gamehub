@@ -5,7 +5,9 @@
 const Game = (() => {
   const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
   let sw = 0, sh = 0, dpr = 1, quality = Store.get('quality', 'alta');
-  const cfg = Object.assign({ mode: 'duel', arena: 'paramo', chars: ['candela', 'yuma'], level: 1, wins: 3 }, Store.get('cfg', {}));
+  const cfg0 = Store.get('cfg', {}) || {}, cfg = Object.assign({ mode: 'duel', arena: 'paramo', chars: ['candela', 'yuma'], level: 2, wins: 3 }, cfg0);
+  // la máquina pasó de 3 a 5 niveles: lo guardado antes (fácil, normal, difícil) pasa a Fácil, Normal y Maestro
+  if (!cfg0.lv5) { if (cfg0.level != null) cfg.level = [1, 2, 4][cfg0.level] != null ? [1, 2, 4][cfg0.level] : 2; cfg.lv5 = true; }
   const cam = { x: 880, y: 500, z: 0.6, tx: 880, ty: 500, tz: 0.6, shake: 0, sx: 0, sy: 0 };
   const G = { ally(o, m) { return o >= 0 && G.mages[o] && (o === m.idx || G.mages[o].team === m.team); }, state: 'attract', mages: [], units: [], spells: [], fx: [], events: [], pops: [], time: 0, frame: 0, rng: makeRng(1), wins: [0, 0], round: 0, players: 2, mode: 'duel', paused: false, slow: 0, slowK: 1, banner: null };
   let onMatchEnd = null, onRoundEnd = null;
@@ -41,6 +43,8 @@ const Game = (() => {
     newRound(true);
     G.introT = ['duel', 'tejo', 'hunt', 'altar'].includes(mode) && G.mages.length === 2 ? 2.7 : 0; G.introMax = G.introT; if (G.introT) G.events.push({ type: 'intro' });
   }
+  const ADV_DMG = [1, 0.8, 0.65], ADV_CD = [1, 1.15, 1.3];
+  const advOf = i => { const A = Store.get('adv', [0, 0]); return clamp((A && A[i]) | 0, 0, 2); };
   function newRound(first) {
     G.round++; G.seed = (Math.random() * 1e9) | 0; G.rng = makeRng(G.seed);
     if (G.mode === 'camp') Camp.build(G, Camp.LEVELS[G.campLevel]); else Arena.build(G, G.arenaId);
@@ -50,7 +54,9 @@ const Game = (() => {
     G.mages = G.chars.map((cid, i) => {
       const [x, y] = G.A.spawns[i], m = new Mage(G, i, cid, x, y, i); m.skin = G.state === 'attract' ? (Math.random() < 0.4 ? 'u.' + ArtMage.OUTFIT_ORDER[(Math.random() * ArtMage.OUTFIT_ORDER.length) | 0] : (Math.random() * 3) | 0) : (G.skins || [])[i] || 0;
       if (!first && prev[i]) { m.emb = prev[i].emb * 0.5; m.stats = prev[i].stats; }
-      const bot = G.state === 'attract' || i >= G.players; if (bot) m.ctrl = new Bot(G.state === 'attract' ? 1 : G.mode === 'camp' ? 2 : G.level);
+      const bot = G.state === 'attract' || i >= G.players; if (bot) { const lv = G.state === 'attract' ? 3 : G.mode === 'camp' ? 4 : G.level; m.ctrl = new Bot(lv); if (G.mode !== 'camp') m.dmgOut = BOT_LV[m.ctrl.lv].dmg; }
+      // ventaja (Opciones): el jugador recibe menos daño y sus manos recargan más rápido (no en la Escuela ni en la campaña)
+      else if (G.mode !== 'school' && G.mode !== 'camp') { const a = advOf(i); if (a) { m.dmgMul = ADV_DMG[a]; m.cdK = ADV_CD[a]; } }
       return m;
     });
     G.units = G.mages.slice();

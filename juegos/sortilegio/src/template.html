@@ -193,6 +193,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
 #s-setup.hubpick .hubTitle { display: block; text-align: center; font: 700 15px/1.3 "Nunito", sans-serif; color: #ffe7b0; letter-spacing: .04em; margin: -2px 0 8px; }
 #s-setup.hubpick .opts { display: none; }
 #s-results.hubres [data-act="rematch"], #s-results.hubres [data-act="setupAgain"], #s-results.hubres [data-act="toTitle"], #s-results.hubres #r-copaNext { display: none; }
+.osub { font-size: 11px; opacity: .7; margin-left: 8px; }
 </style>
 </head>
 <body>
@@ -238,7 +239,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
     <div class="opts">
       <span><span class="lbl">ESCENARIO</span><span class="seg" id="o-arena"></span></span>
       <span id="o-winsw"><span class="lbl">RONDAS</span><span class="seg" id="o-wins"><button data-v="2">al mejor de 3</button><button data-v="3">al mejor de 5</button></span></span>
-      <span id="o-lvlw"><span class="lbl">MÁQUINA</span><span class="seg" id="o-lvl"><button data-v="0">fácil</button><button data-v="1">normal</button><button data-v="2">difícil</button></span></span>
+      <span id="o-lvlw"><span class="lbl">MÁQUINA</span><span class="seg" id="o-lvl"><button data-v="0">aprendiz</button><button data-v="1">fácil</button><button data-v="2">normal</button><button data-v="3">difícil</button><button data-v="4">maestro</button></span></span>
     </div>
     <div class="row goRow" style="margin-top:12px"><button class="btn gold big" data-act="go">¡A pelear!</button></div>
   </div>
@@ -293,6 +294,9 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
       <span><span class="lbl">SONIDO</span><span class="seg" id="o-sound"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
       <span><span class="lbl">MÚSICA</span><span class="seg" id="o-music"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
       <span><span class="lbl">CALIDAD</span><span class="seg" id="o-quality"><button data-v="alta">alta</button><button data-v="media">media</button><button data-v="ligera">ligera</button></span></span>
+      <span><span class="lbl">MÁQUINA</span><span class="seg" id="o-lvl2"><button data-v="0">aprendiz</button><button data-v="1">fácil</button><button data-v="2">normal</button><button data-v="3">difícil</button><button data-v="4">maestro</button></span></span>
+      <span><span class="lbl">VENTAJA J1</span><span class="seg" id="o-adv0"><button data-v="0">no</button><button data-v="1">poca</button><button data-v="2">mucha</button></span><small class="osub">recibe menos daño y recarga más rápido</small></span>
+      <span><span class="lbl">VENTAJA J2</span><span class="seg" id="o-adv1"><button data-v="0">no</button><button data-v="1">poca</button><button data-v="2">mucha</button></span><small class="osub">para jugar parejo entre amigos</small></span>
       <span><span class="lbl">PRESAGIOS</span><span class="seg" id="o-presage"><button data-v="1">sí</button><button data-v="0">no</button></span></span>
       <span><span class="lbl">PANTALLA COMPLETA</span><button class="btn small" id="o-fs" data-act="fullscreen">Activar</button></span>
       <span class="fs-auto"><span class="lbl">AUTOMÁTICA</span><span class="seg" id="o-fsauto"><button data-v="1">sí</button><button data-v="0">no</button></span></span>

@@ -20,6 +20,7 @@ class Unit {
     if (src.el === 'fire' || src.el === 'lava') dmg *= this.fireRes;
     if (this.st.frozen > 0 && !src.dot && src.el !== 'water') { dmg *= 1.5; this.st.frozen = 0; G.events.push({ type: 'shatter', x: this.x, y: this.y }); Combos.add(G, src.by, 'rompehielo', this); }
     if (this.dmgMul) dmg *= this.dmgMul;
+    { const bm = src.by >= 0 ? G.mages[src.by] : null; if (bm && bm.dmgOut && bm !== this) dmg *= bm.dmgOut; } // la máquina en niveles bajos pega más suave
     // maleficio: el siguiente golpe (no el daño continuo) duele más, y se gasta
     if (this.st.hex > 0 && !src.dot) { dmg *= src.by >= 0 && G.mages[src.by] && G.mages[src.by].tr.hexDmg || HEX_MUL; this.st.hex = 0; G.fx.push({ type: 'flashRing', x: this.x, y: this.y - 20, el: 'shadow', r: 60 }); }
     if (this.buff && this.buff.shield > 0) { const a = Math.min(this.buff.shield, dmg); this.buff.shield -= a; dmg -= a; if (a > 0) G.events.push({ type: 'shieldHit', x: this.x, y: this.y }); if (dmg <= 0) return 0; }
@@ -156,7 +157,7 @@ class Mage extends Unit {
     // Gran Sortilegio: se eleva y concentra un instante (intocable) y luego lo suelta
     if (this.granCharge > 0) { this.granCharge -= dt; this.vx *= 0.82; this.vy *= 0.82; this.x += this.vx * dt; this.y += this.vy * dt; if (this.granCharge <= 0) this.releaseGran(G); return; }
     if (this.embFlash > 0) this.embFlash -= dt;
-    for (const h of this.hands) { if (h.cd > 0) h.cd = Math.max(0, h.cd - dt); if (h.deny > 0) h.deny -= dt; }
+    for (const h of this.hands) { if (h.cd > 0) h.cd = Math.max(0, h.cd - dt * (this.cdK || 1)); if (h.deny > 0) h.deny -= dt; }
     const hk = this.buff.haste > 0 ? 2 : 1; if (this.buff.haste > 0) { this.buff.haste -= dt; for (const h of this.hands) if (h.cd > 0) h.cd = Math.max(0, h.cd - dt); }
     if (this.buff.shieldT > 0) { this.buff.shieldT -= dt; if (this.buff.shieldT <= 0) this.buff.shield = 0; }
     if (this.rec > 0) this.rec -= dt; if (this.castT > 0) this.castT -= dt; if (this.impulse > 0) this.impulse -= dt; if (this.dash.gap > 0) this.dash.gap -= dt;
