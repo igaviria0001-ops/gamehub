@@ -184,3 +184,16 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   carrera» = nueva partida con los mismos puestos); elegir piloto y pista antes de lanzar (en la sala, por aparato:
   `info.players[i].pilot` y `skin`); nombres sobre los autos de otros jugadores; modos duelo/eliminación/batalla/
   Gran Premio en línea; prueba con pérdida de paquetes. Luego **F5 Ventolera** (mismo patrón: `09c-net.js`).
+- **17 nov 21:35** — F4 pulido (1): resultados en línea (todos: «Volver a la sala»; anfitrión: «Otra carrera
+  (todos)» → `NetGame.again()` = otra pista, `cfg.id+1`, los remotos aceptan cfg con id distinto); nombres y colores
+  de la sala en la tabla y el título («¡Gana Ana!», «·tú»); **pantalla de espera**: nadie arranca hasta que todos
+  cargaron el juego (lista con «listo ✓ / cargando…», el anfitrión puede «Empezar ya» a los 5 s; sin respuesta en
+  25 s arranca igual); cada aparato manda su **piloto elegido y lo que tiene puesto en el garaje** (`{t:'want', me}`),
+  el anfitrión evita pilotos repetidos y reparte las pieles en `cfg.skins` (validadas); **nombre flotante sobre los
+  autos** de jugadores de otros aparatos (se desvanece a 140 m); `PLAYER_COLORS` ahora 4 y en línea toman el color de
+  la sala; el garaje cuenta victorias solo de los jugadores del aparato y «Ponérselo a…» solo a ellos
+  (`vestidor.js`: opción `nPlayers`). `vertigo/src/00k-net.js` copiado (el juego suelto ya no falla).
+  Prueba `node test/netvtg.js` ampliada (resultados + otra carrera para todos) → VTG EN LÍNEA OK. Nota: con dos
+  páginas 3D por CPU en la misma máquina la prueba a veces va lenta (no es fallo del juego).
+  **Pendiente F4:** el anfitrión en segundo plano detiene la carrera (rAF): seguir simulando con temporizador si
+  `document.hidden`; modos duelo/eliminación/batalla en línea; elegir modo/pista en la sala; prueba con pérdida.

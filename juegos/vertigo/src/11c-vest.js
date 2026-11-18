@@ -128,7 +128,7 @@ const Vestidor = (() => {
     prefix: GAME_META.storagePrefix, title: 'Garaje',
     slots: [{ id: 'paint', name: 'Pinturas', one: 'pintura', perChar: true, newWord: 'nueva' }, { id: 'neon', name: 'Neón', one: 'neón', newWord: 'nuevo' }, { id: 'turbo', name: 'Turbo', one: 'turbo', newWord: 'nuevo' }],
     items, ctx: C, preview,
-    pcolors: [PLAYER_COLORS[0].main, PLAYER_COLORS[1].main], pnames: () => ['J1', 'J2'],
+    pcolors: [PLAYER_COLORS[0].main, PLAYER_COLORS[1].main], pnames: () => ['J1', 'J2'], nPlayers: () => (typeof NetPlay !== 'undefined' && NetPlay.on ? NetPlay.mine.length : 2),
     charOf: p => UI.cfg().p[p], charName: p => PILOTS[UI.cfg().p[p]].name,
     sound: { reveal: r => snd(r === 'mitico' || r === 'legendario' ? 'lessonDone' : 'gemSeg'), open: () => Sound.ui(), pick: () => Sound.ui(), equip: () => snd('turbo') },
     onEquip() { if (UI.refreshSetup) UI.refreshSetup(); },
@@ -139,7 +139,7 @@ const Vestidor = (() => {
   // al terminar cada carrera: victorias, carreras corridas y copas ganadas (para los desbloqueos)
   function record(R, G) {
     if (!R || R._vrec) return; R._vrec = true;
-    const hum = R.cars.filter(c => !c.bot); if (!hum.length) return;
+    const hum = R.cars.filter(c => !c.bot && (typeof NetPlay === 'undefined' || !NetPlay.on || NetPlay.mine.includes(c.human))); if (!hum.length) return; // en línea: solo los de este aparato
     const S = vstat(), mode = G && G.cfg && G.cfg.mode, wc = mode === 'world' ? CAMPAIGN[G.cfg.ch || 0] : null;
     S.races++;
     const ranked = R.cars.length > 1 && !['tt', 'school', 'chase'].includes(mode) && (!wc || ['race', 'elim', 'battle', 'rival', 'escape'].includes(wc.kind));

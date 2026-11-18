@@ -27,6 +27,7 @@ const UI = (() => {
       case 'resume': Game.pause(false); break;
       case 'restart': if (cfg.mode === 'gp') { cfg.mode = 'gp'; Game.startCfg(nH, cfg); } else Game.startCfg(nH, cfg); break;
       case 'toTitle': if (Hub.ev) hubLeave(); Game.toTitle(); break;
+      case 'netAgain': if (typeof NetGame !== 'undefined') NetGame.again(); break;
       case 'garage': case 'garage0': case 'garage1': { const G2 = VG(); if (G2) G2.open(a === 'garage1' ? 1 : 0); break; }
     }
   }
@@ -160,6 +161,18 @@ const UI = (() => {
     results0(R, G);
     { const G2 = VG(); if (G2) { G2.record(R, G); G2.after(); } }
     $('resHub').hidden = !hubNow; $('resMain').hidden = hubNow; $('resAlt').hidden = hubNow || !!hubCfg; const sal = document.querySelector('#resBtns [data-act="toTitle"]'); if (sal) sal.hidden = hubNow;
+    // en línea: el anfitrión puede lanzar otra carrera para todos; cualquiera vuelve a la sala
+    if (typeof NetPlay !== 'undefined' && NetPlay.on) {
+      // nombres y colores de la sala en vez de J1/J2 (el jugador humano h es el puesto h)
+      const S = NetPlay.seats, nm = h => (S[h] && S[h].name) || 'J' + (h + 1), col = h => (S[h] && S[h].color) || PLAYER_COLORS[h % PLAYER_COLORS.length].main;
+      $('resTable').querySelectorAll('.tag').forEach(t => { const m = /^J(\d)$/.exec(t.textContent); if (m) { const h = +m[1] - 1; t.textContent = nm(h).slice(0, 12) + (NetPlay.mine.includes(h) ? ' ·tú' : ''); t.style.background = col(h); } });
+      const best = R.cars.filter(c => !c.bot).sort((a, b) => a.place - b.place)[0];
+      if (best && !(G && G.cfg && G.cfg.mode === 'tt')) { $('resTitle').textContent = NetPlay.mine.includes(best.human) && NetPlay.mine.length === 1 ? '¡Ganaste!' : `¡Gana ${nm(best.human)}!`; $('resTitle').style.color = col(best.human); }
+      $('resHub').hidden = false; $('resHub').textContent = 'Volver a la sala'; $('resHub').dataset.act = 'hubhome';
+      $('resMain').hidden = !NetPlay.isHost; $('resMain').textContent = 'Otra carrera (todos)'; $('resMain').dataset.act = 'netAgain';
+      $('resAlt').hidden = true; if (sal) sal.hidden = true;
+      if (!NetPlay.isHost) { const w = document.getElementById('resWait') || document.createElement('div'); w.id = 'resWait'; w.className = 'mhelp'; w.textContent = 'El anfitrión puede lanzar otra carrera para todos.'; $('resBtns').after(w); }
+    }
   }
   function results0(R, G) {
     const tb = $('resTable'); tb.innerHTML = '';

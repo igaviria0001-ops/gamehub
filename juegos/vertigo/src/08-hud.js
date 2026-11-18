@@ -25,7 +25,7 @@ const HUD = (() => {
   const PLACE_COL = ['#ffd84a', '#dfe8f2', '#ffa25a'];
   // ---------- por jugador ----------
   function player(r, car, R, i, t, opt = {}) {
-    const sc = clamp(Math.min(r.w, r.h) / 520, 0.62, 1.25), m = 14 * sc + (opt.inset || 0), pc = PLAYER_COLORS[i] || PLAYER_COLORS[0];
+    const sc = clamp(Math.min(r.w, r.h) / 520, 0.62, 1.25), m = 14 * sc + (opt.inset || 0), pc = (car && !car.bot && PLAYER_COLORS[car.human]) || PLAYER_COLORS[i] || PLAYER_COLORS[0];
     x.save(); x.beginPath(); x.rect(r.x, r.y, r.w, r.h); x.clip();
     speedLines(r, car, t);
     // disposición: "afuera" = borde exterior de la vista (J2 va en espejo); "adentro" deja libre la columna central

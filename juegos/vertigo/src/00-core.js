@@ -34,7 +34,7 @@ const FONT_T = '"Russo One", system-ui, sans-serif';
 const FONT_B = '"Nunito", "Trebuchet MS", system-ui, sans-serif';
 const fontT = size => `400 ${size}px ${FONT_T}`;
 const fontB = (size, w = 800) => `${w} ${size}px ${FONT_B}`;
-const PLAYER_COLORS = [{ main: '#ffc94a', dark: '#b07a10' }, { main: '#62e0ff', dark: '#1a7fa0' }];
+const PLAYER_COLORS = [{ main: '#ffc94a', dark: '#b07a10' }, { main: '#62e0ff', dark: '#1a7fa0' }, { main: '#ff6fb5', dark: '#a8306c' }, { main: '#8dff6a', dark: '#3c9a22' }];
 const isTouch = () => matchMedia('(pointer: coarse)').matches;
 // calidad gráfica: 2 Ultra (por defecto en computador), 1 Alta (por defecto en celular), 0 Ligera
 const GQ = { lv: (() => { const v = Store.get('gq', null); return v == null ? (isTouch() ? 1 : 2) : clamp(v | 0, 0, 2); })(), names: ['Ligera', 'Alta', 'Ultra'] };

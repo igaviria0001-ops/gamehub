@@ -407,7 +407,7 @@ const Vest = (() => {
       el.className = 'vst-rv'; el.style.setProperty('--rgb', R.rgb); el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Nuevo: ' + it.name);
       const pcs = (typeof cfg.pcolors === 'function' ? cfg.pcolors() : cfg.pcolors) || ['#ffd36b', '#6fd0ff'];
       el.innerHTML = `<div class="vst-rays"></div><div class="vst-flash"></div><div class="vst-rvbox"><div class="vst-rvk">¡${esc((s.newWord || 'NUEVO').toUpperCase())} ${esc((s.one || '').toUpperCase())}!</div><canvas width="600" height="600"></canvas><span class="vst-rar ${it.rar}" style="--rc:${R.c};--rg:${R.c}">${R.name}</span><h3>${esc(it.name)}</h3><p>${esc(it.how || it.desc || '')}</p>
-        <div class="vst-rvb">${[0, 1].map(p => `<button class="p" data-p="${p}" style="--pc:${pcs[p]}">Ponérselo a ${esc(pname(p))}</button>`).join('')}<button class="go" data-go>${queue.length ? 'Siguiente ›' : 'Seguir'}</button></div>${queue.length ? `<div class="vst-more">y ${queue.length} más por ver</div>` : ''}</div>`;
+        <div class="vst-rvb">${[...Array(Math.max(1, Math.min(2, cfg.nPlayers ? cfg.nPlayers() : 2))).keys()].map(p => `<button class="p" data-p="${p}" style="--pc:${pcs[p]}">Ponérselo a ${esc(pname(p))}</button>`).join('')}<button class="go" data-go>${queue.length ? 'Siguiente ›' : 'Seguir'}</button></div>${queue.length ? `<div class="vst-more">y ${queue.length} más por ver</div>` : ''}</div>`;
       document.body.appendChild(el);
       const cv = el.querySelector('canvas'), x = cv.getContext('2d'), t0 = performance.now(); let who = 0;
       const ch = cfg.charOf ? cfg.charOf(0) : null;

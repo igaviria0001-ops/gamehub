@@ -249,7 +249,7 @@ const FONT_T = '"Russo One", system-ui, sans-serif';
 const FONT_B = '"Nunito", "Trebuchet MS", system-ui, sans-serif';
 const fontT = size => `400 ${size}px ${FONT_T}`;
 const fontB = (size, w = 800) => `${w} ${size}px ${FONT_B}`;
-const PLAYER_COLORS = [{ main: '#ffc94a', dark: '#b07a10' }, { main: '#62e0ff', dark: '#1a7fa0' }];
+const PLAYER_COLORS = [{ main: '#ffc94a', dark: '#b07a10' }, { main: '#62e0ff', dark: '#1a7fa0' }, { main: '#ff6fb5', dark: '#a8306c' }, { main: '#8dff6a', dark: '#3c9a22' }];
 const isTouch = () => matchMedia('(pointer: coarse)').matches;
 // calidad gráfica: 2 Ultra (por defecto en computador), 1 Alta (por defecto en celular), 0 Ligera
 const GQ = { lv: (() => { const v = Store.get('gq', null); return v == null ? (isTouch() ? 1 : 2) : clamp(v | 0, 0, 2); })(), names: ['Ligera', 'Alta', 'Ultra'] };
@@ -833,7 +833,7 @@ const Vest = (() => {
       el.className = 'vst-rv'; el.style.setProperty('--rgb', R.rgb); el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Nuevo: ' + it.name);
       const pcs = (typeof cfg.pcolors === 'function' ? cfg.pcolors() : cfg.pcolors) || ['#ffd36b', '#6fd0ff'];
       el.innerHTML = `<div class="vst-rays"></div><div class="vst-flash"></div><div class="vst-rvbox"><div class="vst-rvk">¡${esc((s.newWord || 'NUEVO').toUpperCase())} ${esc((s.one || '').toUpperCase())}!</div><canvas width="600" height="600"></canvas><span class="vst-rar ${it.rar}" style="--rc:${R.c};--rg:${R.c}">${R.name}</span><h3>${esc(it.name)}</h3><p>${esc(it.how || it.desc || '')}</p>
-        <div class="vst-rvb">${[0, 1].map(p => `<button class="p" data-p="${p}" style="--pc:${pcs[p]}">Ponérselo a ${esc(pname(p))}</button>`).join('')}<button class="go" data-go>${queue.length ? 'Siguiente ›' : 'Seguir'}</button></div>${queue.length ? `<div class="vst-more">y ${queue.length} más por ver</div>` : ''}</div>`;
+        <div class="vst-rvb">${[...Array(Math.max(1, Math.min(2, cfg.nPlayers ? cfg.nPlayers() : 2))).keys()].map(p => `<button class="p" data-p="${p}" style="--pc:${pcs[p]}">Ponérselo a ${esc(pname(p))}</button>`).join('')}<button class="go" data-go>${queue.length ? 'Siguiente ›' : 'Seguir'}</button></div>${queue.length ? `<div class="vst-more">y ${queue.length} más por ver</div>` : ''}</div>`;
       document.body.appendChild(el);
       const cv = el.querySelector('canvas'), x = cv.getContext('2d'), t0 = performance.now(); let who = 0;
       const ch = cfg.charOf ? cfg.charOf(0) : null;
@@ -5661,7 +5661,7 @@ const HUD = (() => {
   const PLACE_COL = ['#ffd84a', '#dfe8f2', '#ffa25a'];
   // ---------- por jugador ----------
   function player(r, car, R, i, t, opt = {}) {
-    const sc = clamp(Math.min(r.w, r.h) / 520, 0.62, 1.25), m = 14 * sc + (opt.inset || 0), pc = PLAYER_COLORS[i] || PLAYER_COLORS[0];
+    const sc = clamp(Math.min(r.w, r.h) / 520, 0.62, 1.25), m = 14 * sc + (opt.inset || 0), pc = (car && !car.bot && PLAYER_COLORS[car.human]) || PLAYER_COLORS[i] || PLAYER_COLORS[0];
     x.save(); x.beginPath(); x.rect(r.x, r.y, r.w, r.h); x.clip();
     speedLines(r, car, t);
     // disposición: "afuera" = borde exterior de la vista (J2 va en espejo); "adentro" deja libre la columna central
@@ -6224,6 +6224,7 @@ const UI = (() => {
       case 'resume': Game.pause(false); break;
       case 'restart': if (cfg.mode === 'gp') { cfg.mode = 'gp'; Game.startCfg(nH, cfg); } else Game.startCfg(nH, cfg); break;
       case 'toTitle': if (Hub.ev) hubLeave(); Game.toTitle(); break;
+      case 'netAgain': if (typeof NetGame !== 'undefined') NetGame.again(); break;
       case 'garage': case 'garage0': case 'garage1': { const G2 = VG(); if (G2) G2.open(a === 'garage1' ? 1 : 0); break; }
     }
   }
@@ -6357,6 +6358,18 @@ const UI = (() => {
     results0(R, G);
     { const G2 = VG(); if (G2) { G2.record(R, G); G2.after(); } }
     $('resHub').hidden = !hubNow; $('resMain').hidden = hubNow; $('resAlt').hidden = hubNow || !!hubCfg; const sal = document.querySelector('#resBtns [data-act="toTitle"]'); if (sal) sal.hidden = hubNow;
+    // en línea: el anfitrión puede lanzar otra carrera para todos; cualquiera vuelve a la sala
+    if (typeof NetPlay !== 'undefined' && NetPlay.on) {
+      // nombres y colores de la sala en vez de J1/J2 (el jugador humano h es el puesto h)
+      const S = NetPlay.seats, nm = h => (S[h] && S[h].name) || 'J' + (h + 1), col = h => (S[h] && S[h].color) || PLAYER_COLORS[h % PLAYER_COLORS.length].main;
+      $('resTable').querySelectorAll('.tag').forEach(t => { const m = /^J(\d)$/.exec(t.textContent); if (m) { const h = +m[1] - 1; t.textContent = nm(h).slice(0, 12) + (NetPlay.mine.includes(h) ? ' ·tú' : ''); t.style.background = col(h); } });
+      const best = R.cars.filter(c => !c.bot).sort((a, b) => a.place - b.place)[0];
+      if (best && !(G && G.cfg && G.cfg.mode === 'tt')) { $('resTitle').textContent = NetPlay.mine.includes(best.human) && NetPlay.mine.length === 1 ? '¡Ganaste!' : `¡Gana ${nm(best.human)}!`; $('resTitle').style.color = col(best.human); }
+      $('resHub').hidden = false; $('resHub').textContent = 'Volver a la sala'; $('resHub').dataset.act = 'hubhome';
+      $('resMain').hidden = !NetPlay.isHost; $('resMain').textContent = 'Otra carrera (todos)'; $('resMain').dataset.act = 'netAgain';
+      $('resAlt').hidden = true; if (sal) sal.hidden = true;
+      if (!NetPlay.isHost) { const w = document.getElementById('resWait') || document.createElement('div'); w.id = 'resWait'; w.className = 'mhelp'; w.textContent = 'El anfitrión puede lanzar otra carrera para todos.'; $('resBtns').after(w); }
+    }
   }
   function results0(R, G) {
     const tb = $('resTable'); tb.innerHTML = '';
@@ -6645,7 +6658,7 @@ const Vestidor = (() => {
     prefix: GAME_META.storagePrefix, title: 'Garaje',
     slots: [{ id: 'paint', name: 'Pinturas', one: 'pintura', perChar: true, newWord: 'nueva' }, { id: 'neon', name: 'Neón', one: 'neón', newWord: 'nuevo' }, { id: 'turbo', name: 'Turbo', one: 'turbo', newWord: 'nuevo' }],
     items, ctx: C, preview,
-    pcolors: [PLAYER_COLORS[0].main, PLAYER_COLORS[1].main], pnames: () => ['J1', 'J2'],
+    pcolors: [PLAYER_COLORS[0].main, PLAYER_COLORS[1].main], pnames: () => ['J1', 'J2'], nPlayers: () => (typeof NetPlay !== 'undefined' && NetPlay.on ? NetPlay.mine.length : 2),
     charOf: p => UI.cfg().p[p], charName: p => PILOTS[UI.cfg().p[p]].name,
     sound: { reveal: r => snd(r === 'mitico' || r === 'legendario' ? 'lessonDone' : 'gemSeg'), open: () => Sound.ui(), pick: () => Sound.ui(), equip: () => snd('turbo') },
     onEquip() { if (UI.refreshSetup) UI.refreshSetup(); },
@@ -6656,7 +6669,7 @@ const Vestidor = (() => {
   // al terminar cada carrera: victorias, carreras corridas y copas ganadas (para los desbloqueos)
   function record(R, G) {
     if (!R || R._vrec) return; R._vrec = true;
-    const hum = R.cars.filter(c => !c.bot); if (!hum.length) return;
+    const hum = R.cars.filter(c => !c.bot && (typeof NetPlay === 'undefined' || !NetPlay.on || NetPlay.mine.includes(c.human))); if (!hum.length) return; // en línea: solo los de este aparato
     const S = vstat(), mode = G && G.cfg && G.cfg.mode, wc = mode === 'world' ? CAMPAIGN[G.cfg.ch || 0] : null;
     S.races++;
     const ranked = R.cars.length > 1 && !['tt', 'school', 'chase'].includes(mode) && (!wc || ['race', 'elim', 'battle', 'rival', 'escape'].includes(wc.kind));
@@ -6691,7 +6704,7 @@ const Game = (() => {
     meshes = []; show = []; scene = GFX.buildWorld(T, TRACKS[tid]); worldFor = tid; FX.init(scene, T, GQ.lv < 2);
   }
   // lo que tiene puesto en el garaje el jugador i con ese piloto
-  const garageSkin = (i, pid) => { try { if (typeof NetPlay !== 'undefined' && NetPlay.on) { i = NetPlay.local(i); if (i < 0) return null; } return Vestidor.skinOf(i, pid); } catch (e) { return null; } };
+  const garageSkin = (i, pid) => { try { if (typeof NetPlay !== 'undefined' && NetPlay.on) { const li = NetPlay.local(i); if (li < 0) return NetGame.skinOf(i); i = li; } return Vestidor.skinOf(i, pid); } catch (e) { return null; } };
   const drop = m => { scene.remove(m.root); scene.remove(m.shadow); GFX.disposeScene(m.root); GFX.disposeScene(m.shadow); };
   function clearCars() { for (const m of meshes) drop(m); meshes = []; }
   function newRace(tid, humans, bots, countT, opts = {}) {
@@ -6955,6 +6968,7 @@ const Game = (() => {
       const hc = viewCars(), split = hc.length === 2, touch = Touch.active, W = innerWidth, H = innerHeight, x = HUD.ctx();
       const mmS = Math.min(W, H) * (split ? (touch ? 0.17 : 0.2) : touch ? 0.17 : 0.22), mmR = mmS * 0.62;
       hc.forEach((c, i) => HUD.player(views[i], c, R, i, t, { split, touch, mirror: split && i === 1, innerInset: split ? mmR + 8 : 0, insetT: touch ? 4 : 0, itemKey: touch ? '' : i ? 'L' : 'G' }));
+      if (netOn()) nameTags(hc, x);
       if (split) { x.fillStyle = '#03060d'; x.fillRect(W / 2 - 2, 0, 4, H); }
       if (split || touch) HUD.minimap(R, W / 2, (touch ? 56 : 12) + mmR, mmS, t);
       else HUD.minimap(R, W - mmR - 20, H * 0.42, mmS, t);
@@ -6969,6 +6983,24 @@ const Game = (() => {
     window.__vtg = { get R() { return R; }, get G() { return G; }, cams: () => cams, meshes: () => meshes, look(px, py, pz, tx, ty, tz, fov = 60) { G.freeCam = true; const c = cams[0]; c.position.set(px, py, pz); c.up.set(0, 1, 0); c.lookAt(tx, ty, tz); c.fov = fov; c.updateProjectionMatrix(); } };
   }
   // en línea (12b-net.js): armar la carrera con N humanos sin tocar lo guardado
+  // en línea: el nombre de cada jugador de otro aparato sobre su auto (se desvanece de lejos)
+  const _tagV = new THREE.Vector3();
+  function nameTags(hc, x) {
+    const S = NetPlay.seats; x.save(); x.textAlign = 'center'; x.textBaseline = 'middle';
+    hc.forEach((me, i) => { const v = views[i], cam = cams[i]; if (!v || !cam) return;
+      x.save(); x.beginPath(); x.rect(v.x, v.y, v.w, v.h); x.clip();
+      for (const c of R.cars) { if (c.bot || c === me || c.out || !S[c.human]) continue; const m = meshes[c.idx]; if (!m) continue;
+        _tagV.setFromMatrixPosition(m.root.matrixWorld); const d = _tagV.distanceTo(cam.position); if (d > 140) continue;
+        _tagV.y += 2.3; _tagV.project(cam); if (_tagV.z > 1 || Math.abs(_tagV.x) > 1.1 || Math.abs(_tagV.y) > 1.1) continue;
+        const px = v.x + (_tagV.x + 1) / 2 * v.w, py = v.y + (1 - _tagV.y) / 2 * v.h, a = clamp((140 - d) / 40, 0, 1), fs = Math.round(clamp(15 - d * 0.05, 10, 15) * (v.h < 400 ? 0.85 : 1));
+        const name = String(S[c.human].name || 'J' + (c.human + 1)).slice(0, 14), col = (PLAYER_COLORS[c.human] || PLAYER_COLORS[0]).main;
+        x.font = `800 ${fs}px Nunito, system-ui, sans-serif`; const w = x.measureText(name).width + fs * 1.1, h = fs * 1.55;
+        x.globalAlpha = a * 0.85; x.fillStyle = 'rgba(6,10,22,0.72)'; x.beginPath(); x.roundRect ? x.roundRect(px - w / 2, py - h / 2, w, h, h / 2) : x.rect(px - w / 2, py - h / 2, w, h); x.fill();
+        x.strokeStyle = col; x.lineWidth = 2; x.stroke(); x.globalAlpha = a; x.fillStyle = col; x.fillText(name, px, py + 1);
+        x.beginPath(); x.moveTo(px - 5, py + h / 2); x.lineTo(px + 5, py + h / 2); x.lineTo(px, py + h / 2 + 6); x.closePath(); x.fill(); }
+      x.restore(); });
+    x.restore();
+  }
   function startNet(o) {
     G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode: 'quick', laps: o.laps }); G.gp = null; G.duel = null; clearShow();
     newRace(o.tid, o.humans, o.bots, undefined, { laps: o.laps });
@@ -7002,26 +7034,73 @@ const NetGame = (() => {
   const _msg = HUD.msg; HUD.msg = (i, ...a) => { if (NetPlay.on) { i = NetPlay.mine.indexOf(i); if (i < 0) return; } return _msg(i, ...a); };
   const IT = Object.keys(ITEMS), MODES = ['road', 'water', 'air'], TRICK = ['flip', 'back', 'rollL', 'rollR', 'spin'], ST = ['count', 'race', 'done'];
   const r2 = v => Math.round((+v || 0) * 100) / 100, r3 = v => Math.round((+v || 0) * 1000) / 1000;
-  let cfg = null, evQ = [];
+  let cfg = null, evQ = [], hostBots = [];
 
   /* ---------- arranque ---------- */
-  NetPlay.onStart(o => {
-    if (o.role === 'host') {
-      const n = o.seats.length, pilots = o.seats.map((s, i) => (s.pilot && PILOTS[s.pilot] ? s.pilot : PILOT_ORDER[i % PILOT_ORDER.length]));
-      // no repetir piloto
-      const used = new Set(); pilots.forEach((p, i) => { if (used.has(p)) pilots[i] = PILOT_ORDER.find(q => !used.has(q)); used.add(pilots[i]); });
-      const pool = PILOT_ORDER.filter(p => !used.has(p)), bots = []; for (let i = 0; i < Math.max(0, 6 - n); i++) bots.push({ pid: pool[i], skill: [0.1, 0.15, 0.28, 0.2, 0.05][i % 5] });
-      const tid = TRACK_ORDER.includes(o.ev && o.ev.map) ? o.ev.map : TRACK_ORDER[Math.floor(Math.random() * TRACK_ORDER.length)];
-      cfg = { tid, humans: pilots, bots: bots.map(b => ({ pid: b.pid, level: 1 })), laps: (o.ev && o.ev.rounds) || 3 };
-      Game.startNet({ tid, humans: pilots, bots, laps: cfg.laps });
-      NetPlay.send({ t: 'cfg', cfg }, true, '*');
+  // los colores de la sala pasan a ser los de los jugadores (etiqueta del auto, HUD, resultados)
+  const dark = h => { const n = parseInt(String(h).slice(1), 16); if (isNaN(n)) return h; const f = v => Math.round(v * 0.55).toString(16).padStart(2, '0'); return '#' + f(n >> 16 & 255) + f(n >> 8 & 255) + f(n & 255); };
+  NetPlay.onStart(o => { o.seats.forEach((s, i) => { if (s && /^#[0-9a-f]{6}$/i.test(s.color)) PLAYER_COLORS[i] = { main: s.color, dark: dark(s.color) }; }); });
+  // pantalla de espera: nadie arranca hasta que todos cargaron el juego (o pasa el tiempo)
+  const Wait = (() => {
+    let el = null;
+    function show() {
+      if (el) return el; el = document.createElement('div'); el.id = 'netWait';
+      el.innerHTML = `<style>#netWait{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,rgba(20,30,60,.86),rgba(3,6,13,.96));font-family:Nunito,system-ui,sans-serif;color:#eef3ff;padding:16px}
+#netWait .b{width:min(420px,100%);text-align:center;display:grid;gap:14px}#netWait h2{margin:0;font-size:clamp(20px,4.5vw,28px);font-weight:900;letter-spacing:.5px}
+#netWait .sp{width:46px;height:46px;margin:0 auto;border-radius:50%;border:4px solid rgba(255,255,255,.14);border-top-color:#5ad8ff;animation:nwS 0.9s linear infinite}@keyframes nwS{to{transform:rotate(360deg)}}
+#netWait ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}#netWait li{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:12px;background:rgba(255,255,255,.06);font-weight:800}
+#netWait li i{width:12px;height:12px;border-radius:50%;flex:none}#netWait li span{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#netWait li b{font-size:13px;color:#8a97b8}#netWait li.ok b{color:#6ff0b0}
+#netWait button{justify-self:center;font:inherit;font-weight:900;border:0;border-radius:999px;padding:11px 22px;background:linear-gradient(#3dffa0,#18b870);color:#04210f;cursor:pointer}#netWait p{margin:0;color:#8a97b8;font-size:14px}</style>
+<div class="b"><div class="sp"></div><h2>Preparando la carrera…</h2><ul></ul><p></p><button hidden>Empezar ya</button></div>`;
+      document.body.appendChild(el); el.querySelector('button').onclick = () => { if (pend) launch(); }; return el;
     }
+    function list(ready, note, canGo) {
+      const e = show(), S = NetPlay.seats; e.querySelector('ul').innerHTML = '';
+      S.forEach((s, i) => { const li = document.createElement('li'), ok = ready.includes(i); li.className = ok ? 'ok' : ''; li.innerHTML = '<i></i><span></span><b></b>'; li.querySelector('i').style.background = s.color || '#fff'; li.querySelector('span').textContent = s.name || 'J' + (i + 1); li.querySelector('b').textContent = ok ? 'listo ✓' : 'cargando…'; e.querySelector('ul').appendChild(li); });
+      e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = !canGo;
+    }
+    return { list, hide() { if (el) { el.remove(); el = null; } } };
+  })();
+  // lo que cada aparato dice de sus jugadores: piloto elegido y lo que tiene puesto en el garaje
+  const okId = v => (typeof v === 'string' && v.length < 32 && /^[\w.-]*$/.test(v) ? v : '');
+  const okSkin = k => (k && typeof k === 'object' ? { paint: okId(k.paint), neon: okId(k.neon), turbo: okId(k.turbo) } : null);
+  function myPlayers() { return NetPlay.mine.map((seat, li) => { const pid = (UI.cfg().p || [])[li]; let skin = null; try { skin = Vestidor.skinOf(li, pid); } catch (e) { /* nada */ } return { s: seat, pid, skin }; }); }
+  let pend = null, want = {}, t0 = 0;
+  NetPlay.onStart(o => {
+    if (o.role !== 'host') return;
+    cfg = null; pend = o; want = {}; t0 = performance.now();
+    for (const m of myPlayers()) want[m.s] = m;
+    const tick = () => {
+      if (!pend) return; const ready = Object.keys(want).map(Number), all = ready.length >= o.seats.length, el = performance.now() - t0;
+      Wait.list(ready, all ? '¡Todos listos!' : 'Esperando a que todos carguen el juego…', el > 5000);
+      NetPlay.send({ t: 'wait', ready }, true, '*');
+      if (all || el > 25000) launch(); else setTimeout(tick, 250);
+    };
+    tick();
   });
-  // el remoto pide la carrera al abrir (por si el aviso del anfitrión llegó antes de que cargara el juego)
-  NetPlay.onStart(o => { if (o.role === 'client') { cfg = null; const ask = () => { if (!cfg && NetPlay.isClient) { NetPlay.send({ t: 'want' }, true, 'host'); setTimeout(ask, 1500); } }; ask(); } });
+  function launch() {
+    const o = pend; if (!o) return; pend = null;
+    const n = o.seats.length, used = new Set();
+    const pilots = o.seats.map((s, i) => { const w = want[i]; let p = w && PILOTS[w.pid] ? w.pid : PILOT_ORDER[i % PILOT_ORDER.length]; if (used.has(p)) p = PILOT_ORDER.find(q => !used.has(q)); used.add(p); return p; });
+    const pool = PILOT_ORDER.filter(p => !used.has(p)), bots = []; for (let i = 0; i < Math.max(0, 6 - n); i++) bots.push({ pid: pool[i], skill: [0.1, 0.15, 0.28, 0.2, 0.05][i % 5] });
+    const tid = TRACK_ORDER.includes(o.ev && o.ev.map) ? o.ev.map : TRACK_ORDER[Math.floor(Math.random() * TRACK_ORDER.length)];
+    const skins = o.seats.map((s, i) => (want[i] && okSkin(want[i].skin)) || null);
+    cfg = { id: 1, tid, humans: pilots, bots: bots.map(b => ({ pid: b.pid, level: 1 })), laps: (o.ev && o.ev.rounds) || 3, skins };
+    hostBots = bots; Wait.hide(); Game.startNet({ tid, humans: pilots, bots, laps: cfg.laps });
+    NetPlay.send({ t: 'cfg', cfg }, true, '*');
+  }
+  // el remoto avisa que cargó (con sus jugadores) hasta que le llega la carrera
+  NetPlay.onStart(o => {
+    if (o.role !== 'client') return; cfg = null; Wait.list([], 'Esperando al anfitrión…', false);
+    const ask = () => { if (!cfg && NetPlay.isClient) { NetPlay.send({ t: 'want', me: myPlayers() }, true, 'host'); setTimeout(ask, 1500); } }; ask();
+  });
   NetPlay.onMsg(d => {
-    if (d.t === 'cfg' && NetPlay.isClient && !cfg) { cfg = d.cfg; Game.startNet(cfg); }
-    if (d.t === 'want' && NetPlay.isHost && cfg) NetPlay.send({ t: 'cfg', cfg }, true, '*');
+    if (d.t === 'cfg' && NetPlay.isClient && d.cfg && (!cfg || cfg.id !== d.cfg.id)) { cfg = d.cfg; Wait.hide(); const w = document.getElementById('resWait'); if (w) w.remove(); Game.startNet(cfg); }
+    if (d.t === 'wait' && NetPlay.isClient && !cfg && Array.isArray(d.ready)) Wait.list(d.ready, 'Esperando a que todos carguen el juego…', false);
+    if (d.t === 'want' && NetPlay.isHost) {
+      if (Array.isArray(d.me)) for (const m of d.me) { const s = +m.s; if (s >= 0 && s < NetPlay.seats.length && !NetPlay.mine.includes(s) && !want[s]) want[s] = { s, pid: okId(m.pid), skin: okSkin(m.skin) }; }
+      if (cfg) NetPlay.send({ t: 'cfg', cfg }, true, '*');
+    }
   });
 
   /* ---------- instantánea (anfitrión) ---------- */
@@ -7068,8 +7147,16 @@ const NetGame = (() => {
     const S = NetPlay.sample(); if (S) apply(S.a, S.b, S.k);
     if (evQ.length) { frameEv.push(...evQ); evQ = []; }
   }
+  // el anfitrión lanza otra carrera para todos (otra pista, mismos jugadores)
+  function again() {
+    if (!NetPlay.isHost || !cfg) return; const others = TRACK_ORDER.filter(t => t !== cfg.tid);
+    cfg = Object.assign({}, cfg, { id: cfg.id + 1, tid: others[Math.floor(Math.random() * others.length)] });
+    Game.startNet({ tid: cfg.tid, humans: cfg.humans, bots: hostBots, laps: cfg.laps }); NetPlay.send({ t: 'cfg', cfg }, true, '*');
+  }
   return {
-    seatsMax: 4,
+    seatsMax: 4, again,
+    // lo que lleva puesto el jugador de otro aparato (lo manda el anfitrión en la carrera)
+    skinOf(seat) { return (cfg && cfg.skins && okSkin(cfg.skins[seat])) || null; },
     neutral: () => NEUTRAL,
     // remoto: lo que aprieta cada jugador de este aparato (y los toques cortos cuentan una vez)
     readLocal(li) { const i = _read(li); if (li === NetPlay.mine.length - 1) Input.endStep(); return i; },

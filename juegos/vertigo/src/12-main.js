@@ -16,7 +16,7 @@ const Game = (() => {
     meshes = []; show = []; scene = GFX.buildWorld(T, TRACKS[tid]); worldFor = tid; FX.init(scene, T, GQ.lv < 2);
   }
   // lo que tiene puesto en el garaje el jugador i con ese piloto
-  const garageSkin = (i, pid) => { try { if (typeof NetPlay !== 'undefined' && NetPlay.on) { i = NetPlay.local(i); if (i < 0) return null; } return Vestidor.skinOf(i, pid); } catch (e) { return null; } };
+  const garageSkin = (i, pid) => { try { if (typeof NetPlay !== 'undefined' && NetPlay.on) { const li = NetPlay.local(i); if (li < 0) return NetGame.skinOf(i); i = li; } return Vestidor.skinOf(i, pid); } catch (e) { return null; } };
   const drop = m => { scene.remove(m.root); scene.remove(m.shadow); GFX.disposeScene(m.root); GFX.disposeScene(m.shadow); };
   function clearCars() { for (const m of meshes) drop(m); meshes = []; }
   function newRace(tid, humans, bots, countT, opts = {}) {
@@ -280,6 +280,7 @@ const Game = (() => {
       const hc = viewCars(), split = hc.length === 2, touch = Touch.active, W = innerWidth, H = innerHeight, x = HUD.ctx();
       const mmS = Math.min(W, H) * (split ? (touch ? 0.17 : 0.2) : touch ? 0.17 : 0.22), mmR = mmS * 0.62;
       hc.forEach((c, i) => HUD.player(views[i], c, R, i, t, { split, touch, mirror: split && i === 1, innerInset: split ? mmR + 8 : 0, insetT: touch ? 4 : 0, itemKey: touch ? '' : i ? 'L' : 'G' }));
+      if (netOn()) nameTags(hc, x);
       if (split) { x.fillStyle = '#03060d'; x.fillRect(W / 2 - 2, 0, 4, H); }
       if (split || touch) HUD.minimap(R, W / 2, (touch ? 56 : 12) + mmR, mmS, t);
       else HUD.minimap(R, W - mmR - 20, H * 0.42, mmS, t);
@@ -294,6 +295,24 @@ const Game = (() => {
     window.__vtg = { get R() { return R; }, get G() { return G; }, cams: () => cams, meshes: () => meshes, look(px, py, pz, tx, ty, tz, fov = 60) { G.freeCam = true; const c = cams[0]; c.position.set(px, py, pz); c.up.set(0, 1, 0); c.lookAt(tx, ty, tz); c.fov = fov; c.updateProjectionMatrix(); } };
   }
   // en línea (12b-net.js): armar la carrera con N humanos sin tocar lo guardado
+  // en línea: el nombre de cada jugador de otro aparato sobre su auto (se desvanece de lejos)
+  const _tagV = new THREE.Vector3();
+  function nameTags(hc, x) {
+    const S = NetPlay.seats; x.save(); x.textAlign = 'center'; x.textBaseline = 'middle';
+    hc.forEach((me, i) => { const v = views[i], cam = cams[i]; if (!v || !cam) return;
+      x.save(); x.beginPath(); x.rect(v.x, v.y, v.w, v.h); x.clip();
+      for (const c of R.cars) { if (c.bot || c === me || c.out || !S[c.human]) continue; const m = meshes[c.idx]; if (!m) continue;
+        _tagV.setFromMatrixPosition(m.root.matrixWorld); const d = _tagV.distanceTo(cam.position); if (d > 140) continue;
+        _tagV.y += 2.3; _tagV.project(cam); if (_tagV.z > 1 || Math.abs(_tagV.x) > 1.1 || Math.abs(_tagV.y) > 1.1) continue;
+        const px = v.x + (_tagV.x + 1) / 2 * v.w, py = v.y + (1 - _tagV.y) / 2 * v.h, a = clamp((140 - d) / 40, 0, 1), fs = Math.round(clamp(15 - d * 0.05, 10, 15) * (v.h < 400 ? 0.85 : 1));
+        const name = String(S[c.human].name || 'J' + (c.human + 1)).slice(0, 14), col = (PLAYER_COLORS[c.human] || PLAYER_COLORS[0]).main;
+        x.font = `800 ${fs}px Nunito, system-ui, sans-serif`; const w = x.measureText(name).width + fs * 1.1, h = fs * 1.55;
+        x.globalAlpha = a * 0.85; x.fillStyle = 'rgba(6,10,22,0.72)'; x.beginPath(); x.roundRect ? x.roundRect(px - w / 2, py - h / 2, w, h, h / 2) : x.rect(px - w / 2, py - h / 2, w, h); x.fill();
+        x.strokeStyle = col; x.lineWidth = 2; x.stroke(); x.globalAlpha = a; x.fillStyle = col; x.fillText(name, px, py + 1);
+        x.beginPath(); x.moveTo(px - 5, py + h / 2); x.lineTo(px + 5, py + h / 2); x.lineTo(px, py + h / 2 + 6); x.closePath(); x.fill(); }
+      x.restore(); });
+    x.restore();
+  }
   function startNet(o) {
     G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode: 'quick', laps: o.laps }); G.gp = null; G.duel = null; clearShow();
     newRace(o.tid, o.humans, o.bots, undefined, { laps: o.laps });
