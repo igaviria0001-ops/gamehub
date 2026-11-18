@@ -10,6 +10,8 @@
    · Si WebRTC no conecta en 12 s: relevo por el mismo MQTT (más lento, pero
      nadie se queda por fuera).
    · Pruebas: transporte «bc» (BroadcastChannel) en vez de MQTT (?net=bc).
+   · Si el anfitrión se va, sigue el siguiente aparato de la sala con el mismo
+     código (los demás se reconectan solos; el torneo sigue).
    API: Net.host(info) → código · Net.join(código, info) · Net.leave()
         Net.send(a, datos, confiable) (a = id | '*') · Net.on(tipo, fn)
         Net.id · Net.isHost · Net.code · Net.peers (Map) · Net.now() (reloj del anfitrión)
@@ -28,7 +30,7 @@ const Net = (() => {
   // pruebas: ?netloss=0.1 (se pierde 10 % de lo que va sin orden) · ?netlag=80 (ms de más) · ?netforce=relay (sin WebRTC)
   const SIM = (() => { try { const q = new URLSearchParams(location.search); return { loss: Math.min(0.9, +q.get('netloss') || 0), lag: Math.min(2000, +q.get('netlag') || 0), relay: q.get('netforce') === 'relay' }; } catch (e) { return { loss: 0, lag: 0, relay: false }; } })();
   const ST = { out: 0, in: 0, nOut: 0, nIn: 0, t0: Date.now() };
-  const S = { id: rid(8), code: null, isHost: false, hostId: null, info: null, key: null, topic: null, sig: null, alive: false, seen: new Map(), clockOff: 0 };
+  const S = { id: rid(8), code: null, isHost: false, hostId: null, info: null, key: null, topic: null, sig: null, alive: false, seen: new Map(), clockOff: 0, term: 0, dead: new Set(), succ: null };
   const peers = new Map(); // id → { id, info, pc, r, u, via: 'p2p'|'relay'|'…', rtt, t0, open, lastSeen, pend: [] }
 
   /* ---------- cifrado ---------- */
@@ -82,16 +84,22 @@ const Net = (() => {
   async function signal(obj) { if (!S.sig) return; obj.from = S.id; obj.mid = rid(10); S.sig.send(await seal(obj)); }
 
   /* ---------- servidores de ICE ---------- */
-  async function iceServers() {
-    const list = STUN.slice();
-    try { const own = JSON.parse(localStorage.getItem('gamehub_turn') || 'null'); if (Array.isArray(own) && own.length) return list.concat(own); } catch (e) { /* nada */ }
-    try { // Open Relay «static auth»: usuario = vencimiento:nombre, clave = HMAC-SHA1(secreto público)
+  // TURN propio (Ajustes): [{ urls, username, credential }] — solo direcciones turn:/turns:/stun: y textos cortos
+  function cleanIce(a) {
+    if (!Array.isArray(a)) return null; const ok = u => typeof u === 'string' && u.length < 200 && /^(turns?|stun):[\w.\-:\[\]?=&\/]+$/i.test(u), str = v => typeof v === 'string' && v.length < 300;
+    const out = a.slice(0, 4).map(x => x && typeof x === 'object' ? { urls: (Array.isArray(x.urls) ? x.urls : [x.urls]).filter(ok).slice(0, 6), username: str(x.username) ? x.username : undefined, credential: str(x.credential) ? x.credential : undefined } : null).filter(x => x && x.urls.length);
+    return out.length ? out : null;
+  }
+  const ownTurn = () => { try { return cleanIce(JSON.parse(localStorage.getItem('gamehub_turn') || 'null')); } catch (e) { return null; } };
+  async function openRelay() { // Open Relay «static auth»: usuario = vencimiento:nombre, clave = HMAC-SHA1(secreto público)
+    try {
       const user = Math.floor(Date.now() / 1000 + 86400) + ':gamehub', k = await crypto.subtle.importKey('raw', enc.encode('openrelayprojectsecret'), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
       const cred = b64(new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(user)))), h = 'staticauth.openrelay.metered.ca';
-      list.push({ urls: [`turn:${h}:80`, `turn:${h}:80?transport=tcp`, `turn:${h}:443`, `turns:${h}:443?transport=tcp`], username: user, credential: cred });
-    } catch (e) { /* sin TURN */ }
-    return list;
+      return [{ urls: [`turn:${h}:80`, `turn:${h}:80?transport=tcp`, `turn:${h}:443`, `turns:${h}:443?transport=tcp`], username: user, credential: cred }];
+    } catch (e) { return []; }
   }
+  // el propio (si hay) + el que comparte el anfitrión + el gratuito de respaldo
+  async function iceServers(extra) { return STUN.concat(ownTurn() || [], cleanIce(extra) || [], await openRelay()); }
 
   /* ---------- pares (WebRTC) ---------- */
   function newPeer(id, info) {
@@ -99,10 +107,10 @@ const Net = (() => {
     p = { id, info: info || null, pc: null, r: null, u: null, via: 'conectando', rtt: 0, open: false, lastSeen: Date.now(), pend: [], relayT: 0 };
     peers.set(id, p); return p;
   }
-  async function makePC(p, initiator) {
+  async function makePC(p, initiator, extraIce) {
     if (SIM.relay) { toRelay(p); return null; }
     if (p.pc) { try { p.pc.close(); } catch (e) { /* nada */ } }
-    const pc = new RTCPeerConnection({ iceServers: await iceServers(), bundlePolicy: 'max-bundle' });
+    const pc = new RTCPeerConnection({ iceServers: await iceServers(extraIce), bundlePolicy: 'max-bundle' });
     p.pc = pc; p.open = false; p.via = 'conectando';
     pc.onicecandidate = e => { if (e.candidate) signal({ t: 'ice', to: p.id, c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
     pc.onconnectionstatechange = () => { const st = pc.connectionState; if (st === 'failed') toRelay(p); if (st === 'disconnected') setTimeout(() => { if (pc.connectionState === 'disconnected') toRelay(p); }, 5000); emit('peers'); };
@@ -110,7 +118,7 @@ const Net = (() => {
     // canales negociados: los dos lados los crean igual (sin esperar a «ondatachannel»)
     wire(pc.createDataChannel('r', { negotiated: true, id: 1, ordered: true }), 'r');
     wire(pc.createDataChannel('u', { negotiated: true, id: 2, ordered: false, maxRetransmits: 0 }), 'u');
-    if (initiator) { const o = await pc.createOffer(); await pc.setLocalDescription(o); signal({ t: 'offer', to: p.id, sdp: pc.localDescription.sdp }); }
+    if (initiator) { const o = await pc.createOffer(); await pc.setLocalDescription(o); signal({ t: 'offer', to: p.id, sdp: pc.localDescription.sdp, term: S.term, ice: ownTurn() || undefined }); } // el TURN propio del anfitrión viaja cifrado a la sala
     clearTimeout(p.relayT); p.relayT = setTimeout(() => { if (!p.open) toRelay(p); }, 12000);
     return pc;
   }
@@ -126,9 +134,21 @@ const Net = (() => {
     if (SIM.lag) { setTimeout(() => sendNow(p, s, rel), SIM.lag * (0.8 + Math.random() * 0.4)); return; }
     sendNow(p, s, rel);
   }
+  // relevo (sin WebRTC): lo confiable sale ya; lo urgente (instantáneas, entradas) a lo más ~12 por segundo y siempre lo
+  // más nuevo de cada tipo (lo saltado no hace falta: lo trae el siguiente; las partes «lentas» pasan al que sí sale)
+  const RELAY_MS = 80;
+  const relayKey = o => (o && o.$g ? 'g' + (o.d && o.d.t) + (o.d && o.d.s != null ? ':' + o.d.s : '') : 'n' + (o && o.$));
+  function relayOut(p, s) {
+    let o; try { o = JSON.parse(s); } catch (e) { return; }
+    const q = p.rq || (p.rq = new Map()), k = relayKey(o), old = q.get(k);
+    if (old && api.relayMerge) { try { api.relayMerge(old, o); } catch (e) { /* nada */ } }
+    q.set(k, o);
+    if (!p.rqT) p.rqT = setTimeout(() => relayFlush(p), Math.max(0, RELAY_MS - (Date.now() - (p.rqAt || 0))));
+  }
+  function relayFlush(p) { p.rqT = 0; if (peers.get(p.id) !== p || !p.rq || !p.rq.size) return; p.rqAt = Date.now(); for (const o of p.rq.values()) signal({ t: 'relay', to: p.id, d: JSON.stringify(o) }); p.rq.clear(); }
   function sendNow(p, s, rel) {
     ST.out += s.length; ST.nOut++;
-    if (p.via === 'relay') { if (rel || Math.random() < 0.5) signal({ t: 'relay', to: p.id, d: s }); return; } // sin WebRTC: lo urgente a la mitad (no saturar el broker)
+    if (p.via === 'relay') { if (rel) signal({ t: 'relay', to: p.id, d: s }); else relayOut(p, s); return; }
     const ch = (!rel && p.u && p.u.readyState === 'open') ? p.u : p.r;
     if (!ch || ch.readyState !== 'open') { if (rel && p.pend.length < 200) p.pend.push([s, rel]); return; }
     if (!rel && ch.bufferedAmount > 64000) return; // la red va atrasada: se salta este (llega otro enseguida)
@@ -137,23 +157,64 @@ const Net = (() => {
   function onData(p, raw, rel) {
     p.lastSeen = Date.now(); ST.in += typeof raw === 'string' ? raw.length : raw.byteLength || 0; ST.nIn++;
     let m; try { m = JSON.parse(typeof raw === 'string' ? raw : dec.decode(raw)); } catch (e) { return; }
-    if (m && m.$ === 'ping') { rawSend(p, { $: 'pong', t: m.t, h: S.isHost ? performance.now() : undefined }, false); return; }
+    if (m && m.$ === 'ping') { rawSend(p, { $: 'pong', t: m.t, h: S.isHost ? performance.now() : undefined }, p.via === 'relay'); return; }
     if (m && m.$ === 'pong') { const now = performance.now(), rtt = now - m.t; p.rtt = p.rtt ? p.rtt * 0.8 + rtt * 0.2 : rtt; if (m.h != null && !S.isHost) { const off = m.h + rtt / 2 - now; S.clockOff = S.clockOff ? S.clockOff * 0.85 + off * 0.15 : off; } return; }
-    if (m && m.$ === 'room' && !S.isHost) { S.room = m.room; emit('room', m.room); return; }
+    if (m && m.$ === 'room' && !S.isHost) { if (p.id !== S.hostId) return; S.room = m.room; S.term = Math.max(S.term, m.room.term | 0); for (const d of m.room.devices || []) if (d.id !== S.hostId) S.dead.delete(d.id); emit('room', m.room); return; }
     if (m && m.$ === 'bye') { dropPeer(p.id); return; }
+    if (m && m.$ === 'moved' && !S.isHost && p.id === S.hostId) { S.dead.add(p.id); clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } peers.delete(p.id); S.hostId = null; S.term = Math.max(S.term, m.term | 0); S.moved = true; emit('status', { hostGone: true, old: p.id }); emit('peers'); signal({ t: 'hello', info: S.info, term: S.term }); return; }
     emit('msg', p.id, m, rel);
   }
-  function dropPeer(id) { const p = peers.get(id); if (!p) return; clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } peers.delete(id); emit('peers'); if (S.isHost) broadcastRoom(); else if (id === S.hostId) emit('status', { hostGone: true }); }
+  function dropPeer(id) { const p = peers.get(id); if (!p) return; clearTimeout(p.relayT); clearTimeout(p.rqT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } peers.delete(id); emit('peers'); if (S.isHost) broadcastRoom(); else if (id === S.hostId) succeed(); }
+
+  /* ---------- si el anfitrión se va: sigue el siguiente de la sala (mismo código) ---------- */
+  // orden: el de la última lista de la sala; si el que sigue tampoco aparece en 8 s, sigue el otro
+  const nOpen = () => { const now = Date.now(); return [...peers.values()].filter(p => p.open && now - p.lastSeen < 10000).length; };
+  function succeed() {
+    if (S.isHost || !S.alive) return;
+    const old = S.hostId; if (old) { S.dead.add(old); const hp = peers.get(old); if (hp) { clearTimeout(hp.relayT); try { hp.pc && hp.pc.close(); } catch (e) { /* nada */ } peers.delete(old); } }
+    S.hostId = null; const R = S.room;
+    const order = ((R && R.devices) || []).map(d => d.id).filter(id => !S.dead.has(id));
+    S.succ = { order, t: Date.now(), term: Math.max(S.term, (R && R.term) || 0) + 1 };
+    emit('status', { hostGone: true, old });
+    nextHost();
+  }
+  function nextHost() {
+    const c = S.succ; if (!c) return;
+    while (c.order.length && c.order[0] !== S.id && S.dead.has(c.order[0])) c.order.shift();
+    if (!c.order.length || c.order[0] === S.id) { becomeHost(c.term); return; }
+    signal({ t: 'hello', info: S.info, term: S.term });
+  }
+  function becomeHost(term) {
+    S.succ = null; S.isHost = true; S.hostId = S.id; S.term = Math.max(S.term + 1, term || 0);
+    for (const p of [...peers.values()]) { clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } } peers.clear();
+    announce(); broadcastRoom(); emit('peers'); emit('status', { newHost: S.id, me: true });
+  }
+  // dos anfitriones con el mismo código (el viejo volvió, o uno se quedó sin red un rato): cede el que tiene menos
+  // aparatos conectados; si empatan, el de turno más nuevo; si no, el de id menor
+  function announce() { if (S.isHost && S.alive) signal({ t: 'host', term: S.term, n: nOpen() }); }
+  function stepDown(to, term) {
+    S.isHost = false; S.hostId = null; S.succ = null; S.dead.delete(to); S.term = Math.max(0, term | 0);
+    // a los suyos les avisa que la sala sigue con otro anfitrión (no «adiós»: si no, empezarían otra sucesión)
+    for (const p of [...peers.values()]) { if (p.open) { try { rawSend(p, { $: 'moved', term: S.term }, true); } catch (e) { /* nada */ } } clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } } peers.clear();
+    S.room = null; emit('peers'); emit('status', { steppedDown: true });
+    signal({ t: 'hello', info: S.info, term: S.term });
+  }
 
   /* ---------- señales ---------- */
   async function onSignal(m) {
     if (m.t === 'hello' && S.isHost) { // alguien quiere entrar: el anfitrión lo llama
       const p = newPeer(m.from, m.info); p.lastSeen = Date.now();
       if (!p.pc || p.pc.connectionState === 'failed' || p.pc.connectionState === 'closed' || (!p.open && Date.now() - (p.callT || 0) > 6000)) { p.callT = Date.now(); await makePC(p, true); }
-      signal({ t: 'welcome', to: m.from, host: S.id }); broadcastRoom(); return;
+      signal({ t: 'welcome', to: m.from, host: S.id, term: S.term }); broadcastRoom(); return;
     }
-    if (m.t === 'welcome' && !S.isHost) { S.hostId = m.host; const hp = newPeer(m.host); if (SIM.relay) toRelay(hp); return; }
-    if (m.t === 'offer' && !S.isHost) { S.hostId = m.from; const p = newPeer(m.from); const pc = await makePC(p, false); await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); signal({ t: 'answer', to: m.from, sdp: pc.localDescription.sdp }); for (const c of p.iceQ || []) try { await pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; return; }
+    if (m.t === 'host') { // otro anfitrión con este código
+      if (S.isHost) { const mine = [nOpen(), S.term, S.id], his = [m.n | 0, m.term | 0, m.from]; const lose = his[0] > mine[0] || (his[0] === mine[0] && (his[1] > mine[1] || (his[1] === mine[1] && his[2] < mine[2]))); if (lose) stepDown(m.from, m.term); }
+      else if (!S.hostId && !S.dead.has(m.from)) signal({ t: 'hello', info: S.info, term: S.term });
+      return;
+    }
+    if ((m.t === 'welcome' || m.t === 'offer') && !S.isHost && (S.dead.has(m.from) || (m.term | 0) < S.term || (S.hostId && S.hostId !== m.from && (m.term | 0) <= S.term))) return; // de un anfitrión viejo
+    if (m.t === 'welcome' && !S.isHost) { const was = S.hostId; S.hostId = m.host; S.term = Math.max(S.term, m.term | 0); const hp = newPeer(m.host); if (SIM.relay) toRelay(hp); if (S.succ || S.moved) { S.succ = null; S.moved = false; emit('status', { newHost: m.host }); } else if (was && was !== m.host) emit('status', { newHost: m.host }); return; }
+    if (m.t === 'offer' && !S.isHost) { S.hostId = m.from; S.term = Math.max(S.term, m.term | 0); if (S.succ || S.moved) { S.succ = null; S.moved = false; emit('status', { newHost: m.from }); } const p = newPeer(m.from); const pc = await makePC(p, false, m.ice); await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); signal({ t: 'answer', to: m.from, sdp: pc.localDescription.sdp }); for (const c of p.iceQ || []) try { await pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; return; }
     if (m.t === 'answer' && S.isHost) { const p = peers.get(m.from); if (p && p.pc) { await p.pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); for (const c of p.iceQ || []) try { await p.pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; } return; }
     if (m.t === 'ice') { const p = peers.get(m.from); if (!p) return; if (p.pc && p.pc.remoteDescription) { try { await p.pc.addIceCandidate(m.c); } catch (e) { /* nada */ } } else (p.iceQ = p.iceQ || []).push(m.c); return; }
     if (m.t === 'relay') { const p = peers.get(m.from); if (p) { if (p.via !== 'relay') toRelay(p); onData(p, m.d, true); } return; }
@@ -161,36 +222,75 @@ const Net = (() => {
   }
 
   /* ---------- la sala ---------- */
-  function roomState() { return { code: S.code, host: S.id, devices: [{ id: S.id, info: S.info, host: true, rtt: 0, via: 'local' }].concat([...peers.values()].filter(p => p.info).map(p => ({ id: p.id, info: p.info, rtt: Math.round(p.rtt), via: p.via, open: p.open }))) }; }
+  function roomState() { return { code: S.code, host: S.id, term: S.term, devices: [{ id: S.id, info: S.info, host: true, rtt: 0, via: 'local' }].concat([...peers.values()].filter(p => p.info).map(p => ({ id: p.id, info: p.info, rtt: Math.round(p.rtt), via: p.via, open: p.open }))) }; }
   function broadcastRoom() { if (!S.isHost) return; const room = roomState(); S.room = room; emit('room', room); for (const p of peers.values()) if (p.open) rawSend(p, { $: 'room', room }, true); }
-  let tick = 0;
+  let tick = 0, annN = 0, lastTick = 0;
   function loop() {
     clearInterval(tick);
     tick = setInterval(() => {
       if (!S.alive) return; const now = Date.now();
-      for (const p of peers.values()) { if (p.open && p.via !== 'relay') rawSend(p, { $: 'ping', t: performance.now() }, false); if (p.via === 'p2p' && p.pc && !p.routeChecked) { p.routeChecked = true; refineRoute(p); } }
+      // si ESTE aparato estuvo trabado (cargando un juego pesado, en segundo plano), lo que le llegó aún está en la fila:
+      // no se juzga a nadie por ese silencio (se les da el beneficio de haber hablado justo ahora)
+      if (lastTick && now - lastTick > 4500) for (const p of peers.values()) p.lastSeen = Math.max(p.lastSeen, now - 1000);
+      lastTick = now;
+      for (const p of peers.values()) { if (p.open) rawSend(p, { $: 'ping', t: performance.now() }, p.via === 'relay'); if (p.via === 'p2p' && p.pc && !p.routeChecked) { p.routeChecked = true; refineRoute(p); } }
       // silencio largo = se fue (con margen: mientras un aparato carga un juego pesado puede callar varios segundos)
-      const gone = p => now - p.lastSeen > (p.pc && p.pc.connectionState === 'connected' ? 60000 : 30000);
-      if (S.isHost) { for (const p of [...peers.values()]) if (gone(p)) dropPeer(p.id); broadcastRoom(); }
-      else { const h = peers.get(S.hostId); if (!h || !h.open) signal({ t: 'hello', info: S.info }); else if (gone(h)) { emit('status', { hostGone: true }); } }
+      const gone = p => now - p.lastSeen > (p.pc && p.pc.connectionState === 'connected' ? 60000 : p.via === 'relay' ? 30000 : 20000);
+      if (S.isHost) { for (const p of [...peers.values()]) if (gone(p)) dropPeer(p.id); broadcastRoom(); if (++annN % 2 === 0) announce(); }
+      else if (S.succ) { if (now - S.succ.t > 8000) { S.dead.add(S.succ.order.shift()); S.succ.t = now; } nextHost(); }
+      else { const h = peers.get(S.hostId); if (!h || !h.open) signal({ t: 'hello', info: S.info, term: S.term }); else if (gone(h)) succeed(); } // callado mucho rato (con la conexión viva puede estar cargando un juego pesado: se espera más)
     }, 2000);
   }
   async function start(code, info, host) {
-    leave(true); S.code = code; S.info = info; S.isHost = host; S.hostId = host ? S.id : null; S.alive = true; S.clockOff = 0;
+    leave(true); S.code = code; S.info = info; S.isHost = host; S.hostId = host ? S.id : null; S.alive = true; S.clockOff = 0; S.term = host ? 1 : 0; S.dead.clear(); S.succ = null; S.moved = false;
     await deriveKey(code); S.sig = Signal(); loop();
-    if (host) broadcastRoom(); else { signal({ t: 'hello', info }); setTimeout(() => S.alive && !S.hostId && signal({ t: 'hello', info }), 1200); }
+    if (host) { broadcastRoom(); announce(); } else { signal({ t: 'hello', info }); setTimeout(() => S.alive && !S.hostId && signal({ t: 'hello', info }), 1200); }
     return code;
   }
   function leave(quiet) {
     if (S.alive) { for (const p of peers.values()) { try { rawSend(p, { $: 'bye' }, true); } catch (e) { /* nada */ } } signal({ t: 'bye' }); }
-    S.alive = false; clearInterval(tick);
-    for (const p of peers.values()) { clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } }
+    S.alive = false; clearInterval(tick); S.succ = null;
+    for (const p of peers.values()) { clearTimeout(p.relayT); clearTimeout(p.rqT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } }
     peers.clear(); const sg = S.sig; S.sig = null; if (sg) setTimeout(() => sg.close(), 300);
     S.code = null; S.isHost = false; S.hostId = null; S.room = null; if (!quiet) emit('peers');
   }
+  /* ---------- probar la red de este aparato (Ajustes) ---------- */
+  // señales (los servidores MQTT), conexión directa (STUN: ¿se ve la IP pública?) y respaldo (TURN: ¿da un puerto de relevo?)
+  function iceTypes(servers, policy, ms = 8000) {
+    return new Promise(res => {
+      let pc; const types = new Set(); let done = false;
+      const fin = () => { if (done) return; done = true; try { pc && pc.close(); } catch (e) { /* nada */ } res(types); };
+      try {
+        pc = new RTCPeerConnection({ iceServers: servers, iceTransportPolicy: policy || 'all' }); pc.createDataChannel('x');
+        pc.onicecandidate = e => { if (!e.candidate) return fin(); const t = (String(e.candidate.candidate).match(/ typ (\w+)/) || [])[1]; if (t) types.add(t); if (t === 'relay' && policy === 'relay') fin(); };
+        pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') fin(); };
+        pc.createOffer().then(o => pc.setLocalDescription(o)).catch(fin);
+      } catch (e) { fin(); }
+      setTimeout(fin, ms);
+    });
+  }
+  function brokerOk(url, ms = 6000) {
+    return new Promise(res => {
+      let ws = null, done = false; const fin = ok => { if (done) return; done = true; try { ws && ws.close(); } catch (e) { /* nada */ } res(ok); };
+      try { ws = new WebSocket(url, ['mqtt']); ws.binaryType = 'arraybuffer'; ws.onopen = () => ws.send(mqttPacket(0x10, cat(mqttStr('MQTT'), new Uint8Array([4, 2, 0, 30]), mqttStr('ghp' + rid(8))))); ws.onmessage = e => fin(new Uint8Array(e.data)[0] >> 4 === 2); ws.onerror = ws.onclose = () => fin(false); } catch (e) { fin(false); }
+      setTimeout(() => fin(false), ms);
+    });
+  }
+  async function probe(turn) {
+    if (typeof RTCPeerConnection === 'undefined') return { webrtc: false, signal: 0, of: BROKERS.length, stun: false, turn: false, own: null };
+    const own = turn === undefined ? ownTurn() : cleanIce(turn);
+    const [sig, all, mine] = await Promise.all([
+      Promise.all(BROKERS.map(u => brokerOk(u))),
+      openRelay().then(r => iceTypes(STUN.concat(r), 'all')),
+      own ? iceTypes(own, 'relay') : Promise.resolve(null),
+    ]);
+    return { webrtc: true, signal: sig.filter(Boolean).length, of: BROKERS.length, stun: all.has('srflx') || all.has('prflx'), turn: all.has('relay'), own: mine ? mine.has('relay') : null };
+  }
   addEventListener('pagehide', () => { if (S.alive) leave(true); });
-  return {
+  const api = {
     transport: null,
+    relayMerge: null, // (viejo, nuevo): GameHub pasa las partes lentas de una instantánea saltada a la que sale
+    probe,
     host: info => start(rid(5), info, true),
     join: (code, info) => start(String(code).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5), info, false),
     leave: () => leave(false),
@@ -204,7 +304,9 @@ const Net = (() => {
     get id() { return S.id; }, get code() { return S.code; }, get isHost() { return S.isHost; }, get hostId() { return S.hostId; }, get alive() { return S.alive; },
     get room() { return S.room; }, get peers() { return peers; }, get signalReady() { return !!(S.sig && S.sig.ready); },
     _onInfo(id, info) { const p = peers.get(id); if (p) { p.info = info; broadcastRoom(); } },
+    get term() { return S.term; }, get ownTurn() { return ownTurn(); },
   };
+  return api;
 })();
 // el anfitrión recibe cambios de jugadores de un aparato
 Net.on('msg', (from, m) => { if (m && m.$ === 'info' && Net.isHost) Net._onInfo(from, m.info); });

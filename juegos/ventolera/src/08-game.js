@@ -210,7 +210,8 @@ const Game = (() => {
   function clientEvents(list) {
     for (const e of list) {
       if (e.bid != null) e.b = G.birds[e.bid]; if (e.bid != null && !e.b) continue;
-      FX.event(e, G);
+      if (e.bid == null && e.bx != null) e.b = { x: e.bx, y: e.by };
+      try { FX.event(e, G); } catch (er) { continue; } // un efecto raro no debe parar el cuadro
       if (e.b ? isLocal(e.b.id) : e.from >= 0 && isLocal(e.from)) Progress.event(G, e);
       const gap = { shot: 0.03, hit: 0.04, whiz: 0.15, skim: 0.15, spark: 0.05, glass: 0.07 }[e.type];
       if (gap) { if ((sndT[e.type] || 0) > G.time) continue; sndT[e.type] = G.time + gap; }
@@ -665,6 +666,12 @@ const Game = (() => {
     G.adv = G.birds.map(() => 0); G.wins = G.birds.map(() => 0); G.round = 1; G.cratesOn = true; G.winsNeeded = o.mode === 'duel' ? o.wins || 3 : 1; G.score = G.birds.map(() => 0); G.coopWin = false;
     G.hintT = 8; G.paused = false; acc = 0;
     if (o.mode === 'duel') startRound();
+    else if (o.mode === 'boss') {
+      // Jefe en pareja en línea: todos contra La Sombra, vidas compartidas (una más por piloto); con 3 o 4, el dirigible aguanta más
+      startRound(); Boss.setup(G, false); G.roundT = 999; const n = G.birds.length; G.lives = 4 + n;
+      if (n > 2 && G.boss) for (const p of G.boss.parts) { p.max = Math.round(p.max * (1 + 0.25 * (n - 2))); p.hp = p.max; }
+      G.boss.dmg = G.birds.map(() => 0);
+    }
     else { startRound(); Modes.setup(G); G.cratesOn = o.mode === 'case'; snapCamera(); }
   }
   function netEnd() { G.net = false; }

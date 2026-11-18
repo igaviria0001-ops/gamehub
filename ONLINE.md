@@ -301,3 +301,47 @@ mejores; (5) todo optimizado y comprobado.
   Jefe en pareja; Sortilegio: Copa; Tira y Afloja: Modo Fiesta, jefes y Fuga en pareja; campañas en pareja si alcanza.
 - **G5 · Comprobar y publicar** — todas las pruebas (sin conexión, equivalencia, en línea por modo, celular, red mala),
   unir a main, artefactos, bitácoras, memoria.
+
+### Segunda tanda — bitácora
+- **G1 hecho (18 nov)** — `test/offline-eq.js`: carga la versión de antes del en línea (28e6638) y la nueva lado a lado
+  con el mismo azar, el mismo reloj (performance.now, Date, new Date, requestAnimationFrame, setTimeout/setInterval y el
+  reloj del audio, todos virtuales) y las mismas teclas a los mismos instantes; compara el estado COMPLETO del juego
+  (todo, aplanado: posiciones, velocidades, vida, puntos, cuerdas, terreno…) cada pocos segundos y la imagen final.
+  Resultado: idéntico en los 4 juegos — Tira y Afloja 6 modos + Fiesta + jefe + 2 humanos (bucle real); Ventolera 6 modos
+  + 2 humanos duelo/blancos + carrera + escuela; Sortilegio 4 modos × 2 escenarios + 2 humanos duelo/tejo + contra la
+  máquina; VÉRTIGO 7 modos (carrera, GP, eliminación, batalla, duelo, contrarreloj, vuelta al mundo) + humanos (bucle
+  real, con dibujo 3D). Portadas idénticas. Lo único distinto que encontró, y se arregló: en Sortilegio, el orden en que
+  salían dos letreros a la vez (logro y fusión) cambió al separar «lo visual» para el en línea → vuelto al orden de antes.
+  Diferencias aceptadas (no cambian nada): `bumpCd` de Ventolera pasó a `bumpPair['0-1']` (mismo valor, comprobado) y
+  `G.net = false` en Sortilegio.
+- **G2** — relevo con ritmo propio (≤12/s, lo más nuevo de cada tipo; las partes lentas pasan a la que sale); ping
+  también por el relevo; reloj por mínimo de ventana de 2 s; aviso «Esperando al anfitrión…» en el juego si deja de
+  llegar (1,5 s); pantalla encendida en la sala (Wake Lock); el anfitrión avisa si sale de la app; Ajustes → EN LÍNEA:
+  «Probar la conexión» (señales, directo, respaldo TURN) y TURN propio que el anfitrión comparte cifrado; Sortilegio
+  pide el terreno completo si le falta o se saltó un cambio (`kfreq`, cambios numerados); **sucesión del anfitrión**:
+  si se va (o se calla 20–60 s), sigue el siguiente aparato con el mismo código, los demás se reconectan solos, el
+  torneo sigue con él; si el viejo vuelve, queda uno solo (el que tenga más aparatos; si empatan, el más nuevo).
+- **G3** — predicción del personaje propio en el remoto (los 4 juegos): una copia corre con la física del juego y tus
+  teclas; con cada instantánea se compara con lo predicho para ese momento (hace un ping) y se corrige 30 % por
+  instantánea; si pasó algo grande allá, se toma lo del anfitrión. `?nopred` la apaga (para comparar).
+- **G4** — VÉRTIGO en línea: carrera, mano a mano (sin máquina, hasta que alguien gane 2), eliminación, batalla en arena y
+  Gran Premio (Copa Esmeralda, Dorada o Gran Copa, con puntos). Tira y Afloja: Modo Fiesta en línea (opción en la sala).
+  Ventolera: Jefe en pareja en línea (2 a 4 contra La Sombra; vidas = 4 + pilotos; con 3–4, el dirigible aguanta más).
+  En torneo en línea, VÉRTIGO ahora anota solo el resultado (antes no mandaba `res`). La sala admite modos «extra» del
+  juego (`net.extra` en catalog.js: Gran Premio con copas como escenario, Jefe en pareja) y opciones sí/no (`net.opts`).
+  No van en línea (se juegan en el aparato porque guardan avance ahí): campañas, escuelas, jefes de Tira y Afloja,
+  Persecución de VÉRTIGO, Copa y Travesía de Ventolera.
+- **Más robustez encontrada en las pruebas** — si un aparato estuvo trabado (cargando un juego pesado), no se juzga el
+  silencio de los demás por eso; si el anfitrión vuelve a la sala, los demás también vuelven solos («El anfitrión volvió
+  a la sala»); al ceder el mando, el anfitrión viejo manda a los suyos con el nuevo (no «adiós», que dispararía otra
+  sucesión). Nota de pruebas: en este contenedor (2 núcleos, sin GPU) VÉRTIGO necesita `VIEW=400x225` para que dos
+  copias 3D quepan; `test/todo.sh` corre todo en fila.
+- **Pruebas finales (18 nov)** — `test/todo.sh` (todo en fila). En línea: red, sala, Ventolera (2, 3 y Jefe en pareja),
+  Sortilegio (y con red mala 15 % de pérdida + 120 ms), Tira y Afloja (y Fiesta), VÉRTIGO y sus 4 modos, torneo, celular
+  (Tira y Afloja y Ventolera), sucesión del anfitrión, datos y relevo: todo OK. Predicción: reacción en 2–3 cuadros en
+  Ventolera, Sortilegio y Tira y Afloja (sin predicción: 16–25 cuadros con red de 70 ms + 70 ms), error promedio 3–24 px;
+  VÉRTIGO responde en 2 cuadros (en esta máquina sin GPU el ping sube a ~2 s por la carga y no se juzga el error).
+  Sin conexión idéntico en los 4. Arreglos que salieron de las pruebas: el jefe de Ventolera mandaba eventos sin piloto
+  (el remoto se trababa); la copia predicha sigue el ritmo de la carrera del anfitrión y el tiempo real si los cuadros
+  son muy lentos; historia de 3 s (pings altos); **torneo**: en una llave de muchos, dos cruces podían salir con el mismo
+  id y la prueba se anotaba en el equivocado (muy de vez en cuando) → ids sin repetir (`test/motor.js` 6 veces sin falla).

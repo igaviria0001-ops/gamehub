@@ -466,3 +466,15 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-bubble small { font-weight: 900; font-size: 12px; color: #fff; background: rgba(10,8,30,.6); padding: 2px 8px; border-radius: 999px; }
 @keyframes onBub { 0% { transform: translateY(20px) scale(.6); opacity: 0; } 12% { transform: translateY(0) scale(1.1); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-220px) scale(1); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .on-bubble { animation-duration: 1.4s; } }
+
+/* Ajustes · en línea: prueba de la red y TURN propio */
+.nprobe { display: grid; gap: 8px; margin-top: 12px; }
+.nprow { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line2); }
+.nprow i { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 14px; background: rgba(255,255,255,.08); }
+.nprow.ok i { background: rgba(111,240,176,.18); color: var(--ok); } .nprow.bad i { background: rgba(255,122,138,.18); color: var(--bad); } .nprow.mid i { color: var(--gold); }
+.nprow i.spin { border: 3px solid rgba(255,255,255,.14); border-top-color: var(--gold); animation: npSpin .9s linear infinite; background: none; }
+@keyframes npSpin { to { transform: rotate(360deg); } }
+.nprow div { display: grid; gap: 2px; min-width: 0; } .nprow b { font-weight: 900; } .nprow span { color: var(--mute); font-size: 13.5px; }
+.nprobe .npv { margin: 2px 0 0; }
+.npturn { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; max-width: 640px; } .npturn .textin { max-width: none; min-width: 0; }
+@media (max-width: 620px) { .npturn { grid-template-columns: 1fr; } }

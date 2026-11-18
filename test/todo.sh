@@ -1,0 +1,38 @@
+#!/bin/bash
+# Todas las pruebas, una tras otra (con el servidor de docs/ en 8765). Resumen al final: una línea por prueba.
+# VIEW=400x225 achica las páginas de VÉRTIGO en máquinas lentas (sin GPU, 2 núcleos).
+cd "$(dirname "$0")/.."
+# servidor propio mientras duran las pruebas
+(cd docs && exec python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1) & SRV=$!; trap "kill $SRV 2>/dev/null" EXIT; sleep 1
+V=${VIEW:-400x225}
+run() { local name="$1"; shift; local t0=$(date +%s); local out; out=$(timeout 1500 "$@" 2>&1 | tail -40); local last=$(echo "$out" | grep -E "OK|FALLA|IDÉNTICO|DIFERENCIAS|ERR |fallas|errores" | tail -1); echo "$(date +%H:%M) · $name · $(( $(date +%s) - t0 )) s · ${last:-sin resultado}"; echo "$out" > "/tmp/todo-$name.log"; }
+run red node test/net.js
+run sala node test/sala.js
+run vto node test/netvto.js
+run vto3 env TRES=1 node test/netvto.js
+run vtoJefe env MODE=boss node test/netvto.js
+run srt node test/netsrt.js
+run tya node test/nettya.js
+run tyaFiesta env FIESTA=1 node test/nettya.js
+run vtg env VIEW=$V node test/netvtg.js
+run vtgModos env VIEW=$V node test/netvtgmodos.js
+run torneo node test/nettour.js
+run celTyA node test/netcel.js
+run celVto env JUEGO=ventolera node test/netcel.js
+run sucesion node test/netsucc.js
+run prediccion env VIEW=$V SIN=1 node test/netpred.js
+run datos env VIEW=$V SECS=10 node test/netdatos.js
+run relevo env VIEW=$V SECS=10 RELEVO=1 node test/netdatos.js
+run redMala env RED='netloss=0.15&netlag=120' node test/netsrt.js
+run ui node test/ui.js
+run flujo node test/flujo.js
+run app node test/app.js
+run tablero node test/tablero.js
+run motor node test/motor.js
+run sinConexion env FAST=1 VIEW=480x270 node test/offline-eq.js
+# pruebas propias de cada juego (sus carpetas de trabajo; la de VÉRTIGO está en el bloc de notas de la sesión)
+for g in tya vento sorti; do [ -f /home/claude/$g/test/modes.js ] && run propias-$g node /home/claude/$g/test/modes.js; done
+[ -f /home/claude/vento/test/soakall.js ] && run propias-vento-soak env ARENAS=cocora,capadocia node /home/claude/vento/test/soakall.js
+[ -f /home/claude/sorti/test/chaos.js ] && run propias-sorti-chaos node /home/claude/sorti/test/chaos.js
+[ -f /home/claude/tya/test/chaos.js ] && run propias-tya-chaos node /home/claude/tya/test/chaos.js
+echo FIN

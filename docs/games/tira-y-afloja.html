@@ -1217,13 +1217,22 @@ const NetPlay = (() => {
   const embedded = (() => { try { return window.parent && window.parent !== window; } catch (e) { return true; } })();
   let on = false, role = null, seats = [], mine = [], sid = null, ev = null, hostT = 0, inT = 0, snapN = 0;
   const remote = {}, snaps = [], startSubs = [], msgSubs = [], evQ = [];
-  let lagMs = 100, offset = null, lagFixed = false;
+  const noPred = (() => { try { return /[?&]nopred\b/.test(location.search) || /[?&]nopred\b/.test(window.parent.location.search); } catch (e) { return false; } })();
+  let lagMs = 100, offset = null, lagFixed = false, rtt = 80;
   // colchón de interpolación que se ajusta solo: con red pareja, poquito (responde antes); con red a saltos, más (no tiembla)
   let lastArr = 0, lastTm = 0, jit = 8, gap = 33;
   function adapt(now, tm) {
     if (lastArr && tm > lastTm) { const g = tm - lastTm, j = Math.abs((now - lastArr) - g); gap = gap * 0.9 + g * 0.1; jit = j > jit ? jit * 0.7 + j * 0.3 : jit * 0.98 + j * 0.02; }
     lastArr = now; lastTm = tm;
     if (!lagFixed) { const want = Math.min(250, Math.max(55, gap * 1.5 + jit * 3 + 8)); lagMs += (want - lagMs) * (want > lagMs ? 0.25 : 0.02); }
+  }
+  // reloj del anfitrión: lo que tardó la instantánea MÁS rápida de los últimos 2 s (sin atascos), con paso suave;
+  // así se reajusta solo si la red cambia (wifi ↔ datos) y no se queda pegado a un valor viejo
+  const offW = [];
+  function clock(now, off) {
+    offW.push(now, off); while (offW.length > 2 && now - offW[0] > 2000) offW.splice(0, 2);
+    let best = -Infinity; for (let i = 1; i < offW.length; i += 2) if (offW[i] > best) best = offW[i];
+    offset = offset == null ? best : offset + (best - offset) * (best > offset ? 0.3 : 0.08);
   }
   const G = () => (typeof NetGame !== 'undefined' ? NetGame : null);
   function post(event, data) { if (!embedded) return; try { window.parent.postMessage(Object.assign({ hub: 'gamehub', source: GAME_META.id, event }, data || {}), '*'); } catch (e) { /* nada */ } }
@@ -1232,7 +1241,7 @@ const NetPlay = (() => {
   function onNet(d, from) {
     if (!d) return;
     if (d.t === 'in' && role === 'host') { remote[d.s] = { i: d.i, at: performance.now(), from }; return; }
-    if (d.t === 's' && role === 'client') { const now = performance.now(), off = d.tm - now; adapt(now, d.tm); offset = offset == null ? off : Math.max(off, offset * 0.995 + off * 0.005 - 0.2); snaps.push({ tm: d.tm, n: d.n, d: d.d }); while (snaps.length > 30) snaps.shift(); return; }
+    if (d.t === 's' && role === 'client') { const now = performance.now(); adapt(now, d.tm); clock(now, d.tm - now); Lost.ok(); snaps.push({ tm: d.tm, n: d.n, d: d.d, arr: now }); while (snaps.length > 30) snaps.shift(); return; }
     if (d.t === 'e' && role === 'client') { const g = G(); if (g && g.event) for (const e of d.l) { try { g.event(e); } catch (err) { /* nada */ } } return; }
     for (const f of msgSubs) { try { f(d, from); } catch (e) { /* nada */ } }
   }
@@ -1241,16 +1250,17 @@ const NetPlay = (() => {
     if (m.cmd === 'net') begin(m);
     else if (m.cmd === 'netin') onNet(m.d, m.from);
     else if (m.cmd === 'netoff') end();
+    else if (m.cmd === 'netrtt' && m.rtt > 0 && m.rtt < 3000) rtt = m.rtt; // ida y vuelta hasta el anfitrión (lo mide GameHub)
   });
   function begin(m) {
-    end(); for (const k in slowLast) delete slowLast[k]; on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; snapN = 0;
+    end(); for (const k in slowLast) delete slowLast[k]; on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; offW.length = 0; snapN = 0;
     // cada juego puede pedir su ritmo (instantáneas por segundo) y su colchón de interpolación
-    { const g = G(), hz = (g && g.rate) || 30; lagFixed = !!(g && g.lag); lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); lastArr = 0; jit = 8; gap = 1000 / hz; if (role === 'host') hostT = setInterval(hostTick, Math.round(1000 / hz)); else inT = setInterval(clientTick, 16); }
+    { const g = G(), hz = (g && g.rate) || 30; lagFixed = !!(g && g.lag); lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); lastArr = 0; jit = 8; gap = 1000 / hz; if (role === 'host') { hostT = setInterval(hostTick, Math.round(1000 / hz)); post('netinfo', { slow: (g && g.slowKeys) || [] }); } else inT = setInterval(clientTick, 16); }
     for (const f of startSubs) { try { f({ role, seats, mine, sid, ev }); } catch (err) { post('error', { msg: String(err && err.message || err) }); } }
   }
   // solo números, textos y listas simples (sin objetos del juego, que no viajan)
   function clean(e) { const o = {}; for (const k in e) { const v = e[k]; const t = typeof v; if (t === 'number') o[k] = Math.round(v * 1000) / 1000; else if (t === 'string' || t === 'boolean') o[k] = v; else if (Array.isArray(v) && v.length < 40 && v.every(x => typeof x !== 'object' && typeof x !== 'function')) o[k] = v.slice(); } return o; }
-  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; if (typeof clearTimeout === 'function') { clearTimeout(wtick); clearTimeout(askT); } pend = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
+  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; Lost.ok(); if (typeof clearTimeout === 'function') { clearTimeout(wtick); clearTimeout(askT); } pend = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
   // anfitrión: instantánea + eventos acumulados
   function hostTick() {
     const g = G(); if (!g || !g.snap) return;
@@ -1262,6 +1272,7 @@ const NetPlay = (() => {
   const lastIn = {};
   function clientTick() {
     const g = G(); if (!g || !g.readLocal) return; const now = performance.now();
+    if (gcfg && lastArr && now - lastArr > 1500) Lost.show();
     mine.forEach((seat, li) => {
       let i; try { i = g.readLocal(li); } catch (e) { return; }
       const s = JSON.stringify(i), L = lastIn[seat];
@@ -1269,6 +1280,9 @@ const NetPlay = (() => {
       lastIn[seat] = { s, t: now }; send({ t: 'in', s: seat, i }, false, 'host');
     });
   }
+  // remoto: al apretar o soltar algo, la entrada sale YA (no espera al próximo tick de 16 ms); después de que el juego la registró
+  const nowIn = () => { if (on && role === 'client') setTimeout(clientTick, 0); };
+  for (const ev of ['keydown', 'keyup', 'pointerdown', 'pointerup', 'touchstart', 'touchend']) addEventListener(ev, nowIn, { passive: true });
   /* ---------- sala de espera y arranque (común a los 4 juegos) ----------
      NetPlay.gate({ me(li) → lo de este jugador local (personaje, pinta…),
                     make(want, ev) → cfg de la partida (solo el anfitrión; want[puesto] = lo que mandó cada uno),
@@ -1295,6 +1309,16 @@ const NetPlay = (() => {
       e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = !canGo;
     }
     return { list, hide() { if (el) { el.remove(); el = null; } } };
+  })();
+  // aviso suave si el anfitrión deja de mandar (salió de la app, se le fue la señal): se quita solo al volver
+  const Lost = (() => {
+    let el = null;
+    return {
+      show() { if (el) return; el = document.createElement('div'); el.id = 'netLost'; el.setAttribute('role', 'status');
+        el.innerHTML = '<style>#netLost{position:fixed;left:50%;top:max(10px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:8999;display:flex;align-items:center;gap:10px;max-width:calc(100% - 24px);padding:9px 16px;border-radius:999px;background:rgba(6,10,22,.86);color:#eef3ff;font:800 14px Nunito,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4);pointer-events:none}#netLost i{width:14px;height:14px;flex:none;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:#ffd36b;animation:nlS .9s linear infinite}@keyframes nlS{to{transform:rotate(360deg)}}</style><i></i><span>Esperando al anfitrión… (si salió de la app, la partida sigue cuando vuelva)</span>';
+        document.body.appendChild(el); },
+      ok() { if (el) { el.remove(); el = null; } },
+    };
   })();
   const myInfo = () => mine.map((seat, li) => { let m = null; try { m = gateO.me(li); } catch (e) { m = null; } return { s: seat, m }; });
   function launch() {
@@ -1351,6 +1375,10 @@ const NetPlay = (() => {
       return { a: snaps[0].d, b: snaps[0].d, k: 1 };
     },
     set lag(ms) { lagMs = ms; lagFixed = true; }, get lag() { return lagMs; },
+    // predicción del personaje propio (remoto): la instantánea más nueva (con su hora de llegada) y el ping al anfitrión
+    latest() { return snaps.length ? snaps[snaps.length - 1] : null; }, get rtt() { return rtt; },
+    // ¿predecir? (con ?nopred se apaga, para comparar)
+    get pred() { return on && role === 'client' && !noPred; },
     send, onStart(f) { startSubs.push(f); }, onMsg(f) { msgSubs.push(f); },
     // fin de la partida en línea (lo dice el anfitrión): resultado para todos
     finish(res) { if (on && role === 'host') send({ t: 'fin', res }, true, '*'); },
@@ -6654,7 +6682,7 @@ const Game = (() => {
   function startNet(c) {
     G.net = true; G.daily = null; G.campBoss = null; Fiesta.force(null);
     G.flavors = c.flavors.slice(); G.winsNeeded = c.wins || 3;
-    startMatch(c.mode, false, c.arena || 'random', false);
+    startMatch(c.mode, false, c.arena || 'random', !!c.fiesta); // Modo Fiesta: una sorpresa por ronda (la sortea el anfitrión)
     const S = typeof NetPlay !== 'undefined' ? NetPlay.seats : [];
     G.players.forEach((p, i) => { if (S[i] && S[i].name) p.name = String(S[i].name).slice(0, 14); if (c.accs && c.accs[i]) p.acc = c.accs[i]; });
     G.handicap = [0, 0];
@@ -14220,8 +14248,9 @@ const NetGame = (() => {
   function readLocal(li) {
     const i = _player(li), now = performance.now(), H = hold[li] || (hold[li] = {});
     for (const k of ['jump', 'stick']) if (i[k]) H[k] = now + 120;
-    return { left: !!i.left, right: !!i.right, pull: !!i.pull, release: !!i.release, jump: !!i.jump || (H.jump || 0) > now, stick: !!i.stick || (H.stick || 0) > now };
+    return (lastIn[li] = { left: !!i.left, right: !!i.right, pull: !!i.pull, release: !!i.release, jump: !!i.jump || (H.jump || 0) > now, stick: !!i.stick || (H.stick || 0) > now });
   }
+  const lastIn = [];
 
   /* ---------- arranque ---------- */
   NetPlay.gate({
@@ -14231,7 +14260,7 @@ const NetGame = (() => {
       const fl = [0, 1].map(i => { const w = want[i] || {}; return FLAVORS[w.flavor] ? w.flavor : ['fresa', 'menta'][i]; });
       if (fl[0] === fl[1]) fl[1] = Object.keys(FLAVORS).find(k => k !== fl[0] && !FLAVORS[k].locked) || 'menta';
       const arena = ARENA_DEFS[ev.map] ? ev.map : 'random';
-      return { mode, arena, flavors: fl, accs: [0, 1].map(i => NetPlay.okId((want[i] || {}).acc) || 'ninguno'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)) };
+      return { mode, arena, flavors: fl, accs: [0, 1].map(i => NetPlay.okId((want[i] || {}).acc) || 'ninguno'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), fiesta: !!(ev.opts && ev.opts.fiesta) };
     },
     apply(c) { reset(); UI.netStart(c); },
   });
@@ -14301,10 +14330,73 @@ const NetGame = (() => {
     G.cam.focus = B.cam ? Object.assign({}, B.cam) : null;
   }
 
+  /* ---------- predicción del chicle propio (remoto) ----------
+     Moverse, saltar y pegarse responden YA: una copia del jugador de este aparato corre aquí con la misma física
+     (Player.step, con el tirón del hilo que manda el anfitrión) y es la que se ve; el hilo se acomoda para seguir
+     pegado a ella. Al llegar una instantánea se compara con lo que se predijo para ese momento (hace «un ping») y se
+     corrige de a poquito; si allá pasó otra cosa (se despegó, cayó a la caneca, lo golpearon) se toma lo del anfitrión. */
+  const PDT = 1 / 120, ghosts = {}, PST = { hard: 0, soft: 0, err: 0 }, IXP = Object.fromEntries(PF.map((k, i) => [k, i]));
+  const SHOW = ['x', 'y', 'vx', 'vy', 'stuck', 'onGround', 'moveDir', 'charge', 'chargeLvl', 'jumping', 'diveT', 'airJumps', 'facing', 'pulling', 'releasing'];
+  function hardSet(q, row) { PF.forEach((f, j) => { const v = row[j]; q[f] = v && typeof v === 'object' ? JSON.parse(JSON.stringify(v)) : v; }); q.setMass && q.setMass(q.mass); }
+  function ghostOf(p, row) {
+    let g = ghosts[p.id]; if (g && g.p === p) return g;
+    const q = Object.assign(Object.create(Object.getPrototypeOf(p)), p); q.events = []; q.contacts = []; q.stats = Object.assign({}, p.stats); q.prevJump = false; q.prevStick = false;
+    PST.made = (PST.made || 0) + 1;
+    hardSet(q, row); return (ghosts[p.id] = { p, q, hist: [], lastN: 0, acc: 0 });
+  }
+  function histAt(H, t) {
+    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 250 ? H[0] : null; // un poco antes del comienzo: el primero
+    for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), vx: lerp(a.vx, b.vx, k), vy: lerp(a.vy, b.vy, k), stuck: a.stuck }; }
+    return null;
+  }
+  const rebase = (g, t) => { const q = g.q; g.hist = [{ t, x: q.x, y: q.y, vx: q.vx, vy: q.vy, stuck: q.stuck }]; };
+  function reconcile(g, row, tAt) {
+    const q = g.q, X = f => row[IXP[f]];
+    if (!X('alive') || X('dunked') || !q.alive) { hardSet(q, row); rebase(g, tAt); return; }
+    const h = histAt(g.hist, tAt); if (!h) { hardSet(q, row); rebase(g, tAt); PST.hard++; return; }
+    // pegado/despegado distinto justo en ese instante: si unos ms antes o después la copia estaba igual, es solo el momento
+    // exacto del toque (no se corrige esta vez); si no, de verdad pasó otra cosa allá
+    if (!!h.stuck !== !!X('stuck')) { if (g.hist.some(o => Math.abs(o.t - tAt) < 90 && !!o.stuck === !!X('stuck'))) return; hardSet(q, row); rebase(g, tAt); PST.hard++; return; }
+    const ex = X('x') - h.x, ey = X('y') - h.y, evx = X('vx') - h.vx, evy = X('vy') - h.vy; PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(ex, ey) * 0.05;
+    if (Math.hypot(ex, ey) > 150) { hardSet(q, row); rebase(g, tAt); PST.hard++; return; }
+    const k = 0.3; q.x += ex * k; q.y += ey * k; q.vx += evx * k; q.vy += evy * k; if (q.stuck) { q.stuckX = q.x; q.stuckY = q.y; }
+    for (const o of g.hist) { o.x += ex * k; o.y += ey * k; o.vx += evx * k; o.vy += evy * k; }
+    // lo que decide el anfitrión: el cuerpo (tamaño del chicle), golpes, lo pegajoso
+    if (Math.abs((X('mass') || 0) - q.mass) > 0.02) q.setMass(X('mass')); if ((X('stun') || 0) > q.stun + 0.05) q.stun = X('stun');
+    for (const f of ['inv', 'sticky', 'slingT', 'whipT', 'anchor', 'pinned', 'hangT']) q[f] = X(f);
+  }
+  // cuadros muy lentos (el juego frena su reloj a 0,1 s por cuadro): la copia sigue el tiempo real para no quedarse atrás
+  const realDt = (g, dt) => { const now = performance.now(), real = g.lastT ? (now - g.lastT) / 1000 : dt; g.lastT = now; return real > 0.1 ? Math.min(0.25, real) : dt; };
+  function predict(dt) {
+    const Lt = NetPlay.latest(), D = Lt && Lt.d; if (!D || !D.p || !G.rope) return; const now = performance.now(), R = G.rope;
+    for (const seat of NetPlay.mine) {
+      const p = G.players[seat], row = D.p[seat]; if (!p || !row) continue;
+      const g = ghostOf(p, row), q = g.q;
+      if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, row, Lt.arr - NetPlay.rtt - 12); }
+      const inp = Object.assign({}, NEUTRAL, lastIn[NetPlay.mine.indexOf(seat)] || {});
+      const GP = Object.create(G); GP.rope = Object.assign(Object.create(Object.getPrototypeOf(R)), R); GP.players = G.players.slice(); GP.players[seat] = q;
+      g.acc += realDt(g, dt); let n = 0;
+      while (g.acc >= PDT && n < 32) {
+        const o = G.players[1 - seat], both = q.alive && o && o.alive && R.visible, d = seat === 0 ? R.dirA : R.dirB, T = both ? R.tension : 0, kk = (q.slingT > 0.62 ? 0 : 1);
+        q.step(PDT, inp, { x: d.x * T * kk, y: d.y * T * kk }, GP); q.events.length = 0; g.acc -= PDT; n++;
+      }
+      if (n >= 32) g.acc = 0;
+      g.hist.push({ t: now, x: q.x, y: q.y, vx: q.vx, vy: q.vy, stuck: q.stuck }); while (g.hist.length > 2 && now - g.hist[0].t > 3000) g.hist.shift();
+      if (!p.alive || !q.alive) continue;
+      // se dibuja la copia; el hilo se corre hacia ella (todo en la punta de este jugador, nada en la del otro)
+      const dx = q.x - p.x, dy = q.y - p.y;
+      for (const f of SHOW) p[f] = q[f] && typeof q[f] === 'object' ? Object.assign({}, q[f]) : q[f];
+      if (q.stuckN) p.stuckN = { x: q.stuckN.x, y: q.stuckN.y };
+      const P = R.pts, m = P.length - 1;
+      if (m > 0 && (dx || dy)) P.forEach((pt, i) => { const w0 = seat === 0 ? 1 - i / m : i / m, w = w0 * w0 * (3 - 2 * w0); pt.x += dx * w; pt.y += dy * w; if (pt.px != null) { pt.px += dx * w; pt.py += dy * w; } });
+    }
+  }
+
   /* ---------- un cuadro del remoto ---------- */
   let evQ = [], resQ = null, shownRes = false, prevState = null;
   function clientStep(dt) {
     const S = NetPlay.sample(); if (S) apply(S.a, S.b, S.k);
+    if (NetPlay.pred && dt > 0) predict(dt);
     if (evQ.length) { const l = evQ; evQ = [];
       for (const e of l) { try {
         const a = e.j ? JSON.parse(e.j) : [];
@@ -14316,10 +14408,10 @@ const NetGame = (() => {
     if (G.state === 'matchEnd' && resQ && !shownRes && G.stateT > 2.4) { shownRes = true; const r = resQ; resQ = null; UI.showResults(r); }
   }
   NetPlay.onMsg(d => { if (d.t === 'res' && NetPlay.isClient && d.r) resQ = d.r; });
-  function reset() { evQ = []; resQ = null; shownRes = false; prevState = null; }
+  function reset() { for (const k in ghosts) delete ghosts[k]; evQ = []; resQ = null; shownRes = false; prevState = null; }
 
   return {
-    seatsMax: 2, again, snap, apply, clientStep, readLocal, slowKeys: ['g2', 'pl', 'gd', 'as', 'm', 'f'],
+    seatsMax: 2, again, snap, apply, clientStep, readLocal, get pst() { return PST; }, slowKeys: ['g2', 'pl', 'gd', 'as', 'm', 'f'],
     neutral: () => NEUTRAL,
     event(e) { evQ.push(e); if (evQ.length > 400) evQ.splice(0, evQ.length - 400); },
     results(r) { NetPlay.send({ t: 'res', r }, true, '*'); },

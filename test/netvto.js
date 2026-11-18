@@ -43,7 +43,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const moved = Math.abs(after.h[2] - before.h[2]) > 0.05 || Math.hypot(after.h[0] - before.h[0], after.h[1] - before.h[1]) > 30;
   const synced = Math.hypot(after.c[0] - after.h[0], after.c[1] - after.h[1]) < 160;
   // fin forzado: el anfitrión gana todas las rondas que hacen falta
-  await fh.evaluate(() => { const G = Game.G; if (G.mode === 'duel') { G.wins[0] = G.winsNeeded - 1; G.birds.forEach((b, i) => { if (i) b.damage(9999, 0, 'bullet'); }); } else { G.score[0] = 99; G.roundT = 0.01; } });
+  // Jefe en pareja: el remoto ve el dirigible, sus partes y las vidas del equipo
+  const bossH = await fh.evaluate(() => Game.G.boss ? [Game.G.lives, Game.G.boss.parts.length, Math.round(Game.G.boss.x)] : null), bossC = await fc.evaluate(() => Game.G.boss ? [Game.G.lives, Game.G.boss.parts.length, Math.round(Game.G.boss.x)] : null);
+  if (MODE === 'boss') console.log('jefe (vidas, partes, x) anfitrión', JSON.stringify(bossH), '· remoto', JSON.stringify(bossC));
+  const bossOk = MODE !== 'boss' || (bossH && bossC && bossH[0] === bossC[0] && bossH[1] === bossC[1] && Math.abs(bossH[2] - bossC[2]) < 200);
+  await fh.evaluate(() => { const G = Game.G; if (G.mode === 'boss') { G.boss.dead = true; G.boss.fallT = 3.5; return; } if (G.mode === 'duel') { G.wins[0] = G.winsNeeded - 1; G.birds.forEach((b, i) => { if (i) b.damage(9999, 0, 'bullet'); }); } else { G.score[0] = 99; G.roundT = 0.01; } });
   let resH = null, resC = null;
   for (let i = 0; i < 40; i++) { await wait(500); resH = await fh.evaluate(() => !document.getElementById('s-results').hidden && document.getElementById('r-title').textContent); resC = await fc.evaluate(() => !document.getElementById('s-results').hidden && document.getElementById('r-title').textContent); if (resH && resC) break; }
   const btns = async f => f.evaluate(() => ['r-rematch', 'r-hub'].map(id => { const e = document.getElementById(id); return e.hidden ? null : e.textContent; }));
@@ -56,6 +60,6 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   errs.push(...(await ferr(fh)).map(e => 'anfitrión: ' + e), ...(await ferr(fc)).map(e => 'remoto: ' + e));
   const resOk = !!resH && !!resC && bh[0] === 'Revancha (todos)' && bh[1] === 'Volver a la sala' && !bc[0] && bc[1] === 'Volver a la sala';
   console.log({ pilotos: n, remotoMueveSuPajaro: moved, remotoVeLoMismo: synced, disparos: shots > 0, resultados: resOk, revancha: again, errores: errs.slice(0, 6) });
-  console.log(moved && synced && shots > 0 && resOk && again && !errs.length && n === (TRES ? 3 : 2) ? 'VTO EN LÍNEA OK' : 'VTO EN LÍNEA FALLA');
+  console.log(bossOk && moved && synced && shots > 0 && resOk && again && !errs.length && n === (TRES ? 3 : 2) ? 'VTO EN LÍNEA OK' : 'VTO EN LÍNEA FALLA');
   await b.close();
 })();

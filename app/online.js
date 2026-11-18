@@ -71,14 +71,14 @@ const Online = (() => {
           ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
         </div></div>`;
       bindWho(root); bindResume(root);
-      $('#on-host', root).onclick = async () => { busy = true; note = ''; render(); try { await Net.host(info()); } catch (e) { note = 'No se pudo crear la sala: ' + e.message; } busy = false; render(); };
-      const join = async () => { const c = $('#on-code', root).value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length < 5) { note = 'El código tiene 5 letras o números.'; render(); return; } busy = true; note = ''; render(); try { await Net.join(c, info()); waitHost(); } catch (e) { note = 'No se pudo entrar: ' + e.message; } busy = false; render(); };
+      $('#on-host', root).onclick = async () => { busy = true; note = ''; render(); try { await Net.host(info()); keepAwake(); } catch (e) { note = 'No se pudo crear la sala: ' + e.message; } busy = false; render(); };
+      const join = async () => { const c = $('#on-code', root).value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length < 5) { note = 'El código tiene 5 letras o números.'; render(); return; } busy = true; note = ''; render(); try { await Net.join(c, info()); waitHost(); keepAwake(); } catch (e) { note = 'No se pudo entrar: ' + e.message; } busy = false; render(); };
       $('#on-join', root).onclick = join; $('#on-code', root).onkeydown = e => { if (e.key === 'Enter') join(); };
       return;
     }
     const devs = (R && R.devices) || [], ps = players(R), me = Net.id, host = Net.isHost;
     const hostPeer = !host && Net.peers.get(Net.hostId), myRtt = hostPeer ? Math.round(hostPeer.rtt) : 0, connected = host || (hostPeer && hostPeer.open);
-    root.innerHTML = `<div class="wrap" style="max-width:920px"><div class="thead"><div><h1 class="h1">Sala en línea</h1><p class="sub">${host ? 'Eres el anfitrión: aquí corren las partidas. Pásales el código o el enlace a los demás y deja esta pantalla abierta mientras juegan.' : connected ? 'Estás dentro. El anfitrión elige qué jugar.' : 'Buscando al anfitrión…'}</p></div><button class="btn small danger" id="on-leave">Salir de la sala</button></div>
+    root.innerHTML = `<div class="wrap" style="max-width:920px"><div class="thead"><div><h1 class="h1">Sala en línea</h1><p class="sub">${host ? 'Eres el anfitrión: aquí corren las partidas. Pásales el código o el enlace a los demás y deja esta pantalla abierta mientras juegan.' : connected ? (hostAway ? 'El anfitrión salió de la app un momento: todo sigue cuando vuelva.' : 'Estás dentro. El anfitrión elige qué jugar.') : 'Buscando al anfitrión…'}</p></div><button class="btn small danger" id="on-leave">Salir de la sala</button></div>
       <div class="stack">
         <div class="panel on-room">
           <div class="on-codebox"><span class="lbl">CÓDIGO</span><b class="on-big">${esc(Net.code)}</b>
@@ -98,7 +98,7 @@ const Online = (() => {
         ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
       </div></div>`;
     bindWho(root);
-    $('#on-leave', root).onclick = () => { Net.leave(); note = ''; render(); };
+    $('#on-leave', root).onclick = () => { Net.leave(); note = ''; hostAway = false; render(); };
     $('#on-copy', root).onclick = async () => { const u = linkFor(Net.code); try { await navigator.clipboard.writeText(u); note = 'Enlace copiado: ' + u; } catch (e) { note = u; } render(); };
     if ($('#on-share', root)) $('#on-share', root).onclick = () => navigator.share({ title: 'GameHub', text: `¡Juguemos en GameHub! Sala ${Net.code}`, url: linkFor(Net.code) }).catch(() => {});
     if (host) bindHostPlay(root);
@@ -108,12 +108,15 @@ const Online = (() => {
   let pick = null, pickEv = null, lastPick = null;
   const GAMES = () => (window.GAMEHUB ? GAMEHUB.GAMES : []);
   // los modos que ya van en línea (y que admiten tantos jugadores)
-  const netModes = (g, n = players(Net.room).length) => g.modes.filter(m => (!g.net || !g.net.modes || g.net.modes.includes(m.id)) && !(g.net && g.net.max && g.net.max[m.id] < n));
-  const mapsFor = (g, m) => (m && m.maps === 'arenas' ? g.arenas || [] : g.maps).filter(x => !(m && m.map) || x[0] === m.map);
+  const netModes = (g, n = players(Net.room).length) => g.modes.filter(m => (!g.net || !g.net.modes || g.net.modes.includes(m.id)) && !(g.net && g.net.max && g.net.max[m.id] < n)).concat((g.net && g.net.extra) || []);
+  // opciones de sí/no que también van en línea (Modo Fiesta…)
+  const netOpts = g => (g.opts || []).filter(o => o.type === 'bool' && g.net && (g.net.opts || []).includes(o.id));
+  const allModes = g => g.modes.concat((g.net && g.net.extra) || []);
+  const mapsFor = (g, m) => (m && Array.isArray(m.maps) ? m.maps : m && m.maps === 'arenas' ? g.arenas || [] : g.maps).filter(x => !(m && m.map) || x[0] === m.map);
   const lenTxt = (g, m, n) => (g.net && g.net.lenTxt && g.net.lenTxt[m.id] ? g.net.lenTxt[m.id](n) : m.lenTxt(n));
   function evText(g, ev) {
-    if (!g || !ev) return ''; const m = g.modes.find(x => x.id === ev.mode), mp = (g.maps.concat(g.arenas || [])).find(x => x[0] === ev.map);
-    return [g.name, m && m.name, mp ? mp[1] : 'escenario al azar', m && m.len && ev.len ? lenTxt(g, m, ev.len) : ''].filter(Boolean).join(' · ');
+    if (!g || !ev) return ''; const m = allModes(g).find(x => x.id === ev.mode), mp = (Array.isArray(m && m.maps) ? m.maps : g.maps.concat(g.arenas || [])).find(x => x[0] === ev.map);
+    return [g.name, m && m.name, mp ? mp[1] : 'escenario al azar', m && m.len && ev.len ? lenTxt(g, m, ev.len) : '', ...netOpts(g).filter(o => ev.opts && ev.opts[o.id]).map(o => o.name)].filter(Boolean).join(' · ');
   }
   function hostPlayHTML(ps) {
     const gs = GAMES(), g = pick && gs.find(x => x.id === pick);
@@ -127,6 +130,7 @@ const Online = (() => {
         <div class="lbl">Modo</div>${seg('mode', ms.map(x => [x.id, x.name]), m.id)}<p class="on-desc">${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</p>
         ${maps.length > 1 ? `<div class="lbl">Escenario</div>${seg('map', [['', '🎲 Al azar']].concat(maps), pickEv.map || '')}` : ''}
         ${m.len ? `<div class="lbl">Largo</div>${seg('len', m.len.map(n => [n, lenTxt(g, m, n)]), pickEv.len || m.len[1] || m.len[0])}` : ''}
+        ${netOpts(g).map(o => `<div class="lbl">${esc(o.name)}</div>${seg('opt:' + o.id, [['0', 'No'], ['1', 'Sí']], pickEv.opts && pickEv.opts[o.id] ? '1' : '0')}<p class="on-desc">${esc(o.desc[0].toUpperCase() + o.desc.slice(1))}.</p>`).join('')}
         ${over}<div class="row"><button class="btn gold big" id="on-go">¡A jugar!</button><button class="btn ghost" id="on-back">Otro juego</button></div>
       </div>`;
   }
@@ -134,11 +138,11 @@ const Online = (() => {
     if ($('#on-tour', root)) $('#on-tour', root).onclick = () => { const T = GAMEHUB.Tour.T; if (T && T.online && !T.done) GAMEHUB.go('torneo'); else GAMEHUB.onlineTour(players(Net.room)); };
     $$('[data-ong]', root).forEach(b => b.onclick = () => { const g = GAMES().find(x => x.id === b.dataset.ong); if (!g || !g.net) { note = 'Ese juego todavía no está listo para jugar en línea (en construcción).'; render(); return; }
       if (pick !== g.id) { pick = g.id; const m = netModes(g)[0]; pickEv = { mode: m.id, map: '', len: m.len ? m.len[1] || m.len[0] : 0 }; sendPick(); } note = ''; render(); });
-    $$('[data-onseg]', root).forEach(sg => sg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = sg.dataset.onseg, v = b.dataset.v; pickEv[k] = k === 'len' ? +v : v;
-      if (k === 'mode') { const g = GAMES().find(x => x.id === pick), m = g.modes.find(x => x.id === v); if (!mapsFor(g, m).some(x => x[0] === pickEv.map)) pickEv.map = ''; if (m.len && !m.len.includes(pickEv.len)) pickEv.len = m.len[1] || m.len[0]; }
+    $$('[data-onseg]', root).forEach(sg => sg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = sg.dataset.onseg, v = b.dataset.v; if (k.startsWith('opt:')) { pickEv.opts = Object.assign({}, pickEv.opts, { [k.slice(4)]: v === '1' }); sendPick(); render(); return; } pickEv[k] = k === 'len' ? +v : v;
+      if (k === 'mode') { const g = GAMES().find(x => x.id === pick), m = allModes(g).find(x => x.id === v); if (!mapsFor(g, m).some(x => x[0] === pickEv.map)) pickEv.map = ''; if (m.len && !m.len.includes(pickEv.len)) pickEv.len = m.len[1] || m.len[0]; }
       sendPick(); render(); }));
-    if ($('#on-go', root)) $('#on-go', root).onclick = () => { const g = GAMES().find(x => x.id === pick); if (!g) return; const m = g.modes.find(x => x.id === pickEv.mode), maps = mapsFor(g, m);
-      const map = pickEv.map || (maps[Math.floor(Math.random() * maps.length)] || [])[0]; startGame(g, { mode: pickEv.mode, map, rounds: pickEv.len || 3, len: pickEv.len || 0 }); };
+    if ($('#on-go', root)) $('#on-go', root).onclick = () => { const g = GAMES().find(x => x.id === pick); if (!g) return; const m = allModes(g).find(x => x.id === pickEv.mode), maps = mapsFor(g, m);
+      const map = pickEv.map || (maps[Math.floor(Math.random() * maps.length)] || [])[0]; startGame(g, { mode: pickEv.mode, map, rounds: pickEv.len || 3, len: pickEv.len || 0, opts: Object.assign({}, pickEv.opts) }); };
     if ($('#on-back', root)) $('#on-back', root).onclick = () => { pick = null; pickEv = null; sendPick(); render(); };
   }
   // los demás ven lo que el anfitrión está armando
@@ -182,6 +186,7 @@ const Online = (() => {
     saveTourNet(m.T); if (m.T.done) GAMEHUB.fameAdd(m.T); if (visible()) render();
   });
   function tourPanel(host) {
+    if (host && !(GAMEHUB.Tour.T && GAMEHUB.Tour.T.online) && tourNet && tourNet.online && !tourNet.done) return `<div class="panel"><div class="h2">TORNEO EN LÍNEA A MEDIAS</div><p class="note">«${esc(tourNet.name)}» va en la prueba ${tourNet.events.filter(e => e.status === 'done').length + 1}. Como ahora eres el anfitrión, lo puedes seguir aquí con todos.</p><div class="row"><button class="btn gold" id="on-tourtake">Seguir el torneo</button></div></div>`;
     const T = host ? GAMEHUB.Tour.T : tourNet; if (!T || !T.online || (T.done && Date.now() - (T.ended || 0) > 6 * 3600e3)) return '';
     return `<div class="panel"><div class="h2">TORNEO EN LÍNEA</div>${GAMEHUB.tourHTML(T)}${host ? '<div class="row" style="margin-top:10px"><button class="btn small" id="on-tourgo">Abrir el tablero del torneo ›</button></div>' : '<p class="note">El anfitrión lanza cada prueba; quienes no juegan la miran en vivo.</p>'}</div>`;
   }
@@ -198,6 +203,7 @@ const Online = (() => {
     if ($('#on-resume', root)) $('#on-resume', root).onclick = async () => { const T = tourNet; GAMEHUB.Tour.T = T; GAMEHUB.Tour.save(); try { await Net.host(info()); } catch (e) { note = 'No se pudo crear la sala: ' + e.message; } render(); };
     if ($('#on-forget', root)) $('#on-forget', root).onclick = () => { saveTourNet(null); render(); };
     if ($('#on-tourgo', root)) $('#on-tourgo', root).onclick = () => GAMEHUB.go('torneo');
+    if ($('#on-tourtake', root)) $('#on-tourtake', root).onclick = () => { const L = GAMEHUB.Tour.T; const take = () => { GAMEHUB.Tour.T = tourNet; GAMEHUB.Tour.save(); GAMEHUB.go('torneo'); }; if (L && !L.done) GAMEHUB.confirm('¿Cambiar de torneo?', 'En este aparato hay otro torneo sin terminar; si sigues el de la sala, ese se pierde.', 'Sí, seguir el de la sala', take); else take(); };
   }
   // el anfitrión lanza una prueba del torneo: juegan los dos de la prueba (buscados por nombre en la sala); los demás miran
   function playTour(T, ev) {
@@ -219,7 +225,7 @@ const Online = (() => {
     const g = lastPick && GAMES().find(x => x.id === lastPick.game);
     return g ? `<div class="on-next" style="--c1:${g.c1};--c2:${g.c2}"><span class="lbl">EL ANFITRIÓN PREPARA</span><b>${esc(evText(g, lastPick.ev).split(' · ')[0])}</b><small>${esc(evText(g, lastPick.ev).split(' · ').slice(1).join(' · '))}</small></div>` : '<p class="note">Esperando a que el anfitrión elija…</p>';
   }
-  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0 } : {} } : null; if (visible()) render(); } });
+  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0, opts: m.ev.opts && typeof m.ev.opts === 'object' ? Object.fromEntries(Object.entries(m.ev.opts).filter(([k, v]) => /^\w{1,20}$/.test(k) && typeof v === 'boolean')) : {} } : {} } : null; if (visible()) render(); } });
   // al entrar alguien nuevo, el anfitrión le cuenta qué está armando
   Net.on('peers', () => { if (Net.isHost && pick) sendPick(); });
   // los remotos: el anfitrión arrancó una partida → abrirla aquí también
@@ -228,7 +234,35 @@ const Online = (() => {
   function waitHost() { clearTimeout(hostT); hostT = setTimeout(() => { if (Net.alive && !Net.isHost && !Net.room) { note = 'No aparece el anfitrión. Revisa el código, o que su GameHub siga abierto en la sala.'; render(); } }, 15000); }
   Net.on('room', () => { if (visible()) render(); });
   Net.on('peers', () => { if (visible()) render(); });
-  Net.on('status', s => { if (s.hostGone && Net.alive && !Net.isHost) { note = 'El anfitrión salió de la sala.'; Net.leave(); if (visible()) render(); } });
+  // si el anfitrión se va, la sala sigue: el siguiente aparato queda de anfitrión (mismo código) y el torneo sigue con él
+  const nameOf = id => { const d = ((Net.room && Net.room.devices) || []).find(x => x.id === id); return d && d.info ? d.info.name : ''; };
+  const closeNetGame = () => { try { if (GAMEHUB.Launcher.net) GAMEHUB.Launcher.close(); } catch (e) { /* nada */ } };
+  Net.on('status', s => {
+    if (!Net.alive) return;
+    if (s.hostGone) { closeNetGame(); hostAway = false; note = 'Se fue el anfitrión: la sala sigue con el siguiente aparato…'; }
+    else if (s.newHost && s.me) { closeNetGame(); note = 'Ahora tú eres el anfitrión: la sala sigue con el mismo código y los demás se reconectan solos.'; adoptTour(); }
+    else if (s.newHost) { const n = nameOf(s.newHost); note = n ? `Ahora el anfitrión es ${n}.` : 'La sala sigue con un nuevo anfitrión.'; }
+    else if (s.steppedDown) { closeNetGame(); note = 'Otro aparato quedó de anfitrión: sigues en la sala como invitado.'; }
+    else return;
+    if (visible()) render();
+  });
+  // el nuevo anfitrión sigue el torneo en línea que todos tenían guardado (si en este aparato no hay otro a medias)
+  function adoptTour() {
+    const T = tourNet, L = GAMEHUB.Tour.T; if (!T || !T.online || T.done) return;
+    if (L && !L.done && !L.online) { note += ' El torneo en línea quedó a medias: ábrelo desde «Seguir el torneo» abajo.'; return; }
+    GAMEHUB.Tour.T = T; GAMEHUB.Tour.save();
+  }
+  /* ---------- pantalla encendida y anfitrión en segundo plano ---------- */
+  let wl = null, hostAway = false;
+  async function keepAwake() { if (!Net.alive || document.hidden || wl || !navigator.wakeLock) return; try { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); if (!Net.alive) letSleep(); } catch (e) { wl = null; } }
+  function letSleep() { const w = wl; wl = null; if (w) w.release().catch(() => {}); }
+  Net.on('peers', () => { if (Net.alive) keepAwake(); else letSleep(); });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) keepAwake();
+    // el anfitrión avisa si sale de la app (en el celular, la partida se congela hasta que vuelva)
+    if (Net.alive && Net.isHost) Net.send('*', { $: 'away', on: document.hidden }, true);
+  });
+  Net.on('msg', (from, m) => { if (m && m.$ === 'away' && !Net.isHost && from === Net.hostId) { hostAway = !!m.on; if (visible()) render(); } });
   // refrescar el ping de vez en cuando (sin tocar lo que se está escribiendo)
   setInterval(() => { if (visible() && Net.alive && !el().contains(document.activeElement && document.activeElement.tagName === 'INPUT' ? document.activeElement : null)) render(); }, 3000);
   return { render, get code0() { return code0; }, info, players: () => players(Net.room), playTour };

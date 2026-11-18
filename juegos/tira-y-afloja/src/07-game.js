@@ -165,7 +165,7 @@ const Game = (() => {
   function startNet(c) {
     G.net = true; G.daily = null; G.campBoss = null; Fiesta.force(null);
     G.flavors = c.flavors.slice(); G.winsNeeded = c.wins || 3;
-    startMatch(c.mode, false, c.arena || 'random', false);
+    startMatch(c.mode, false, c.arena || 'random', !!c.fiesta); // Modo Fiesta: una sorpresa por ronda (la sortea el anfitrión)
     const S = typeof NetPlay !== 'undefined' ? NetPlay.seats : [];
     G.players.forEach((p, i) => { if (S[i] && S[i].name) p.name = String(S[i].name).slice(0, 14); if (c.accs && c.accs[i]) p.acc = c.accs[i]; });
     G.handicap = [0, 0];

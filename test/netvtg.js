@@ -5,7 +5,7 @@ const URL = (process.env.URL || 'http://127.0.0.1:8765/') + '?net=bc' + (process
 const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  const ctx = await b.newContext({ viewport: { width: 960, height: 540 } }); const errs = [];
+  const ctx = await b.newContext({ viewport: (process.env.VIEW ? { width: +process.env.VIEW.split('x')[0], height: +process.env.VIEW.split('x')[1] } : { width: 960, height: 540 }) }); const errs = [];
   await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); });
   const page = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('c:' + m.text().slice(0, 160)); }); await p.goto(URL); await wait(800); return p; };
   const H = await page(), C = await page();
