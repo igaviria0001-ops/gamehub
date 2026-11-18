@@ -66,6 +66,7 @@ const Online = (() => {
             <div class="panel on-card"><div class="h2">UNIRME A UNA SALA</div><p class="note">Escribe el código que te pasaron (o abre el enlace de invitación).</p>
               <div class="row" style="flex-wrap:nowrap"><input class="textin on-code" id="on-code" maxlength="5" placeholder="CÓDIGO" value="${esc(code0)}" autocapitalize="characters" autocomplete="off"><button class="btn" id="on-join" ${busy ? 'disabled' : ''}>Unirme</button></div></div>
           </div>
+          ${previewHTML()}
           ${resumeHTML()}
           ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
         </div></div>`;
@@ -84,6 +85,7 @@ const Online = (() => {
             <div class="row"><button class="btn small" id="on-copy">Copiar enlace</button>${navigator.share ? '<button class="btn small ghost" id="on-share">Compartir</button>' : ''}</div></div>
           <div class="on-sum"><b>${ps.length}</b> jugador${ps.length === 1 ? '' : 'es'} en <b>${devs.length}</b> aparato${devs.length === 1 ? '' : 's'}${!host && connected ? ` · tu ping <span class="on-ping ${sig(myRtt)}">${myRtt} ms</span>` : ''}${Net.signalReady ? '' : ' · <span class="on-ping mid">buscando la red…</span>'}</div>
         </div>
+        <div class="on-react" role="group" aria-label="Reacciones rápidas">${REACT.map(e => `<button class="on-rx" data-rx="${e}" aria-label="Enviar ${e}">${e}</button>`).join('')}</div>
         <div class="panel"><div class="h2">APARATOS Y JUGADORES</div>
           <div class="on-devs">${devs.map(d => { const hp = d.host && !host ? hostPeer : null; if (hp) d = Object.assign({}, d, { via: hp.via, rtt: Math.round(hp.rtt) }); const v = VIA[d.id === me ? 'local' : d.via] || VIA.conectando; return `<div class="on-dev${d.id === me ? ' me' : ''}">
             <div class="on-dh"><span class="on-di">${DEV[d.info && d.info.dev] || '🎮'}</span><b>${esc(d.info ? d.info.name : '…')}</b>${d.host ? '<span class="on-tag gold">anfitrión</span>' : ''}${d.id === me ? '<span class="on-tag">tú</span>' : ''}
@@ -100,7 +102,7 @@ const Online = (() => {
     $('#on-copy', root).onclick = async () => { const u = linkFor(Net.code); try { await navigator.clipboard.writeText(u); note = 'Enlace copiado: ' + u; } catch (e) { note = u; } render(); };
     if ($('#on-share', root)) $('#on-share', root).onclick = () => navigator.share({ title: 'GameHub', text: `¡Juguemos en GameHub! Sala ${Net.code}`, url: linkFor(Net.code) }).catch(() => {});
     if (host) bindHostPlay(root);
-    bindResume(root);
+    bindResume(root); bindReact(root);
   }
   // lo que el anfitrión puede lanzar: juego → modo, escenario y largo → ¡A jugar!
   let pick = null, pickEv = null, lastPick = null;
@@ -155,6 +157,20 @@ const Online = (() => {
     Net.send('*', { $: 'game', game: g.id, ev, seats, sid, tour: tour || null }, true);
     openNet(g.id, 'host', seats, ev, sid, tour);
   }
+  /* ---------- reacciones rápidas (emojis que salen flotando en todos los aparatos de la sala) ---------- */
+  const REACT = ['👋', '😂', '🔥', '😱', '👏', '🏆', '😎', '🙏'];
+  let rxT = 0;
+  function bubble(e, who) {
+    const host = document.body; if (!REACT.includes(e)) return;
+    const b = document.createElement('div'); b.className = 'on-bubble'; b.style.left = (12 + Math.random() * 70) + '%';
+    b.innerHTML = `<span>${e}</span><small></small>`; b.querySelector('small').textContent = String(who || '').slice(0, 16);
+    host.appendChild(b); setTimeout(() => b.remove(), 2600);
+  }
+  function bindReact(root) {
+    $$('[data-rx]', root).forEach(btn => btn.onclick = () => { if (Date.now() - rxT < 400) return; rxT = Date.now(); const e = btn.dataset.rx, who = (st.players[0] && st.players[0].name) || 'Alguien'; bubble(e, who); if (Net.alive) Net.send('*', { $: 'rx', e, who }, true); });
+  }
+  Net.on('msg', (from, m) => { if (!m || m.$ !== 'rx' || typeof m.e !== 'string' || m.via === Net.id) return; if (visible()) bubble(m.e, typeof m.who === 'string' ? m.who : ''); if (Net.isHost) Net.send('*', { $: 'rx', e: m.e, who: m.who, via: from }, true); });
+
   /* ---------- torneo en línea ---------- */
   let tourNet = (() => { try { return JSON.parse(localStorage.getItem('gamehub_tourNet') || 'null'); } catch (e) { return null; } })();
   const saveTourNet = T => { tourNet = T; try { localStorage.setItem('gamehub_tourNet', JSON.stringify(T)); } catch (e) { /* nada */ } };
@@ -168,6 +184,13 @@ const Online = (() => {
   function tourPanel(host) {
     const T = host ? GAMEHUB.Tour.T : tourNet; if (!T || !T.online || (T.done && Date.now() - (T.ended || 0) > 6 * 3600e3)) return '';
     return `<div class="panel"><div class="h2">TORNEO EN LÍNEA</div>${GAMEHUB.tourHTML(T)}${host ? '<div class="row" style="margin-top:10px"><button class="btn small" id="on-tourgo">Abrir el tablero del torneo ›</button></div>' : '<p class="note">El anfitrión lanza cada prueba; quienes no juegan la miran en vivo.</p>'}</div>`;
+  }
+  // dentro de una vista previa (como el artefacto de Claude) el navegador no deja conectar aparatos: se avisa dónde sí
+  function previewHTML() {
+    let hosted = true; try { hosted = GAMEHUB.App.state().hosted; } catch (e) { /* nada */ }
+    if (hosted && typeof RTCPeerConnection !== 'undefined') return '';
+    const url = 'https://igaviria0001-ops.github.io/gamehub/';
+    return `<div class="panel on-note"><b>Para jugar en línea, abre GameHub desde su dirección:</b> <a href="${url}" target="_blank" rel="noopener">igaviria0001-ops.github.io/gamehub</a> (o desde la app instalada). Aquí, dentro de la vista previa, el navegador no deja conectar aparatos.</div>`;
   }
   // si el anfitrión se cayó a mitad de torneo, cualquiera lo puede seguir desde su copia
   function resumeHTML() { const T = tourNet; if (!T || !T.online || T.done) return ''; return `<div class="panel"><div class="h2">TORNEO A MEDIAS</div><p class="note">«${esc(T.name)}» quedó a medias (${T.events.filter(e => e.status === 'done').length} pruebas jugadas). Si el anfitrión no vuelve, síguelo tú: creas una sala nueva y los demás entran con el código.</p><div class="row"><button class="btn gold" id="on-resume">Seguir el torneo como anfitrión</button><button class="btn small ghost" id="on-forget">Olvidarlo</button></div></div>`; }

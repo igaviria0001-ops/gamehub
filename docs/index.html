@@ -484,6 +484,17 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-champ { font-size: 18px; font-weight: 900; padding: 10px 14px; border-radius: 14px; background: rgba(255, 210, 90, .12); border: 1px solid rgba(255, 210, 90, .35); }
 .ftag { display: inline-block; font-size: 11px; font-weight: 900; letter-spacing: .6px; padding: 2px 8px; border-radius: 999px; background: rgba(90, 216, 255, .16); color: #9fe8ff; margin-left: 6px; vertical-align: middle; }
 
+/* reacciones rápidas en la sala */
+.on-react { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.on-rx { font-size: 22px; line-height: 1; width: 46px; height: 46px; border-radius: 14px; border: 1px solid var(--line2); background: rgba(255,255,255,.06); cursor: pointer; transition: transform .12s; }
+.on-rx:hover { transform: translateY(-2px) scale(1.06); background: rgba(255,255,255,.12); }
+.on-rx:active { transform: scale(.92); }
+.on-bubble { position: fixed; bottom: 12%; z-index: 60; display: grid; justify-items: center; pointer-events: none; animation: onBub 2.6s ease-out forwards; }
+.on-bubble span { font-size: 46px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
+.on-bubble small { font-weight: 900; font-size: 12px; color: #fff; background: rgba(10,8,30,.6); padding: 2px 8px; border-radius: 999px; }
+@keyframes onBub { 0% { transform: translateY(20px) scale(.6); opacity: 0; } 12% { transform: translateY(0) scale(1.1); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-220px) scale(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .on-bubble { animation-duration: 1.4s; } }
+
 </style>
 </head>
 <body>
@@ -1125,6 +1136,7 @@ const Online = (() => {
             <div class="panel on-card"><div class="h2">UNIRME A UNA SALA</div><p class="note">Escribe el código que te pasaron (o abre el enlace de invitación).</p>
               <div class="row" style="flex-wrap:nowrap"><input class="textin on-code" id="on-code" maxlength="5" placeholder="CÓDIGO" value="${esc(code0)}" autocapitalize="characters" autocomplete="off"><button class="btn" id="on-join" ${busy ? 'disabled' : ''}>Unirme</button></div></div>
           </div>
+          ${previewHTML()}
           ${resumeHTML()}
           ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
         </div></div>`;
@@ -1143,6 +1155,7 @@ const Online = (() => {
             <div class="row"><button class="btn small" id="on-copy">Copiar enlace</button>${navigator.share ? '<button class="btn small ghost" id="on-share">Compartir</button>' : ''}</div></div>
           <div class="on-sum"><b>${ps.length}</b> jugador${ps.length === 1 ? '' : 'es'} en <b>${devs.length}</b> aparato${devs.length === 1 ? '' : 's'}${!host && connected ? ` · tu ping <span class="on-ping ${sig(myRtt)}">${myRtt} ms</span>` : ''}${Net.signalReady ? '' : ' · <span class="on-ping mid">buscando la red…</span>'}</div>
         </div>
+        <div class="on-react" role="group" aria-label="Reacciones rápidas">${REACT.map(e => `<button class="on-rx" data-rx="${e}" aria-label="Enviar ${e}">${e}</button>`).join('')}</div>
         <div class="panel"><div class="h2">APARATOS Y JUGADORES</div>
           <div class="on-devs">${devs.map(d => { const hp = d.host && !host ? hostPeer : null; if (hp) d = Object.assign({}, d, { via: hp.via, rtt: Math.round(hp.rtt) }); const v = VIA[d.id === me ? 'local' : d.via] || VIA.conectando; return `<div class="on-dev${d.id === me ? ' me' : ''}">
             <div class="on-dh"><span class="on-di">${DEV[d.info && d.info.dev] || '🎮'}</span><b>${esc(d.info ? d.info.name : '…')}</b>${d.host ? '<span class="on-tag gold">anfitrión</span>' : ''}${d.id === me ? '<span class="on-tag">tú</span>' : ''}
@@ -1159,7 +1172,7 @@ const Online = (() => {
     $('#on-copy', root).onclick = async () => { const u = linkFor(Net.code); try { await navigator.clipboard.writeText(u); note = 'Enlace copiado: ' + u; } catch (e) { note = u; } render(); };
     if ($('#on-share', root)) $('#on-share', root).onclick = () => navigator.share({ title: 'GameHub', text: `¡Juguemos en GameHub! Sala ${Net.code}`, url: linkFor(Net.code) }).catch(() => {});
     if (host) bindHostPlay(root);
-    bindResume(root);
+    bindResume(root); bindReact(root);
   }
   // lo que el anfitrión puede lanzar: juego → modo, escenario y largo → ¡A jugar!
   let pick = null, pickEv = null, lastPick = null;
@@ -1214,6 +1227,20 @@ const Online = (() => {
     Net.send('*', { $: 'game', game: g.id, ev, seats, sid, tour: tour || null }, true);
     openNet(g.id, 'host', seats, ev, sid, tour);
   }
+  /* ---------- reacciones rápidas (emojis que salen flotando en todos los aparatos de la sala) ---------- */
+  const REACT = ['👋', '😂', '🔥', '😱', '👏', '🏆', '😎', '🙏'];
+  let rxT = 0;
+  function bubble(e, who) {
+    const host = document.body; if (!REACT.includes(e)) return;
+    const b = document.createElement('div'); b.className = 'on-bubble'; b.style.left = (12 + Math.random() * 70) + '%';
+    b.innerHTML = `<span>${e}</span><small></small>`; b.querySelector('small').textContent = String(who || '').slice(0, 16);
+    host.appendChild(b); setTimeout(() => b.remove(), 2600);
+  }
+  function bindReact(root) {
+    $$('[data-rx]', root).forEach(btn => btn.onclick = () => { if (Date.now() - rxT < 400) return; rxT = Date.now(); const e = btn.dataset.rx, who = (st.players[0] && st.players[0].name) || 'Alguien'; bubble(e, who); if (Net.alive) Net.send('*', { $: 'rx', e, who }, true); });
+  }
+  Net.on('msg', (from, m) => { if (!m || m.$ !== 'rx' || typeof m.e !== 'string' || m.via === Net.id) return; if (visible()) bubble(m.e, typeof m.who === 'string' ? m.who : ''); if (Net.isHost) Net.send('*', { $: 'rx', e: m.e, who: m.who, via: from }, true); });
+
   /* ---------- torneo en línea ---------- */
   let tourNet = (() => { try { return JSON.parse(localStorage.getItem('gamehub_tourNet') || 'null'); } catch (e) { return null; } })();
   const saveTourNet = T => { tourNet = T; try { localStorage.setItem('gamehub_tourNet', JSON.stringify(T)); } catch (e) { /* nada */ } };
@@ -1227,6 +1254,13 @@ const Online = (() => {
   function tourPanel(host) {
     const T = host ? GAMEHUB.Tour.T : tourNet; if (!T || !T.online || (T.done && Date.now() - (T.ended || 0) > 6 * 3600e3)) return '';
     return `<div class="panel"><div class="h2">TORNEO EN LÍNEA</div>${GAMEHUB.tourHTML(T)}${host ? '<div class="row" style="margin-top:10px"><button class="btn small" id="on-tourgo">Abrir el tablero del torneo ›</button></div>' : '<p class="note">El anfitrión lanza cada prueba; quienes no juegan la miran en vivo.</p>'}</div>`;
+  }
+  // dentro de una vista previa (como el artefacto de Claude) el navegador no deja conectar aparatos: se avisa dónde sí
+  function previewHTML() {
+    let hosted = true; try { hosted = GAMEHUB.App.state().hosted; } catch (e) { /* nada */ }
+    if (hosted && typeof RTCPeerConnection !== 'undefined') return '';
+    const url = 'https://igaviria0001-ops.github.io/gamehub/';
+    return `<div class="panel on-note"><b>Para jugar en línea, abre GameHub desde su dirección:</b> <a href="${url}" target="_blank" rel="noopener">igaviria0001-ops.github.io/gamehub</a> (o desde la app instalada). Aquí, dentro de la vista previa, el navegador no deja conectar aparatos.</div>`;
   }
   // si el anfitrión se cayó a mitad de torneo, cualquiera lo puede seguir desde su copia
   function resumeHTML() { const T = tourNet; if (!T || !T.online || T.done) return ''; return `<div class="panel"><div class="h2">TORNEO A MEDIAS</div><p class="note">«${esc(T.name)}» quedó a medias (${T.events.filter(e => e.status === 'done').length} pruebas jugadas). Si el anfitrión no vuelve, síguelo tú: creas una sala nueva y los demás entran con el código.</p><div class="row"><button class="btn gold" id="on-resume">Seguir el torneo como anfitrión</button><button class="btn small ghost" id="on-forget">Olvidarlo</button></div></div>`; }
@@ -1291,7 +1325,7 @@ const Online = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"b7b277aaa0","date":"2026-11-18"};
+  const BUILD = {"v":"c34562a467","date":"2026-11-18"};
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
   const COLORS = ['#ff5d8f', '#45d6b0', '#ffb36b', '#6fc3ff', '#ffd36b', '#b07bff', '#3dffa8', '#ff7a3d'];

@@ -66,15 +66,15 @@
 - [x] **F3 · Enlace juego ↔ red** (puente hecho; se prueba de verdad con el primer adaptador, F4) (`shared/netplay.js`, copiado como `src/00k-net.js`):
       anfitrión: entradas remotas → `Input`; instantáneas y eventos → red. Remoto: modo
       «títere» (no simula, aplica instantáneas, interpola, dibuja, efectos por eventos).
-- [~] **F4 · VÉRTIGO en línea** (carrera rápida en línea FUNCIONA; faltan pulidos, ver bitácora) (encaja mejor: estado pequeño, cámara por aparato, hasta 4).
-- [ ] **F5 · Ventolera en línea** (pájaros, balas, misiles, cajas, blancos; hasta 4).
-- [ ] **F6 · Sortilegio en línea** (magos, hechizos, terreno por cambios, criaturas; hasta 4).
-- [ ] **F7 · Tira y Afloja en línea** (chicles, hilo, objetos; 2 o 2 contra 2).
-- [ ] **F8 · Torneo y Salón de la fama en línea**; resultados a todos; reanudar si el
+- [x] **F4 · VÉRTIGO en línea** (carrera rápida con hasta 4 personas; duelo/eliminación/batalla en línea quedan para después) (encaja mejor: estado pequeño, cámara por aparato, hasta 4).
+- [x] **F5 · Ventolera en línea** (pájaros, balas, misiles, cajas, blancos; hasta 4).
+- [x] **F6 · Sortilegio en línea** (magos, hechizos, terreno por cambios, criaturas; hasta 4).
+- [x] **F7 · Tira y Afloja en línea** (chicles, hilo, objetos; 2 o 2 contra 2).
+- [x] **F8 · Torneo y Salón de la fama en línea**; resultados a todos; reanudar si el
       anfitrión se cae (el torneo se guarda en todos).
-- [ ] **F9 · Pruebas**: dos y tres navegadores en la misma máquina (WebRTC real), pérdida y
+- [x] **F9 · Pruebas**: dos y tres navegadores en la misma máquina (WebRTC real), pérdida y
       retraso simulados, celular + PC, 30 min sin cortes; medir datos por minuto.
-- [ ] **F10 · Publicar**: unir `online` → `main`, versión nueva, artefacto, bitácoras, guía.
+- [x] **F10 · Publicar**: unir `online` → `main`, versión nueva, artefacto, bitácoras, guía.
 
 ## Cómo retomar
 
@@ -265,3 +265,8 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   de Tira y Afloja. Todas las pruebas en línea pasan (netvtg, netvto, netsrt, nettya, nettour, netcel).
   No se puede probar el TURN público desde aquí (el contenedor no sale a internet); queda configurado (Open Relay).
   Sigue: estabilidad larga, revisar pantallas en celular y **F10 publicar**.
+- **18 nov 05:00** — F9 cerrado: estabilidad 2,5 min por juego (Ventolera ≈1,2 MB/min, Sortilegio ≈2,3 MB/min en pelea
+  intensa) sin errores; **reacciones rápidas** en la sala (8 emojis que salen flotando en todos los aparatos; `test/sala.js`
+  lo prueba); aviso en vistas previas (dentro del artefacto el navegador no deja conectar: «abre GameHub desde su
+  dirección»). README con la sección «En línea» y las pruebas nuevas. Pruebas de siempre al día (flujo, app, ui, motor).
+  **F10:** `online` → `main` y publicar.

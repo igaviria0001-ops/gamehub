@@ -455,3 +455,14 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-tour .on-next b small { font-size: 13px; color: var(--mute); font-weight: 800; margin: 0 4px; }
 .on-champ { font-size: 18px; font-weight: 900; padding: 10px 14px; border-radius: 14px; background: rgba(255, 210, 90, .12); border: 1px solid rgba(255, 210, 90, .35); }
 .ftag { display: inline-block; font-size: 11px; font-weight: 900; letter-spacing: .6px; padding: 2px 8px; border-radius: 999px; background: rgba(90, 216, 255, .16); color: #9fe8ff; margin-left: 6px; vertical-align: middle; }
+
+/* reacciones rápidas en la sala */
+.on-react { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.on-rx { font-size: 22px; line-height: 1; width: 46px; height: 46px; border-radius: 14px; border: 1px solid var(--line2); background: rgba(255,255,255,.06); cursor: pointer; transition: transform .12s; }
+.on-rx:hover { transform: translateY(-2px) scale(1.06); background: rgba(255,255,255,.12); }
+.on-rx:active { transform: scale(.92); }
+.on-bubble { position: fixed; bottom: 12%; z-index: 60; display: grid; justify-items: center; pointer-events: none; animation: onBub 2.6s ease-out forwards; }
+.on-bubble span { font-size: 46px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
+.on-bubble small { font-weight: 900; font-size: 12px; color: #fff; background: rgba(10,8,30,.6); padding: 2px 8px; border-radius: 999px; }
+@keyframes onBub { 0% { transform: translateY(20px) scale(.6); opacity: 0; } 12% { transform: translateY(0) scale(1.1); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-220px) scale(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .on-bubble { animation-duration: 1.4s; } }

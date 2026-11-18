@@ -18,6 +18,7 @@ Los cuatro se juegan de a dos en el mismo computador (cada uno con su lado del t
 - **Pantalla completa automática** al abrir un juego (en el celular, además, horizontal). Cada juego tiene en *Opciones* su botón para ponerla o quitarla a mano, y suelto también se pone sola con el primer toque (se puede apagar).
 - **Torneo combinado:** de 2 a 8 jugadores, en serie mano a mano, liga, eliminatoria o rey de la pista. Cada prueba se sortea entre los juegos, modos y escenarios que se dejen encendidos; los personajes pueden elegirse, salir al azar o ser los de siempre. Al terminar cada partida, el juego avisa quién ganó y el resultado se anota solo (también se puede anotar a mano).
 - **Salón de la fama:** los campeones de cada torneo terminado, con copas, podios y pruebas ganadas.
+- **En línea (varios aparatos):** botón *En línea* → uno crea la sala (es el anfitrión: ahí corre la partida) y los demás entran con el código de 5 letras o el enlace. Cada aparato dice cuántos juegan en él (1 o 2) con nombre y color, así que se puede todo: cada uno con su celular, un celular con dos y otro con uno, PC y celulares mezclados. VÉRTIGO, Ventolera y Sortilegio son de **hasta 4**; Tira y Afloja es de 2 (el hilo une a dos) y **los demás miran en vivo**. También hay **torneo en línea** con los de la sala y su campeón entra al Salón de la fama de todos (marcado «en línea»). Técnica: WebRTC directo entre aparatos (señales por brokers MQTT públicos cifradas con el código; TURN y relevo de respaldo), el anfitrión simula y manda instantáneas 30 veces por segundo; gasta ≈1,5–2 MB por minuto. Detalle y bitácora en [ONLINE.md](ONLINE.md). Solo funciona desde la dirección de GitHub Pages o la app instalada (no dentro de vistas previas).
 - **App instalable** con botón *Instalar* (Android, PC y Mac; en iPhone se explica cómo: Compartir → «Agregar a inicio»). Funciona sin internet y se actualiza sola.
 
 ## Actualizar sin perder el progreso
@@ -81,6 +82,10 @@ Pruebas (con el servidor andando; usan Playwright, `npm i -D playwright`):
 | `node test/fluidez.js` | cuadros por segundo de cada juego suelto vs. dentro de GameHub |
 | `node test/pantalla.js` | pantalla completa automática y manual, dentro y fuera de GameHub |
 | `node test/app.js` | app instalable: actualizar sin perder el progreso, sin internet y copia de seguridad |
+| `node test/net.js` · `node test/sala.js` | red (WebRTC real entre pestañas) y sala en línea |
+| `node test/netvtg.js` · `netvto.js` · `netsrt.js` · `nettya.js` | cada juego en línea (con `TRES=1`: 3 aparatos o un mirón; con `RED='netloss=0.15&netlag=120'`: red mala) |
+| `node test/nettour.js` · `node test/netcel.js` | torneo en línea con 3 aparatos · celular táctil como remoto |
+| `node test/netdatos.js` | datos por minuto de cada juego (`RELEVO=1`: sin WebRTC) |
 
 En un computador sin tarjeta gráfica, VÉRTIGO va muy lento en las pruebas: usar `VTG_GQ=0` (gráficos ligeros) y, en `fluidez.js` y `pantalla.js`, `VIEW=640x360`.
 

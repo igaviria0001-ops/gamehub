@@ -18,7 +18,12 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const names = await H.evaluate(() => Online.players().map(p => p.name).join(', '));
   const seenA = await A.evaluate(() => Online.players().length);
   await H.screenshot({ path: OUT + 'sala-pc.png' }); await A.screenshot({ path: OUT + 'sala-cel.png' });
-  console.log({ code, conectados: room.devices.length, ms: Date.now() - t0, jugadores: names, celularVe: seenA, errs: errs.slice(0, 3) });
-  console.log(room.devices.length === 3 && seenA === 4 && !errs.length ? 'SALA OK' : 'SALA FALLA');
+  // reacción rápida: el celular manda 🔥 y la ven los otros dos (una sola vez cada uno)
+  const watch = p => p.evaluate(() => { window.__rx = 0; new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.classList && n.classList.contains('on-bubble')) window.__rx++; }))).observe(document.body, { childList: true }); });
+  await watch(H); await watch(B); await watch(A);
+  await A.click('[data-rx="🔥"]'); await wait(1200);
+  const rx = [await H.evaluate(() => window.__rx), await B.evaluate(() => window.__rx), await A.evaluate(() => window.__rx)];
+  console.log({ code, conectados: room.devices.length, ms: Date.now() - t0, jugadores: names, celularVe: seenA, reaccion: rx, errs: errs.slice(0, 3) });
+  console.log(room.devices.length === 3 && seenA === 4 && rx.join() === '1,1,1' && !errs.length ? 'SALA OK' : 'SALA FALLA');
   await b.close();
 })();
