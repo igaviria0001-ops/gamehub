@@ -247,7 +247,8 @@ const UI = (() => {
     const s = r.stats, row = (l, k) => `<tr><td>${l}</td>${s.map((x, i) => `<td style="color:${col(i)};font-weight:900">${Math.round(x[k])}</td>`).join('')}</tr>`;
     $('#r-stats').innerHTML = `<tr><td></td>${r.names.map((n, i) => `<td style="color:${col(i)};font-weight:900">${nm(i)}${mine.includes(i) ? ' ·tú' : ''}</td>`).join('')}</tr>` + row('Daño hecho', 'dmg') + row('Golpes', 'hits') + row('Fusiones', 'fusions') + row('Combinaciones', 'combos') + row('Grandes Sortilegios', 'gran');
     $('#r-copa').hidden = true; $('#r-copaNext').hidden = true;
-    $('#r-rematch').hidden = !host; $('#r-rematch').textContent = 'Revancha (todos)'; $('#r-rematch').dataset.act = 'netAgain';
+    const tourM = !!(NetPlay.ev && NetPlay.ev.tour); if (tourM) $('#r-hub').textContent = 'Volver al torneo';
+    $('#r-rematch').hidden = !host || tourM; $('#r-rematch').textContent = 'Revancha (todos)'; $('#r-rematch').dataset.act = 'netAgain';
     ['setupAgain', 'toTitle'].forEach(a => { const e = document.querySelector(`#s-results [data-act="${a}"]`); if (e) e.hidden = true; });
     hero(w >= 0 ? r.chars[w] : r.chars[0], w >= 0 ? '¡Victoria!' : 'Empate', w);
     paused = false; show('results', false); startHero(); vestAfter();

@@ -254,7 +254,7 @@
       stage.setAttribute('style', gvars(g)); stage.classList.remove('ready'); stage.hidden = false; BG.stop();
       document.body.classList.add('playing');
       $('#ltitle').innerHTML = glogo(g);
-      $('#ltip').textContent = ev ? `Prueba ${ev.n}: ${tName(ev.j1)} (J1) contra ${tName(ev.j2)} (J2) · ${modeName(ev)} en ${mapName(g, ev.map)}` : g.touch.startsWith('En el') && touch ? g.touch : `Para volver a GameHub, usa «⌂ GameHub» en la portada del juego.`;
+      $('#ltip').textContent = net && net.tour ? `Torneo en línea · ${net.tour.title}${net.mine && net.mine.length ? '' : ' · tú miras en vivo'}` : ev ? `Prueba ${ev.n}: ${tName(ev.j1)} (J1) contra ${tName(ev.j2)} (J2) · ${modeName(ev)} en ${mapName(g, ev.map)}` : g.touch.startsWith('En el') && touch ? g.touch : `Para volver a GameHub, usa «⌂ GameHub» en la portada del juego.`;
       $('#lerr').hidden = true; $('#lbtns').hidden = true; $('.lbar').hidden = false;
       clearTimeout(readyT); readyT = setTimeout(() => fail('El juego está tardando en arrancar.'), 25000);
       frame.removeAttribute('srcdoc'); frame.src = 'about:blank';
@@ -263,12 +263,12 @@
     }
     function fail(msg) { $('#lerr').textContent = msg; $('#lerr').hidden = false; $('#lbtns').hidden = false; $('.lbar').hidden = true; }
     function close() {
-      const wasNet = !!netCfg; if (wasNet) post({ cmd: 'netoff' }); netCfg = null;
+      const wasNet = !!netCfg, wasTour = !!(netCfg && netCfg.tour); if (wasNet) post({ cmd: 'netoff' }); netCfg = null;
       clearTimeout(readyT); cur = null; tourEv = null;
       stage.hidden = true; stage.classList.remove('ready'); frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; hideToast();
       document.body.classList.remove('playing'); if (touch) FS.unlock();
       BG.start();
-      if (wasNet) go('online'); else if (view === 'torneo') renderTorneo(); else if (view === 'home') renderHome();
+      if (wasNet) go(Tour.T && Tour.T.online && typeof Net !== 'undefined' && Net.isHost && wasTour ? 'torneo' : 'online'); else if (view === 'torneo') renderTorneo(); else if (view === 'home') renderHome();
       if (Tour.T && Tour.T.done && !Tour.T.celebrated) Champ.show(Tour.T);
       App.afterGame();
     }
@@ -300,6 +300,13 @@
       } else if (m.event === 'net' && netCfg && typeof Net !== 'undefined' && Net.alive) {
         // el juego habla con los otros aparatos: anfitrión ↔ remotos, por la sala
         const to = m.to === 'host' ? Net.hostId : '*'; if (to) Net.send(to, { $g: netCfg.sid, d: m.d }, m.ch === 'r');
+        // torneo en línea: el resultado que manda el juego del anfitrión se anota solo
+        if (netCfg.tour && netCfg.role === 'host' && m.d && m.d.t === 'res' && m.d.r && !resultGot) {
+          resultGot = true; const r = m.d.r, ev = netCfg.tour, w = r.winner === 0 ? ev.j1 : r.winner === 1 ? ev.j2 : 'draw';
+          const sc = r.mode === 'duel' || r.mode === 'caneca' || r.mode === 'escalada' || !r.score && !r.points ? (r.wins || []) : (r.points || r.score || []);
+          Tour.result(ev.id, w, { score: sc.slice(0, 2).join(' – ') }); Snd.ok();
+          toast(w === 'draw' ? 'Empate: la prueba quedó anotada' : `¡Gana ${esc(tName(w))}! Resultado anotado`, false);
+        }
       } else if (m.event === 'exit') close();
       else if (m.event === 'abort' && tourEv) { toast('La prueba quedó pendiente: pueden volver a jugarla', true); }
       else if (m.event === 'error') toast('El juego avisó un error: ' + esc(m.msg || ''), !!tourEv);
@@ -313,7 +320,7 @@
   /* ---------- torneo: estado guardado y asistente ---------- */
   const Tour = {
     T: Store.get('tour', null),
-    save() { Store.set('tour', this.T); },
+    save() { Store.set('tour', this.T); try { if (this.T && this.T.online && App.onTour) App.onTour(this.T); } catch (e) { /* aún no arranca */ } },
     result(evId, w, info) { if (!this.T) return; const ev = Torneo.record(this.T, evId, w, info); if (ev) { this.save(); if (this.T.done) archive(this.T); } },
   };
   if (Tour.T && Tour.T.v !== 1) Tour.T = null;
@@ -377,6 +384,7 @@
   }
   function wfoot(nextTxt = 'Siguiente ›') { return `<div class="wfoot"><button class="btn ghost" data-w="prev" ${W.step === 0 ? 'style="visibility:hidden"' : ''}>‹ Atrás</button><button class="btn gold" data-w="next">${nextTxt}</button></div>`; }
   function stepPlayers() {
+    if (W.online) return `<div class="h2">JUGADORES DE LA SALA</div><p class="note">Juegan los de la sala en línea (cada uno desde su aparato). Para cambiar quién juega, cambien la sala.</p><div class="players">${W.players.map(p => `<div class="prow"><span class="swatch" style="background:${p.color}"></span><b style="padding:10px 4px">${esc(p.name)}</b></div>`).join('')}</div>${wfoot()}`;
     const recent = (Store.get('names', [])).filter(n => !W.players.some(p => p.name.trim().toLowerCase() === n.toLowerCase())).slice(0, 12);
     return `<div class="h2">ARRANQUE RÁPIDO</div>
       <div class="presets">${PRESETS.map((p, i) => `<button class="preset" data-preset="${i}"><b>${esc(p.name)}</b><span>${esc(p.desc)}</span></button>`).join('')}</div>
@@ -498,6 +506,7 @@
     Store.set('lastPlayers', W.players); Store.set('lastPool', W.pool);
     const names = Store.get('names', []); W.players.forEach(p => { const n = p.name.trim(); const k = names.findIndex(x => x.toLowerCase() === n.toLowerCase()); if (k >= 0) names.splice(k, 1); names.unshift(n); }); Store.set('names', names.slice(0, 24));
     Tour.T = Torneo.create({ name: W.name.trim() || 'Copa Galaxia', players: W.players, format: W.format, rules: W.rules, pool: W.pool });
+    if (W.online) Tour.T.online = true;
     Tour.save(); W = null; Snd.shuffle(); renderTorneo();
   }
 
@@ -584,7 +593,7 @@
   }
   function dashAct(a) {
     const T = Tour.T, ev = Torneo.curEvent(T);
-    if (a === 'play' && ev) { Snd.open(); Launcher.open(ev.game, ev); }
+    if (a === 'play' && ev) { Snd.open(); if (T.online && typeof Online !== 'undefined') { const why = Online.playTour(T, ev); if (why) notify(why); } else Launcher.open(ev.game, ev); }
     else if (a === 'reroll') { Snd.shuffle(); Torneo.reroll(T, false); Tour.save(); renderTorneo(); }
     else if (a === 'rerollMode') { Snd.shuffle(); Torneo.reroll(T, true); Tour.save(); renderTorneo(); }
     else if (a === 'manual' && ev) manual(ev);
@@ -620,8 +629,26 @@
   function archive(T) {
     if (T.archived) return; T.archived = true; Tour.save();
     const H = Store.get('fame', []);
-    H.unshift({ id: T.id, name: T.name, format: T.format, date: T.ended || Date.now(), players: T.players, champion: T.champion, podium: T.podium, events: T.events.filter(e => e.status === 'done').map(e => ({ g: e.game, w: e.winner, a: e.j1, b: e.j2 })) });
+    H.unshift({ id: T.id, online: !!T.online, name: T.name, format: T.format, date: T.ended || Date.now(), players: T.players, champion: T.champion, podium: T.podium, events: T.events.filter(e => e.status === 'done').map(e => ({ g: e.game, w: e.winner, a: e.j1, b: e.j2 })) });
     Store.set('fame', H.slice(0, 60));
+  }
+
+  // torneo en línea: el anfitrión lo arma con los de la sala (solo juegos que ya van en línea)
+  function onlineTour(ps) {
+    const doIt = () => { Tour.T = null; Store.del('tour'); W = newWizard(); W.online = true; W.name = 'Copa en línea'; W.players = ps.map(p => ({ name: p.name, color: p.color })); for (const g of GAMES) if (!g.net && W.pool[g.id]) W.pool[g.id].on = false; W.step = 1; fixFormat(); go('torneo'); };
+    if (tourActive() && !Tour.T.online) confirmBox('¿Cambiar de torneo?', 'En este aparato hay un torneo sin terminar; si arman uno en línea, ese se pierde.', 'Sí, uno en línea', doIt); else if (tourActive()) go('torneo'); else doIt();
+  }
+  // los otros aparatos guardan el torneo en línea terminado en su propio salón de la fama
+  function fameAdd(T) { const H = Store.get('fame', []); if (!T || !T.done || H.some(t => t.id === T.id)) return; H.unshift({ id: T.id, online: true, name: T.name, format: T.format, date: T.ended || Date.now(), players: T.players, champion: T.champion, podium: T.podium, events: (T.events || []).filter(e => e.status === 'done').map(e => ({ g: e.game, w: e.winner, a: e.j1, b: e.j2 })) }); Store.set('fame', H.slice(0, 60)); }
+  // tablero de solo mirar (para los otros aparatos de la sala)
+  function tourHTML(T) {
+    const keep = Tour.T; Tour.T = T; let h = '';
+    try { const ev = Torneo.curEvent(T), P = Torneo.progress(T), F = FORMATS[T.format];
+      h = `<div class="on-tour"><div class="on-th"><b>${esc(T.name)}</b><small>${F ? F.name : ''} · ${T.players.length} jugadores · prueba ${Math.min(P.played + (T.done ? 0 : 1), P.total)} de unas ${P.total}</small></div>
+        ${T.done ? `<div class="on-champ">🏆 Campeón: <b style="color:${tColor(T.champion)}">${esc(tName(T.champion))}</b></div>` : ev ? `<div class="on-next"><span class="lbl">PRUEBA ${ev.n}</span><b>${esc(tName(ev.j1))} <small>contra</small> ${esc(tName(ev.j2))}</b><small>${esc((GAME[ev.game] || {}).name || '')} · ${esc(modeName(ev))}</small></div>` : ''}
+        <div class="grid2" style="align-items:start;margin-top:10px"><div>${tableHTML(T, true)}</div><div>${histHTML(T)}</div></div></div>`;
+    } catch (e) { h = ''; }
+    Tour.T = keep; return h;
   }
 
   /* ---------- campeón ---------- */
@@ -656,7 +683,7 @@
     const rank = Object.values(by).sort((a, b) => b.cups - a.cups || b.w - a.w || b.pods - a.pods);
     el.innerHTML = `<div class="wrap"><div class="thead"><div><h1 class="h1">Salón de la fama</h1><p class="sub">Los campeones de cada torneo que se termina quedan aquí, con sus copas y sus pruebas ganadas.</p></div></div>
       ${H.length ? `<div class="grid2" style="align-items:start"><div class="panel"><div class="h2">RANKING GENERAL</div><table class="table"><thead><tr><th>#</th><th>Jugador</th><th class="n">Copas</th><th class="n">Podios</th><th class="n">Pruebas ganadas</th><th>Su juego</th></tr></thead><tbody>${rank.map((r, i) => { const best = Object.entries(r.games).sort((a, b) => b[1] - a[1])[0]; return `<tr><td>${i + 1}</td><td><span class="who"><i style="background:${r.color}"></i>${esc(r.name)}</span></td><td class="n"><b>${r.cups}</b></td><td class="n">${r.pods}</td><td class="n">${r.w} de ${r.played}</td><td>${best ? esc(GAME[best[0]].short) : '—'}</td></tr>`; }).join('')}</tbody></table></div>
-        <div class="fame">${H.map(t => { const ch = t.players.find(p => p.id === t.champion) || {}; return `<div class="fcard"><div class="when">${new Date(t.date).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })} · ${FORMATS[t.format].name}</div><div class="tn">${esc(t.name)}</div><div class="champ">${ICON.cup}<span style="color:${ch.color || '#fff'}">${esc(ch.name || '—')}</span></div><div class="note">${t.players.length} jugadores · ${(t.events || []).length} pruebas · ${[...new Set((t.events || []).map(e => GAME[e.g] && GAME[e.g].short))].filter(Boolean).join(', ')}</div></div>`; }).join('')}</div></div>`
+        <div class="fame">${H.map(t => { const ch = t.players.find(p => p.id === t.champion) || {}; return `<div class="fcard"><div class="when">${new Date(t.date).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })} · ${FORMATS[t.format].name}</div><div class="tn">${esc(t.name)}${t.online ? '<span class="ftag">EN LÍNEA</span>' : ''}</div><div class="champ">${ICON.cup}<span style="color:${ch.color || '#fff'}">${esc(ch.name || '—')}</span></div><div class="note">${t.players.length} jugadores · ${(t.events || []).length} pruebas · ${[...new Set((t.events || []).map(e => GAME[e.g] && GAME[e.g].short))].filter(Boolean).join(', ')}</div></div>`; }).join('')}</div></div>`
         : `<div class="panel empty">${ICON.cup}<div style="font-weight:900;color:var(--text);font-size:18px">Todavía no hay campeones</div><p class="sub" style="margin:8px auto 16px">Arma un torneo y el primero que lo gane estrena el salón.</p><button class="btn gold" data-go="torneo">Armar un torneo</button></div>`}
     </div>`;
   }
@@ -787,7 +814,7 @@
 
   /* ---------- arranque ---------- */
   const h = (location.hash || '').slice(1);
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML };
   // un enlace de invitación (?sala=CÓDIGO) abre directo la sala en línea
   if (new URLSearchParams(location.search).get('sala')) go('online', null, false);
   else if (h.startsWith('ficha-') && GAME[h.slice(6)]) go('game', h.slice(6), false);
@@ -796,5 +823,5 @@
   BG.start();
   // en GitHub Pages: app instalable, sin internet y con actualizaciones que no tocan el progreso
   App.register();
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML };
 })();

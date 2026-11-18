@@ -241,3 +241,14 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   táctiles solo de los jugadores del aparato (del lado de su chicle). Espectadores también en VÉRTIGO (cámara al que va
   adelante; sin botones táctiles). Pruebas: `node test/nettya.js` y `TRES=1` (con mirón) → TYA EN LÍNEA OK; sin conexión OK.
   **Los 4 juegos ya se juegan en línea.** Sigue **F8**: torneo y Salón de la fama en línea.
+- **18 nov 03:10** — **F8 Torneo y Salón de la fama en línea HECHO:** en la sala, el anfitrión toca «🏆 Torneo con todos» →
+  el asistente de siempre con los jugadores de la sala (fijos) y solo los juegos que van en línea; `Tour.T.online`.
+  «¡A jugar!» en el tablero lanza la prueba en línea (`Online.playTour`): juegan los dos de la prueba (buscados por
+  nombre en la sala), los demás la miran en vivo; el juego sabe que es de torneo (`NetPlay.ev.tour`: sin «Revancha»,
+  botón «Volver al torneo»); el resultado que manda el juego del anfitrión se anota solo (`Launcher`, mensaje `res`).
+  Cada cambio del torneo viaja a todos (`{$:'tour'}`): en la sala se ve el tablero (prueba que sigue, tabla, pruebas
+  jugadas, campeón). Al terminar, el campeón entra al Salón de la fama de **todos** los aparatos, marcado «EN LÍNEA».
+  Si el anfitrión se cae, cualquiera ve «TORNEO A MEDIAS → Seguir el torneo como anfitrión» (copia guardada en cada
+  aparato). La sala muestra colores y nombres ya sin repetir. `NetGame.rate`/`lag` por juego (ritmo de instantáneas).
+  Prueba `node test/nettour.js` (3 aparatos, liga) → TORNEO EN LÍNEA OK. Sigue **F9 pruebas** (pérdida/retraso, datos
+  por minuto y bajar Sortilegio, relevo/TURN, celular+PC, estabilidad) y **F10 publicar**.

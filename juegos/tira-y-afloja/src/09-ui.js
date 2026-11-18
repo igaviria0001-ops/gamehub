@@ -383,8 +383,9 @@ const UI = (() => {
     if (Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on) {
       $('#btn-hub').hidden = false; $('#btn-hub').textContent = 'Volver a la sala'; $('#btn-hub').dataset.act = 'hubhome';
       $('#btn-next').hidden = true; $('#s-results [data-act="changemode"]').hidden = true; $('#s-results [data-act="menu"]').hidden = true;
-      $('#btn-rematch').hidden = !NetPlay.isHost; $('#btn-rematch').textContent = 'Revancha (todos)'; $('#btn-rematch').dataset.act = 'netAgain';
-      if (!NetPlay.isHost) { ra.hidden = false; ra.textContent = (ra.textContent && parts.length ? ra.textContent + ' · ' : '') + 'El anfitrión puede lanzar la revancha.'; }
+      const tourM = !!(NetPlay.ev && NetPlay.ev.tour); if (tourM) $('#btn-hub').textContent = 'Volver al torneo';
+      $('#btn-rematch').hidden = !NetPlay.isHost || tourM; $('#btn-rematch').textContent = 'Revancha (todos)'; $('#btn-rematch').dataset.act = 'netAgain';
+      if (!NetPlay.isHost && !tourM) { ra.hidden = false; ra.textContent = (ra.textContent && parts.length ? ra.textContent + ' · ' : '') + 'El anfitrión puede lanzar la revancha.'; }
     }
     const P = Game.G.players;
     const t = $('#r-title');

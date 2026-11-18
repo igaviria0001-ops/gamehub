@@ -112,9 +112,10 @@ const UI = (() => {
     const T = $('#r-table'); T.style.gridTemplateColumns = `1fr repeat(${N}, auto)`;
     T.innerHTML = `<span class="h"></span>` + n.map((nm, i) => `<span class="h n" style="color:${PLAYER_COLORS[i].main}">${esc(nm.split(' · ')[0])}${mine.includes(i) ? ' ·tú' : ''}</span>`).join('') + rows.map(([lab, f]) => `<span>${lab}</span>` + s.map((st, i) => `<span class="n" style="color:${PLAYER_COLORS[i].main}">${f(st)}</span>`).join('')).join('');
     ['#r-next', '#r-copa', '#r-birds', '#r-trav', '#s-results [data-act="toTitle"]'].forEach(q => { const e = $(q); if (e) e.hidden = true; });
-    $('#r-stars').hidden = !(!host); $('#r-stars').innerHTML = host ? '' : '<small>El anfitrión puede lanzar la revancha para todos.</small>';
+    const tourM0 = !!(NetPlay.ev && NetPlay.ev.tour); $('#r-stars').hidden = host || tourM0; $('#r-stars').innerHTML = host || tourM0 ? '' : '<small>El anfitrión puede lanzar la revancha para todos.</small>';
     $('#r-hub').hidden = false; $('#r-hub').textContent = 'Volver a la sala'; $('#r-hub').dataset.act = 'hubhome'; $('#r-hub').style.gridColumn = host ? '' : '1 / -1';
-    $('#r-rematch').hidden = !host; $('#r-rematch').textContent = 'Revancha (todos)'; $('#r-rematch').dataset.act = 'netAgain';
+    const tourM = !!(NetPlay.ev && NetPlay.ev.tour); if (tourM) $('#r-hub').textContent = 'Volver al torneo';
+    $('#r-rematch').hidden = !host || tourM; $('#r-rematch').textContent = 'Revancha (todos)'; $('#r-rematch').dataset.act = 'netAgain';
     stack = []; show('results', false);
     if (VV()) VV().after();
   }

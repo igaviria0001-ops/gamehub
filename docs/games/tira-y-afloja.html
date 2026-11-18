@@ -1237,8 +1237,8 @@ const NetPlay = (() => {
   });
   function begin(m) {
     end(); on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; snapN = 0;
-    if (role === 'host') hostT = setInterval(hostTick, 33);
-    else inT = setInterval(clientTick, 16);
+    // cada juego puede pedir su ritmo (instantáneas por segundo) y su colchón de interpolación
+    { const g = G(), hz = (g && g.rate) || 30; lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); if (role === 'host') hostT = setInterval(hostTick, Math.round(1000 / hz)); else inT = setInterval(clientTick, 16); }
     for (const f of startSubs) { try { f({ role, seats, mine, sid, ev }); } catch (err) { post('error', { msg: String(err && err.message || err) }); } }
   }
   // solo números, textos y listas simples (sin objetos del juego, que no viajan)
@@ -13705,8 +13705,9 @@ const UI = (() => {
     if (Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on) {
       $('#btn-hub').hidden = false; $('#btn-hub').textContent = 'Volver a la sala'; $('#btn-hub').dataset.act = 'hubhome';
       $('#btn-next').hidden = true; $('#s-results [data-act="changemode"]').hidden = true; $('#s-results [data-act="menu"]').hidden = true;
-      $('#btn-rematch').hidden = !NetPlay.isHost; $('#btn-rematch').textContent = 'Revancha (todos)'; $('#btn-rematch').dataset.act = 'netAgain';
-      if (!NetPlay.isHost) { ra.hidden = false; ra.textContent = (ra.textContent && parts.length ? ra.textContent + ' · ' : '') + 'El anfitrión puede lanzar la revancha.'; }
+      const tourM = !!(NetPlay.ev && NetPlay.ev.tour); if (tourM) $('#btn-hub').textContent = 'Volver al torneo';
+      $('#btn-rematch').hidden = !NetPlay.isHost || tourM; $('#btn-rematch').textContent = 'Revancha (todos)'; $('#btn-rematch').dataset.act = 'netAgain';
+      if (!NetPlay.isHost && !tourM) { ra.hidden = false; ra.textContent = (ra.textContent && parts.length ? ra.textContent + ' · ' : '') + 'El anfitrión puede lanzar la revancha.'; }
     }
     const P = Game.G.players;
     const t = $('#r-title');

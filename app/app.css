@@ -447,3 +447,11 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-next .lbl { font-size: 11.5px; font-weight: 900; letter-spacing: 1.4px; color: var(--mute); }
 .on-next b { font-size: 22px; font-weight: 900; }
 .on-next small { color: var(--mute); font-weight: 700; font-size: 14px; }
+
+/* torneo en línea en la sala */
+.on-tour .on-th { display: grid; gap: 2px; margin-bottom: 8px; }
+.on-tour .on-th b { font-size: 18px; font-weight: 900; }
+.on-tour .on-th small { color: var(--mute); font-weight: 700; }
+.on-tour .on-next b small { font-size: 13px; color: var(--mute); font-weight: 800; margin: 0 4px; }
+.on-champ { font-size: 18px; font-weight: 900; padding: 10px 14px; border-radius: 14px; background: rgba(255, 210, 90, .12); border: 1px solid rgba(255, 210, 90, .35); }
+.ftag { display: inline-block; font-size: 11px; font-weight: 900; letter-spacing: .6px; padding: 2px 8px; border-radius: 999px; background: rgba(90, 216, 255, .16); color: #9fe8ff; margin-left: 6px; vertical-align: middle; }

@@ -476,6 +476,14 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-next b { font-size: 22px; font-weight: 900; }
 .on-next small { color: var(--mute); font-weight: 700; font-size: 14px; }
 
+/* torneo en línea en la sala */
+.on-tour .on-th { display: grid; gap: 2px; margin-bottom: 8px; }
+.on-tour .on-th b { font-size: 18px; font-weight: 900; }
+.on-tour .on-th small { color: var(--mute); font-weight: 700; }
+.on-tour .on-next b small { font-size: 13px; color: var(--mute); font-weight: 800; margin: 0 4px; }
+.on-champ { font-size: 18px; font-weight: 900; padding: 10px 14px; border-radius: 14px; background: rgba(255, 210, 90, .12); border: 1px solid rgba(255, 210, 90, .35); }
+.ftag { display: inline-block; font-size: 11px; font-weight: 900; letter-spacing: .6px; padding: 2px 8px; border-radius: 999px; background: rgba(90, 216, 255, .16); color: #9fe8ff; margin-left: 6px; vertical-align: middle; }
+
 </style>
 </head>
 <body>
@@ -1065,7 +1073,17 @@ const Online = (() => {
   const DEV = { cel: '📱', pc: '💻' };
   const sig = ms => ms <= 0 ? '' : ms < 60 ? 'ok' : ms < 140 ? 'mid' : 'bad';
   function linkFor(code) { const u = new URL(location.href); u.search = ''; u.hash = 'online'; u.searchParams.set('sala', code); if (params.get('net')) u.searchParams.set('net', params.get('net')); return u.toString(); }
-  function players(room) { const out = []; for (const d of (room && room.devices) || []) for (const p of (d.info && d.info.players) || []) out.push(Object.assign({ dev: d.id, devName: d.info.name, kind: d.info.dev }, p)); return out; }
+  // todos los jugadores de la sala, en orden; colores y nombres sin repetir (el que llegó después cede)
+  function players(room) {
+    const out = [], usedC = new Set(), usedN = {};
+    for (const d of (room && room.devices) || []) for (const [li, p0] of ((d.info && d.info.players) || []).entries()) {
+      const p = Object.assign({ dev: d.id, devName: d.info.name, kind: d.info.dev, li, name0: p0.name, color0: p0.color }, p0);
+      if (usedC.has(p.color) || !/^#[0-9a-f]{6}$/i.test(p.color || '')) p.color = COLORS.find(c => !usedC.has(c)) || p.color; usedC.add(p.color);
+      const nm = String(p.name || 'Jugador').trim().slice(0, 16) || 'Jugador', k = (usedN[nm.toLowerCase()] || 0) + 1; usedN[nm.toLowerCase()] = k; p.name = k > 1 ? `${nm} ${k}` : nm;
+      out.push(p);
+    }
+    return out;
+  }
 
   /* ---------- quién juega en este aparato ---------- */
   function whoHTML() {
@@ -1095,9 +1113,10 @@ const Online = (() => {
             <div class="panel on-card"><div class="h2">UNIRME A UNA SALA</div><p class="note">Escribe el código que te pasaron (o abre el enlace de invitación).</p>
               <div class="row" style="flex-wrap:nowrap"><input class="textin on-code" id="on-code" maxlength="5" placeholder="CÓDIGO" value="${esc(code0)}" autocapitalize="characters" autocomplete="off"><button class="btn" id="on-join" ${busy ? 'disabled' : ''}>Unirme</button></div></div>
           </div>
+          ${resumeHTML()}
           ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
         </div></div>`;
-      bindWho(root);
+      bindWho(root); bindResume(root);
       $('#on-host', root).onclick = async () => { busy = true; note = ''; render(); try { await Net.host(info()); } catch (e) { note = 'No se pudo crear la sala: ' + e.message; } busy = false; render(); };
       const join = async () => { const c = $('#on-code', root).value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length < 5) { note = 'El código tiene 5 letras o números.'; render(); return; } busy = true; note = ''; render(); try { await Net.join(c, info()); waitHost(); } catch (e) { note = 'No se pudo entrar: ' + e.message; } busy = false; render(); };
       $('#on-join', root).onclick = join; $('#on-code', root).onkeydown = e => { if (e.key === 'Enter') join(); };
@@ -1116,9 +1135,10 @@ const Online = (() => {
           <div class="on-devs">${devs.map(d => { const hp = d.host && !host ? hostPeer : null; if (hp) d = Object.assign({}, d, { via: hp.via, rtt: Math.round(hp.rtt) }); const v = VIA[d.id === me ? 'local' : d.via] || VIA.conectando; return `<div class="on-dev${d.id === me ? ' me' : ''}">
             <div class="on-dh"><span class="on-di">${DEV[d.info && d.info.dev] || '🎮'}</span><b>${esc(d.info ? d.info.name : '…')}</b>${d.host ? '<span class="on-tag gold">anfitrión</span>' : ''}${d.id === me ? '<span class="on-tag">tú</span>' : ''}
               <span class="on-via ${v[1]}">${v[0]}${d.id !== me && d.rtt ? ` · ${d.rtt} ms` : ''}</span></div>
-            <div class="on-ps">${((d.info && d.info.players) || []).map(p => `<span class="on-p" style="--c:${esc(p.color)}"><i></i>${esc(p.name)}</span>`).join('')}</div></div>`; }).join('')}</div>
+            <div class="on-ps">${ps.filter(p => p.dev === d.id).map(p => `<span class="on-p" style="--c:${esc(p.color)}"><i></i>${esc(p.name)}</span>`).join('')}</div></div>`; }).join('')}</div>
           <details class="on-me"><summary>Cambiar quién juega en este aparato</summary>${whoHTML()}</details>
         </div>
+        ${tourPanel(host)}
         <div class="panel" id="on-play"><div class="h2">${host ? '¿QUÉ JUGAMOS?' : 'LO QUE VIENE'}</div>${host ? hostPlayHTML(ps) : clientPlayHTML(connected)}</div>
         ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
       </div></div>`;
@@ -1127,6 +1147,7 @@ const Online = (() => {
     $('#on-copy', root).onclick = async () => { const u = linkFor(Net.code); try { await navigator.clipboard.writeText(u); note = 'Enlace copiado: ' + u; } catch (e) { note = u; } render(); };
     if ($('#on-share', root)) $('#on-share', root).onclick = () => navigator.share({ title: 'GameHub', text: `¡Juguemos en GameHub! Sala ${Net.code}`, url: linkFor(Net.code) }).catch(() => {});
     if (host) bindHostPlay(root);
+    bindResume(root);
   }
   // lo que el anfitrión puede lanzar: juego → modo, escenario y largo → ¡A jugar!
   let pick = null, pickEv = null, lastPick = null;
@@ -1142,7 +1163,8 @@ const Online = (() => {
   function hostPlayHTML(ps) {
     const gs = GAMES(), g = pick && gs.find(x => x.id === pick);
     const cards = `<div class="on-games">${gs.map(x => `<button class="on-game${x.id === pick ? ' sel' : ''}" data-ong="${x.id}" style="--c1:${x.c1};--c2:${x.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(x.name)}</b><small>${x.net ? (x.net.watch ? `en línea · juegan ${x.net.seats}, los demás miran` : `en línea · hasta ${x.net.seats}`) : 'en línea · pronto'}</small></button>`).join('')}</div>`;
-    if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: elige un juego.`}</p>${cards}`;
+    const tourBtn = ps.length >= 2 ? `<div class="row" style="margin-top:12px"><button class="btn gold" id="on-tour">🏆 ${GAMEHUB.Tour.T && GAMEHUB.Tour.T.online && !GAMEHUB.Tour.T.done ? 'Seguir el torneo' : 'Torneo con todos'}</button><span class="note" style="margin:0">liga, eliminatoria, rey de la pista… con los ${ps.length} de la sala</span></div>` : '';
+    if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: elige un juego.`}</p>${cards}${tourBtn}`;
     const ms = netModes(g), m = ms.find(x => x.id === pickEv.mode) || ms[0], maps = mapsFor(g, m), seg = (k, items, v) => `<div class="seg" data-onseg="${k}">${items.map(([id, t]) => `<button data-v="${esc(id)}" aria-pressed="${String(id) === String(v)}">${esc(t)}</button>`).join('')}</div>`;
     const over = ps.length > g.net.seats ? `<p class="note warn">Este juego es de ${g.net.watch ? '' : 'hasta '}${g.net.seats}: juegan ${ps.slice(0, g.net.seats).map(p => esc(p.name)).join(' y ')}; ${g.net.watch ? 'los demás miran en vivo' : 'los demás esperan'}.</p>` : '';
     return `<p class="note">Con ${ps.length} jugadores.</p>${cards}
@@ -1154,6 +1176,7 @@ const Online = (() => {
       </div>`;
   }
   function bindHostPlay(root) {
+    if ($('#on-tour', root)) $('#on-tour', root).onclick = () => { const T = GAMEHUB.Tour.T; if (T && T.online && !T.done) GAMEHUB.go('torneo'); else GAMEHUB.onlineTour(players(Net.room)); };
     $$('[data-ong]', root).forEach(b => b.onclick = () => { const g = GAMES().find(x => x.id === b.dataset.ong); if (!g || !g.net) { note = 'Ese juego todavía no está listo para jugar en línea (en construcción).'; render(); return; }
       if (pick !== g.id) { pick = g.id; const m = netModes(g)[0]; pickEv = { mode: m.id, map: '', len: m.len ? m.len[1] || m.len[0] : 0 }; sendPick(); } note = ''; render(); });
     $$('[data-onseg]', root).forEach(sg => sg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = sg.dataset.onseg, v = b.dataset.v; pickEv[k] = k === 'len' ? +v : v;
@@ -1166,8 +1189,8 @@ const Online = (() => {
   // los demás ven lo que el anfitrión está armando
   function sendPick() { Net.send('*', { $: 'pick', game: pick, ev: pickEv }, true); }
   // el anfitrión arranca una partida: puestos con los jugadores de la sala (en orden), y todos abren el juego
-  function startGame(g, ev) {
-    const ps = players(Net.room).slice(0, g.net.seats), sid = Math.random().toString(36).slice(2, 10);
+  function startGame(g, ev, only, tour) {
+    const ps = (only || players(Net.room)).slice(0, g.net.seats), sid = Math.random().toString(36).slice(2, 10);
     const seats = ps.map(p => ({ dev: p.dev, local: devLocal(p), name: p.name, color: p.color }));
     // que nadie se repita: colores (el siguiente libre de la paleta) y nombres (con número)
     const usedC = new Set(), usedN = {};
@@ -1176,13 +1199,44 @@ const Online = (() => {
       const nm = String(st.name || 'Jugador').trim().slice(0, 16) || 'Jugador', k = (usedN[nm.toLowerCase()] || 0) + 1; usedN[nm.toLowerCase()] = k; st.name = k > 1 ? `${nm} ${k}` : nm;
     }
     ev = ev || { mode: g.net.mode || (g.modes[0] && g.modes[0].id), map: (g.maps[Math.floor(Math.random() * g.maps.length)] || [])[0], rounds: 3 };
-    Net.send('*', { $: 'game', game: g.id, ev, seats, sid }, true);
-    openNet(g.id, 'host', seats, ev, sid);
+    Net.send('*', { $: 'game', game: g.id, ev, seats, sid, tour: tour || null }, true);
+    openNet(g.id, 'host', seats, ev, sid, tour);
   }
-  function devLocal(p) { const d = (Net.room.devices || []).find(x => x.id === p.dev); return d ? (d.info.players || []).findIndex(q => q.name === p.name && q.color === p.color) : 0; }
-  function openNet(gid, role, seats, ev, sid) {
+  /* ---------- torneo en línea ---------- */
+  let tourNet = (() => { try { return JSON.parse(localStorage.getItem('gamehub_tourNet') || 'null'); } catch (e) { return null; } })();
+  const saveTourNet = T => { tourNet = T; try { localStorage.setItem('gamehub_tourNet', JSON.stringify(T)); } catch (e) { /* nada */ } };
+  // el anfitrión: cada cambio del torneo viaja a todos (y al que entra)
+  setTimeout(() => { if (window.GAMEHUB) GAMEHUB.App.onTour = T => { if (Net.alive && Net.isHost) Net.send('*', { $: 'tour', T }, true); }; }, 0); // app.js arma GAMEHUB después
+  Net.on('peers', () => { const T = GAMEHUB.Tour.T; if (Net.isHost && T && T.online) Net.send('*', { $: 'tour', T }, true); });
+  Net.on('msg', (from, m) => {
+    if (!m || m.$ !== 'tour' || Net.isHost || from !== Net.hostId || !m.T || typeof m.T !== 'object' || !Array.isArray(m.T.players)) return;
+    saveTourNet(m.T); if (m.T.done) GAMEHUB.fameAdd(m.T); if (visible()) render();
+  });
+  function tourPanel(host) {
+    const T = host ? GAMEHUB.Tour.T : tourNet; if (!T || !T.online || (T.done && Date.now() - (T.ended || 0) > 6 * 3600e3)) return '';
+    return `<div class="panel"><div class="h2">TORNEO EN LÍNEA</div>${GAMEHUB.tourHTML(T)}${host ? '<div class="row" style="margin-top:10px"><button class="btn small" id="on-tourgo">Abrir el tablero del torneo ›</button></div>' : '<p class="note">El anfitrión lanza cada prueba; quienes no juegan la miran en vivo.</p>'}</div>`;
+  }
+  // si el anfitrión se cayó a mitad de torneo, cualquiera lo puede seguir desde su copia
+  function resumeHTML() { const T = tourNet; if (!T || !T.online || T.done) return ''; return `<div class="panel"><div class="h2">TORNEO A MEDIAS</div><p class="note">«${esc(T.name)}» quedó a medias (${T.events.filter(e => e.status === 'done').length} pruebas jugadas). Si el anfitrión no vuelve, síguelo tú: creas una sala nueva y los demás entran con el código.</p><div class="row"><button class="btn gold" id="on-resume">Seguir el torneo como anfitrión</button><button class="btn small ghost" id="on-forget">Olvidarlo</button></div></div>`; }
+  function bindResume(root) {
+    if ($('#on-resume', root)) $('#on-resume', root).onclick = async () => { const T = tourNet; GAMEHUB.Tour.T = T; GAMEHUB.Tour.save(); try { await Net.host(info()); } catch (e) { note = 'No se pudo crear la sala: ' + e.message; } render(); };
+    if ($('#on-forget', root)) $('#on-forget', root).onclick = () => { saveTourNet(null); render(); };
+    if ($('#on-tourgo', root)) $('#on-tourgo', root).onclick = () => GAMEHUB.go('torneo');
+  }
+  // el anfitrión lanza una prueba del torneo: juegan los dos de la prueba (buscados por nombre en la sala); los demás miran
+  function playTour(T, ev) {
+    if (!Net.alive || !Net.isHost) return 'Para jugar el torneo en línea, primero crea la sala (En línea).';
+    const g = GAMEHUB.GAMES.find(x => x.id === ev.game); if (!g || !g.net) return 'Ese juego todavía no va en línea.';
+    const ps = players(Net.room), byName = id => { const p = T.players.find(x => x.id === id); return p && ps.find(q => q.name.trim().toLowerCase() === p.name.trim().toLowerCase()); };
+    const a = byName(ev.j1), b = byName(ev.j2); if (!a || !b) return `Falta en la sala: ${[!a && ev.j1, !b && ev.j2].filter(Boolean).map(id => (T.players.find(x => x.id === id) || {}).name).join(' y ')}.`;
+    const nm = id => (T.players.find(x => x.id === id) || {}).name;
+    startGame(g, { mode: ev.mode, map: ev.map, rounds: ev.rounds || 3, len: ev.rounds || 0, tour: true }, [a, b], { id: ev.id, n: ev.n, j1: ev.j1, j2: ev.j2, title: `Prueba ${ev.n}: ${nm(ev.j1)} contra ${nm(ev.j2)}` });
+    return '';
+  }
+  function devLocal(p) { if (typeof p.li === 'number') return p.li; const d = (Net.room.devices || []).find(x => x.id === p.dev); return d ? Math.max(0, (d.info.players || []).findIndex(q => q.name === p.name)) : 0; }
+  function openNet(gid, role, seats, ev, sid, tour) {
     const mine = seats.map((s, i) => (s.dev === Net.id ? i : -1)).filter(i => i >= 0).sort((a, b) => seats[a].local - seats[b].local);
-    GAMEHUB.Launcher.open(gid, null, { role, seats, mine, ev, sid });
+    GAMEHUB.Launcher.open(gid, null, { role, seats, mine, ev, sid, tour: tour && typeof tour === 'object' ? { id: String(tour.id), n: +tour.n || 0, j1: String(tour.j1), j2: String(tour.j2), title: String(tour.title || '').slice(0, 80) } : null });
   }
   function clientPlayHTML(connected) {
     if (!connected) return '<p class="note">Conectando con el anfitrión…</p>';
@@ -1193,7 +1247,7 @@ const Online = (() => {
   // al entrar alguien nuevo, el anfitrión le cuenta qué está armando
   Net.on('peers', () => { if (Net.isHost && pick) sendPick(); });
   // los remotos: el anfitrión arrancó una partida → abrirla aquí también
-  Net.on('msg', (from, m) => { if (m && m.$ === 'game' && !Net.isHost && from === Net.hostId) openNet(m.game, 'client', m.seats, m.ev, m.sid); });
+  Net.on('msg', (from, m) => { if (m && m.$ === 'game' && !Net.isHost && from === Net.hostId) openNet(m.game, 'client', m.seats, m.ev, m.sid, m.tour); });
   let hostT = 0;
   function waitHost() { clearTimeout(hostT); hostT = setTimeout(() => { if (Net.alive && !Net.isHost && !Net.room) { note = 'No aparece el anfitrión. Revisa el código, o que su GameHub siga abierto en la sala.'; render(); } }, 15000); }
   Net.on('room', () => { if (visible()) render(); });
@@ -1201,7 +1255,7 @@ const Online = (() => {
   Net.on('status', s => { if (s.hostGone && Net.alive && !Net.isHost) { note = 'El anfitrión salió de la sala.'; Net.leave(); if (visible()) render(); } });
   // refrescar el ping de vez en cuando (sin tocar lo que se está escribiendo)
   setInterval(() => { if (visible() && Net.alive && !el().contains(document.activeElement && document.activeElement.tagName === 'INPUT' ? document.activeElement : null)) render(); }, 3000);
-  return { render, get code0() { return code0; }, info, players: () => players(Net.room) };
+  return { render, get code0() { return code0; }, info, players: () => players(Net.room), playTour };
 })();
 
 /* ===== app.js ===== */
@@ -1225,7 +1279,7 @@ const Online = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"d020b73b0a","date":"2026-11-18"};
+  const BUILD = {"v":"da30269c45","date":"2026-11-18"};
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
   const COLORS = ['#ff5d8f', '#45d6b0', '#ffb36b', '#6fc3ff', '#ffd36b', '#b07bff', '#3dffa8', '#ff7a3d'];
@@ -1461,7 +1515,7 @@ const Online = (() => {
       stage.setAttribute('style', gvars(g)); stage.classList.remove('ready'); stage.hidden = false; BG.stop();
       document.body.classList.add('playing');
       $('#ltitle').innerHTML = glogo(g);
-      $('#ltip').textContent = ev ? `Prueba ${ev.n}: ${tName(ev.j1)} (J1) contra ${tName(ev.j2)} (J2) · ${modeName(ev)} en ${mapName(g, ev.map)}` : g.touch.startsWith('En el') && touch ? g.touch : `Para volver a GameHub, usa «⌂ GameHub» en la portada del juego.`;
+      $('#ltip').textContent = net && net.tour ? `Torneo en línea · ${net.tour.title}${net.mine && net.mine.length ? '' : ' · tú miras en vivo'}` : ev ? `Prueba ${ev.n}: ${tName(ev.j1)} (J1) contra ${tName(ev.j2)} (J2) · ${modeName(ev)} en ${mapName(g, ev.map)}` : g.touch.startsWith('En el') && touch ? g.touch : `Para volver a GameHub, usa «⌂ GameHub» en la portada del juego.`;
       $('#lerr').hidden = true; $('#lbtns').hidden = true; $('.lbar').hidden = false;
       clearTimeout(readyT); readyT = setTimeout(() => fail('El juego está tardando en arrancar.'), 25000);
       frame.removeAttribute('srcdoc'); frame.src = 'about:blank';
@@ -1470,12 +1524,12 @@ const Online = (() => {
     }
     function fail(msg) { $('#lerr').textContent = msg; $('#lerr').hidden = false; $('#lbtns').hidden = false; $('.lbar').hidden = true; }
     function close() {
-      const wasNet = !!netCfg; if (wasNet) post({ cmd: 'netoff' }); netCfg = null;
+      const wasNet = !!netCfg, wasTour = !!(netCfg && netCfg.tour); if (wasNet) post({ cmd: 'netoff' }); netCfg = null;
       clearTimeout(readyT); cur = null; tourEv = null;
       stage.hidden = true; stage.classList.remove('ready'); frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; hideToast();
       document.body.classList.remove('playing'); if (touch) FS.unlock();
       BG.start();
-      if (wasNet) go('online'); else if (view === 'torneo') renderTorneo(); else if (view === 'home') renderHome();
+      if (wasNet) go(Tour.T && Tour.T.online && typeof Net !== 'undefined' && Net.isHost && wasTour ? 'torneo' : 'online'); else if (view === 'torneo') renderTorneo(); else if (view === 'home') renderHome();
       if (Tour.T && Tour.T.done && !Tour.T.celebrated) Champ.show(Tour.T);
       App.afterGame();
     }
@@ -1507,6 +1561,13 @@ const Online = (() => {
       } else if (m.event === 'net' && netCfg && typeof Net !== 'undefined' && Net.alive) {
         // el juego habla con los otros aparatos: anfitrión ↔ remotos, por la sala
         const to = m.to === 'host' ? Net.hostId : '*'; if (to) Net.send(to, { $g: netCfg.sid, d: m.d }, m.ch === 'r');
+        // torneo en línea: el resultado que manda el juego del anfitrión se anota solo
+        if (netCfg.tour && netCfg.role === 'host' && m.d && m.d.t === 'res' && m.d.r && !resultGot) {
+          resultGot = true; const r = m.d.r, ev = netCfg.tour, w = r.winner === 0 ? ev.j1 : r.winner === 1 ? ev.j2 : 'draw';
+          const sc = r.mode === 'duel' || r.mode === 'caneca' || r.mode === 'escalada' || !r.score && !r.points ? (r.wins || []) : (r.points || r.score || []);
+          Tour.result(ev.id, w, { score: sc.slice(0, 2).join(' – ') }); Snd.ok();
+          toast(w === 'draw' ? 'Empate: la prueba quedó anotada' : `¡Gana ${esc(tName(w))}! Resultado anotado`, false);
+        }
       } else if (m.event === 'exit') close();
       else if (m.event === 'abort' && tourEv) { toast('La prueba quedó pendiente: pueden volver a jugarla', true); }
       else if (m.event === 'error') toast('El juego avisó un error: ' + esc(m.msg || ''), !!tourEv);
@@ -1520,7 +1581,7 @@ const Online = (() => {
   /* ---------- torneo: estado guardado y asistente ---------- */
   const Tour = {
     T: Store.get('tour', null),
-    save() { Store.set('tour', this.T); },
+    save() { Store.set('tour', this.T); try { if (this.T && this.T.online && App.onTour) App.onTour(this.T); } catch (e) { /* aún no arranca */ } },
     result(evId, w, info) { if (!this.T) return; const ev = Torneo.record(this.T, evId, w, info); if (ev) { this.save(); if (this.T.done) archive(this.T); } },
   };
   if (Tour.T && Tour.T.v !== 1) Tour.T = null;
@@ -1584,6 +1645,7 @@ const Online = (() => {
   }
   function wfoot(nextTxt = 'Siguiente ›') { return `<div class="wfoot"><button class="btn ghost" data-w="prev" ${W.step === 0 ? 'style="visibility:hidden"' : ''}>‹ Atrás</button><button class="btn gold" data-w="next">${nextTxt}</button></div>`; }
   function stepPlayers() {
+    if (W.online) return `<div class="h2">JUGADORES DE LA SALA</div><p class="note">Juegan los de la sala en línea (cada uno desde su aparato). Para cambiar quién juega, cambien la sala.</p><div class="players">${W.players.map(p => `<div class="prow"><span class="swatch" style="background:${p.color}"></span><b style="padding:10px 4px">${esc(p.name)}</b></div>`).join('')}</div>${wfoot()}`;
     const recent = (Store.get('names', [])).filter(n => !W.players.some(p => p.name.trim().toLowerCase() === n.toLowerCase())).slice(0, 12);
     return `<div class="h2">ARRANQUE RÁPIDO</div>
       <div class="presets">${PRESETS.map((p, i) => `<button class="preset" data-preset="${i}"><b>${esc(p.name)}</b><span>${esc(p.desc)}</span></button>`).join('')}</div>
@@ -1705,6 +1767,7 @@ const Online = (() => {
     Store.set('lastPlayers', W.players); Store.set('lastPool', W.pool);
     const names = Store.get('names', []); W.players.forEach(p => { const n = p.name.trim(); const k = names.findIndex(x => x.toLowerCase() === n.toLowerCase()); if (k >= 0) names.splice(k, 1); names.unshift(n); }); Store.set('names', names.slice(0, 24));
     Tour.T = Torneo.create({ name: W.name.trim() || 'Copa Galaxia', players: W.players, format: W.format, rules: W.rules, pool: W.pool });
+    if (W.online) Tour.T.online = true;
     Tour.save(); W = null; Snd.shuffle(); renderTorneo();
   }
 
@@ -1791,7 +1854,7 @@ const Online = (() => {
   }
   function dashAct(a) {
     const T = Tour.T, ev = Torneo.curEvent(T);
-    if (a === 'play' && ev) { Snd.open(); Launcher.open(ev.game, ev); }
+    if (a === 'play' && ev) { Snd.open(); if (T.online && typeof Online !== 'undefined') { const why = Online.playTour(T, ev); if (why) notify(why); } else Launcher.open(ev.game, ev); }
     else if (a === 'reroll') { Snd.shuffle(); Torneo.reroll(T, false); Tour.save(); renderTorneo(); }
     else if (a === 'rerollMode') { Snd.shuffle(); Torneo.reroll(T, true); Tour.save(); renderTorneo(); }
     else if (a === 'manual' && ev) manual(ev);
@@ -1827,8 +1890,26 @@ const Online = (() => {
   function archive(T) {
     if (T.archived) return; T.archived = true; Tour.save();
     const H = Store.get('fame', []);
-    H.unshift({ id: T.id, name: T.name, format: T.format, date: T.ended || Date.now(), players: T.players, champion: T.champion, podium: T.podium, events: T.events.filter(e => e.status === 'done').map(e => ({ g: e.game, w: e.winner, a: e.j1, b: e.j2 })) });
+    H.unshift({ id: T.id, online: !!T.online, name: T.name, format: T.format, date: T.ended || Date.now(), players: T.players, champion: T.champion, podium: T.podium, events: T.events.filter(e => e.status === 'done').map(e => ({ g: e.game, w: e.winner, a: e.j1, b: e.j2 })) });
     Store.set('fame', H.slice(0, 60));
+  }
+
+  // torneo en línea: el anfitrión lo arma con los de la sala (solo juegos que ya van en línea)
+  function onlineTour(ps) {
+    const doIt = () => { Tour.T = null; Store.del('tour'); W = newWizard(); W.online = true; W.name = 'Copa en línea'; W.players = ps.map(p => ({ name: p.name, color: p.color })); for (const g of GAMES) if (!g.net && W.pool[g.id]) W.pool[g.id].on = false; W.step = 1; fixFormat(); go('torneo'); };
+    if (tourActive() && !Tour.T.online) confirmBox('¿Cambiar de torneo?', 'En este aparato hay un torneo sin terminar; si arman uno en línea, ese se pierde.', 'Sí, uno en línea', doIt); else if (tourActive()) go('torneo'); else doIt();
+  }
+  // los otros aparatos guardan el torneo en línea terminado en su propio salón de la fama
+  function fameAdd(T) { const H = Store.get('fame', []); if (!T || !T.done || H.some(t => t.id === T.id)) return; H.unshift({ id: T.id, online: true, name: T.name, format: T.format, date: T.ended || Date.now(), players: T.players, champion: T.champion, podium: T.podium, events: (T.events || []).filter(e => e.status === 'done').map(e => ({ g: e.game, w: e.winner, a: e.j1, b: e.j2 })) }); Store.set('fame', H.slice(0, 60)); }
+  // tablero de solo mirar (para los otros aparatos de la sala)
+  function tourHTML(T) {
+    const keep = Tour.T; Tour.T = T; let h = '';
+    try { const ev = Torneo.curEvent(T), P = Torneo.progress(T), F = FORMATS[T.format];
+      h = `<div class="on-tour"><div class="on-th"><b>${esc(T.name)}</b><small>${F ? F.name : ''} · ${T.players.length} jugadores · prueba ${Math.min(P.played + (T.done ? 0 : 1), P.total)} de unas ${P.total}</small></div>
+        ${T.done ? `<div class="on-champ">🏆 Campeón: <b style="color:${tColor(T.champion)}">${esc(tName(T.champion))}</b></div>` : ev ? `<div class="on-next"><span class="lbl">PRUEBA ${ev.n}</span><b>${esc(tName(ev.j1))} <small>contra</small> ${esc(tName(ev.j2))}</b><small>${esc((GAME[ev.game] || {}).name || '')} · ${esc(modeName(ev))}</small></div>` : ''}
+        <div class="grid2" style="align-items:start;margin-top:10px"><div>${tableHTML(T, true)}</div><div>${histHTML(T)}</div></div></div>`;
+    } catch (e) { h = ''; }
+    Tour.T = keep; return h;
   }
 
   /* ---------- campeón ---------- */
@@ -1863,7 +1944,7 @@ const Online = (() => {
     const rank = Object.values(by).sort((a, b) => b.cups - a.cups || b.w - a.w || b.pods - a.pods);
     el.innerHTML = `<div class="wrap"><div class="thead"><div><h1 class="h1">Salón de la fama</h1><p class="sub">Los campeones de cada torneo que se termina quedan aquí, con sus copas y sus pruebas ganadas.</p></div></div>
       ${H.length ? `<div class="grid2" style="align-items:start"><div class="panel"><div class="h2">RANKING GENERAL</div><table class="table"><thead><tr><th>#</th><th>Jugador</th><th class="n">Copas</th><th class="n">Podios</th><th class="n">Pruebas ganadas</th><th>Su juego</th></tr></thead><tbody>${rank.map((r, i) => { const best = Object.entries(r.games).sort((a, b) => b[1] - a[1])[0]; return `<tr><td>${i + 1}</td><td><span class="who"><i style="background:${r.color}"></i>${esc(r.name)}</span></td><td class="n"><b>${r.cups}</b></td><td class="n">${r.pods}</td><td class="n">${r.w} de ${r.played}</td><td>${best ? esc(GAME[best[0]].short) : '—'}</td></tr>`; }).join('')}</tbody></table></div>
-        <div class="fame">${H.map(t => { const ch = t.players.find(p => p.id === t.champion) || {}; return `<div class="fcard"><div class="when">${new Date(t.date).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })} · ${FORMATS[t.format].name}</div><div class="tn">${esc(t.name)}</div><div class="champ">${ICON.cup}<span style="color:${ch.color || '#fff'}">${esc(ch.name || '—')}</span></div><div class="note">${t.players.length} jugadores · ${(t.events || []).length} pruebas · ${[...new Set((t.events || []).map(e => GAME[e.g] && GAME[e.g].short))].filter(Boolean).join(', ')}</div></div>`; }).join('')}</div></div>`
+        <div class="fame">${H.map(t => { const ch = t.players.find(p => p.id === t.champion) || {}; return `<div class="fcard"><div class="when">${new Date(t.date).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })} · ${FORMATS[t.format].name}</div><div class="tn">${esc(t.name)}${t.online ? '<span class="ftag">EN LÍNEA</span>' : ''}</div><div class="champ">${ICON.cup}<span style="color:${ch.color || '#fff'}">${esc(ch.name || '—')}</span></div><div class="note">${t.players.length} jugadores · ${(t.events || []).length} pruebas · ${[...new Set((t.events || []).map(e => GAME[e.g] && GAME[e.g].short))].filter(Boolean).join(', ')}</div></div>`; }).join('')}</div></div>`
         : `<div class="panel empty">${ICON.cup}<div style="font-weight:900;color:var(--text);font-size:18px">Todavía no hay campeones</div><p class="sub" style="margin:8px auto 16px">Arma un torneo y el primero que lo gane estrena el salón.</p><button class="btn gold" data-go="torneo">Armar un torneo</button></div>`}
     </div>`;
   }
@@ -1994,7 +2075,7 @@ const Online = (() => {
 
   /* ---------- arranque ---------- */
   const h = (location.hash || '').slice(1);
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML };
   // un enlace de invitación (?sala=CÓDIGO) abre directo la sala en línea
   if (new URLSearchParams(location.search).get('sala')) go('online', null, false);
   else if (h.startsWith('ficha-') && GAME[h.slice(6)]) go('game', h.slice(6), false);
@@ -2003,7 +2084,7 @@ const Online = (() => {
   BG.start();
   // en GitHub Pages: app instalable, sin internet y con actualizaciones que no tocan el progreso
   App.register();
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML };
 })();
 
 </script>

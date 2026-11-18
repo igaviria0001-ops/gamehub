@@ -34,8 +34,8 @@ const NetPlay = (() => {
   });
   function begin(m) {
     end(); on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; snapN = 0;
-    if (role === 'host') hostT = setInterval(hostTick, 33);
-    else inT = setInterval(clientTick, 16);
+    // cada juego puede pedir su ritmo (instantáneas por segundo) y su colchón de interpolación
+    { const g = G(), hz = (g && g.rate) || 30; lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); if (role === 'host') hostT = setInterval(hostTick, Math.round(1000 / hz)); else inT = setInterval(clientTick, 16); }
     for (const f of startSubs) { try { f({ role, seats, mine, sid, ev }); } catch (err) { post('error', { msg: String(err && err.message || err) }); } }
   }
   // solo números, textos y listas simples (sin objetos del juego, que no viajan)
