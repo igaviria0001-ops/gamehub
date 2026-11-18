@@ -14,7 +14,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await C.fill('[data-pname="0"]', 'Remoto'); await C.fill('#on-code', code); await C.click('#on-join');
   for (let i = 0; i < 40; i++) { const ok = await H.evaluate(() => Net.room && Net.room.devices.length === 2 && Net.room.devices.every(d => d.host || d.open)); if (ok) break; await wait(300); }
   await C.evaluate(() => { const t0 = Date.now(); window.__nl = []; Net.on('status', s => __nl.push([Date.now() - t0, 'st', JSON.stringify(s)])); Net.on('peers', () => __nl.push([Date.now() - t0, 'peers', JSON.stringify(Net.peers)])); });
-  await H.click('[data-ong="vertigo"]');
+  await H.click('[data-ong="vertigo"]'); await wait(300); await H.click('[data-onseg="map"] [data-v="venecia"]'); await wait(200); await H.click('[data-onseg="len"] [data-v="2"]'); await wait(1200);
+  const nextTxt = await C.evaluate(() => { const e = document.querySelector('.on-next'); return e ? e.innerText.replace(/\s+/g, ' ') : null; });
+  console.log('el remoto ve:', nextTxt); await H.screenshot({ path: OUT + 'sala-elegir.png' }); await C.screenshot({ path: OUT + 'sala-remoto-ve.png' });
+  await H.click('#on-go');
   const frameOf = async p => { for (let i = 0; i < 120; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(() => typeof Game !== 'undefined' && Game.R && Game.mode === 'race')) return f; } catch (e) {} } await wait(500); } return null; };
   const fh = await frameOf(H), fc = await frameOf(C);
   console.log('carrera abierta: anfitrión', !!fh, '· remoto', !!fc);
@@ -23,6 +26,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     if (fh) console.log('anfitrión:', JSON.stringify(await fh.evaluate(() => ({ mode: Game.mode, wait: !!document.getElementById('netWait'), errs: window.__errs }))));
   }
   if (!fh || !fc) { console.log(errs.slice(0, 5)); await b.close(); process.exit(1); }
+  const tk = await fh.evaluate(() => [Game.R.track.def.id, Game.R.laps]), tkc = await fc.evaluate(() => [Game.R.track.def.id, Game.R.laps]);
+  console.log('pista y vueltas (anfitrión / remoto):', JSON.stringify(tk), JSON.stringify(tkc));
+  const pickOk = !!nextTxt && /Venecia/.test(nextTxt) && tk[0] === 'venecia' && tk[1] === 2 && tkc[0] === 'venecia';
   // esperar la presentación y la cuenta
   for (let i = 0; i < 160; i++) { const ok = await fh.evaluate(() => Game.R.state === 'race' && Game.R.time > 1.5); if (ok) break; await wait(500); }
   await wait(3000);
@@ -55,6 +61,6 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const ferr = async f => f.evaluate(() => window.__errs.slice(0, 4)).catch(() => ['?']); errs.push(...(await ferr(fh)).map(e => 'anfitrión: ' + e), ...(await ferr(fc)).map(e => 'remoto: ' + e));
   console.log('remoto:', JSON.stringify(await fc.evaluate(() => ({ mode: Game.mode, st: Game.R.state, on: NetPlay.on, n: NetPlay.sample() && 1 }))), 'errores juego:', errs.slice(0, 6));
   console.log({ pantallaResultados: resOk, otraCarreraParaTodos: againOk, pista: [L0, L1h, L1c] });
-  console.log(moved && synced && resOk && againOk && !errs.length ? 'VTG EN LÍNEA OK' : 'VTG EN LÍNEA FALLA');
+  console.log({ eleccionEnSala: pickOk }); console.log(moved && synced && resOk && againOk && pickOk && !errs.length ? 'VTG EN LÍNEA OK' : 'VTG EN LÍNEA FALLA');
   await b.close();
 })();

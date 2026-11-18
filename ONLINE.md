@@ -201,3 +201,8 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   respaldo (`12-main.js`, cada 50 ms con `document.hidden`; probado: +1,7 s de carrera en 2 s ocultos). En la sala, el
   anfitrión ve «deja esta pantalla abierta mientras juegan». Orden decidido: F2 (elegir modo/escenario en la sala,
   sirve para todos) → F5 Ventolera → F6 Sortilegio → F7 Tira y Afloja → F8 torneo/Salón → modos extra de VÉRTIGO.
+- **17 nov 22:05** — F2 (elegir antes de lanzar): el anfitrión toca un juego → panel con **modo** (solo los que ya
+  funcionan en línea: `catalog.net.modes`), **escenario** (🎲 al azar o uno), **largo** (vueltas/rondas) y «¡A jugar!»;
+  los demás ven «EL ANFITRIÓN PREPARA: VÉRTIGO · Carrera · Venecia · 2 vueltas» (`{$:'pick'}`, se reenvía al que entra).
+  `catalog.net.desc` = texto del modo en línea. Prueba `test/netvtg.js` elige Venecia a 2 vueltas desde la sala y los
+  dos aparatos corren ahí → OK. Celular revisado (sin desborde). Sigue **F5 Ventolera**.

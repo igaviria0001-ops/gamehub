@@ -80,7 +80,7 @@ const Online = (() => {
             <div class="on-ps">${((d.info && d.info.players) || []).map(p => `<span class="on-p" style="--c:${esc(p.color)}"><i></i>${esc(p.name)}</span>`).join('')}</div></div>`; }).join('')}</div>
           <details class="on-me"><summary>Cambiar quién juega en este aparato</summary>${whoHTML()}</details>
         </div>
-        <div class="panel" id="on-play"><div class="h2">${host ? '¿QUÉ JUGAMOS?' : 'LO QUE VIENE'}</div>${host ? hostPlayHTML(ps) : `<p class="note">${connected ? 'Esperando a que el anfitrión elija…' : 'Conectando con el anfitrión…'}</p>`}</div>
+        <div class="panel" id="on-play"><div class="h2">${host ? '¿QUÉ JUGAMOS?' : 'LO QUE VIENE'}</div>${host ? hostPlayHTML(ps) : clientPlayHTML(connected)}</div>
         ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
       </div></div>`;
     bindWho(root);
@@ -89,17 +89,46 @@ const Online = (() => {
     if ($('#on-share', root)) $('#on-share', root).onclick = () => navigator.share({ title: 'GameHub', text: `¡Juguemos en GameHub! Sala ${Net.code}`, url: linkFor(Net.code) }).catch(() => {});
     if (host) bindHostPlay(root);
   }
-  // lo que el anfitrión puede lanzar (las partidas en línea llegan en las fases siguientes)
-  function hostPlayHTML(ps) {
-    return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: una partida de un juego o un torneo con todos.`}</p>
-      <div class="on-games">${(window.GAMEHUB ? GAMEHUB.GAMES : []).map(g => `<button class="on-game" data-ong="${g.id}" style="--c1:${g.c1};--c2:${g.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(g.name)}</b><small>${g.net ? `en línea · hasta ${g.net.seats}` : 'en línea · pronto'}</small></button>`).join('')}</div>`;
+  // lo que el anfitrión puede lanzar: juego → modo, escenario y largo → ¡A jugar!
+  let pick = null, pickEv = null, lastPick = null;
+  const GAMES = () => (window.GAMEHUB ? GAMEHUB.GAMES : []);
+  const netModes = g => g.modes.filter(m => !g.net || !g.net.modes || g.net.modes.includes(m.id));
+  const mapsFor = (g, m) => (m && m.maps === 'arenas' ? g.arenas || [] : g.maps).filter(x => !(m && m.map) || x[0] === m.map);
+  function evText(g, ev) {
+    if (!g || !ev) return ''; const m = g.modes.find(x => x.id === ev.mode), mp = (g.maps.concat(g.arenas || [])).find(x => x[0] === ev.map);
+    return [g.name, m && m.name, mp ? mp[1] : 'escenario al azar', m && m.len && ev.len ? m.lenTxt(ev.len) : ''].filter(Boolean).join(' · ');
   }
-  function bindHostPlay(root) { $$('[data-ong]', root).forEach(b => b.onclick = () => { const g = GAMEHUB.GAMES.find(x => x.id === b.dataset.ong); if (!g || !g.net) { note = 'Ese juego todavía no está listo para jugar en línea (en construcción).'; render(); return; } startGame(g); }); }
+  function hostPlayHTML(ps) {
+    const gs = GAMES(), g = pick && gs.find(x => x.id === pick);
+    const cards = `<div class="on-games">${gs.map(x => `<button class="on-game${x.id === pick ? ' sel' : ''}" data-ong="${x.id}" style="--c1:${x.c1};--c2:${x.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(x.name)}</b><small>${x.net ? `en línea · hasta ${x.net.seats}` : 'en línea · pronto'}</small></button>`).join('')}</div>`;
+    if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: elige un juego.`}</p>${cards}`;
+    const ms = netModes(g), m = ms.find(x => x.id === pickEv.mode) || ms[0], maps = mapsFor(g, m), seg = (k, items, v) => `<div class="seg" data-onseg="${k}">${items.map(([id, t]) => `<button data-v="${esc(id)}" aria-pressed="${String(id) === String(v)}">${esc(t)}</button>`).join('')}</div>`;
+    const over = ps.length > g.net.seats ? `<p class="note warn">Este juego es de hasta ${g.net.seats}: juegan los primeros ${g.net.seats} de la lista.</p>` : '';
+    return `<p class="note">Con ${ps.length} jugadores.</p>${cards}
+      <div class="on-cfg" style="--c1:${g.c1};--c2:${g.c2}">
+        <div class="lbl">Modo</div>${seg('mode', ms.map(x => [x.id, x.name]), m.id)}<p class="on-desc">${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</p>
+        ${maps.length > 1 ? `<div class="lbl">Escenario</div>${seg('map', [['', '🎲 Al azar']].concat(maps), pickEv.map || '')}` : ''}
+        ${m.len ? `<div class="lbl">Largo</div>${seg('len', m.len.map(n => [n, m.lenTxt(n)]), pickEv.len || m.len[1] || m.len[0])}` : ''}
+        ${over}<div class="row"><button class="btn gold big" id="on-go">¡A jugar!</button><button class="btn ghost" id="on-back">Otro juego</button></div>
+      </div>`;
+  }
+  function bindHostPlay(root) {
+    $$('[data-ong]', root).forEach(b => b.onclick = () => { const g = GAMES().find(x => x.id === b.dataset.ong); if (!g || !g.net) { note = 'Ese juego todavía no está listo para jugar en línea (en construcción).'; render(); return; }
+      if (pick !== g.id) { pick = g.id; const m = netModes(g)[0]; pickEv = { mode: m.id, map: '', len: m.len ? m.len[1] || m.len[0] : 0 }; sendPick(); } note = ''; render(); });
+    $$('[data-onseg]', root).forEach(sg => sg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = sg.dataset.onseg, v = b.dataset.v; pickEv[k] = k === 'len' ? +v : v;
+      if (k === 'mode') { const g = GAMES().find(x => x.id === pick), m = g.modes.find(x => x.id === v); if (!mapsFor(g, m).some(x => x[0] === pickEv.map)) pickEv.map = ''; if (m.len && !m.len.includes(pickEv.len)) pickEv.len = m.len[1] || m.len[0]; }
+      sendPick(); render(); }));
+    if ($('#on-go', root)) $('#on-go', root).onclick = () => { const g = GAMES().find(x => x.id === pick); if (!g) return; const m = g.modes.find(x => x.id === pickEv.mode), maps = mapsFor(g, m);
+      const map = pickEv.map || (maps[Math.floor(Math.random() * maps.length)] || [])[0]; startGame(g, { mode: pickEv.mode, map, rounds: pickEv.len || 3, len: pickEv.len || 0 }); };
+    if ($('#on-back', root)) $('#on-back', root).onclick = () => { pick = null; pickEv = null; sendPick(); render(); };
+  }
+  // los demás ven lo que el anfitrión está armando
+  function sendPick() { Net.send('*', { $: 'pick', game: pick, ev: pickEv }, true); }
   // el anfitrión arranca una partida: puestos con los jugadores de la sala (en orden), y todos abren el juego
   function startGame(g, ev) {
     const ps = players(Net.room).slice(0, g.net.seats), sid = Math.random().toString(36).slice(2, 10);
     const seats = ps.map(p => ({ dev: p.dev, local: devLocal(p), name: p.name, color: p.color }));
-    ev = ev || { mode: g.net.mode || (g.modes[0] && g.modes[0].id), map: (g.maps[Math.floor(Math.random() * g.maps.length)] || {}).id, rounds: 3 };
+    ev = ev || { mode: g.net.mode || (g.modes[0] && g.modes[0].id), map: (g.maps[Math.floor(Math.random() * g.maps.length)] || [])[0], rounds: 3 };
     Net.send('*', { $: 'game', game: g.id, ev, seats, sid }, true);
     openNet(g.id, 'host', seats, ev, sid);
   }
@@ -108,6 +137,14 @@ const Online = (() => {
     const mine = seats.map((s, i) => (s.dev === Net.id ? i : -1)).filter(i => i >= 0).sort((a, b) => seats[a].local - seats[b].local);
     GAMEHUB.Launcher.open(gid, null, { role, seats, mine, ev, sid });
   }
+  function clientPlayHTML(connected) {
+    if (!connected) return '<p class="note">Conectando con el anfitrión…</p>';
+    const g = lastPick && GAMES().find(x => x.id === lastPick.game);
+    return g ? `<div class="on-next" style="--c1:${g.c1};--c2:${g.c2}"><span class="lbl">EL ANFITRIÓN PREPARA</span><b>${esc(evText(g, lastPick.ev).split(' · ')[0])}</b><small>${esc(evText(g, lastPick.ev).split(' · ').slice(1).join(' · '))}</small></div>` : '<p class="note">Esperando a que el anfitrión elija…</p>';
+  }
+  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0 } : {} } : null; if (visible()) render(); } });
+  // al entrar alguien nuevo, el anfitrión le cuenta qué está armando
+  Net.on('peers', () => { if (Net.isHost && pick) sendPick(); });
   // los remotos: el anfitrión arrancó una partida → abrirla aquí también
   Net.on('msg', (from, m) => { if (m && m.$ === 'game' && !Net.isHost && from === Net.hostId) openNet(m.game, 'client', m.seats, m.ev, m.sid); });
   let hostT = 0;

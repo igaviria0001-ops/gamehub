@@ -434,3 +434,16 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-game b { font-size: 17px; font-weight: 900; } .on-game small { opacity: .85; font-weight: 800; }
 .on-game[disabled] { opacity: .45; cursor: default; }
 .on-note { color: var(--gold); font-weight: 800; word-break: break-all; }
+
+/* sala en línea: elegir modo, escenario y largo */
+.on-game.sel { outline: 3px solid var(--text); outline-offset: 2px; }
+.on-cfg { margin-top: 14px; display: grid; gap: 8px; padding: 16px; border-radius: 18px; background: linear-gradient(135deg, color-mix(in srgb, var(--c1) 22%, transparent), color-mix(in srgb, var(--c2) 14%, transparent)); border: 1px solid var(--line2); }
+.on-cfg .lbl { font-size: 11.5px; font-weight: 900; letter-spacing: 1.4px; color: var(--mute); margin-top: 4px; }
+.on-cfg .seg { align-self: flex-start; max-width: 100%; }
+.on-cfg .on-desc { margin: 0; color: var(--mute); font-size: 13.5px; }
+.on-cfg .row { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; }
+.on-cfg .note.warn { color: #ffcf6a; margin: 0; }
+.on-next { display: grid; gap: 4px; padding: 16px 18px; border-radius: 18px; background: linear-gradient(135deg, color-mix(in srgb, var(--c1) 30%, transparent), color-mix(in srgb, var(--c2) 18%, transparent)); border: 1px solid var(--line2); }
+.on-next .lbl { font-size: 11.5px; font-weight: 900; letter-spacing: 1.4px; color: var(--mute); }
+.on-next b { font-size: 22px; font-weight: 900; }
+.on-next small { color: var(--mute); font-weight: 700; font-size: 14px; }

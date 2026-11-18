@@ -64,7 +64,7 @@ const GAMES = [
     extras: ['Campaña en equipo de 18 niveles (cielo e infierno)', '13 magos con atuendos', 'Grimorio de 28 fusiones', 'Escuela de magia'],
   },
   {
-    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick' },
+    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick', modes: ['quick'], desc: { quick: 'Todos a la misma carrera; la máquina completa la parrilla hasta 6 autos. Gana quien llegue primero.' } },
     tag: 'La Copa Esmeralda', kind: 'Carreras en 3D',
     desc: 'Bólidos que derrapan, saltan, flotan en lancha y planean con alas por 10 pistas del mundo. Objetos, turbos esmeralda, batallas y pantalla dividida para dos.',
     c1: '#3dffa8', c2: '#00c8ff', c3: '#ffd23d', ink: '#04140f', font: 'vtg',
