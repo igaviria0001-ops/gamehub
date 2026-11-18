@@ -55,23 +55,27 @@ const NetGame = (() => {
 
   /* ---------- instantánea (anfitrión) ---------- */
   const PF = ['x', 'y', 'vx', 'vy', 'r', 'mass', 'alive', 'stuck', 'onGround', 'stun', 'inv', 'facing', 'dunked', 'dunkT', 'dunkX', 'pulling', 'releasing', 'reeling', 'charge', 'chargeLvl', 'sticky', 'gripLoad', 'mood', 'stuckN', 'ropeDir', 'ropeT', 'slingT', 'whipT', 'diveT', 'moveDir', 'airJumps', 'hangT', 'jumping', 'anchor', 'pinned'];
-  const GF = ['stateT', 'roundT', 'round', 'wins', 'points', 'timeScale', 'slowT', 'suddenDeath', 'canControl', 'respawn', 'countdownLen', 'ropeCut', 'kickoff', 'cdMarks', 'hintsT', 'lastWinner', 'lastLoser', 'winsNeeded', 'spawnCount'];
+  // lo que cambia todo el tiempo (viaja siempre) y lo demás (solo cuando cambia: NetPlay.slow)
+  const GF = ['stateT', 'roundT', 'hintsT', 'slowT', 'timeScale'], GS = ['round', 'wins', 'points', 'suddenDeath', 'canControl', 'respawn', 'countdownLen', 'ropeCut', 'kickoff', 'cdMarks', 'lastWinner', 'lastLoser', 'winsNeeded', 'spawnCount'];
   const ASTATIC = new Set(['id', 'def', 'L', 'solids', 'oneway', 'pegs', 'zones', 'hazards', 'movers', 'spawns', 'pelletSpots', 'goldenSpots', 'respawnSpots', 'cans', 'goals', 'variant', 'hazardY', 'ceilY', 'deskLeft', 'deskRight', 'deskY', 'canRim']);
   function arenaSnap() {
-    const A = ARENA, o = { t: r2(A.t), mods: enc(A.mods), mv: A.movers.map(R => [r1(R.x), r1(R.y), r1(R.dx), r1(R.dy)]), zn: A.zones.map(Z => r2(Z.active)) };
+    const A = ARENA, o = { t: r2(A.t) }; if (A.movers.length) o.mv = A.movers.map(R => [r1(R.x), r1(R.y), r1(R.dx), r1(R.dy)]);
     const x = {}; for (const k in A) { if (ASTATIC.has(k) || k === 't' || k === 'mods') continue; const v = A[k]; if (typeof v === 'function') continue; const e = enc(v); if (e !== undefined) x[k] = e; }
-    o.x = x; return o;
+    o.$s = { mods: enc(A.mods), zn: A.zones.map(Z => r2(Z.active)), x }; return o;
   }
+  let arenaSlow = null;
   function snap() {
     if (!on() || G.state === 'attract' || !NetPlay.cfg || !G.rope) return null;
     const g = {}; for (const k of GF) { const v = enc(G[k]); if (v !== undefined) g[k] = v; }
-    const R = G.rope, pts = []; for (const p of R.pts) pts.push(ri(p.x), ri(p.y));
+    const g2 = {}; for (const k of GS) { const v = enc(G[k]); if (v !== undefined) g2[k] = v; }
+    // el hilo: el primer punto entero y los demás como diferencias (números cortos)
+    const R = G.rope, pts = []; let lx = 0, ly = 0; for (const p of R.pts) { const x = ri(p.x), y = ri(p.y); pts.push(x - lx, y - ly); lx = x; ly = y; }
     return {
-      st: STS.indexOf(G.state), ar: G.arenaId, av: ARENA.variant || null, g,
+      st: STS.indexOf(G.state), ar: G.arenaId, av: ARENA.variant || null, g, g2: NetPlay.slow('g2', g2),
       p: G.players.map(p => PF.map(k => enc(p[k]))),
       rp: { pts, len: r1(R.len), strain: r2(R.strain), tension: r1(R.tension), vis: R.visible ? 1 : 0, dA: [r2(R.dirA.x), r2(R.dirA.y)], dB: [r2(R.dirB.x), r2(R.dirB.y)], temp: r2(R.temp), snapFx: r2(R.snapFx), jitter: r2(R.jitter) },
-      pl: G.pellets.map(pl => enc(pl)), gd: G.golden ? enc(G.golden) : 0,
-      a: arenaSnap(), m: enc(Modes.M), f: enc(Fiesta.state),
+      pl: NetPlay.slow('pl', G.pellets.map(pl => { const o = enc(pl); delete o.t; return o; })), gd: NetPlay.slow('gd', G.golden ? (o => { delete o.t; return o; })(enc(G.golden)) : 0),
+      a: (() => { const o = arenaSnap(); arenaSlow = o.$s; delete o.$s; return o; })(), as: NetPlay.slow('as', arenaSlow), m: NetPlay.slow('m', enc(Modes.M)), f: NetPlay.slow('f', enc(Fiesta.state), 500),
       cam: G.cam.focus ? enc(G.cam.focus) : 0,
     };
   }
@@ -85,16 +89,19 @@ const NetGame = (() => {
     if (B.ar && (G.arenaId !== B.ar || (ARENA.variant || null) !== (B.av || null))) Game.setArena(B.ar, B.av || null);
     G.state = STS[B.st] || 'play';
     for (const key in B.g) G[key] = B.g[key];
+    if (B.g2) for (const key in B.g2) G[key] = B.g2[key];
     G.players.forEach((p, i) => { const a = A.p[i], b = B.p[i]; if (!a || !b) return;
       const far = Math.abs(a[0] - b[0]) > 300 || Math.abs(a[1] - b[1]) > 300;
       PF.forEach((f, j) => { const v = b[j]; if (v && typeof v === 'object') { if (p[f] && typeof p[f] === 'object') Object.assign(p[f], v); else p[f] = v; } else p[f] = LIN.has(f) && !far && typeof a[j] === 'number' && typeof v === 'number' ? lerp(a[j], v, k) : v; });
       p.r = Math.max(4, p.r || 20); });
-    const R = G.rope, ra = A.rp, rb = B.rp;
-    if (R.pts.length * 2 === rb.pts.length) R.pts.forEach((pt, q) => { const ax = ra.pts[q * 2], ay = ra.pts[q * 2 + 1], bx = rb.pts[q * 2], by = rb.pts[q * 2 + 1]; pt.px = pt.x; pt.py = pt.y; if (ra.pts.length === rb.pts.length && Math.abs(ax - bx) < 300) { pt.x = lerp(ax, bx, k); pt.y = lerp(ay, by, k); } else { pt.x = bx; pt.y = by; } });
+    const R = G.rope, ra = A.rp, rb = B.rp, abs = d => { if (d._abs) return d._abs; const o = []; let x = 0, y = 0; for (let q = 0; q < d.pts.length; q += 2) { x += d.pts[q]; y += d.pts[q + 1]; o.push(x, y); } return (d._abs = o); }, pa = abs(ra), pb = abs(rb);
+    if (R.pts.length * 2 === pb.length) R.pts.forEach((pt, q) => { const ax = pa[q * 2], ay = pa[q * 2 + 1], bx = pb[q * 2], by = pb[q * 2 + 1]; pt.px = pt.x; pt.py = pt.y; if (pa.length === pb.length && Math.abs(ax - bx) < 300) { pt.x = lerp(ax, bx, k); pt.y = lerp(ay, by, k); } else { pt.x = bx; pt.y = by; } });
     R.len = rb.len; R.strain = rb.strain; R.tension = rb.tension; R.visible = !!rb.vis; R.dirA.x = rb.dA[0]; R.dirA.y = rb.dA[1]; R.dirB.x = rb.dB[0]; R.dirB.y = rb.dB[1]; R.temp = rb.temp; R.snapFx = rb.snapFx; R.jitter = rb.jitter;
-    G.pellets = B.pl.map(o => Object.assign({}, o)); G.golden = B.gd ? Object.assign({}, B.gd) : null;
+    if (B.pl) G.pellets = B.pl.map((o, i) => Object.assign({ t: (G.pellets[i] && G.pellets[i].t) || 0 }, o));
+    if (B.gd !== undefined) G.golden = B.gd ? Object.assign({ t: (G.golden && G.golden.t) || 0 }, B.gd) : null;
     // escenario: lo que se mueve (muebles, ventiladores, el bus…) y su estado propio
-    const Ar = ARENA, D = B.a; if (D) { Ar.t = D.t; deepSet(Ar.mods, D.mods); D.mv.forEach((v, i) => { const R2 = Ar.movers[i]; if (R2) { R2.x = v[0]; R2.y = v[1]; R2.dx = v[2]; R2.dy = v[3]; } }); D.zn.forEach((v, i) => { if (Ar.zones[i]) Ar.zones[i].active = v; }); if (D.x) deepSet(Ar, D.x); }
+    const Ar = ARENA, D = B.a; if (D) { Ar.t = D.t; if (D.mv) D.mv.forEach((v, i) => { const R2 = Ar.movers[i]; if (R2) { R2.x = v[0]; R2.y = v[1]; R2.dx = v[2]; R2.dy = v[3]; } }); }
+    const DS = B.as; if (DS) { if (DS.mods) deepSet(Ar.mods, DS.mods); if (DS.zn) DS.zn.forEach((v, i) => { if (Ar.zones[i]) Ar.zones[i].active = v; }); if (DS.x) deepSet(Ar, DS.x); }
     if (B.m) deepSet(Modes.M, B.m);
     if (B.f) deepSet(Fiesta.state, B.f);
     G.cam.focus = B.cam ? Object.assign({}, B.cam) : null;
@@ -118,7 +125,7 @@ const NetGame = (() => {
   function reset() { evQ = []; resQ = null; shownRes = false; prevState = null; }
 
   return {
-    seatsMax: 2, again, snap, apply, clientStep, readLocal,
+    seatsMax: 2, again, snap, apply, clientStep, readLocal, slowKeys: ['g2', 'pl', 'gd', 'as', 'm', 'f'],
     neutral: () => NEUTRAL,
     event(e) { evQ.push(e); if (evQ.length > 400) evQ.splice(0, evQ.length - 400); },
     results(r) { NetPlay.send({ t: 'res', r }, true, '*'); },

@@ -157,6 +157,7 @@ const Game = (() => {
     NetGame.clientStep(realDt);
     const [A, B] = G.players;
     A.animate(realDt, G, B.alive ? B : null, G.t); B.animate(realDt, G, A.alive ? A : null, G.t);
+    G.pellets.forEach(pl => { pl.t = (pl.t || 0) + realDt; }); if (G.golden) G.golden.t = (G.golden.t || 0) + realDt;
     FX.update(realDt); updateCamera(realDt);
     if (G.rope.visible && G.state === 'play') { Sound.setTension(G.rope.strain, true); const reelP = G.players.find(p => p.pulling), reelR = G.players.find(p => p.releasing); Sound.setReel(reelP || reelR ? 1 : 0, !!reelP); } else Sound.silenceLoops();
   }

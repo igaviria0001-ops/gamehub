@@ -3,7 +3,7 @@
 // Comprueba: los dos abren la partida, el remoto ve lo mismo, su tecla mueve SU pájaro en el anfitrión,
 // llegan los eventos, tamaño de las instantáneas, fin → resultados en los dos → revancha para todos.
 const { chromium } = require('playwright');
-const URL = (process.env.URL || 'http://127.0.0.1:8765/') + '?net=bc#online', OUT = process.env.OUT || '/tmp/', TRES = !!process.env.TRES, MODE = process.env.MODE || 'duel';
+const URL = (process.env.URL || 'http://127.0.0.1:8765/') + '?net=bc' + (process.env.RED ? '&' + process.env.RED : '') + '#online', OUT = process.env.OUT || '/tmp/', TRES = !!process.env.TRES, MODE = process.env.MODE || 'duel';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] });
@@ -41,7 +41,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   console.log('magos', n, '· puesto remoto', remSeat, '· antes', JSON.stringify(before), 'después', JSON.stringify(after), '· tiros del remoto', shots, '· instantánea', size, 'bytes ·', fx);
   await H.screenshot({ path: OUT + 'netsrt-host.png' }); await C.screenshot({ path: OUT + 'netsrt-remoto.png' });
   const moved = Math.hypot(after.h[0] - before.h[0], after.h[1] - before.h[1]) > 30;
-  const synced = Math.hypot(after.c[0] - after.h[0], after.c[1] - after.h[1]) < 90;
+  const synced = Math.hypot(after.c[0] - after.h[0], after.c[1] - after.h[1]) < (process.env.RED ? 180 : 90); // con red mala el remoto ve un poco más atrás (es lo esperado)
   // fin forzado: el anfitrión gana todas las rondas que hacen falta
   await fh.evaluate(() => { const G = Game.G; if (G.mode === 'duel') { G.introT = 0; G.wins[0] = G.winsNeeded - 1; G.mages.forEach((m, i) => { if (i) { m.hp = 1; m.hurt(G, 999, { by: 0, el: 'fire' }); } }); } else { G.score[0] = 999; G.roundT = 9999; } });
   let resH = null, resC = null;

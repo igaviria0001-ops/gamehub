@@ -872,6 +872,9 @@ const Net = (() => {
   const emit = (t, ...a) => { for (const f of L[t] || []) { try { f(...a); } catch (e) { console.error(e); } } };
 
   /* ---------- estado ---------- */
+  // pruebas: ?netloss=0.1 (se pierde 10 % de lo que va sin orden) · ?netlag=80 (ms de más) · ?netforce=relay (sin WebRTC)
+  const SIM = (() => { try { const q = new URLSearchParams(location.search); return { loss: Math.min(0.9, +q.get('netloss') || 0), lag: Math.min(2000, +q.get('netlag') || 0), relay: q.get('netforce') === 'relay' }; } catch (e) { return { loss: 0, lag: 0, relay: false }; } })();
+  const ST = { out: 0, in: 0, nOut: 0, nIn: 0, t0: Date.now() };
   const S = { id: rid(8), code: null, isHost: false, hostId: null, info: null, key: null, topic: null, sig: null, alive: false, seen: new Map(), clockOff: 0 };
   const peers = new Map(); // id → { id, info, pc, r, u, via: 'p2p'|'relay'|'…', rtt, t0, open, lastSeen, pend: [] }
 
@@ -944,6 +947,7 @@ const Net = (() => {
     peers.set(id, p); return p;
   }
   async function makePC(p, initiator) {
+    if (SIM.relay) { toRelay(p); return null; }
     if (p.pc) { try { p.pc.close(); } catch (e) { /* nada */ } }
     const pc = new RTCPeerConnection({ iceServers: await iceServers(), bundlePolicy: 'max-bundle' });
     p.pc = pc; p.open = false; p.via = 'conectando';
@@ -965,6 +969,12 @@ const Net = (() => {
   function flush(p) { const q = p.pend; p.pend = []; for (const [d, rel] of q) rawSend(p, d, rel); }
   function rawSend(p, data, rel) {
     const s = typeof data === 'string' ? data : JSON.stringify(data);
+    if (SIM.loss && !rel && Math.random() < SIM.loss) return;
+    if (SIM.lag) { setTimeout(() => sendNow(p, s, rel), SIM.lag * (0.8 + Math.random() * 0.4)); return; }
+    sendNow(p, s, rel);
+  }
+  function sendNow(p, s, rel) {
+    ST.out += s.length; ST.nOut++;
     if (p.via === 'relay') { if (rel || Math.random() < 0.5) signal({ t: 'relay', to: p.id, d: s }); return; } // sin WebRTC: lo urgente a la mitad (no saturar el broker)
     const ch = (!rel && p.u && p.u.readyState === 'open') ? p.u : p.r;
     if (!ch || ch.readyState !== 'open') { if (rel && p.pend.length < 200) p.pend.push([s, rel]); return; }
@@ -972,7 +982,7 @@ const Net = (() => {
     try { ch.send(s); } catch (e) { /* nada */ }
   }
   function onData(p, raw, rel) {
-    p.lastSeen = Date.now();
+    p.lastSeen = Date.now(); ST.in += typeof raw === 'string' ? raw.length : raw.byteLength || 0; ST.nIn++;
     let m; try { m = JSON.parse(typeof raw === 'string' ? raw : dec.decode(raw)); } catch (e) { return; }
     if (m && m.$ === 'ping') { rawSend(p, { $: 'pong', t: m.t, h: S.isHost ? performance.now() : undefined }, false); return; }
     if (m && m.$ === 'pong') { const now = performance.now(), rtt = now - m.t; p.rtt = p.rtt ? p.rtt * 0.8 + rtt * 0.2 : rtt; if (m.h != null && !S.isHost) { const off = m.h + rtt / 2 - now; S.clockOff = S.clockOff ? S.clockOff * 0.85 + off * 0.15 : off; } return; }
@@ -989,7 +999,7 @@ const Net = (() => {
       if (!p.pc || p.pc.connectionState === 'failed' || p.pc.connectionState === 'closed' || (!p.open && Date.now() - (p.callT || 0) > 6000)) { p.callT = Date.now(); await makePC(p, true); }
       signal({ t: 'welcome', to: m.from, host: S.id }); broadcastRoom(); return;
     }
-    if (m.t === 'welcome' && !S.isHost) { S.hostId = m.host; newPeer(m.host); return; }
+    if (m.t === 'welcome' && !S.isHost) { S.hostId = m.host; const hp = newPeer(m.host); if (SIM.relay) toRelay(hp); return; }
     if (m.t === 'offer' && !S.isHost) { S.hostId = m.from; const p = newPeer(m.from); const pc = await makePC(p, false); await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); signal({ t: 'answer', to: m.from, sdp: pc.localDescription.sdp }); for (const c of p.iceQ || []) try { await pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; return; }
     if (m.t === 'answer' && S.isHost) { const p = peers.get(m.from); if (p && p.pc) { await p.pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); for (const c of p.iceQ || []) try { await p.pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; } return; }
     if (m.t === 'ice') { const p = peers.get(m.from); if (!p) return; if (p.pc && p.pc.remoteDescription) { try { await p.pc.addIceCandidate(m.c); } catch (e) { /* nada */ } } else (p.iceQ = p.iceQ || []).push(m.c); return; }
@@ -1031,6 +1041,8 @@ const Net = (() => {
     host: info => start(rid(5), info, true),
     join: (code, info) => start(String(code).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5), info, false),
     leave: () => leave(false),
+    // datos enviados y recibidos (bytes) desde el último reinicio de la cuenta
+    get stats() { return Object.assign({ secs: (Date.now() - ST.t0) / 1000 }, ST); }, resetStats() { ST.out = ST.in = ST.nOut = ST.nIn = 0; ST.t0 = Date.now(); }, get sim() { return SIM; },
     // a: id de un aparato o '*' (todos); confiable = true para lo que no se puede perder
     send(a, data, rel = true) { if (a === '*') { for (const p of peers.values()) rawSend(p, data, rel); } else { const p = peers.get(a); if (p) rawSend(p, data, rel); } },
     setInfo(info) { S.info = info; if (S.isHost) broadcastRoom(); else { const h = peers.get(S.hostId); if (h && h.open) rawSend(h, { $: 'info', info }, true); signal({ t: 'hello', info }); } },
@@ -1279,7 +1291,7 @@ const Online = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"da30269c45","date":"2026-11-18"};
+  const BUILD = {"v":"b7b277aaa0","date":"2026-11-18"};
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
   const COLORS = ['#ff5d8f', '#45d6b0', '#ffb36b', '#6fc3ff', '#ffd36b', '#b07bff', '#3dffa8', '#ff7a3d'];

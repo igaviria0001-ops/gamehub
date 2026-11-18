@@ -252,3 +252,16 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   aparato). La sala muestra colores y nombres ya sin repetir. `NetGame.rate`/`lag` por juego (ritmo de instantáneas).
   Prueba `node test/nettour.js` (3 aparatos, liga) → TORNEO EN LÍNEA OK. Sigue **F9 pruebas** (pérdida/retraso, datos
   por minuto y bajar Sortilegio, relevo/TURN, celular+PC, estabilidad) y **F10 publicar**.
+- **18 nov 04:20** — **F9 pruebas (gran parte):** `app/net.js` con red simulada para pruebas (`?netloss=0.15&netlag=120`,
+  `?netforce=relay`) y cuenta de datos (`Net.stats`). `test/netdatos.js` mide datos por minuto (1 contra 1, el remoto
+  moviéndose): Tira y Afloja ≈1,9 MB/min (bajó de 3,1: partes «lentas» solo cuando cambian — `NetPlay.slow` — y el hilo
+  como diferencias), Ventolera ≈1,6, Sortilegio ≈1,5 (VÉRTIGO ≈50 KB/s en carrera según el tamaño de su instantánea).
+  Con 15 % de pérdida y 120 ms de retraso los 3 juegos siguen sin errores y sincronizados; **solo por relevo (sin WebRTC)**
+  también se juega. Colchón de interpolación **adaptable** (55–250 ms según lo pareja que llegue la red: responde antes
+  con buena red). Lo lento que se salta un cuadro pasa a la instantánea que sí se dibuja. **Celular:** `test/netcel.js`
+  (tablet anfitrión + celular 844×390): el celular ve SUS botones táctiles (uno), del color de su jugador, y su dedo mueve
+  su personaje en el anfitrión (Tira y Afloja y Ventolera) → CELULAR OK. Arreglos: botones táctiles de Sortilegio
+  mostraban el mago 0 (ahora el del puesto), colores de los botones en VÉRTIGO/Ventolera/Sortilegio, disposición táctil
+  de Tira y Afloja. Todas las pruebas en línea pasan (netvtg, netvto, netsrt, nettya, nettour, netcel).
+  No se puede probar el TURN público desde aquí (el contenedor no sale a internet); queda configurado (Open Relay).
+  Sigue: estabilidad larga, revisar pantallas en celular y **F10 publicar**.

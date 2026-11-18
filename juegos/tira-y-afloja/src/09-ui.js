@@ -698,7 +698,7 @@ const UI = (() => {
     Game.startMatch(ev.mode, false, ev.map && ev.map !== 'random' ? ev.map : 'random', !!(ev.opts && ev.opts.fiesta));
   }
   // en línea: arranca (o repite) la partida que mandó el anfitrión
-  function netStart(c) { vsBot = false; paused = false; stack = []; show(null, false); Game.startNet(c); }
+  function netStart(c) { vsBot = false; paused = false; stack = []; Game.G.net = true; Game.startNet(c); show(null, false); }
   return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge, netStart, showResults: r => showResults(r) };
 })();
 

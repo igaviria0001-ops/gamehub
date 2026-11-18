@@ -3,7 +3,7 @@
 // Comprueba: los dos abren la partida, el remoto ve lo mismo, su tecla mueve SU pájaro en el anfitrión,
 // llegan los eventos, tamaño de las instantáneas, fin → resultados en los dos → revancha para todos.
 const { chromium } = require('playwright');
-const URL = (process.env.URL || 'http://127.0.0.1:8765/') + '?net=bc#online', OUT = process.env.OUT || '/tmp/', TRES = !!process.env.TRES, MODE = process.env.MODE || 'caneca';
+const URL = (process.env.URL || 'http://127.0.0.1:8765/') + '?net=bc' + (process.env.RED ? '&' + process.env.RED : '') + '#online', OUT = process.env.OUT || '/tmp/', TRES = !!process.env.TRES, MODE = process.env.MODE || 'caneca';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] });

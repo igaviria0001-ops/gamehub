@@ -1,7 +1,7 @@
 // VÉRTIGO en línea: anfitrión (PC) + remoto (otro PC) en la misma máquina, sala por BroadcastChannel, WebRTC real.
 // Comprueba: los dos abren la carrera, el remoto recibe instantáneas, y su tecla de giro mueve SU auto en el anfitrión.
 const { chromium } = require('playwright');
-const URL = (process.env.URL || 'http://127.0.0.1:8765/') + '?net=bc#online', OUT = process.env.OUT || '/tmp/';
+const URL = (process.env.URL || 'http://127.0.0.1:8765/') + '?net=bc' + (process.env.RED ? '&' + process.env.RED : '') + '#online', OUT = process.env.OUT || '/tmp/';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });

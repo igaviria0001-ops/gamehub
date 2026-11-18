@@ -97,7 +97,7 @@ const Touch = (() => {
     if (!enabled || G.attract || UI.current != null) return;
     const L = layout();
     for (let p = 0; p < 2; p++) {
-      const Lp = L[p]; if (!Lp) continue; const m = G.mages[p], S = st[p], col = PLAYER_COLORS[p].main;
+      const Lp = L[p]; if (!Lp) continue; const seat = netOn() ? NetPlay.mine[p] : p, m = G.mages[seat], S = st[p], col = (PLAYER_COLORS[seat] || PLAYER_COLORS[p]).main;
       if (!m || m.ctrl) continue;
       // palanca
       const bx = S.stick != null ? S.sx : Lp.stickHome.x, byy = S.stick != null ? S.sy : Lp.stickHome.y;

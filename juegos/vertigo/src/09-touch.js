@@ -68,7 +68,7 @@ const Touch = (() => {
     if (!st.active) return; const sc = st.sc;
     for (const p of st.players) {
       const car = cars[p.i]; let so = null; for (const [, o] of st.touches) if (o.p === p && o.kind === 'stick') so = o;
-      const pc = PLAYER_COLORS[p.i].main;
+      const pc = (PLAYER_COLORS[typeof NetPlay !== 'undefined' && NetPlay.on ? NetPlay.mine[p.i] : p.i] || PLAYER_COLORS[p.i] || PLAYER_COLORS[0]).main;
       // palanca
       const bx = so ? so.ox : p.home.x, byy = so ? so.oy : p.home.y;
       x.globalAlpha = so ? 0.9 : 0.4; x.beginPath(); x.arc(bx, byy, p.R, 0, TAU); x.fillStyle = 'rgba(6,12,26,0.35)'; x.fill(); x.lineWidth = 2.5; x.strokeStyle = 'rgba(255,255,255,0.55)'; x.stroke();

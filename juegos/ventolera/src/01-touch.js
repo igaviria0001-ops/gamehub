@@ -218,7 +218,12 @@ const Touch = (() => {
     layout = mode;
     for (const P of K) for (const k of KEYS) P[k].vis = false;
   }
-  function show(mode) { if (!enabled) return; if (!root || layout !== mode) build(mode); releaseAll(); root.hidden = false; measure(); }
+  function show(mode) {
+    if (!enabled) return; if (!root || layout !== mode) build(mode); releaseAll(); root.hidden = false; measure();
+    // en línea: los botones del color de SU piloto (el de la sala)
+    const net = typeof NetPlay !== 'undefined' && NetPlay.on && Game.G.net;
+    for (const g of groups) { const pc = net && PLAYER_COLORS[NetPlay.mine[g.p]]; if (pc) g.el.style.setProperty('--pc', pc.main); else g.el.style.removeProperty('--pc'); }
+  }
   function hide() { if (root) root.hidden = true; releaseAll(); }
   // cuánto tapan los botones (px CSS) para acomodar el HUD
   // (se calcula una vez por disposición: pedir medidas en cada cuadro le cuesta al celular)

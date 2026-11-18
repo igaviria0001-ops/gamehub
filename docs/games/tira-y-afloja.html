@@ -1217,7 +1217,14 @@ const NetPlay = (() => {
   const embedded = (() => { try { return window.parent && window.parent !== window; } catch (e) { return true; } })();
   let on = false, role = null, seats = [], mine = [], sid = null, ev = null, hostT = 0, inT = 0, snapN = 0;
   const remote = {}, snaps = [], startSubs = [], msgSubs = [], evQ = [];
-  let lagMs = 100, offset = null;
+  let lagMs = 100, offset = null, lagFixed = false;
+  // colchón de interpolación que se ajusta solo: con red pareja, poquito (responde antes); con red a saltos, más (no tiembla)
+  let lastArr = 0, lastTm = 0, jit = 8, gap = 33;
+  function adapt(now, tm) {
+    if (lastArr && tm > lastTm) { const g = tm - lastTm, j = Math.abs((now - lastArr) - g); gap = gap * 0.9 + g * 0.1; jit = j > jit ? jit * 0.7 + j * 0.3 : jit * 0.98 + j * 0.02; }
+    lastArr = now; lastTm = tm;
+    if (!lagFixed) { const want = Math.min(250, Math.max(55, gap * 1.5 + jit * 3 + 8)); lagMs += (want - lagMs) * (want > lagMs ? 0.25 : 0.02); }
+  }
   const G = () => (typeof NetGame !== 'undefined' ? NetGame : null);
   function post(event, data) { if (!embedded) return; try { window.parent.postMessage(Object.assign({ hub: 'gamehub', source: GAME_META.id, event }, data || {}), '*'); } catch (e) { /* nada */ } }
   // ch 'u' = sin orden (entradas, instantáneas) · 'r' = confiable (eventos, fin)
@@ -1225,7 +1232,7 @@ const NetPlay = (() => {
   function onNet(d, from) {
     if (!d) return;
     if (d.t === 'in' && role === 'host') { remote[d.s] = { i: d.i, at: performance.now(), from }; return; }
-    if (d.t === 's' && role === 'client') { const now = performance.now(), off = d.tm - now; offset = offset == null ? off : Math.max(off, offset * 0.995 + off * 0.005 - 0.2); snaps.push({ tm: d.tm, n: d.n, d: d.d }); while (snaps.length > 30) snaps.shift(); return; }
+    if (d.t === 's' && role === 'client') { const now = performance.now(), off = d.tm - now; adapt(now, d.tm); offset = offset == null ? off : Math.max(off, offset * 0.995 + off * 0.005 - 0.2); snaps.push({ tm: d.tm, n: d.n, d: d.d }); while (snaps.length > 30) snaps.shift(); return; }
     if (d.t === 'e' && role === 'client') { const g = G(); if (g && g.event) for (const e of d.l) { try { g.event(e); } catch (err) { /* nada */ } } return; }
     for (const f of msgSubs) { try { f(d, from); } catch (e) { /* nada */ } }
   }
@@ -1236,9 +1243,9 @@ const NetPlay = (() => {
     else if (m.cmd === 'netoff') end();
   });
   function begin(m) {
-    end(); on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; snapN = 0;
+    end(); for (const k in slowLast) delete slowLast[k]; on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; snapN = 0;
     // cada juego puede pedir su ritmo (instantáneas por segundo) y su colchón de interpolación
-    { const g = G(), hz = (g && g.rate) || 30; lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); if (role === 'host') hostT = setInterval(hostTick, Math.round(1000 / hz)); else inT = setInterval(clientTick, 16); }
+    { const g = G(), hz = (g && g.rate) || 30; lagFixed = !!(g && g.lag); lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); lastArr = 0; jit = 8; gap = 1000 / hz; if (role === 'host') hostT = setInterval(hostTick, Math.round(1000 / hz)); else inT = setInterval(clientTick, 16); }
     for (const f of startSubs) { try { f({ role, seats, mine, sid, ev }); } catch (err) { post('error', { msg: String(err && err.message || err) }); } }
   }
   // solo números, textos y listas simples (sin objetos del juego, que no viajan)
@@ -1321,8 +1328,11 @@ const NetPlay = (() => {
   function again(f) { if (role !== 'host' || !gcfg || !gateO) return; const c = f ? f(gcfg) : gcfg; gcfg = Object.assign({}, c, { id: gcfg.id + 1 }); send({ t: 'cfg', cfg: gcfg }, true, '*'); try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); } }
   // textos e identificadores que llegan de otro aparato: solo lo simple
   const okId = v => (typeof v === 'string' && v.length < 40 && /^[\w.-]*$/.test(v) ? v : '');
+  // partes «lentas» de la instantánea: solo viajan si cambiaron (y al menos una vez por segundo, por si se perdió una)
+  const slowLast = {};
+  function slow(k, v, ms = 1000) { if (v === undefined) return undefined; const j = JSON.stringify(v), now = performance.now(), L = slowLast[k]; if (L && L.j === j && now - L.t < ms) return undefined; slowLast[k] = { j, t: now }; return v; }
   return {
-    gate(o) { gateO = o; }, again, get cfg() { return gcfg; }, okId,
+    gate(o) { gateO = o; }, again, get cfg() { return gcfg; }, okId, slow,
     get on() { return on; }, get role() { return role; }, get isHost() { return on && role === 'host'; }, get isClient() { return on && role === 'client'; },
     get seats() { return seats; }, get mine() { return mine; }, get sid() { return sid; }, get ev() { return ev; },
     // ¿este puesto se juega en este aparato? y con qué jugador local (0 o 1)
@@ -1333,12 +1343,14 @@ const NetPlay = (() => {
     event(e) { if (on && role === 'host') { evQ.push(clean(e)); if (evQ.length > 200) evQ.splice(0, evQ.length - 200); } },
     // remoto: las dos instantáneas alrededor del momento a dibujar y cuánto avanzar entre ellas (0..1)
     sample() {
-      if (!snaps.length) return null; if (snaps.length === 1 || offset == null) { const s = snaps[snaps.length - 1]; return { a: s.d, b: s.d, k: 1 }; }
+      if (!snaps.length) return null;
+      // si el dibujo se salta instantáneas, lo «lento» que traían (solo viaja cuando cambia) pasa a la que sí se usa
+      const sk = G() && G().slowKeys; if (sk && snaps.length > 1) { for (let i = 1; i < snaps.length; i++) { const p = snaps[i - 1], c = snaps[i]; if (p._used) continue; for (const k of sk) if (p.d[k] !== undefined && c.d[k] === undefined) c.d[k] = p.d[k]; } } if (snaps.length === 1 || offset == null) { const s = snaps[snaps.length - 1]; return { a: s.d, b: s.d, k: 1 }; }
       const t = performance.now() + offset - lagMs;
       for (let i = snaps.length - 1; i > 0; i--) { const a = snaps[i - 1], b = snaps[i]; if (a.tm <= t) { const k = b.tm > a.tm ? Math.min(1, Math.max(0, (t - a.tm) / (b.tm - a.tm))) : 1; return { a: a.d, b: b.d, k, dt: (b.tm - a.tm) / 1000 }; } }
       return { a: snaps[0].d, b: snaps[0].d, k: 1 };
     },
-    set lag(ms) { lagMs = ms; },
+    set lag(ms) { lagMs = ms; lagFixed = true; }, get lag() { return lagMs; },
     send, onStart(f) { startSubs.push(f); }, onMsg(f) { msgSubs.push(f); },
     // fin de la partida en línea (lo dice el anfitrión): resultado para todos
     finish(res) { if (on && role === 'host') send({ t: 'fin', res }, true, '*'); },
@@ -6634,6 +6646,7 @@ const Game = (() => {
     NetGame.clientStep(realDt);
     const [A, B] = G.players;
     A.animate(realDt, G, B.alive ? B : null, G.t); B.animate(realDt, G, A.alive ? A : null, G.t);
+    G.pellets.forEach(pl => { pl.t = (pl.t || 0) + realDt; }); if (G.golden) G.golden.t = (G.golden.t || 0) + realDt;
     FX.update(realDt); updateCamera(realDt);
     if (G.rope.visible && G.state === 'play') { Sound.setTension(G.rope.strain, true); const reelP = G.players.find(p => p.pulling), reelR = G.players.find(p => p.releasing); Sound.setReel(reelP || reelR ? 1 : 0, !!reelP); } else Sound.silenceLoops();
   }
@@ -14020,7 +14033,7 @@ const UI = (() => {
     Game.startMatch(ev.mode, false, ev.map && ev.map !== 'random' ? ev.map : 'random', !!(ev.opts && ev.opts.fiesta));
   }
   // en línea: arranca (o repite) la partida que mandó el anfitrión
-  function netStart(c) { vsBot = false; paused = false; stack = []; show(null, false); Game.startNet(c); }
+  function netStart(c) { vsBot = false; paused = false; stack = []; Game.G.net = true; Game.startNet(c); show(null, false); }
   return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge, netStart, showResults: r => showResults(r) };
 })();
 
@@ -14236,23 +14249,27 @@ const NetGame = (() => {
 
   /* ---------- instantánea (anfitrión) ---------- */
   const PF = ['x', 'y', 'vx', 'vy', 'r', 'mass', 'alive', 'stuck', 'onGround', 'stun', 'inv', 'facing', 'dunked', 'dunkT', 'dunkX', 'pulling', 'releasing', 'reeling', 'charge', 'chargeLvl', 'sticky', 'gripLoad', 'mood', 'stuckN', 'ropeDir', 'ropeT', 'slingT', 'whipT', 'diveT', 'moveDir', 'airJumps', 'hangT', 'jumping', 'anchor', 'pinned'];
-  const GF = ['stateT', 'roundT', 'round', 'wins', 'points', 'timeScale', 'slowT', 'suddenDeath', 'canControl', 'respawn', 'countdownLen', 'ropeCut', 'kickoff', 'cdMarks', 'hintsT', 'lastWinner', 'lastLoser', 'winsNeeded', 'spawnCount'];
+  // lo que cambia todo el tiempo (viaja siempre) y lo demás (solo cuando cambia: NetPlay.slow)
+  const GF = ['stateT', 'roundT', 'hintsT', 'slowT', 'timeScale'], GS = ['round', 'wins', 'points', 'suddenDeath', 'canControl', 'respawn', 'countdownLen', 'ropeCut', 'kickoff', 'cdMarks', 'lastWinner', 'lastLoser', 'winsNeeded', 'spawnCount'];
   const ASTATIC = new Set(['id', 'def', 'L', 'solids', 'oneway', 'pegs', 'zones', 'hazards', 'movers', 'spawns', 'pelletSpots', 'goldenSpots', 'respawnSpots', 'cans', 'goals', 'variant', 'hazardY', 'ceilY', 'deskLeft', 'deskRight', 'deskY', 'canRim']);
   function arenaSnap() {
-    const A = ARENA, o = { t: r2(A.t), mods: enc(A.mods), mv: A.movers.map(R => [r1(R.x), r1(R.y), r1(R.dx), r1(R.dy)]), zn: A.zones.map(Z => r2(Z.active)) };
+    const A = ARENA, o = { t: r2(A.t) }; if (A.movers.length) o.mv = A.movers.map(R => [r1(R.x), r1(R.y), r1(R.dx), r1(R.dy)]);
     const x = {}; for (const k in A) { if (ASTATIC.has(k) || k === 't' || k === 'mods') continue; const v = A[k]; if (typeof v === 'function') continue; const e = enc(v); if (e !== undefined) x[k] = e; }
-    o.x = x; return o;
+    o.$s = { mods: enc(A.mods), zn: A.zones.map(Z => r2(Z.active)), x }; return o;
   }
+  let arenaSlow = null;
   function snap() {
     if (!on() || G.state === 'attract' || !NetPlay.cfg || !G.rope) return null;
     const g = {}; for (const k of GF) { const v = enc(G[k]); if (v !== undefined) g[k] = v; }
-    const R = G.rope, pts = []; for (const p of R.pts) pts.push(ri(p.x), ri(p.y));
+    const g2 = {}; for (const k of GS) { const v = enc(G[k]); if (v !== undefined) g2[k] = v; }
+    // el hilo: el primer punto entero y los demás como diferencias (números cortos)
+    const R = G.rope, pts = []; let lx = 0, ly = 0; for (const p of R.pts) { const x = ri(p.x), y = ri(p.y); pts.push(x - lx, y - ly); lx = x; ly = y; }
     return {
-      st: STS.indexOf(G.state), ar: G.arenaId, av: ARENA.variant || null, g,
+      st: STS.indexOf(G.state), ar: G.arenaId, av: ARENA.variant || null, g, g2: NetPlay.slow('g2', g2),
       p: G.players.map(p => PF.map(k => enc(p[k]))),
       rp: { pts, len: r1(R.len), strain: r2(R.strain), tension: r1(R.tension), vis: R.visible ? 1 : 0, dA: [r2(R.dirA.x), r2(R.dirA.y)], dB: [r2(R.dirB.x), r2(R.dirB.y)], temp: r2(R.temp), snapFx: r2(R.snapFx), jitter: r2(R.jitter) },
-      pl: G.pellets.map(pl => enc(pl)), gd: G.golden ? enc(G.golden) : 0,
-      a: arenaSnap(), m: enc(Modes.M), f: enc(Fiesta.state),
+      pl: NetPlay.slow('pl', G.pellets.map(pl => { const o = enc(pl); delete o.t; return o; })), gd: NetPlay.slow('gd', G.golden ? (o => { delete o.t; return o; })(enc(G.golden)) : 0),
+      a: (() => { const o = arenaSnap(); arenaSlow = o.$s; delete o.$s; return o; })(), as: NetPlay.slow('as', arenaSlow), m: NetPlay.slow('m', enc(Modes.M)), f: NetPlay.slow('f', enc(Fiesta.state), 500),
       cam: G.cam.focus ? enc(G.cam.focus) : 0,
     };
   }
@@ -14266,16 +14283,19 @@ const NetGame = (() => {
     if (B.ar && (G.arenaId !== B.ar || (ARENA.variant || null) !== (B.av || null))) Game.setArena(B.ar, B.av || null);
     G.state = STS[B.st] || 'play';
     for (const key in B.g) G[key] = B.g[key];
+    if (B.g2) for (const key in B.g2) G[key] = B.g2[key];
     G.players.forEach((p, i) => { const a = A.p[i], b = B.p[i]; if (!a || !b) return;
       const far = Math.abs(a[0] - b[0]) > 300 || Math.abs(a[1] - b[1]) > 300;
       PF.forEach((f, j) => { const v = b[j]; if (v && typeof v === 'object') { if (p[f] && typeof p[f] === 'object') Object.assign(p[f], v); else p[f] = v; } else p[f] = LIN.has(f) && !far && typeof a[j] === 'number' && typeof v === 'number' ? lerp(a[j], v, k) : v; });
       p.r = Math.max(4, p.r || 20); });
-    const R = G.rope, ra = A.rp, rb = B.rp;
-    if (R.pts.length * 2 === rb.pts.length) R.pts.forEach((pt, q) => { const ax = ra.pts[q * 2], ay = ra.pts[q * 2 + 1], bx = rb.pts[q * 2], by = rb.pts[q * 2 + 1]; pt.px = pt.x; pt.py = pt.y; if (ra.pts.length === rb.pts.length && Math.abs(ax - bx) < 300) { pt.x = lerp(ax, bx, k); pt.y = lerp(ay, by, k); } else { pt.x = bx; pt.y = by; } });
+    const R = G.rope, ra = A.rp, rb = B.rp, abs = d => { if (d._abs) return d._abs; const o = []; let x = 0, y = 0; for (let q = 0; q < d.pts.length; q += 2) { x += d.pts[q]; y += d.pts[q + 1]; o.push(x, y); } return (d._abs = o); }, pa = abs(ra), pb = abs(rb);
+    if (R.pts.length * 2 === pb.length) R.pts.forEach((pt, q) => { const ax = pa[q * 2], ay = pa[q * 2 + 1], bx = pb[q * 2], by = pb[q * 2 + 1]; pt.px = pt.x; pt.py = pt.y; if (pa.length === pb.length && Math.abs(ax - bx) < 300) { pt.x = lerp(ax, bx, k); pt.y = lerp(ay, by, k); } else { pt.x = bx; pt.y = by; } });
     R.len = rb.len; R.strain = rb.strain; R.tension = rb.tension; R.visible = !!rb.vis; R.dirA.x = rb.dA[0]; R.dirA.y = rb.dA[1]; R.dirB.x = rb.dB[0]; R.dirB.y = rb.dB[1]; R.temp = rb.temp; R.snapFx = rb.snapFx; R.jitter = rb.jitter;
-    G.pellets = B.pl.map(o => Object.assign({}, o)); G.golden = B.gd ? Object.assign({}, B.gd) : null;
+    if (B.pl) G.pellets = B.pl.map((o, i) => Object.assign({ t: (G.pellets[i] && G.pellets[i].t) || 0 }, o));
+    if (B.gd !== undefined) G.golden = B.gd ? Object.assign({ t: (G.golden && G.golden.t) || 0 }, B.gd) : null;
     // escenario: lo que se mueve (muebles, ventiladores, el bus…) y su estado propio
-    const Ar = ARENA, D = B.a; if (D) { Ar.t = D.t; deepSet(Ar.mods, D.mods); D.mv.forEach((v, i) => { const R2 = Ar.movers[i]; if (R2) { R2.x = v[0]; R2.y = v[1]; R2.dx = v[2]; R2.dy = v[3]; } }); D.zn.forEach((v, i) => { if (Ar.zones[i]) Ar.zones[i].active = v; }); if (D.x) deepSet(Ar, D.x); }
+    const Ar = ARENA, D = B.a; if (D) { Ar.t = D.t; if (D.mv) D.mv.forEach((v, i) => { const R2 = Ar.movers[i]; if (R2) { R2.x = v[0]; R2.y = v[1]; R2.dx = v[2]; R2.dy = v[3]; } }); }
+    const DS = B.as; if (DS) { if (DS.mods) deepSet(Ar.mods, DS.mods); if (DS.zn) DS.zn.forEach((v, i) => { if (Ar.zones[i]) Ar.zones[i].active = v; }); if (DS.x) deepSet(Ar, DS.x); }
     if (B.m) deepSet(Modes.M, B.m);
     if (B.f) deepSet(Fiesta.state, B.f);
     G.cam.focus = B.cam ? Object.assign({}, B.cam) : null;
@@ -14299,7 +14319,7 @@ const NetGame = (() => {
   function reset() { evQ = []; resQ = null; shownRes = false; prevState = null; }
 
   return {
-    seatsMax: 2, again, snap, apply, clientStep, readLocal,
+    seatsMax: 2, again, snap, apply, clientStep, readLocal, slowKeys: ['g2', 'pl', 'gd', 'as', 'm', 'f'],
     neutral: () => NEUTRAL,
     event(e) { evQ.push(e); if (evQ.length > 400) evQ.splice(0, evQ.length - 400); },
     results(r) { NetPlay.send({ t: 'res', r }, true, '*'); },
