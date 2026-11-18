@@ -307,11 +307,17 @@
           Tour.result(ev.id, w, { score: sc.slice(0, 2).join(' – ') }); Snd.ok();
           toast(w === 'draw' ? 'Empate: la prueba quedó anotada' : `¡Gana ${esc(tName(w))}! Resultado anotado`, false);
         }
+      } else if (m.event === 'netinfo' && netCfg && Array.isArray(m.slow)) {
+        netCfg.slowKeys = m.slow.filter(k => typeof k === 'string' && k.length < 20).slice(0, 20);
       } else if (m.event === 'exit') close();
       else if (m.event === 'abort' && tourEv) { toast('La prueba quedó pendiente: pueden volver a jugarla', true); }
       else if (m.event === 'error') toast('El juego avisó un error: ' + esc(m.msg || ''), !!tourEv);
     });
     if (typeof Net !== 'undefined') Net.on('msg', (from, m) => { if (m && m.$g && netCfg && m.$g === netCfg.sid && cur) post({ cmd: 'netin', from, d: m.d }); });
+    // por el relevo (sin WebRTC) solo sale la instantánea más nueva: lo «lento» de la saltada pasa a esa
+    // el remoto le cuenta a su juego el ping al anfitrión (para predecir su propio personaje)
+    setInterval(() => { if (!cur || !netCfg || netCfg.role !== 'client' || typeof Net === 'undefined' || !Net.alive) return; const h = Net.peers.get(Net.hostId); if (h && h.rtt > 0) post({ cmd: 'netrtt', rtt: Math.round(h.rtt) }); }, 1000);
+    if (typeof Net !== 'undefined') Net.relayMerge = (a, b) => { if (!netCfg || !netCfg.slowKeys || a.$g !== netCfg.sid || b.$g !== netCfg.sid || !a.d || !b.d || a.d.t !== 's' || b.d.t !== 's' || !a.d.d || !b.d.d) return; for (const k of netCfg.slowKeys) if (a.d.d[k] !== undefined && b.d.d[k] === undefined) b.d.d[k] = a.d.d[k]; };
     $('#lretry').addEventListener('click', () => { const g = cur, ev = tourEv, nc = netCfg; if (g) { delete cache[g.id]; open(g.id, ev, nc); } });
     $('#lback').addEventListener('click', () => close());
     return { open, close, get open_() { return !!cur; }, get net() { return netCfg; } };
@@ -709,10 +715,43 @@
         <div class="field"><span class="lbl">Los juegos</span><div class="keys">${GAMES.map(g => `<div><b style="background:${g.c1}">${g.num}</b><span>${esc(g.name)} ${vs[g.id] ? '· versión ' + esc(vs[g.id]) : '· aún sin abrir aquí'} · guarda con su propio nombre</span></div>`).join('')}</div></div>
         <div class="field"><span class="lbl">Borrar datos de GameHub</span><div class="row"><button class="btn small danger" data-clear="tour">Borrar el torneo en curso</button><button class="btn small danger" data-clear="fame">Borrar el salón de la fama</button><button class="btn small danger" data-clear="names">Olvidar nombres recientes</button></div><span class="hint">Esto no borra nada de los juegos.</span></div>
         <div class="field"><span class="lbl">Acerca de</span><p class="note" style="margin:0">GameHub reúne Tira y Afloja, Ventolera, Sortilegio y VÉRTIGO. Cada juego corre aparte, en su propio marco: lo que guarda uno (ajustes, récords, campañas) nunca toca a los otros.</p></div>
-      </div></div></div>`;
+      </div>${netPanel()}</div></div>`;
+    bindNetPanel(el);
     $$('[data-set]', el).forEach(b => b.onclick = () => { const k = b.dataset.set; SET[k] = !SET[k]; saveSet(); Snd.click(); renderSettings(); });
     $$('[data-clear]', el).forEach(b => b.onclick = () => { const k = b.dataset.clear; confirmBox('¿Seguro?', k === 'tour' ? 'Se borra el torneo que está en curso.' : k === 'fame' ? 'Se borran todos los campeones guardados.' : 'Se olvidan los nombres que salen como sugerencia.', 'Sí, borrar', () => { if (k === 'tour') { Tour.T = null; Store.del('tour'); } else Store.del(k === 'names' ? 'names' : 'fame'); notify('Listo.'); }); });
     $$('[data-app]', el).forEach(b => b.onclick = () => { Snd.click(); App[b.dataset.app](); });
+  }
+
+  // EN LÍNEA: probar la red de este aparato y, si hace falta, un servidor TURN propio (lo comparte el anfitrión con la sala)
+  let probeRes = null, probing = false;
+  function netPanel() {
+    if (typeof Net === 'undefined') return '';
+    const own = (() => { try { const a = JSON.parse(localStorage.getItem('gamehub_turn') || 'null'); return Array.isArray(a) && a[0] ? a[0] : null; } catch (e) { return null; } })();
+    const url = own ? [].concat(own.urls)[0] || '' : '';
+    const line = (ok, t, d) => `<div class="nprow ${ok === null ? 'mid' : ok ? 'ok' : 'bad'}"><i>${ok === null ? '…' : ok ? '✓' : '✗'}</i><div><b>${t}</b><span>${d}</span></div></div>`;
+    const R = probeRes; let res = '';
+    if (probing) res = `<div class="nprobe"><div class="nprow mid"><i class="spin"></i><div><b>Probando…</b><span>Unos segundos: servidores de señales, conexión directa y respaldo.</span></div></div></div>`;
+    else if (R) {
+      const verdict = !R.webrtc ? 'Este navegador no deja jugar en línea (falta WebRTC). Prueba con Chrome, Edge, Safari o Firefox al día.' : !R.signal ? 'No se llega a los servidores de señales: revisa que haya internet (o que esta red no los bloquee).' : R.stun || R.turn || R.own ? 'Listo para jugar en línea desde esta red' + (R.stun ? ' (con conexión directa).' : ' (por el respaldo: un poquito más lento).') : 'Esta red no deja conectar directo ni por el respaldo: igual se puede jugar por el relevo de señales, pero más lento. Con otra red (o un TURN propio) va mejor.';
+      res = `<div class="nprobe">${line(R.signal > 0, 'Señales', R.signal ? `${R.signal} de ${R.of} servidores responden` : 'ningún servidor responde')}${line(R.stun, 'Conexión directa', R.stun ? 'este aparato se puede conectar directo con los demás' : 'esta red no deja conexión directa')}${line(R.turn, 'Respaldo (TURN gratuito)', R.turn ? 'funciona: sirve cuando la red del otro no deja conexión directa' : 'no responde desde esta red')}${R.own !== null ? line(R.own, 'Tu TURN', R.own ? 'funciona' : 'no responde: revisa la dirección, el usuario y la clave') : ''}<p class="note npv">${esc(verdict)}</p></div>`;
+    }
+    return `<div class="panel"><div class="h2">EN LÍNEA</div>
+      <div class="field"><div class="appline"><div class="grow"><div style="font-weight:900">Probar la conexión</div><div class="hint" style="margin:2px 0 0">Revisa si este aparato puede jugar en línea desde la red en la que está (wifi o datos móviles).</div></div><button class="btn small" data-net="probe" ${probing ? 'disabled' : ''}>Probar</button></div>${res}</div>
+      <div class="field"><span class="lbl">Servidor TURN propio (opcional)</span><div class="hint" style="margin:0 0 8px">Solo si alguna red no deja conectar ni con el respaldo gratuito. Si lo pone el anfitrión, viaja cifrado a todos los de la sala.</div>
+        <div class="npturn"><input class="textin" id="turn-url" placeholder="turn:mi-servidor.com:3478" value="${esc(url)}" autocomplete="off" spellcheck="false"><input class="textin" id="turn-user" placeholder="Usuario" value="${esc(own && own.username || '')}" autocomplete="off"><input class="textin" id="turn-pass" placeholder="Clave" type="password" value="${esc(own && own.credential || '')}" autocomplete="off"></div>
+        <div class="row" style="margin-top:8px"><button class="btn small" data-net="save">Guardar</button>${own ? '<button class="btn small ghost" data-net="clear">Quitar</button>' : ''}</div></div>
+    </div>`;
+  }
+  function bindNetPanel(el) {
+    $$('[data-net]', el).forEach(b => b.onclick = async () => {
+      const k = b.dataset.net; Snd.click();
+      if (k === 'probe') { probing = true; probeRes = null; renderSettings(); try { probeRes = await Net.probe(); } catch (e) { probeRes = null; } probing = false; if (view === 'ajustes') renderSettings(); return; }
+      if (k === 'clear') { try { localStorage.removeItem('gamehub_turn'); } catch (e) { /* nada */ } probeRes = null; notify('Listo: sin TURN propio.'); renderSettings(); return; }
+      const u = $('#turn-url', el).value.trim(), user = $('#turn-user', el).value.trim(), pass = $('#turn-pass', el).value;
+      if (!/^turns?:[\w.\-:\[\]?=&\/]+$/i.test(u)) { notify('La dirección empieza por turn: o turns: (por ejemplo turn:mi-servidor.com:3478).'); return; }
+      try { localStorage.setItem('gamehub_turn', JSON.stringify([{ urls: [u], username: user || undefined, credential: pass || undefined }])); } catch (e) { /* nada */ }
+      notify('TURN guardado. Pruébalo con «Probar».'); probeRes = null; renderSettings();
+    });
   }
 
   /* ---------- app instalable, actualizaciones sin perder nada y copia de seguridad ---------- */
@@ -814,7 +853,7 @@
 
   /* ---------- arranque ---------- */
   const h = (location.hash || '').slice(1);
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox };
   // un enlace de invitación (?sala=CÓDIGO) abre directo la sala en línea
   if (new URLSearchParams(location.search).get('sala')) go('online', null, false);
   else if (h.startsWith('ficha-') && GAME[h.slice(6)]) go('game', h.slice(6), false);
@@ -823,5 +862,5 @@
   BG.start();
   // en GitHub Pages: app instalable, sin internet y con actualizaciones que no tocan el progreso
   App.register();
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox };
 })();

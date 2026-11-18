@@ -23,13 +23,13 @@ const NetGame = (() => {
     return r;
   };
   // remoto: lo que aprieta cada jugador de este aparato; el tonel y el misil se repiten ~150 ms (por si se pierde un paquete)
-  const latch = [], mlatch = []; let ridN = 0;
+  const latch = [], mlatch = [], lastIn = []; let ridN = 0;
   function readLocal(li) {
     const i = _read(li), now = performance.now();
     if (i.roll) latch[li] = { rdx: i.rdx, rdy: i.rdy, rid: ++ridN, until: now + 150 };
     if (i.missile) mlatch[li] = now + 120;
     const L = latch[li] && latch[li].until > now ? latch[li] : null;
-    return { dx: r2(i.dx), dy: r2(i.dy), fire: !!i.fire, boost: !!i.boost, missile: !!i.missile || (mlatch[li] || 0) > now, roll: !!L, rdx: L ? r2(L.rdx) : 0, rdy: L ? r2(L.rdy) : 0, rid: L ? L.rid : 0 };
+    return (lastIn[li] = { dx: r2(i.dx), dy: r2(i.dy), fire: !!i.fire, boost: !!i.boost, missile: !!i.missile || (mlatch[li] || 0) > now, roll: !!L, rdx: L ? r2(L.rdx) : 0, rdy: L ? r2(L.rdy) : 0, rid: L ? L.rid : 0 });
   }
 
   /* ---------- arranque (sala de espera común) ---------- */
@@ -94,7 +94,7 @@ const NetGame = (() => {
   function deepSet(dst, src) { for (const k in src) { const v = src[k]; if (v && typeof v === 'object' && !Array.isArray(v) && dst[k] && typeof dst[k] === 'object' && !Array.isArray(dst[k])) deepSet(dst[k], v); else dst[k] = v && typeof v === 'object' ? JSON.parse(JSON.stringify(v)) : v; } }
   const mTrail = new Map(), fTrail = new Map();
   let lastSN = -1;
-  function snaps0() { mTrail.clear(); fTrail.clear(); lastSN = -1; }
+  function snaps0() { mTrail.clear(); fTrail.clear(); lastSN = -1; for (const k in ghosts) delete ghosts[k]; }
   function apply(A, B, k, dtAB) {
     const G = Game.G; if (!A || !B || !G.world) return;
     const s = B.s; G.state = ST[s[0]] || 'play'; G.stateT = s[1]; G.round = s[2]; G.roundT = s[3]; G.timeScale = s[4]; G.cineTarget = s[5]; G.freeze = !!s[6]; G.canFight = !!s[7]; G.roundWinner = s[8]; G.winsNeeded = s[9];
@@ -135,9 +135,63 @@ const NetGame = (() => {
 
   /* ---------- un cuadro del remoto ---------- */
   let evQ = [], resQ = null, shownRes = false, prevState = null;
+  /* ---------- predicción del pájaro propio (remoto) ----------
+     El pájaro de cada jugador de este aparato vuela YA con sus teclas: una copia corre aquí con la misma física
+     (Bird.step, sin tocar el escenario) y es la que se ve. Cuando llega una instantánea, se compara con lo que la copia
+     predijo para el momento que esa instantánea refleja (hace «un ping») y se corrige de a poquito; si pasó algo grande
+     allá (lo tumbaron, se posó, un choque), se toma lo del anfitrión. Daño, blindaje, armas y puntos: los del anfitrión. */
+  const PDT = 1 / 120, ghosts = {}, PST = { hard: 0, soft: 0, err: 0 };
+  const VIS = ['x', 'y', 'vx', 'vy', 'a', 'va', 'c', 's', 'boosting', 'flipT', 'spin', 'spinDir', 'evadeT', 'lift', 'stalled', 'rasante', 'flapPh', 'drafting', 'stun', 'fuel', 'fuelLock'];
+  const NOW = ['knockHotair', 'hitCrown', 'hitBuilding', 'nudgeCabin'], NOP = () => {};
+  function hardSet(b, c) {
+    BF.forEach((f, j) => { if (f === 'perch') b.perch = c[j] ? (b.perch && !b.perch.ship && b.perch.hot == null ? b.perch : { x: c[IX.x], y: c[IX.y] }) : null; else if (f !== 'lockTgt') b[f] = BOOL.has(f) ? !!c[j] : c[j]; });
+  }
+  function ghostOf(G, seat, c) {
+    let g = ghosts[seat]; if (g && g.G === G && g.world === G.world) return g;
+    const src = G.birds[seat], GP = Object.create(G); GP.events = [];
+    const b = Object.assign(Object.create(Object.getPrototypeOf(src)), src); b.trail = []; b.stats = Object.assign({}, src.stats); b.perch = null; b.G = GP;
+    hardSet(b, c); return (ghosts[seat] = { G, world: G.world, GP, bird: b, hist: [], lastN: 0, acc: 0 });
+  }
+  function histAt(H, t) {
+    if (!H.length || t < H[0].t) return null;
+    for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), vx: lerp(a.vx, b.vx, k), vy: lerp(a.vy, b.vy, k), a: lerpA(a.a, b.a, k) }; }
+    return null;
+  }
+  function reconcile(g, c, tAt) {
+    const b = g.bird;
+    if (!c[IX.alive] || !b.alive || !!c[IX.perch] !== !!b.perch) { hardSet(b, c); g.hist.length = 0; return; } // tumbado, reapareciendo, posado o despegando: lo del anfitrión
+    const h = histAt(g.hist, tAt); if (!h) { hardSet(b, c); g.hist.length = 0; PST.hard++; return; }
+    const e = { x: c[IX.x] - h.x, y: c[IX.y] - h.y, vx: c[IX.vx] - h.vx, vy: c[IX.vy] - h.vy, a: angDiff(h.a, c[IX.a]) };
+    PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(e.x, e.y) * 0.05;
+    if (Math.hypot(e.x, e.y) > 170 || Math.abs(e.a) > 1.6) { hardSet(b, c); g.hist.length = 0; PST.hard++; return; }
+    const k = 0.3;
+    b.x += e.x * k; b.y += e.y * k; b.vx += e.vx * k; b.vy += e.vy * k; b.a += e.a * k; b.s = Math.hypot(b.vx, b.vy); b.va = Math.atan2(b.vy, b.vx); b.c = Math.cos(b.a) >= 0 ? 1 : -1;
+    for (const q of g.hist) { q.x += e.x * k; q.y += e.y * k; q.vx += e.vx * k; q.vy += e.vy * k; q.a += e.a * k; }
+    // lo que decide el anfitrión: daño, golpes, blindaje, armas
+    for (const f of ['hp', 'shield', 'legendT', 'rocket', 'missiles', 'flares', 'mis', 'adren', 'heat', 'hitT', 'rapid', 'catchup']) b[f] = c[IX[f]];
+    b.overheat = !!c[IX.overheat]; if (c[IX.stun] > b.stun + 0.05) b.stun = c[IX.stun]; if (c[IX.spin] > b.spin + 0.2) { b.spin = c[IX.spin]; b.spinDir = c[IX.spinDir]; }
+    if (Math.abs(c[IX.fuel] - b.fuel) > 0.12) { b.fuel = c[IX.fuel]; b.fuelLock = !!c[IX.fuelLock]; }
+  }
+  function predict(G, dt) {
+    const Lt = NetPlay.latest(), D = Lt && Lt.d, now = performance.now(); if (!D || !D.b || !G.world) return;
+    for (const seat of NetPlay.mine) {
+      const c = D.b[seat], shown = G.birds[seat]; if (!c || !shown) continue;
+      const g = ghostOf(G, seat, c), b = g.bird;
+      if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, c, Lt.arr - NetPlay.rtt - 12); }
+      const playing = G.state === 'play' || G.state === 'roundEnd', inp = playing && !G.freeze ? Object.assign({}, NEUTRAL, lastIn[NetPlay.mine.indexOf(seat)] || {}) : NEUTRAL;
+      g.acc += dt; let n = 0; const keep = NOW.map(k => World[k]); NOW.forEach(k => { World[k] = NOP; });
+      try { while (g.acc >= PDT && n < 14) { if (!G.freeze) b.step(PDT, inp, g.GP); g.GP.events.length = 0; g.acc -= PDT; n++; } } finally { NOW.forEach((k, i) => { World[k] = keep[i]; }); }
+      if (n >= 14) g.acc = 0;
+      g.hist.push({ t: now, x: b.x, y: b.y, vx: b.vx, vy: b.vy, a: b.a }); while (g.hist.length > 90) g.hist.shift();
+      if (!b.alive || !shown.alive) continue;
+      for (const f of VIS) shown[f] = b[f];
+      shown.perch = b.perch ? shown.perch || { x: b.x, y: b.y } : null; if (shown.perch) { shown.perch.x = b.x; shown.perch.y = b.y; }
+    }
+  }
   function clientStep(dt) {
     const G = Game.G, S = NetPlay.sample();
     if (S) apply(S.a, S.b, S.k, S.dt || 0.033);
+    if (NetPlay.pred && dt > 0) predict(G, dt);
     for (const b of G.birds) { b.G = G; if (b.alive) b.pushTrail(dt, !!b.perch); else b.trail.length = 0; }
     trails(G);
     G.cine += (G.cineTarget - G.cine) * Math.min(1, dt * 4);
@@ -150,7 +204,7 @@ const NetGame = (() => {
   NetPlay.onMsg(d => { if (d.t === 'res' && NetPlay.isClient && d.r) resQ = d.r; });
 
   return {
-    seatsMax: 4, again, snap, apply, clientStep, readLocal,
+    seatsMax: 4, again, snap, apply, clientStep, readLocal, get pst() { return PST; },
     neutral: () => NEUTRAL,
     // anfitrión: cada evento de la partida viaja a los remotos (el piloto va como número)
     fwd(e) { const o = {}; for (const k in e) { const v = e[k], t = typeof v; if (t === 'number' || t === 'string' || t === 'boolean') o[k] = v; else if (k === 'b' && v && v.id != null) o.bid = v.id; } NetPlay.event(o); },

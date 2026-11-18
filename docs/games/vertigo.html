@@ -917,13 +917,22 @@ const NetPlay = (() => {
   const embedded = (() => { try { return window.parent && window.parent !== window; } catch (e) { return true; } })();
   let on = false, role = null, seats = [], mine = [], sid = null, ev = null, hostT = 0, inT = 0, snapN = 0;
   const remote = {}, snaps = [], startSubs = [], msgSubs = [], evQ = [];
-  let lagMs = 100, offset = null, lagFixed = false;
+  const noPred = (() => { try { return /[?&]nopred\b/.test(location.search) || /[?&]nopred\b/.test(window.parent.location.search); } catch (e) { return false; } })();
+  let lagMs = 100, offset = null, lagFixed = false, rtt = 80;
   // colchón de interpolación que se ajusta solo: con red pareja, poquito (responde antes); con red a saltos, más (no tiembla)
   let lastArr = 0, lastTm = 0, jit = 8, gap = 33;
   function adapt(now, tm) {
     if (lastArr && tm > lastTm) { const g = tm - lastTm, j = Math.abs((now - lastArr) - g); gap = gap * 0.9 + g * 0.1; jit = j > jit ? jit * 0.7 + j * 0.3 : jit * 0.98 + j * 0.02; }
     lastArr = now; lastTm = tm;
     if (!lagFixed) { const want = Math.min(250, Math.max(55, gap * 1.5 + jit * 3 + 8)); lagMs += (want - lagMs) * (want > lagMs ? 0.25 : 0.02); }
+  }
+  // reloj del anfitrión: lo que tardó la instantánea MÁS rápida de los últimos 2 s (sin atascos), con paso suave;
+  // así se reajusta solo si la red cambia (wifi ↔ datos) y no se queda pegado a un valor viejo
+  const offW = [];
+  function clock(now, off) {
+    offW.push(now, off); while (offW.length > 2 && now - offW[0] > 2000) offW.splice(0, 2);
+    let best = -Infinity; for (let i = 1; i < offW.length; i += 2) if (offW[i] > best) best = offW[i];
+    offset = offset == null ? best : offset + (best - offset) * (best > offset ? 0.3 : 0.08);
   }
   const G = () => (typeof NetGame !== 'undefined' ? NetGame : null);
   function post(event, data) { if (!embedded) return; try { window.parent.postMessage(Object.assign({ hub: 'gamehub', source: GAME_META.id, event }, data || {}), '*'); } catch (e) { /* nada */ } }
@@ -932,7 +941,7 @@ const NetPlay = (() => {
   function onNet(d, from) {
     if (!d) return;
     if (d.t === 'in' && role === 'host') { remote[d.s] = { i: d.i, at: performance.now(), from }; return; }
-    if (d.t === 's' && role === 'client') { const now = performance.now(), off = d.tm - now; adapt(now, d.tm); offset = offset == null ? off : Math.max(off, offset * 0.995 + off * 0.005 - 0.2); snaps.push({ tm: d.tm, n: d.n, d: d.d }); while (snaps.length > 30) snaps.shift(); return; }
+    if (d.t === 's' && role === 'client') { const now = performance.now(); adapt(now, d.tm); clock(now, d.tm - now); Lost.ok(); snaps.push({ tm: d.tm, n: d.n, d: d.d, arr: now }); while (snaps.length > 30) snaps.shift(); return; }
     if (d.t === 'e' && role === 'client') { const g = G(); if (g && g.event) for (const e of d.l) { try { g.event(e); } catch (err) { /* nada */ } } return; }
     for (const f of msgSubs) { try { f(d, from); } catch (e) { /* nada */ } }
   }
@@ -941,16 +950,17 @@ const NetPlay = (() => {
     if (m.cmd === 'net') begin(m);
     else if (m.cmd === 'netin') onNet(m.d, m.from);
     else if (m.cmd === 'netoff') end();
+    else if (m.cmd === 'netrtt' && m.rtt > 0 && m.rtt < 3000) rtt = m.rtt; // ida y vuelta hasta el anfitrión (lo mide GameHub)
   });
   function begin(m) {
-    end(); for (const k in slowLast) delete slowLast[k]; on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; snapN = 0;
+    end(); for (const k in slowLast) delete slowLast[k]; on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; offW.length = 0; snapN = 0;
     // cada juego puede pedir su ritmo (instantáneas por segundo) y su colchón de interpolación
-    { const g = G(), hz = (g && g.rate) || 30; lagFixed = !!(g && g.lag); lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); lastArr = 0; jit = 8; gap = 1000 / hz; if (role === 'host') hostT = setInterval(hostTick, Math.round(1000 / hz)); else inT = setInterval(clientTick, 16); }
+    { const g = G(), hz = (g && g.rate) || 30; lagFixed = !!(g && g.lag); lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); lastArr = 0; jit = 8; gap = 1000 / hz; if (role === 'host') { hostT = setInterval(hostTick, Math.round(1000 / hz)); post('netinfo', { slow: (g && g.slowKeys) || [] }); } else inT = setInterval(clientTick, 16); }
     for (const f of startSubs) { try { f({ role, seats, mine, sid, ev }); } catch (err) { post('error', { msg: String(err && err.message || err) }); } }
   }
   // solo números, textos y listas simples (sin objetos del juego, que no viajan)
   function clean(e) { const o = {}; for (const k in e) { const v = e[k]; const t = typeof v; if (t === 'number') o[k] = Math.round(v * 1000) / 1000; else if (t === 'string' || t === 'boolean') o[k] = v; else if (Array.isArray(v) && v.length < 40 && v.every(x => typeof x !== 'object' && typeof x !== 'function')) o[k] = v.slice(); } return o; }
-  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; if (typeof clearTimeout === 'function') { clearTimeout(wtick); clearTimeout(askT); } pend = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
+  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; Lost.ok(); if (typeof clearTimeout === 'function') { clearTimeout(wtick); clearTimeout(askT); } pend = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
   // anfitrión: instantánea + eventos acumulados
   function hostTick() {
     const g = G(); if (!g || !g.snap) return;
@@ -962,6 +972,7 @@ const NetPlay = (() => {
   const lastIn = {};
   function clientTick() {
     const g = G(); if (!g || !g.readLocal) return; const now = performance.now();
+    if (gcfg && lastArr && now - lastArr > 1500) Lost.show();
     mine.forEach((seat, li) => {
       let i; try { i = g.readLocal(li); } catch (e) { return; }
       const s = JSON.stringify(i), L = lastIn[seat];
@@ -995,6 +1006,16 @@ const NetPlay = (() => {
       e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = !canGo;
     }
     return { list, hide() { if (el) { el.remove(); el = null; } } };
+  })();
+  // aviso suave si el anfitrión deja de mandar (salió de la app, se le fue la señal): se quita solo al volver
+  const Lost = (() => {
+    let el = null;
+    return {
+      show() { if (el) return; el = document.createElement('div'); el.id = 'netLost'; el.setAttribute('role', 'status');
+        el.innerHTML = '<style>#netLost{position:fixed;left:50%;top:max(10px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:8999;display:flex;align-items:center;gap:10px;max-width:calc(100% - 24px);padding:9px 16px;border-radius:999px;background:rgba(6,10,22,.86);color:#eef3ff;font:800 14px Nunito,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4);pointer-events:none}#netLost i{width:14px;height:14px;flex:none;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:#ffd36b;animation:nlS .9s linear infinite}@keyframes nlS{to{transform:rotate(360deg)}}</style><i></i><span>Esperando al anfitrión… (si salió de la app, la partida sigue cuando vuelva)</span>';
+        document.body.appendChild(el); },
+      ok() { if (el) { el.remove(); el = null; } },
+    };
   })();
   const myInfo = () => mine.map((seat, li) => { let m = null; try { m = gateO.me(li); } catch (e) { m = null; } return { s: seat, m }; });
   function launch() {
@@ -1051,6 +1072,10 @@ const NetPlay = (() => {
       return { a: snaps[0].d, b: snaps[0].d, k: 1 };
     },
     set lag(ms) { lagMs = ms; lagFixed = true; }, get lag() { return lagMs; },
+    // predicción del personaje propio (remoto): la instantánea más nueva (con su hora de llegada) y el ping al anfitrión
+    latest() { return snaps.length ? snaps[snaps.length - 1] : null; }, get rtt() { return rtt; },
+    // ¿predecir? (con ?nopred se apaga, para comparar)
+    get pred() { return on && role === 'client' && !noPred; },
     send, onStart(f) { startSubs.push(f); }, onMsg(f) { msgSubs.push(f); },
     // fin de la partida en línea (lo dice el anfitrión): resultado para todos
     finish(res) { if (on && role === 'host') send({ t: 'fin', res }, true, '*'); },
@@ -6439,6 +6464,14 @@ const UI = (() => {
       if (best && !(G && G.cfg && G.cfg.mode === 'tt')) { $('resTitle').textContent = NetPlay.mine.includes(best.human) && NetPlay.mine.length === 1 ? '¡Ganaste!' : `¡Gana ${nm(best.human)}!`; $('resTitle').style.color = col(best.human); }
       $('resHub').hidden = false; $('resHub').textContent = 'Volver a la sala'; $('resHub').dataset.act = 'hubhome';
       const tourM = !!(NetPlay.ev && NetPlay.ev.tour); $('resMain').hidden = !NetPlay.isHost || tourM; if (tourM) $('resHub').textContent = 'Volver al torneo'; $('resMain').textContent = 'Otra carrera (todos)'; $('resMain').dataset.act = 'netAgain';
+      // mano a mano en línea: rondas hasta que alguien gane 2; Gran Premio: pista por pista con puntos
+      const D = G && G.duel && G.duel.net ? G.duel : null, GP = G && G.gp, rk = c => R.cars.filter(x => !x.bot).sort((a, b) => a.place - b.place)[0];
+      if (D) { const champ = D.w.findIndex(w => w >= 2), rw = rk() ? rk().human : 0, who = champ >= 0 ? champ : rw;
+        $('resTitle').textContent = champ >= 0 ? `¡${nm(champ)} gana el mano a mano!` : `¡${nm(rw)} gana la ronda ${D.r + 1}!`; $('resTitle').style.color = col(who);
+        const th = $('resTable').querySelector('th'); if (th) th.textContent = 'MANO A MANO · ' + S.map((q, i) => `${nm(i)} ${D.w[i] || 0}`).join(' · ') + ' · gana quien llegue a 2';
+        $('resMain').textContent = champ >= 0 ? 'Otro mano a mano (todos)' : 'Siguiente ronda (todos)'; }
+      if (GP && GP.list) { const last = GP.i >= GP.list.length - 1; $('resMain').textContent = last ? 'Otro Gran Premio (todos)' : 'Siguiente pista (todos)';
+        if (last) { const order = PILOT_ORDER.filter(k => GP.pts[k] != null).sort((a, b) => GP.pts[b] - GP.pts[a]), hc = R.cars.find(c => c.pid === order[0] && !c.bot); $('resTitle').textContent = hc ? `¡${nm(hc.human)} gana la ${GP.cup}!` : `Campeón: ${PILOTS[order[0]].name}`; $('resTitle').style.color = hc ? col(hc.human) : ''; } }
       $('resAlt').hidden = true; if (sal) sal.hidden = true;
       if (!NetPlay.isHost && !tourM) { const w = document.getElementById('resWait') || document.createElement('div'); w.id = 'resWait'; w.className = 'mhelp'; w.textContent = 'El anfitrión puede lanzar otra carrera para todos.'; $('resBtns').after(w); }
     }
@@ -6838,7 +6871,7 @@ const Game = (() => {
   function gpScore() { if (!G.gp || G.gp.scored === G.gp.i) return; G.gp.scored = G.gp.i; R.order.forEach((c, i) => { G.gp.pts[c.pid] = (G.gp.pts[c.pid] || 0) + (GP_PTS[i] || 0); }); }
   function gpNext() { if (!G.gp) return; G.gp.i++; startCfg(G.nHumans, G.cfg, true); }
   // duelo al mejor de tres: cada carrera suma una ronda al que llega primero
-  function duelScore() { if (!G.duel || G.duel.scored === G.duel.r) return; G.duel.scored = G.duel.r; const h = R.cars.filter(c => !c.bot); if (h.length === 2) G.duel.w[h[0].place < h[1].place ? 0 : 1]++; else if (h.length === 1) G.duel.w[h[0].place === 1 ? 0 : 1]++; }
+  function duelScore() { if (!G.duel || G.duel.scored === G.duel.r) return; G.duel.scored = G.duel.r; const h = R.cars.filter(c => !c.bot); if (G.duel.net) { const b = h.slice().sort((x, y) => x.place - y.place)[0]; if (b) G.duel.w[b.human]++; } else if (h.length === 2) G.duel.w[h[0].place < h[1].place ? 0 : 1]++; else if (h.length === 1) G.duel.w[h[0].place === 1 ? 0 : 1]++; }
   function duelNext() { if (!G.duel) return; G.duel.r++; startCfg(G.nHumans, G.cfg, true); }
   function worldNext() { const c = G.cfg, k = World.next(c.ch || 0); if (k < 0) return; c.ch = k; Store.set('setup', c); startCfg(G.nHumans, c); }
   function lessonNext() { const c = G.cfg; c.lesson = Math.min(LESSONS.length - 1, (c.lesson || 0) + 1); Store.set('setup', c); startCfg(G.nHumans, c); }
@@ -6971,7 +7004,7 @@ const Game = (() => {
     const x = HUD.ctx(), W = innerWidth, H = innerHeight, d = R.track.def, e = G.INTRO - G.introT, a = clamp(e / 0.5, 0, 1) * clamp(G.introT / 0.5, 0, 1), sc = clamp(Math.min(W, H) / 560, 0.6, 1.4);
     x.globalAlpha = a; const g = x.createLinearGradient(0, H * 0.55, 0, H); g.addColorStop(0, 'rgba(2,6,14,0)'); g.addColorStop(1, 'rgba(2,6,14,0.75)'); x.fillStyle = g; x.fillRect(0, H * 0.55, W, H * 0.45);
     HUD.txt(d.name.toUpperCase(), W / 2, H * 0.8, `italic ${fontT(70 * sc)}`, '#ffffff', 'center', 9 * sc);
-    const modeTxt = R.rules ? R.rules.introSub : G.cfg && G.cfg.mode === 'duel' && G.duel ? `Duelo · ronda ${G.duel.r + 1} · J1 ${G.duel.w[0]} – ${G.duel.w[1]} J2` : R.laps + ' vueltas';
+    const modeTxt = R.rules ? R.rules.introSub : G.duel && G.duel.net ? `Mano a mano · ronda ${G.duel.r + 1} · ` + NetPlay.seats.map((q, i) => `${q.name} ${G.duel.w[i] || 0}`).join(' · ') : G.gp && netOn() ? `${G.gp.cup} · pista ${G.gp.i + 1} de ${G.gp.list.length} · ${R.laps} vueltas` : G.cfg && G.cfg.mode === 'duel' && G.duel ? `Duelo · ronda ${G.duel.r + 1} · J1 ${G.duel.w[0]} – ${G.duel.w[1]} J2` : R.laps + ' vueltas';
     HUD.txt(d.sub + ' · ' + (d.country || ''), W / 2, H * 0.8 + 34 * sc, fontB(19 * sc, 900), '#b8ffe0', 'center', 5 * sc);
     HUD.txt(modeTxt, W / 2, H * 0.8 + 58 * sc, fontB(16 * sc, 900), '#ffffff', 'center', 4 * sc);
     const hc = humansCars(); HUD.txt(hc.map((c, i) => c.P.name + ' (J' + (i + 1) + ')').join(R.boss ? '   y   ' : '   vs   '), W / 2, H * 0.8 + 82 * sc, fontB(16 * sc, 900), '#ffd23d', 'center', 4 * sc);
@@ -7008,7 +7041,7 @@ const Game = (() => {
     const now = performance.now(), dt = Math.min(1, (now - (bgLast || now)) / 1000); bgLast = now; last = 0;
     if (G.introT > 0) { G.introT = Math.max(0, G.introT - dt); return; }
     acc += dt; let n = 0; while (acc >= DT && n < 130) { R.step(DT); Input.endStep(); for (const e of R.events) NetPlay.event(e); acc -= DT; n++; } if (n >= 130) acc = 0;
-    if (R.state === 'done' && R.doneT > 3.2 && !G.shownResults) { G.shownResults = true; UI.results(R, G); }
+    if (R.state === 'done' && R.doneT > 3.2 && !G.shownResults) { G.shownResults = true; if (G.cfg && G.cfg.mode === 'gp') gpScore(); if (G.cfg && G.cfg.mode === 'duel') duelScore(); UI.results(R, G); }
   }, 50);
   function frame(now) {
     requestAnimationFrame(frame);
@@ -7018,7 +7051,7 @@ const Game = (() => {
     if (intro) { G.introT -= dt; if (G.introT <= 0) { G.introT = 0; camSt.fill(null); resize(); } }
     const run = !(G.mode === 'race' && G.paused) && !intro && G.mode !== 'setup';
     frameEv.length = 0;
-    if (run && netOn() && NetPlay.isClient && G.mode === 'race') { t += dt; NetGame.clientStep(R, frameEv); } // en línea, remoto: dibuja lo que manda el anfitrión
+    if (run && netOn() && NetPlay.isClient && G.mode === 'race') { t += dt; NetGame.clientStep(R, frameEv, dt); } // en línea, remoto: dibuja lo que manda el anfitrión
     else if (run) { t += dt; acc += dt; let n = 0; while (acc >= DT && n < 14) { R.step(DT); Input.endStep(); if (R.events.length) frameEv.push(...R.events); acc -= DT; n++; } if (n >= 14) acc = 0; }
     if (netOn() && NetPlay.isHost && G.mode === 'race') for (const e of frameEv) NetPlay.event(e);
     // demostración infinita: reiniciar cuando terminen
@@ -7084,8 +7117,12 @@ const Game = (() => {
     x.restore();
   }
   function startNet(o) {
-    G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode: 'quick', laps: o.laps }); G.gp = null; G.duel = null; clearShow();
-    newRace(o.tid, o.humans, o.bots, undefined, { laps: o.laps });
+    const mode = o.mode || 'quick', rules = mode === 'elim' ? Rules.elim : mode === 'battle' ? Rules.battle : null;
+    G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode, laps: o.laps, cup: o.gp ? o.gp.cup : 0 }); clearShow();
+    // Gran Premio y mano a mano en línea: la cuenta la trae la configuración del anfitrión (todos ven lo mismo)
+    G.gp = o.gp ? { i: o.gp.i, pts: Object.assign({}, o.gp.pts), list: cupTracks(o.gp.cup || 0), cup: (CUPS[o.gp.cup || 0] || CUPS[0]).name } : null;
+    G.duel = o.duel ? { r: o.duel.r, w: o.duel.w.slice(), net: true } : null;
+    newRace(o.tid, o.humans, o.bots, undefined, { laps: rules ? 999 : o.laps, rules });
     G.mode = 'race'; G.paused = false; G.shownResults = false; G.introT = G.INTRO = 3.6;
     if (isTouch() && NetPlay.mine.length) Touch.start(G.nHumans); else Touch.stop();
     UI.show(null); Sound.startRace(G.nHumans); Music.play(TRACKS[o.tid].theme); resize();
@@ -7114,6 +7151,8 @@ const NetGame = (() => {
   };
   // los avisos del HUD van a la vista de ese jugador (en línea, solo los de este aparato)
   const _msg = HUD.msg; HUD.msg = (i, ...a) => { if (NetPlay.on) { i = NetPlay.mine.indexOf(i); if (i < 0) return; } return _msg(i, ...a); };
+  // modos en línea: carrera, mano a mano (al mejor de 3, sin máquina), eliminación, batalla en arena y Gran Premio
+  const NET_MODES = ['quick', 'duel', 'elim', 'battle', 'gp'];
   const IT = Object.keys(ITEMS), MODES = ['road', 'water', 'air'], TRICK = ['flip', 'back', 'rollL', 'rollR', 'spin'], ST = ['count', 'race', 'done'];
   const r2 = v => Math.round((+v || 0) * 100) / 100, r3 = v => Math.round((+v || 0) * 1000) / 1000;
   let cfg = null, evQ = [];
@@ -7129,13 +7168,17 @@ const NetGame = (() => {
   NetPlay.gate({
     me(li) { const pid = (UI.cfg().p || [])[li]; let skin = null; try { skin = Vestidor.skinOf(li, pid); } catch (e) { /* nada */ } return { pid, skin }; },
     make(want, ev) {
-      const S = NetPlay.seats, n = S.length, used = new Set();
+      const S = NetPlay.seats, n = S.length, used = new Set(), mode = NET_MODES.includes(ev.mode) ? ev.mode : 'quick';
       const pilots = S.map((s, i) => { const w = want[i] || {}; let p = PILOTS[w.pid] ? w.pid : PILOT_ORDER[i % PILOT_ORDER.length]; if (used.has(p)) p = PILOT_ORDER.find(q => !used.has(q)); used.add(p); return p; });
-      const pool = PILOT_ORDER.filter(p => !used.has(p)), bots = []; for (let i = 0; i < Math.max(0, 6 - n); i++) bots.push({ pid: pool[i], skill: [0.1, 0.15, 0.28, 0.2, 0.05][i % 5] });
-      const tid = TRACK_ORDER.includes(ev.map) ? ev.map : TRACK_ORDER[Math.floor(Math.random() * TRACK_ORDER.length)];
-      return { tid, humans: pilots, bots, laps: ev.rounds || 3, skins: S.map((s, i) => okSkin((want[i] || {}).skin)) };
+      // mano a mano: sin máquina; los demás modos completan la parrilla hasta 6
+      const pool = PILOT_ORDER.filter(p => !used.has(p)), bots = []; if (mode !== 'duel') for (let i = 0; i < Math.max(0, 6 - n); i++) bots.push({ pid: pool[i], skill: [0.1, 0.15, 0.28, 0.2, 0.05][i % 5] });
+      const rnd = L => L[Math.floor(Math.random() * L.length)], cup = Math.max(0, Math.min(CUPS.length - 1, +ev.map || 0));
+      const tid = mode === 'battle' ? (ARENA_ORDER.includes(ev.map) ? ev.map : rnd(ARENA_ORDER)) : mode === 'gp' ? cupTracks(cup)[0] : TRACK_ORDER.includes(ev.map) ? ev.map : rnd(TRACK_ORDER);
+      const c = { mode, tid, humans: pilots, bots, laps: mode === 'gp' ? 3 : Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), skins: S.map((s, i) => okSkin((want[i] || {}).skin)) };
+      if (mode === 'gp') c.gp = { cup, i: 0, pts: {} }; if (mode === 'duel') c.duel = { r: 0, w: S.map(() => 0) };
+      return c;
     },
-    apply(c) { cfg = c; const w = document.getElementById('resWait'); if (w) w.remove(); Game.startNet({ tid: c.tid, humans: c.humans, bots: c.bots, laps: c.laps }); },
+    apply(c) { cfg = c; for (const k in ghosts) delete ghosts[k]; const w = document.getElementById('resWait'); if (w) w.remove(); Game.startNet({ mode: c.mode || 'quick', tid: c.tid, humans: c.humans, bots: c.bots, laps: c.laps, gp: c.gp || null, duel: c.duel || null }); },
   });
 
   /* ---------- instantánea (anfitrión) ---------- */
@@ -7148,7 +7191,8 @@ const NetGame = (() => {
       c: R.cars.map(c => [r3(c.s), r3(c.u), r3(c.h), r3(c.a), r3(c.roll), r3(c.pitch), r2(c.f), MODES.indexOf(c.mode), c.drift.on ? 1 : 0, c.drift.dir, c.drift.lv, r2(c.drift.t),
         r2(c.boostT), r2(c.boostK), r2(c.gem), c.item ? IT.indexOf(c.item) : -1, c.itemN || 0, c.lap, c.place, c.finished ? 1 : 0, r2(c.finishT), r2(c.respawnT), c.out ? 1 : 0,
         c.trick ? TRICK.indexOf(c.trick.kind) : -1, c.trick ? r2(c.trick.t) : 0, c.trick ? r2(c.trick.dur) : 0, r2(c.hopT), r2(c.wobT), r2(c.spinT), r2(c.steerS), r2(c.shieldT), r2(c.specT),
-        c.laps.length, r2(c.laps[c.laps.length - 1] || 0), r2(c.lapT), r2(c.best), c.grounded ? 1 : 0, r2(c.fogT), r2(c.invT), r2(c.magnetT)]),
+        c.laps.length, r2(c.laps[c.laps.length - 1] || 0), r2(c.lapT), r2(c.best), c.grounded ? 1 : 0, r2(c.fogT), r2(c.invT), r2(c.magnetT), r3(c.l), r3(c.vn), r2(c.airT), c.hearts == null ? -1 : c.hearts, r2(c.outT || 0), (c.stats && c.stats.hitsDone) || 0]),
+      ru: R.rules ? (o => { const q = {}; for (const k of ['left', 'next']) if (typeof o[k] === 'number') q[k] = r2(o[k]); return q; })(R.rules) : 0,
       hz: R.hz.map(z => { const o = {}; for (const k in z) { const v = z[k]; if (typeof v === 'number') o[k] = r2(v); else if (typeof v === 'string' || typeof v === 'boolean') o[k] = v; } return o; }),
       bx: R.boxes.map(b => r2(b.gone)),
       gm: T.gems.map((g, i) => (g.gone > 0 ? i : -1)).filter(i => i >= 0),
@@ -7171,26 +7215,96 @@ const NetGame = (() => {
       c.hopT = b[26]; c.wobT = b[27]; c.spinT = b[28]; c.steerS = lerp(a[29], b[29], k); c.shieldT = b[30]; c.specT = b[31];
       while (c.laps.length < b[32]) c.laps.push(b[33]); c.laps.length = b[32]; if (b[32]) c.laps[b[32] - 1] = b[33];
       c.lapT = b[34]; c.best = b[35]; c.grounded = !!b[36]; c.fogT = b[37]; c.invT = b[38]; c.magnetT = b[39];
+      if (b[43] >= 0) c.hearts = b[43]; c.outT = b[44] || 0; if (c.stats) c.stats.hitsDone = b[45] || 0;
     });
-    R.order = B.ord.map(i => R.cars[i]).filter(Boolean);
+    R.order = B.ord.map(i => R.cars[i]).filter(Boolean); if (B.ru && R.rules) Object.assign(R.rules, B.ru);
     R.hz = B.hz.map(z => Object.assign({}, z));
     B.bx.forEach((g, i) => { if (R.boxes[i]) R.boxes[i].gone = g; });
     const gs = new Set(B.gm); R.track.gems.forEach((g, i) => { g.gone = gs.has(i) ? 1 : 0; });
   }
-  // un paso del remoto: lo último del anfitrión + sus eventos de este cuadro
-  function clientStep(R, frameEv) {
+  /* ---------- predicción del bólido propio (remoto) ----------
+     El auto de cada jugador de este aparato responde YA a sus teclas: una copia corre aquí con la misma física
+     (Car.step) y es la que se dibuja. Cuando llega una instantánea, se compara con lo que la copia predijo para el
+     momento que esa instantánea refleja (hace «un ping») y se corrige de a poquito; si algo grande pasó allá
+     (caída, reaparición, choque fuerte), se toma lo del anfitrión de una. Lo demás (vueltas, puestos, objetos) manda el anfitrión. */
+  const DT = 1 / 120, ghosts = {}, lastIn = {}, PST = { hard: 0, soft: 0, err: 0 }; // PST: cuántas correcciones (para las pruebas)
+  function hardSet(car, b) {
+    car.s = b[0]; car.u = b[1]; car.h = b[2]; car.a = b[3]; car.roll = b[4]; car.pitch = b[5]; car.f = b[6]; car.mode = MODES[b[7]] || 'road';
+    car.drift.on = !!b[8]; car.drift.dir = b[9]; car.drift.lv = b[10]; car.drift.t = b[11]; car.boostT = b[12]; car.boostK = b[13]; car.gem = b[14]; car.lap = b[17]; car.finished = !!b[19];
+    car.respawnT = b[21]; car.out = !!b[22]; car.trick = b[23] >= 0 ? { kind: TRICK[b[23]], t: b[24], dur: b[25] } : null; car.hopT = b[26]; car.wobT = b[27]; car.spinT = b[28]; car.steerS = b[29];
+    car.shieldT = b[30]; car.specT = b[31]; car.lapT = b[34]; car.grounded = !!b[36]; car.l = b[40] || 0; car.vn = b[41] || 0; car.airT = b[42] || 0;
+    car.vs = car.f * Math.cos(car.a) - car.l * Math.sin(car.a); car.vu = car.f * Math.sin(car.a) + car.l * Math.cos(car.a); if (car.grounded) car.safeS = car.s;
+  }
+  function ghostOf(R, seat, b) {
+    let g = ghosts[seat]; if (g && g.R === R) return g;
+    const PR = Object.create(R); PR.events = []; const c = R.cars[seat];
+    g = ghosts[seat] = { R, PR, car: new Car(PR, c.idx, c.pid, c.s, c.u), hist: [], lastN: 0, acc: 0 };
+    if (b) hardSet(g.car, b); return g;
+  }
+  // lo que predijo la copia en el instante t (entre dos cuadros guardados)
+  function histAt(H, t) {
+    if (!H.length || t < H[0].t) return null;
+    for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t), o = {}; for (const key in a) o[key] = key === 'a' ? lerpA(a.a, b.a, k) : a[key] + (b[key] - a[key]) * k; if (Math.abs(b.s - a.s) > 100) o.s = a.s; return o; }
+    return null;
+  }
+  function reconcile(g, b, tAt) {
+    const car = g.car, L = g.R.track.L;
+    if (b[21] > 0 || b[22] || car.respawnT > 0) { hardSet(car, b); g.hist.length = 0; return; } // cayéndose o fuera: igual que el anfitrión
+    const h = histAt(g.hist, tAt); if (!h) { hardSet(car, b); g.hist.length = 0; PST.hard++; return; }
+    let es = b[0] - h.s; if (es > L / 2) es -= L; else if (es < -L / 2) es += L;
+    const e = { s: es, u: b[1] - h.u, h: b[2] - h.h, a: angWrap(b[3] - h.a), f: b[6] - h.f, l: (b[40] || 0) - h.l, vn: (b[41] || 0) - h.vn };
+    PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(es, e.u) * 0.05;
+    if (Math.abs(es) > 24 || Math.abs(e.u) > 7 || Math.abs(e.h) > 7 || Math.abs(e.a) > 1.2) { hardSet(car, b); g.hist.length = 0; PST.hard++; return; }
+    const k = 0.3; // de a poquito: no se nota y no tiembla
+    car.s = g.R.track.wrap(car.s + es * k); car.u += e.u * k; car.h += e.h * k; car.a = angWrap(car.a + e.a * k); car.vn += e.vn * k;
+    const f = car.f + e.f * k, l = (car.l || 0) + e.l * k; car.f = f; car.l = l; car.vs = f * Math.cos(car.a) - l * Math.sin(car.a); car.vu = f * Math.sin(car.a) + l * Math.cos(car.a);
+    for (const q of g.hist) { q.s += es * k; q.u += e.u * k; q.h += e.h * k; q.a += e.a * k; q.f += e.f * k; q.l += e.l * k; q.vn += e.vn * k; }
+    // lo que decide el anfitrión: golpes, turbos de plataforma o de objeto, barra, vueltas, meta
+    if (b[12] > car.boostT + 0.15) { car.boostT = b[12]; car.boostK = b[13]; }
+    if (b[28] > car.spinT + 0.1) car.spinT = b[28]; if (b[27] > car.wobT + 0.1) car.wobT = b[27];
+    if (Math.abs(b[14] - car.gem) > 0.3) car.gem = b[14];
+    car.lap = b[17]; car.finished = !!b[19]; car.shieldT = b[30]; car.specT = b[31];
+    if (!!b[36] !== car.grounded && Math.abs(e.h) < 0.6) { car.grounded = !!b[36]; if (car.grounded) { car.vn = 0; car.airT = 0; car.trick = null; } }
+  }
+  function predict(R, dt) {
+    const Lt = NetPlay.latest(), now = performance.now(), D = Lt && Lt.d;
+    for (const seat of NetPlay.mine) {
+      const c = R.cars[seat]; if (!c || !D || !D.c[seat]) continue;
+      const g = ghostOf(R, seat, D.c[seat]); g.PR.state = ST[D.st] || 'race'; g.PR.events.length = 0;
+      if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, D.c[seat], Lt.arr - NetPlay.rtt - 12); }
+      const inp = Object.assign({}, NEUTRAL, lastIn[NetPlay.mine.indexOf(seat)] || {}, { item: false });
+      g.acc += dt; let n = 0; while (g.acc >= DT && n < 14) { g.car.step(DT, inp); g.PR.events.length = 0; g.acc -= DT; n++; } if (n >= 14) g.acc = 0;
+      const k = g.car; g.hist.push({ t: now, s: k.s, u: k.u, h: k.h, a: k.a, f: k.f, l: k.l || 0, vn: k.vn }); while (g.hist.length > 90) g.hist.shift();
+      // se dibuja la copia (lo de la carrera —vueltas, puesto, objeto— sigue siendo lo del anfitrión)
+      c.s = k.s; c.u = k.u; c.h = k.h; c.a = k.a; c.roll = k.roll; c.pitch = k.pitch; c.f = k.f; c.mode = k.mode; c.grounded = k.grounded; c.steerS = k.steerS; c.hopT = k.hopT;
+      c.drift.on = k.drift.on; c.drift.dir = k.drift.dir; c.drift.lv = k.drift.lv; c.drift.t = k.drift.t; c.trick = k.trick; c.boostT = k.boostT; c.boostK = k.boostK; c.vs = k.vs; c.vu = k.vu; c.vn = k.vn;
+    }
+  }
+  // un paso del remoto: lo último del anfitrión + sus eventos de este cuadro (+ su propio bólido, ya)
+  function clientStep(R, frameEv, dt) {
     const S = NetPlay.sample(); if (S) apply(S.a, S.b, S.k);
+    if (NetPlay.pred && dt > 0) predict(R, dt);
     if (evQ.length) { frameEv.push(...evQ); evQ = []; }
   }
   // el anfitrión lanza otra carrera para todos (otra pista, mismos jugadores)
-  function again() { NetPlay.again(c => { const others = TRACK_ORDER.filter(t => t !== c.tid); return Object.assign({}, c, { tid: others[Math.floor(Math.random() * others.length)] }); }); }
+  // «otra para todos»: en el Gran Premio, la pista siguiente (o uno nuevo al terminar); en el mano a mano, la ronda siguiente
+  // (o un duelo nuevo si ya hay campeón); en la batalla, otra arena; en lo demás, otra pista
+  function again() {
+    NetPlay.again(c => {
+      const rnd = L => L[Math.floor(Math.random() * L.length)];
+      if (c.mode === 'gp' && Game.gp) { const g = Game.gp, last = g.i >= g.list.length - 1, gp = last ? { cup: c.gp.cup, i: 0, pts: {} } : { cup: c.gp.cup, i: g.i + 1, pts: Object.assign({}, g.pts) }; return Object.assign({}, c, { gp, tid: cupTracks(gp.cup)[gp.i] }); }
+      if (c.mode === 'duel' && Game.duel) { const d = Game.duel, champ = d.w.some(w => w >= 2), duel = champ ? { r: 0, w: d.w.map(() => 0) } : { r: d.r + 1, w: d.w.slice() }; return Object.assign({}, c, { duel, tid: TRACK_ORDER[(TRACK_ORDER.indexOf(c.tid) + 1) % TRACK_ORDER.length] }); }
+      if (c.mode === 'battle') return Object.assign({}, c, { tid: rnd(ARENA_ORDER.filter(t => t !== c.tid)) });
+      return Object.assign({}, c, { tid: rnd(TRACK_ORDER.filter(t => t !== c.tid)) });
+    });
+  }
   return {
-    seatsMax: 4, again,
+    seatsMax: 4, again, get pst() { return PST; },
     // lo que lleva puesto el jugador de otro aparato (lo manda el anfitrión en la carrera)
     skinOf(seat) { return (cfg && cfg.skins && okSkin(cfg.skins[seat])) || null; },
     neutral: () => NEUTRAL,
     // remoto: lo que aprieta cada jugador de este aparato (y los toques cortos cuentan una vez)
-    readLocal(li) { const i = _read(li); if (li === NetPlay.mine.length - 1) Input.endStep(); return i; },
+    readLocal(li) { const i = _read(li); lastIn[li] = i; if (li === NetPlay.mine.length - 1) Input.endStep(); return i; },
     snap, apply, clientStep,
     event(e) { evQ.push(e); if (evQ.length > 300) evQ.splice(0, evQ.length - 300); },
   };

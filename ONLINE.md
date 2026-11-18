@@ -301,3 +301,28 @@ mejores; (5) todo optimizado y comprobado.
   Jefe en pareja; Sortilegio: Copa; Tira y Afloja: Modo Fiesta, jefes y Fuga en pareja; campañas en pareja si alcanza.
 - **G5 · Comprobar y publicar** — todas las pruebas (sin conexión, equivalencia, en línea por modo, celular, red mala),
   unir a main, artefactos, bitácoras, memoria.
+
+### Segunda tanda — bitácora
+- **G1 hecho (18 nov)** — `test/offline-eq.js`: carga la versión de antes del en línea (28e6638) y la nueva lado a lado
+  con el mismo azar, el mismo reloj (performance.now, Date, new Date, requestAnimationFrame, setTimeout/setInterval y el
+  reloj del audio, todos virtuales) y las mismas teclas a los mismos instantes; compara el estado COMPLETO del juego
+  (todo, aplanado: posiciones, velocidades, vida, puntos, cuerdas, terreno…) cada pocos segundos y la imagen final.
+  Resultado: idéntico en los 4 juegos — Tira y Afloja 6 modos + Fiesta + jefe + 2 humanos (bucle real); Ventolera 6 modos
+  + 2 humanos duelo/blancos + carrera + escuela; Sortilegio 4 modos × 2 escenarios + 2 humanos duelo/tejo + contra la
+  máquina; VÉRTIGO 7 modos (carrera, GP, eliminación, batalla, duelo, contrarreloj, vuelta al mundo) + humanos (bucle
+  real, con dibujo 3D). Portadas idénticas. Lo único distinto que encontró, y se arregló: en Sortilegio, el orden en que
+  salían dos letreros a la vez (logro y fusión) cambió al separar «lo visual» para el en línea → vuelto al orden de antes.
+  Diferencias aceptadas (no cambian nada): `bumpCd` de Ventolera pasó a `bumpPair['0-1']` (mismo valor, comprobado) y
+  `G.net = false` en Sortilegio.
+- **G2** — relevo con ritmo propio (≤12/s, lo más nuevo de cada tipo; las partes lentas pasan a la que sale); ping
+  también por el relevo; reloj por mínimo de ventana de 2 s; aviso «Esperando al anfitrión…» en el juego si deja de
+  llegar (1,5 s); pantalla encendida en la sala (Wake Lock); el anfitrión avisa si sale de la app; Ajustes → EN LÍNEA:
+  «Probar la conexión» (señales, directo, respaldo TURN) y TURN propio que el anfitrión comparte cifrado; Sortilegio
+  pide el terreno completo si le falta o se saltó un cambio (`kfreq`, cambios numerados); **sucesión del anfitrión**:
+  si se va (o se calla 20–60 s), sigue el siguiente aparato con el mismo código, los demás se reconectan solos, el
+  torneo sigue con él; si el viejo vuelve, queda uno solo (el que tenga más aparatos; si empatan, el más nuevo).
+- **G3** — predicción del personaje propio en el remoto (los 4 juegos): una copia corre con la física del juego y tus
+  teclas; con cada instantánea se compara con lo predicho para ese momento (hace un ping) y se corrige 30 % por
+  instantánea; si pasó algo grande allá, se toma lo del anfitrión. `?nopred` la apaga (para comparar).
+- **G4** — VÉRTIGO en línea: carrera, mano a mano (sin máquina, hasta que alguien gane 2), eliminación, batalla en arena y
+  Gran Premio (Copa Esmeralda, Dorada o Gran Copa, con puntos). Tira y Afloja: Modo Fiesta en línea (opción en la sala).

@@ -78,7 +78,7 @@ const Game = (() => {
   function gpScore() { if (!G.gp || G.gp.scored === G.gp.i) return; G.gp.scored = G.gp.i; R.order.forEach((c, i) => { G.gp.pts[c.pid] = (G.gp.pts[c.pid] || 0) + (GP_PTS[i] || 0); }); }
   function gpNext() { if (!G.gp) return; G.gp.i++; startCfg(G.nHumans, G.cfg, true); }
   // duelo al mejor de tres: cada carrera suma una ronda al que llega primero
-  function duelScore() { if (!G.duel || G.duel.scored === G.duel.r) return; G.duel.scored = G.duel.r; const h = R.cars.filter(c => !c.bot); if (h.length === 2) G.duel.w[h[0].place < h[1].place ? 0 : 1]++; else if (h.length === 1) G.duel.w[h[0].place === 1 ? 0 : 1]++; }
+  function duelScore() { if (!G.duel || G.duel.scored === G.duel.r) return; G.duel.scored = G.duel.r; const h = R.cars.filter(c => !c.bot); if (G.duel.net) { const b = h.slice().sort((x, y) => x.place - y.place)[0]; if (b) G.duel.w[b.human]++; } else if (h.length === 2) G.duel.w[h[0].place < h[1].place ? 0 : 1]++; else if (h.length === 1) G.duel.w[h[0].place === 1 ? 0 : 1]++; }
   function duelNext() { if (!G.duel) return; G.duel.r++; startCfg(G.nHumans, G.cfg, true); }
   function worldNext() { const c = G.cfg, k = World.next(c.ch || 0); if (k < 0) return; c.ch = k; Store.set('setup', c); startCfg(G.nHumans, c); }
   function lessonNext() { const c = G.cfg; c.lesson = Math.min(LESSONS.length - 1, (c.lesson || 0) + 1); Store.set('setup', c); startCfg(G.nHumans, c); }
@@ -211,7 +211,7 @@ const Game = (() => {
     const x = HUD.ctx(), W = innerWidth, H = innerHeight, d = R.track.def, e = G.INTRO - G.introT, a = clamp(e / 0.5, 0, 1) * clamp(G.introT / 0.5, 0, 1), sc = clamp(Math.min(W, H) / 560, 0.6, 1.4);
     x.globalAlpha = a; const g = x.createLinearGradient(0, H * 0.55, 0, H); g.addColorStop(0, 'rgba(2,6,14,0)'); g.addColorStop(1, 'rgba(2,6,14,0.75)'); x.fillStyle = g; x.fillRect(0, H * 0.55, W, H * 0.45);
     HUD.txt(d.name.toUpperCase(), W / 2, H * 0.8, `italic ${fontT(70 * sc)}`, '#ffffff', 'center', 9 * sc);
-    const modeTxt = R.rules ? R.rules.introSub : G.cfg && G.cfg.mode === 'duel' && G.duel ? `Duelo · ronda ${G.duel.r + 1} · J1 ${G.duel.w[0]} – ${G.duel.w[1]} J2` : R.laps + ' vueltas';
+    const modeTxt = R.rules ? R.rules.introSub : G.duel && G.duel.net ? `Mano a mano · ronda ${G.duel.r + 1} · ` + NetPlay.seats.map((q, i) => `${q.name} ${G.duel.w[i] || 0}`).join(' · ') : G.gp && netOn() ? `${G.gp.cup} · pista ${G.gp.i + 1} de ${G.gp.list.length} · ${R.laps} vueltas` : G.cfg && G.cfg.mode === 'duel' && G.duel ? `Duelo · ronda ${G.duel.r + 1} · J1 ${G.duel.w[0]} – ${G.duel.w[1]} J2` : R.laps + ' vueltas';
     HUD.txt(d.sub + ' · ' + (d.country || ''), W / 2, H * 0.8 + 34 * sc, fontB(19 * sc, 900), '#b8ffe0', 'center', 5 * sc);
     HUD.txt(modeTxt, W / 2, H * 0.8 + 58 * sc, fontB(16 * sc, 900), '#ffffff', 'center', 4 * sc);
     const hc = humansCars(); HUD.txt(hc.map((c, i) => c.P.name + ' (J' + (i + 1) + ')').join(R.boss ? '   y   ' : '   vs   '), W / 2, H * 0.8 + 82 * sc, fontB(16 * sc, 900), '#ffd23d', 'center', 4 * sc);
@@ -248,7 +248,7 @@ const Game = (() => {
     const now = performance.now(), dt = Math.min(1, (now - (bgLast || now)) / 1000); bgLast = now; last = 0;
     if (G.introT > 0) { G.introT = Math.max(0, G.introT - dt); return; }
     acc += dt; let n = 0; while (acc >= DT && n < 130) { R.step(DT); Input.endStep(); for (const e of R.events) NetPlay.event(e); acc -= DT; n++; } if (n >= 130) acc = 0;
-    if (R.state === 'done' && R.doneT > 3.2 && !G.shownResults) { G.shownResults = true; UI.results(R, G); }
+    if (R.state === 'done' && R.doneT > 3.2 && !G.shownResults) { G.shownResults = true; if (G.cfg && G.cfg.mode === 'gp') gpScore(); if (G.cfg && G.cfg.mode === 'duel') duelScore(); UI.results(R, G); }
   }, 50);
   function frame(now) {
     requestAnimationFrame(frame);
@@ -258,7 +258,7 @@ const Game = (() => {
     if (intro) { G.introT -= dt; if (G.introT <= 0) { G.introT = 0; camSt.fill(null); resize(); } }
     const run = !(G.mode === 'race' && G.paused) && !intro && G.mode !== 'setup';
     frameEv.length = 0;
-    if (run && netOn() && NetPlay.isClient && G.mode === 'race') { t += dt; NetGame.clientStep(R, frameEv); } // en línea, remoto: dibuja lo que manda el anfitrión
+    if (run && netOn() && NetPlay.isClient && G.mode === 'race') { t += dt; NetGame.clientStep(R, frameEv, dt); } // en línea, remoto: dibuja lo que manda el anfitrión
     else if (run) { t += dt; acc += dt; let n = 0; while (acc >= DT && n < 14) { R.step(DT); Input.endStep(); if (R.events.length) frameEv.push(...R.events); acc -= DT; n++; } if (n >= 14) acc = 0; }
     if (netOn() && NetPlay.isHost && G.mode === 'race') for (const e of frameEv) NetPlay.event(e);
     // demostración infinita: reiniciar cuando terminen
@@ -324,8 +324,12 @@ const Game = (() => {
     x.restore();
   }
   function startNet(o) {
-    G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode: 'quick', laps: o.laps }); G.gp = null; G.duel = null; clearShow();
-    newRace(o.tid, o.humans, o.bots, undefined, { laps: o.laps });
+    const mode = o.mode || 'quick', rules = mode === 'elim' ? Rules.elim : mode === 'battle' ? Rules.battle : null;
+    G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode, laps: o.laps, cup: o.gp ? o.gp.cup : 0 }); clearShow();
+    // Gran Premio y mano a mano en línea: la cuenta la trae la configuración del anfitrión (todos ven lo mismo)
+    G.gp = o.gp ? { i: o.gp.i, pts: Object.assign({}, o.gp.pts), list: cupTracks(o.gp.cup || 0), cup: (CUPS[o.gp.cup || 0] || CUPS[0]).name } : null;
+    G.duel = o.duel ? { r: o.duel.r, w: o.duel.w.slice(), net: true } : null;
+    newRace(o.tid, o.humans, o.bots, undefined, { laps: rules ? 999 : o.laps, rules });
     G.mode = 'race'; G.paused = false; G.shownResults = false; G.introT = G.INTRO = 3.6;
     if (isTouch() && NetPlay.mine.length) Touch.start(G.nHumans); else Touch.stop();
     UI.show(null); Sound.startRace(G.nHumans); Music.play(TRACKS[o.tid].theme); resize();

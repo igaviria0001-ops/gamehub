@@ -129,24 +129,30 @@ const Game = (() => {
   function handleEvents() {
     const E = G.events; G.events = [];
     const fwd = netOn() && NetPlay.isHost;
+    // lo que nace de un evento (efectos, sonidos, letreros, logros) lo arma cada aparato solo: en línea se marca para no enviarlo
+    let f0 = 0, p0 = 0; const from = () => { f0 = G.fx.length; p0 = G.pops.length; }, own = () => { for (let k = f0; k < G.fx.length; k++) G.fx[k]._s = 1; for (let k = p0; k < G.pops.length; k++) G.pops[k]._s = 1; };
     for (const e of E) {
+      // el mismo orden de siempre (sin conexión, idéntico a antes del juego en línea)
       if (Game.tap) Game.tap(e);
-      if (fwd) NetGame.fwd(e);
-      const nfx = G.fx.length, npop = G.pops.length;
-      visual(e); Progress.onEvent(G, e);
-      // lo que nace de un evento lo arma cada aparato solo; lo demás (fx y letreros de la lógica) viaja aparte
-      if (fwd) { for (let k = nfx; k < G.fx.length; k++) G.fx[k]._s = 1; for (let k = npop; k < G.pops.length; k++) G.pops[k]._s = 1; }
+      if (fwd) { NetGame.fwd(e); from(); }
+      FX.onEvent(G, e);
+      Sound.onEvent(G, e);
+      if (fwd) own();
       if (G.mode === 'camp') Camp.onEvent(G, e);
+      if (fwd) from();
+      Progress.onEvent(G, e);
+      if (fwd) own();
       if (G.mode === 'school') Progress.schoolEvent(G, e);
       if (e.type === 'creatureDown') Modes.onCreatureDown(G, e);
-      if (e.type === 'down') { const m = G.mages[e.who]; Modes.onDown(G, m); }
+      if (fwd) from();
+      visual(e);
+      if (fwd) own();
+      if (e.type === 'down') Modes.onDown(G, G.mages[e.who]);
     }
     while (G.pops.length > 7) G.pops.shift();
   }
-  // efectos, sonidos, cámara y letreros de un evento (en línea, los remotos solo hacen esto)
+  // cámara y letreros de un evento (en línea, los remotos hacen esto más efectos, sonidos y logros)
   function visual(e) {
-      FX.onEvent(G, e);
-      Sound.onEvent(G, e);
       if (e.type === 'goal') { cam.shake = Math.max(cam.shake, 18); G.slow = Math.max(G.slow, 0.5); }
       if (e.type === 'down') { const m = G.mages[e.who]; G.slow = Math.max(G.slow, 0.9); cam.shake = Math.max(cam.shake, 16); if (m && G.mode === 'duel') G.koCam = { x: m.x, y: m.y, until: G.time + 1.1 }; }
       if (e.type === 'combo' && !G.attract && e.n < 3) G.pops.push({ x: e.x, y: e.y - 70, text: e.name, t: 0, color: PLAYER_COLORS[e.who] ? PLAYER_COLORS[e.who].main : '#fff', big: true });
@@ -164,7 +170,7 @@ const Game = (() => {
   }
   // en línea, remoto: eventos que llegan del anfitrión (efectos, sonidos y logros de los magos de este aparato)
   function clientEvents(list) {
-    for (const e of list) { visual(e); Progress.onEvent(G, e); }
+    for (const e of list) { FX.onEvent(G, e); Sound.onEvent(G, e); Progress.onEvent(G, e); visual(e); }
     while (G.pops.length > 7) G.pops.shift();
   }
 

@@ -6,7 +6,7 @@
 const GAMES = [
   {
     id: 'tira-y-afloja', file: 'games/tira-y-afloja.html', name: 'Tira y Afloja', short: 'Tira y Afloja', num: '01',
-    net: { seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], watch: true, desc: { caneca: 'Echa al otro a la caneca. Juegan dos; los demás miran en vivo.' } },
+    net: { seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], opts: ['fiesta'], watch: true, desc: { caneca: 'Echa al otro a la caneca. Juegan dos; los demás miran en vivo.' } },
     tag: 'Duelo de chicle', kind: 'Física y empujones',
     desc: 'Dos chicles unidos por un hilo pelean en el colegio: tirar te hace pesado, aflojar te vuelve ágil. Empuja, embiste, salta en tirachinas y echa al otro a la caneca.',
     c1: '#ff5d8f', c2: '#45d6b0', c3: '#ffd84d', ink: '#2a1710', font: 'tya',
@@ -67,7 +67,10 @@ const GAMES = [
     extras: ['Campaña en equipo de 18 niveles (cielo e infierno)', '13 magos con atuendos', 'Grimorio de 28 fusiones', 'Escuela de magia'],
   },
   {
-    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick', modes: ['quick'], desc: { quick: 'Todos a la misma carrera; la máquina completa la parrilla hasta 6 autos. Gana quien llegue primero.' } },
+    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick', modes: ['quick', 'duel', 'elim', 'battle'],
+      // modos que solo están adentro del juego (no en el torneo) y también van en línea
+      extra: [{ id: 'gp', name: 'Gran Premio', desc: 'Varias pistas seguidas con puntos por puesto (10, 8, 6…): gana la copa quien sume más.', maps: [['0', 'Copa Esmeralda · 5 pistas'], ['1', 'Copa Dorada · 5 pistas'], ['2', 'Gran Copa · 10 pistas']] }],
+      desc: { quick: 'Todos a la misma carrera; la máquina completa la parrilla hasta 6 autos. Gana quien llegue primero.', duel: 'Solo ustedes, sin máquina: carreras seguidas hasta que alguien gane 2.', elim: 'Cada 15 segundos sale el último (máquina incluida). Gana quien dure más.', battle: 'Arena con 3 corazones: embiste con turbo y usa objetos. Último en pie.' } },
     tag: 'La Copa Esmeralda', kind: 'Carreras en 3D',
     desc: 'Bólidos que derrapan, saltan, flotan en lancha y planean con alas por 10 pistas del mundo. Objetos, turbos esmeralda, batallas y pantalla dividida para dos.',
     c1: '#3dffa8', c2: '#00c8ff', c3: '#ffd23d', ink: '#04140f', font: 'vtg',

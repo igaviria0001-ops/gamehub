@@ -1080,13 +1080,22 @@ const NetPlay = (() => {
   const embedded = (() => { try { return window.parent && window.parent !== window; } catch (e) { return true; } })();
   let on = false, role = null, seats = [], mine = [], sid = null, ev = null, hostT = 0, inT = 0, snapN = 0;
   const remote = {}, snaps = [], startSubs = [], msgSubs = [], evQ = [];
-  let lagMs = 100, offset = null, lagFixed = false;
+  const noPred = (() => { try { return /[?&]nopred\b/.test(location.search) || /[?&]nopred\b/.test(window.parent.location.search); } catch (e) { return false; } })();
+  let lagMs = 100, offset = null, lagFixed = false, rtt = 80;
   // colchón de interpolación que se ajusta solo: con red pareja, poquito (responde antes); con red a saltos, más (no tiembla)
   let lastArr = 0, lastTm = 0, jit = 8, gap = 33;
   function adapt(now, tm) {
     if (lastArr && tm > lastTm) { const g = tm - lastTm, j = Math.abs((now - lastArr) - g); gap = gap * 0.9 + g * 0.1; jit = j > jit ? jit * 0.7 + j * 0.3 : jit * 0.98 + j * 0.02; }
     lastArr = now; lastTm = tm;
     if (!lagFixed) { const want = Math.min(250, Math.max(55, gap * 1.5 + jit * 3 + 8)); lagMs += (want - lagMs) * (want > lagMs ? 0.25 : 0.02); }
+  }
+  // reloj del anfitrión: lo que tardó la instantánea MÁS rápida de los últimos 2 s (sin atascos), con paso suave;
+  // así se reajusta solo si la red cambia (wifi ↔ datos) y no se queda pegado a un valor viejo
+  const offW = [];
+  function clock(now, off) {
+    offW.push(now, off); while (offW.length > 2 && now - offW[0] > 2000) offW.splice(0, 2);
+    let best = -Infinity; for (let i = 1; i < offW.length; i += 2) if (offW[i] > best) best = offW[i];
+    offset = offset == null ? best : offset + (best - offset) * (best > offset ? 0.3 : 0.08);
   }
   const G = () => (typeof NetGame !== 'undefined' ? NetGame : null);
   function post(event, data) { if (!embedded) return; try { window.parent.postMessage(Object.assign({ hub: 'gamehub', source: GAME_META.id, event }, data || {}), '*'); } catch (e) { /* nada */ } }
@@ -1095,7 +1104,7 @@ const NetPlay = (() => {
   function onNet(d, from) {
     if (!d) return;
     if (d.t === 'in' && role === 'host') { remote[d.s] = { i: d.i, at: performance.now(), from }; return; }
-    if (d.t === 's' && role === 'client') { const now = performance.now(), off = d.tm - now; adapt(now, d.tm); offset = offset == null ? off : Math.max(off, offset * 0.995 + off * 0.005 - 0.2); snaps.push({ tm: d.tm, n: d.n, d: d.d }); while (snaps.length > 30) snaps.shift(); return; }
+    if (d.t === 's' && role === 'client') { const now = performance.now(); adapt(now, d.tm); clock(now, d.tm - now); Lost.ok(); snaps.push({ tm: d.tm, n: d.n, d: d.d, arr: now }); while (snaps.length > 30) snaps.shift(); return; }
     if (d.t === 'e' && role === 'client') { const g = G(); if (g && g.event) for (const e of d.l) { try { g.event(e); } catch (err) { /* nada */ } } return; }
     for (const f of msgSubs) { try { f(d, from); } catch (e) { /* nada */ } }
   }
@@ -1104,16 +1113,17 @@ const NetPlay = (() => {
     if (m.cmd === 'net') begin(m);
     else if (m.cmd === 'netin') onNet(m.d, m.from);
     else if (m.cmd === 'netoff') end();
+    else if (m.cmd === 'netrtt' && m.rtt > 0 && m.rtt < 3000) rtt = m.rtt; // ida y vuelta hasta el anfitrión (lo mide GameHub)
   });
   function begin(m) {
-    end(); for (const k in slowLast) delete slowLast[k]; on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; snapN = 0;
+    end(); for (const k in slowLast) delete slowLast[k]; on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; offW.length = 0; snapN = 0;
     // cada juego puede pedir su ritmo (instantáneas por segundo) y su colchón de interpolación
-    { const g = G(), hz = (g && g.rate) || 30; lagFixed = !!(g && g.lag); lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); lastArr = 0; jit = 8; gap = 1000 / hz; if (role === 'host') hostT = setInterval(hostTick, Math.round(1000 / hz)); else inT = setInterval(clientTick, 16); }
+    { const g = G(), hz = (g && g.rate) || 30; lagFixed = !!(g && g.lag); lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); lastArr = 0; jit = 8; gap = 1000 / hz; if (role === 'host') { hostT = setInterval(hostTick, Math.round(1000 / hz)); post('netinfo', { slow: (g && g.slowKeys) || [] }); } else inT = setInterval(clientTick, 16); }
     for (const f of startSubs) { try { f({ role, seats, mine, sid, ev }); } catch (err) { post('error', { msg: String(err && err.message || err) }); } }
   }
   // solo números, textos y listas simples (sin objetos del juego, que no viajan)
   function clean(e) { const o = {}; for (const k in e) { const v = e[k]; const t = typeof v; if (t === 'number') o[k] = Math.round(v * 1000) / 1000; else if (t === 'string' || t === 'boolean') o[k] = v; else if (Array.isArray(v) && v.length < 40 && v.every(x => typeof x !== 'object' && typeof x !== 'function')) o[k] = v.slice(); } return o; }
-  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; if (typeof clearTimeout === 'function') { clearTimeout(wtick); clearTimeout(askT); } pend = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
+  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; Lost.ok(); if (typeof clearTimeout === 'function') { clearTimeout(wtick); clearTimeout(askT); } pend = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
   // anfitrión: instantánea + eventos acumulados
   function hostTick() {
     const g = G(); if (!g || !g.snap) return;
@@ -1125,6 +1135,7 @@ const NetPlay = (() => {
   const lastIn = {};
   function clientTick() {
     const g = G(); if (!g || !g.readLocal) return; const now = performance.now();
+    if (gcfg && lastArr && now - lastArr > 1500) Lost.show();
     mine.forEach((seat, li) => {
       let i; try { i = g.readLocal(li); } catch (e) { return; }
       const s = JSON.stringify(i), L = lastIn[seat];
@@ -1158,6 +1169,16 @@ const NetPlay = (() => {
       e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = !canGo;
     }
     return { list, hide() { if (el) { el.remove(); el = null; } } };
+  })();
+  // aviso suave si el anfitrión deja de mandar (salió de la app, se le fue la señal): se quita solo al volver
+  const Lost = (() => {
+    let el = null;
+    return {
+      show() { if (el) return; el = document.createElement('div'); el.id = 'netLost'; el.setAttribute('role', 'status');
+        el.innerHTML = '<style>#netLost{position:fixed;left:50%;top:max(10px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:8999;display:flex;align-items:center;gap:10px;max-width:calc(100% - 24px);padding:9px 16px;border-radius:999px;background:rgba(6,10,22,.86);color:#eef3ff;font:800 14px Nunito,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4);pointer-events:none}#netLost i{width:14px;height:14px;flex:none;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:#ffd36b;animation:nlS .9s linear infinite}@keyframes nlS{to{transform:rotate(360deg)}}</style><i></i><span>Esperando al anfitrión… (si salió de la app, la partida sigue cuando vuelva)</span>';
+        document.body.appendChild(el); },
+      ok() { if (el) { el.remove(); el = null; } },
+    };
   })();
   const myInfo = () => mine.map((seat, li) => { let m = null; try { m = gateO.me(li); } catch (e) { m = null; } return { s: seat, m }; });
   function launch() {
@@ -1214,6 +1235,10 @@ const NetPlay = (() => {
       return { a: snaps[0].d, b: snaps[0].d, k: 1 };
     },
     set lag(ms) { lagMs = ms; lagFixed = true; }, get lag() { return lagMs; },
+    // predicción del personaje propio (remoto): la instantánea más nueva (con su hora de llegada) y el ping al anfitrión
+    latest() { return snaps.length ? snaps[snaps.length - 1] : null; }, get rtt() { return rtt; },
+    // ¿predecir? (con ?nopred se apaga, para comparar)
+    get pred() { return on && role === 'client' && !noPred; },
     send, onStart(f) { startSubs.push(f); }, onMsg(f) { msgSubs.push(f); },
     // fin de la partida en línea (lo dice el anfitrión): resultado para todos
     finish(res) { if (on && role === 'host') send({ t: 'fin', res }, true, '*'); },
@@ -4125,24 +4150,30 @@ const Game = (() => {
   function handleEvents() {
     const E = G.events; G.events = [];
     const fwd = netOn() && NetPlay.isHost;
+    // lo que nace de un evento (efectos, sonidos, letreros, logros) lo arma cada aparato solo: en línea se marca para no enviarlo
+    let f0 = 0, p0 = 0; const from = () => { f0 = G.fx.length; p0 = G.pops.length; }, own = () => { for (let k = f0; k < G.fx.length; k++) G.fx[k]._s = 1; for (let k = p0; k < G.pops.length; k++) G.pops[k]._s = 1; };
     for (const e of E) {
+      // el mismo orden de siempre (sin conexión, idéntico a antes del juego en línea)
       if (Game.tap) Game.tap(e);
-      if (fwd) NetGame.fwd(e);
-      const nfx = G.fx.length, npop = G.pops.length;
-      visual(e); Progress.onEvent(G, e);
-      // lo que nace de un evento lo arma cada aparato solo; lo demás (fx y letreros de la lógica) viaja aparte
-      if (fwd) { for (let k = nfx; k < G.fx.length; k++) G.fx[k]._s = 1; for (let k = npop; k < G.pops.length; k++) G.pops[k]._s = 1; }
+      if (fwd) { NetGame.fwd(e); from(); }
+      FX.onEvent(G, e);
+      Sound.onEvent(G, e);
+      if (fwd) own();
       if (G.mode === 'camp') Camp.onEvent(G, e);
+      if (fwd) from();
+      Progress.onEvent(G, e);
+      if (fwd) own();
       if (G.mode === 'school') Progress.schoolEvent(G, e);
       if (e.type === 'creatureDown') Modes.onCreatureDown(G, e);
-      if (e.type === 'down') { const m = G.mages[e.who]; Modes.onDown(G, m); }
+      if (fwd) from();
+      visual(e);
+      if (fwd) own();
+      if (e.type === 'down') Modes.onDown(G, G.mages[e.who]);
     }
     while (G.pops.length > 7) G.pops.shift();
   }
-  // efectos, sonidos, cámara y letreros de un evento (en línea, los remotos solo hacen esto)
+  // cámara y letreros de un evento (en línea, los remotos hacen esto más efectos, sonidos y logros)
   function visual(e) {
-      FX.onEvent(G, e);
-      Sound.onEvent(G, e);
       if (e.type === 'goal') { cam.shake = Math.max(cam.shake, 18); G.slow = Math.max(G.slow, 0.5); }
       if (e.type === 'down') { const m = G.mages[e.who]; G.slow = Math.max(G.slow, 0.9); cam.shake = Math.max(cam.shake, 16); if (m && G.mode === 'duel') G.koCam = { x: m.x, y: m.y, until: G.time + 1.1 }; }
       if (e.type === 'combo' && !G.attract && e.n < 3) G.pops.push({ x: e.x, y: e.y - 70, text: e.name, t: 0, color: PLAYER_COLORS[e.who] ? PLAYER_COLORS[e.who].main : '#fff', big: true });
@@ -4160,7 +4191,7 @@ const Game = (() => {
   }
   // en línea, remoto: eventos que llegan del anfitrión (efectos, sonidos y logros de los magos de este aparato)
   function clientEvents(list) {
-    for (const e of list) { visual(e); Progress.onEvent(G, e); }
+    for (const e of list) { FX.onEvent(G, e); Sound.onEvent(G, e); Progress.onEvent(G, e); visual(e); }
     while (G.pops.length > 7) G.pops.shift();
   }
 
@@ -7607,7 +7638,8 @@ const NetGame = (() => {
     return r;
   };
   let pinMine = [];
-  function readLocal(li) { const i = _read(li); const o = { mx: r2(i.mx), my: r2(i.my), h: [!!i.h[0], !!i.h[1]], dash: !!i.dash }; if (pinMine[li]) o.pn = pinMine[li]; return o; }
+  function readLocal(li) { const i = _read(li); const o = { mx: r2(i.mx), my: r2(i.my), h: [!!i.h[0], !!i.h[1]], dash: !!i.dash }; if (pinMine[li]) o.pn = pinMine[li]; lastIn[li] = o; return o; }
+  const lastIn = [];
   let pinN = 0;
   function pinFrom(li, u) { pinMine[li] = [codeOf(u), ++pinN]; }
 
@@ -7658,11 +7690,11 @@ const NetGame = (() => {
 
   /* ---------- terreno ---------- */
   const SY = Terrain.SYNC, INT = new Set(['base', 'fireO', 'vineO', 'elecO', 'pitO', 'crys']);
-  let shadow = null, tdAcc = 0, lastSimT = 0, kfSeed = null;
+  let shadow = null, tdAcc = 0, lastSimT = 0, kfSeed = null, tdN = 0, tdLast = 0, kfAsk = 0, kfMiss = 0, kfSent = 0;
   function copyT(T) { const S = { n: T.n, cols: T.cols, bridgeUnder: T.bridgeUnder, ver: 0 }; for (const f of SY) S[f] = T[f].slice(); return S; }
   function keyframe(G) {
     const T = G.T, cells = {}; for (const f of SY) { if (f === 'base') continue; const a = []; for (let i = 0; i < T.n; i++) if (T[f][i]) a.push(i, INT.has(f) ? T[f][i] : r2(T[f][i])); if (a.length) cells[f] = a; }
-    shadow = copyT(T); lastSimT = G.time; kfSeed = G.seed;
+    shadow = copyT(T); lastSimT = G.time; kfSeed = G.seed; tdN = 0; kfSent = performance.now();
     NetPlay.send({ t: 'kf', seed: G.seed, round: G.round, arena: G.arenaId, base: Array.from(T.base), cells, sources: G.sources.map(s => [r2(s.x), r2(s.y), s.el, r2(s.cd)]) }, true, '*');
   }
   // cada 100 ms: lo que cambió de verdad respecto a lo que el remoto ya tiene (su copia «se gasta» igual que la del anfitrión)
@@ -7675,7 +7707,7 @@ const NetGame = (() => {
       for (let k = 0; k < SY.length; k++) { const f = SY[k], a = T[f][i], b = shadow[f][i]; if (INT.has(f) ? a !== b : Math.abs(a - b) > (f === 'wall' ? 0.5 : 0.2) || (a === 0) !== (b === 0)) { mask |= 1 << k; vals.push(INT.has(f) ? a : r2(a)); shadow[f][i] = a; } }
       if (mask) out.push(i, mask, ...vals);
     }
-    if (out.length) NetPlay.send({ t: 'td', seed: G.seed, d: out }, true, '*');
+    if (out.length) NetPlay.send({ t: 'td', seed: G.seed, q: ++tdN, d: out }, true, '*');
   }
   function applyKf(d) {
     const G = Game.G; if (G.round !== d.round || G.seed !== d.seed) Game.netNewRound(d.round, d.seed);
@@ -7683,10 +7715,13 @@ const NetGame = (() => {
     for (const f of SY) T[f].fill(f === 'fireO' || f === 'pitO' ? -1 : 0);
     T.base.set(d.base); for (const f in d.cells) { const a = d.cells[f]; if (!T[f]) continue; for (let q = 0; q < a.length; q += 2) T[f][a[q]] = a[q + 1]; }
     if (Array.isArray(d.sources)) G.sources = d.sources.map(([x, y, el, cd]) => ({ x, y, el, cd, glow: 0 }));
-    T.ver++; kfSeed = d.seed; uMap.clear();
+    T.ver++; kfSeed = d.seed; tdLast = 0; kfMiss = 0; uMap.clear();
   }
+  // si se perdió el terreno (llegó tarde a la ronda, o un cambio no llegó por el relevo), se pide uno completo
+  function askKf() { const now = performance.now(); if (now - kfAsk < 2000) return; kfAsk = now; NetPlay.send({ t: 'kfreq' }, true, 'host'); }
   function applyTd(d) {
     const G = Game.G, T = G.T; if (!T || d.seed !== kfSeed) return; const a = d.d;
+    if (typeof d.q === 'number') { if (d.q !== tdLast + 1) askKf(); tdLast = d.q; }
     for (let q = 0; q < a.length;) { const i = a[q++], mask = a[q++]; for (let k = 0; k < SY.length; k++) if (mask & (1 << k)) T[SY[k]][i] = a[q++]; }
     T.ver++;
   }
@@ -7750,6 +7785,84 @@ const NetGame = (() => {
     B.so.forEach((v, i) => { if (G.sources[i]) { G.sources[i].cd = v[0]; G.sources[i].glow = v[1]; } });
   }
 
+  /* ---------- predicción del mago propio (remoto) ----------
+     Caminar y esquivar responden YA: una copia del mago de este aparato se mueve aquí con sus teclas (la misma cuenta
+     de velocidad, suelo —hielo, agua, barro, enredaderas—, estados y paredes que usa el juego) y es la que se ve. Al llegar
+     una instantánea se compara con lo que se predijo para ese momento (hace «un ping») y se corrige de a poquito; si
+     pasó algo grande (lo empujaron lejos, cayó, reapareció) se toma lo del anfitrión. Hechizos, vida y daño: del anfitrión. */
+  const PDT = 1 / 120, ghosts = {}, PST = { hard: 0, soft: 0, err: 0 };
+  function ghostOf(m) {
+    let g = ghosts[m.idx]; if (g && g.m === m) return g;
+    return (ghosts[m.idx] = { m, x: m.x, y: m.y, vx: m.vx || 0, vy: m.vy || 0, face: m.face || 0, r: m.r, dash: { t: 0, dx: 0, dy: 0 }, prevDash: false, hist: [], lastN: 0, acc: 0, walk: m.walk || 0 });
+  }
+  // la misma cuenta de moverse de Mage.update (sin daño, sin hechizos, sin tocar el terreno)
+  function moveGhost(g, m, inp, G, dt) {
+    const T = G.T, st = m.st || {}, bf = m.buff || {}, tr = m.tr || {}, C = m.C || { speed: 1 };
+    const locked = G.state !== 'play' || !!m.busy || (st.stun || 0) > 0 || (st.frozen || 0) > 0 || (m.granCharge || 0) > 0;
+    const ci = Terrain.idx(T, g.x, g.y);
+    let spd = 230 * C.speed * ((bf.haste || 0) > 0 ? 1.15 : 1), acc = 22, noDash = false;
+    if (ci >= 0) {
+      const b = T.base[ci];
+      if (T.ice[ci] > 0) acc = tr.iceWalk ? 22 : 2.4;
+      else if (b === TT.DEEP && T.ice[ci] <= 0) { spd *= tr.waterSpeed ? 1.0 : 0.56; noDash = true; }
+      else if (b === TT.SHALLOW && T.ice[ci] <= 0) spd *= tr.waterSpeed || 0.86;
+      if (T.mud[ci] > 0) { spd *= tr.waterSpeed ? 0.8 : 0.45; noDash = true; }
+      if (T.vine[ci] > 0 && T.vineO[ci] !== m.idx && !(G.ally && G.ally(T.vineO[ci], m))) spd *= 0.5;
+    }
+    let mx = locked ? 0 : inp.mx || 0, my = locked ? 0 : inp.my || 0; const ml = Math.hypot(mx, my);
+    const charging = !!(m.fuse || m.holding || (m.castT || 0) > 0);
+    if (!locked && !charging && ml > 0.2) g.face += clamp(angDiff(g.face, Math.atan2(my, mx)), -26 * dt, 26 * dt); else g.face = m.face || 0;
+    if ((st.root || 0) > 0) { mx = 0; my = 0; }
+    if (m.fuse) spd *= 0.6; else if (m.holding) spd *= 0.72;
+    if ((st.chill || 0) > 0 && !tr.iceWalk) spd *= 0.6;
+    if ((st.slow || 0) > 0) spd *= st.slowF || 1;
+    if (g.dash.t > 0) { g.dash.t -= dt; const ds = 920 * (noDash ? 0.5 : 1); g.vx = g.dash.dx * ds; g.vy = g.dash.dy * ds; }
+    else { const k = 1 - Math.exp(-(ml < 0.2 && acc > 10 ? 30 : acc) * dt), kk = (m.kt || 0) > 0 ? k * 0.25 : k; g.vx += (mx * spd - g.vx) * kk; g.vy += (my * spd - g.vy) * kk; }
+    if (G.wind && ci >= 0 && T.base[ci] !== TT.ROCK) { g.vx += G.wind.x * 40 * dt; g.vy += G.wind.y * 40 * dt; }
+    if (G.current && ci >= 0 && T.base[ci] === TT.DEEP && T.ice[ci] <= 0) { g.vx += G.current.x * dt * 3; g.vy += G.current.y * dt * 3; }
+    g.x += g.vx * dt; g.y += g.vy * dt;
+    Unit.prototype.collide.call(g, T);
+    g.walk += Math.hypot(g.vx, g.vy) * dt * 0.045;
+    // esquivar: sale ya (el anfitrión hace lo mismo cuando le llega la tecla)
+    const dashP = inp.dash && !g.prevDash; g.prevDash = !!inp.dash;
+    const D = m.dash || {};
+    if (dashP && !locked && (D.charges || 0) > 0 && (D.gap || 0) <= 0 && (st.root || 0) <= 0 && !noDash && g.dash.t <= 0 && (D.t || 0) <= 0) {
+      const dx = ml > 0.2 ? mx / ml : Math.cos(g.face), dy = ml > 0.2 ? my / ml : Math.sin(g.face); g.dash = { t: 0.17, dx, dy }; g.dashAt = performance.now();
+    }
+  }
+  function histAt(H, t) {
+    if (!H.length || t < H[0].t) return null;
+    for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), vx: lerp(a.vx, b.vx, k), vy: lerp(a.vy, b.vy, k) }; }
+    return null;
+  }
+  function reconcile(g, c, tAt) {
+    const sx = c.x || 0, sy = c.y || 0, svx = c.vx || 0, svy = c.vy || 0;
+    const hardSet = () => { g.x = sx; g.y = sy; g.vx = svx; g.vy = svy; g.hist.length = 0; g.dash.t = 0; };
+    if (!c.alive || (c.granCharge || 0) > 0) { hardSet(); return; }
+    // el anfitrión empezó a esquivar (y aquí no): se toma su esquive
+    if (c.dash && c.dash.t > 0 && g.dash.t <= 0 && !(g.dashAt && performance.now() - g.dashAt < 400)) { g.dash = { t: c.dash.t, dx: c.dash.dx || 0, dy: c.dash.dy || 0 }; }
+    const h = histAt(g.hist, tAt); if (!h) { hardSet(); PST.hard++; return; }
+    const ex = sx - h.x, ey = sy - h.y, evx = svx - h.vx, evy = svy - h.vy; PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(ex, ey) * 0.05;
+    if (Math.hypot(ex, ey) > 140) { hardSet(); PST.hard++; return; }
+    const k = 0.3; g.x += ex * k; g.y += ey * k; g.vx += evx * k; g.vy += evy * k;
+    for (const q of g.hist) { q.x += ex * k; q.y += ey * k; q.vx += evx * k; q.vy += evy * k; }
+  }
+  function predict(G, dt) {
+    const Lt = NetPlay.latest(), D = Lt && Lt.d; if (!D || !D.m || !G.T || D.seed !== kfSeed) return; const now = performance.now();
+    for (const seat of NetPlay.mine) {
+      const m = G.mages[seat], c = D.m[seat]; if (!m || !c) continue;
+      const g = ghostOf(m);
+      if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, dec(c), Lt.arr - NetPlay.rtt - 12); }
+      const inp = lastIn[NetPlay.mine.indexOf(seat)] || { mx: 0, my: 0, dash: false };
+      g.acc += dt; let n = 0; while (g.acc >= PDT && n < 14) { moveGhost(g, m, inp, G, PDT); g.acc -= PDT; n++; } if (n >= 14) g.acc = 0;
+      g.hist.push({ t: now, x: g.x, y: g.y, vx: g.vx, vy: g.vy }); while (g.hist.length > 90) g.hist.shift();
+      if (!m.alive) continue;
+      // se dibuja la copia: posición, rumbo y paso
+      m.x = g.x; m.y = g.y; m.vx = g.vx; m.vy = g.vy; m.face = g.face; m.moving = Math.hypot(g.vx, g.vy); m.walk = g.walk;
+      if (g.dash.t > 0 && m.dash) { m.dash.t = Math.max(m.dash.t || 0, g.dash.t); m.dash.dx = g.dash.dx; m.dash.dy = g.dash.dy; }
+    }
+  }
+
   /* ---------- un cuadro del remoto ---------- */
   let evQ = [], resQ = null, shownRes = false, prevState = null, kfQ = [], tdQ = [];
   function clientStep(dt) {
@@ -7758,6 +7871,8 @@ const NetGame = (() => {
     if (tdQ.length) { for (const d of tdQ) applyTd(d); tdQ = []; }
     if (G.T) Terrain.decay(G.T, dt, G.rain);
     const S = NetPlay.sample(); if (S) apply(S.a, S.b, S.k);
+    if (NetPlay.pred && dt > 0) predict(G, dt);
+    if (S && S.b && S.b.seed !== kfSeed && !kfQ.length) { kfMiss += dt; if (kfMiss > 0.8) askKf(); } else kfMiss = 0;
     if (evQ.length) { const l = evQ; evQ = []; const evs = [];
       for (const e of l) {
         if (e.type === '$fx') { try { G.fx.push(dec(JSON.parse(e.j))); } catch (er) { /* nada */ } continue; }
@@ -7769,13 +7884,15 @@ const NetGame = (() => {
     if (G.state === 'matchEnd' && resQ && !shownRes) { shownRes = true; const r = resQ; resQ = null; try { Progress.onMatchEnd(G, r); } catch (e) { /* nada */ } UI.netResults(r); }
   }
   NetPlay.onMsg(d => {
+    // anfitrión: un remoto pide el terreno completo (a lo más uno por segundo; le llega a todos y todos quedan al día)
+    if (NetPlay.isHost && d.t === 'kfreq') { const G = Game.G; if (G.T && !G.attract && shadow && performance.now() - kfSent > 1000) keyframe(G); return; }
     if (!NetPlay.isClient) return;
     if (d.t === 'kf') kfQ.push(d); else if (d.t === 'td') tdQ.push(d); else if (d.t === 'res' && d.r) resQ = d.r;
   });
-  function reset() { shadow = null; sentSeed = null; kfSeed = null; uMap.clear(); evQ = []; kfQ = []; tdQ = []; resQ = null; shownRes = false; pinMine = []; }
+  function reset() { for (const k in ghosts) delete ghosts[k]; shadow = null; sentSeed = null; kfSeed = null; tdN = 0; tdLast = 0; kfMiss = 0; uMap.clear(); evQ = []; kfQ = []; tdQ = []; resQ = null; shownRes = false; pinMine = []; }
 
   return {
-    seatsMax: 4, again, snap, apply, clientStep, readLocal, pinFrom,
+    seatsMax: 4, again, snap, apply, clientStep, readLocal, pinFrom, get pst() { return PST; },
     neutral: () => NEUTRAL,
     // anfitrión: cada evento viaja (la unidad como número)
     fwd(e) { const o = {}; for (const k in e) { const v = e[k], t = typeof v; if (t === 'number' || t === 'string' || t === 'boolean') o[k] = v; else if (k === 'unit' && v instanceof Unit) o.unit = codeOf(v); else if (Array.isArray(v) && v.length < 12 && v.every(x => typeof x !== 'object')) o[k] = v.slice(); } NetPlay.event(o); },
