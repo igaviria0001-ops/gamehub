@@ -29,7 +29,7 @@ const ACHIEVEMENTS = [
 const Progress = (() => {
   let P = Object.assign({ ach: {}, grim: {}, combos: {}, grazes: 0, absorbs: 0, games: 0, wins: {}, best: {} }, Store.get('prog', {}));
   const save = () => Store.set('prog', P);
-  const human = (G, i) => i >= 0 && G.mages[i] && !G.mages[i].ctrl && !G.attract;
+  const human = (G, i) => i >= 0 && G.mages[i] && !G.mages[i].ctrl && !G.attract && (!G.net || typeof NetPlay === 'undefined' || !NetPlay.on || NetPlay.mine.includes(i));
   function unlock(G, id) { if (P.ach[id]) return; P.ach[id] = Date.now(); save(); const A = ACHIEVEMENTS.find(a => a.id === id); if (A && G) { G.pops.push({ x: 0, y: 0, text: 'LOGRO · ' + A.name, t: 0, color: '#ffe9a0', big: true, screen: true, low: true, row: G.pops.filter(p => p.screen && p.low && p.t < 1.6).length }); Sound.play('matchWin'); } }
   function onEvent(G, e) {
     if (G.attract) return;
@@ -51,7 +51,7 @@ const Progress = (() => {
     if (G.attract) return; P.games++;
     const w = r.winner;
     if (G.mode === 'duel' && w >= 0 && human(G, w)) { P.wins[G.chars[w]] = (P.wins[G.chars[w]] || 0) + 1; if (CHAR_ORDER.every(c => P.wins[c])) unlock(G, 'all6'); if (G.players === 1 && w === 0 && G.level >= 4 && !((Store.get('adv', [0, 0]) || [])[0] > 0)) unlock(G, 'hard'); }
-    if (G.mode === 'hunt' && G.score) for (let i = 0; i < 2; i++) if (human(G, i) && G.score[i] >= 20) unlock(G, 'hunt');
+    if (G.mode === 'hunt' && G.score) for (let i = 0; i < G.mages.length; i++) if (human(G, i) && G.score[i] >= 20) unlock(G, 'hunt');
     if (r.camp && r.camp.win) { unlock(G, 'camp1'); if (r.camp.level === 9) unlock(G, 'campAll'); if (r.camp.level === 17) unlock(G, 'campW2'); if (Camp.total() >= 30) unlock(G, 'stars30'); if (Camp.total() >= Camp.LEVELS.length * 3) unlock(G, 'starsAll'); }
     save();
   }

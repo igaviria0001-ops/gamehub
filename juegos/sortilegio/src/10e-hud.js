@@ -35,8 +35,8 @@ const HUD = (() => {
     if (h.uses > 0) { for (let p = 0; p < h.uses; p++) { x.fillStyle = '#fff'; x.beginPath(); x.arc(X - (h.uses - 1) * 4 + p * 8, Y + R + 7, 2.4, 0, TAU); x.fill(); } }
     if (key) { const bx = X + R * 0.72, by = Y + R * 0.72, br = Math.max(7, R * 0.42); x.fillStyle = 'rgba(12,8,30,0.92)'; x.beginPath(); x.arc(bx, by, br, 0, TAU); x.fill(); x.font = fontB(Math.max(8, R * 0.5), 900); x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#fff'; x.fillText(key, bx, by + 0.5); }
   }
-  function panel(x, G, m, i, sw, sh) {
-    const right = i === 1, W = 300 * u, X = right ? sw - 14 * u - W : 14 * u, Y = 12 * u + (getInsets().topPad || 0), col = PLAYER_COLORS[i];
+  function panel(x, G, m, i, sw, sh, slot = i, li = i) {
+    const right = slot === 1, W = 300 * u, X = right ? sw - 14 * u - W : 14 * u, Y = 12 * u + (getInsets().topPad || 0), col = PLAYER_COLORS[i];
     const touch = isTouch();
     x.save();
     x.fillStyle = 'rgba(14,10,34,0.62)'; rr(x, X, Y, W, 84 * u, 16 * u); x.fill();
@@ -75,7 +75,7 @@ const HUD = (() => {
     x.font = fontB(7 * u, 900); x.textBaseline = 'middle'; x.textAlign = right ? 'right' : 'left'; x.fillStyle = full ? '#3a2006' : 'rgba(255,255,255,0.75)'; x.fillText('EMBRUJO', right ? bx + bw - 6 * u : bx + 6 * u, eY + eH / 2 + 0.5);
     if (full) { x.font = fontB(10 * u, 900); x.fillStyle = `rgba(255,233,160,${0.75 + 0.25 * Math.sin(now * 8)})`; x.textAlign = right ? 'right' : 'left'; x.fillText('✦ GRAN SORTILEGIO LISTO · funde las dos manos', right ? bx + bw : bx, eY + eH + 9 * u); }
     // manos y esquive
-    const keys = touch || m.ctrl ? [null, null, null, null] : KEY_HINT(i), HR = 13 * u, hy = Y + 84 * u + 8 * u + HR;
+    const keys = touch || m.ctrl ? [null, null, null, null] : KEY_HINT(li), HR = 13 * u, hy = Y + 84 * u + 8 * u + HR;
     const hx0 = right ? X + W - 20 * u - HR : X + 20 * u + HR;
     for (let k = 0; k < 2; k++) hand(x, m, k, hx0 + dir * k * (HR * 2 + 12 * u), hy, HR, keys[k]);
     // esquive
@@ -199,15 +199,51 @@ const HUD = (() => {
     }
     x.restore();
   }
+  // en línea: ficha chica de cada mago de otro aparato (retrato, nombre y vida)
+  function chips(x, G, sw, sh) {
+    const others = G.mages.filter(m => !NetPlay.mine.includes(m.idx)); if (!others.length) return;
+    const two = NetPlay.mine.length > 1, W = 150 * u, H = 40 * u, gap = 6 * u, top = 12 * u + (getInsets().topPad || 0);
+    others.forEach((m, k) => {
+      const X = two ? sw / 2 - (others.length * (W + gap) - gap) / 2 + k * (W + gap) : sw - 14 * u - W, Y = two ? top + 80 * u + (isTouch() ? 46 : 0) : top + k * (H + gap), col = PLAYER_COLORS[m.idx] || PLAYER_COLORS[0];
+      x.save(); x.globalAlpha = m.alive ? 1 : 0.55;
+      x.fillStyle = 'rgba(14,10,34,0.62)'; rr(x, X, Y, W, H, 12 * u); x.fill(); x.strokeStyle = col.main; x.lineWidth = 1.5; x.stroke();
+      const PR = 14 * u; ArtMage.portrait(x, m.cid, X + 8 * u + PR, Y + H / 2, PR, G.time, m.skin || 0);
+      x.font = fontB(11 * u, 900); x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillStyle = '#f3eaff';
+      let nm = col.name || ''; while (nm.length > 3 && x.measureText(nm).width > W - PR * 2 - 26 * u) nm = nm.slice(0, -1); x.fillText(nm, X + PR * 2 + 16 * u, Y + 13 * u);
+      const bx = X + PR * 2 + 16 * u, bw = W - PR * 2 - 26 * u, f = m.alive ? clamp(m.hp / m.maxHp, 0, 1) : 0;
+      x.fillStyle = 'rgba(0,0,0,0.5)'; rr(x, bx, Y + 24 * u, bw, 7 * u, 3.5 * u); x.fill(); if (f > 0) { x.fillStyle = f > 0.5 ? col.main : f > 0.25 ? '#ffb347' : '#ff6a5a'; rr(x, bx, Y + 24 * u, bw * f, 7 * u, 3.5 * u); x.fill(); }
+      x.restore();
+    });
+  }
+  // 3 o 4 magos: tiempo arriba y una fila por mago (rondas ganadas o puntos), del que va ganando hacia abajo
+  function boardN(x, G, sw, sh, cx, ty) {
+    const N = G.mages.length, rh = 16 * u, W = 230 * u, H = 30 * u + N * rh, X = cx - W / 2;
+    x.fillStyle = 'rgba(14,10,34,0.62)'; rr(x, X, ty, W, H, 14 * u); x.fill(); x.strokeStyle = 'rgba(232,196,110,0.5)'; x.lineWidth = 1.5; x.stroke();
+    const lim = G.mode === 'duel' ? Modes.ROUND_T : G.mode === 'hunt' ? Modes.HUNT_T : 180, left = Math.max(0, lim - G.roundT);
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = fontB(12 * u, 900); x.fillStyle = G.mode === 'duel' && G.roundT > Modes.MIST_T ? '#c9b8ff' : '#f3eaff';
+    x.fillText(`${G.mode === 'duel' ? 'RONDA ' + G.round : MODES[G.mode].name.toUpperCase()} · ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`, cx, ty + 15 * u);
+    const val = i => (G.mode === 'duel' ? G.wins[i] : Math.floor(G.score[i]));
+    G.mages.map((m, i) => i).sort((a, b) => val(b) - val(a)).forEach((i, r) => {
+      const m = G.mages[i], col = PLAYER_COLORS[i] || PLAYER_COLORS[0], y = ty + 30 * u + r * rh + rh / 2;
+      x.globalAlpha = m.alive ? 1 : 0.55; x.fillStyle = col.main; x.beginPath(); x.arc(X + 14 * u, y, 4 * u, 0, TAU); x.fill();
+      x.textAlign = 'left'; x.font = fontB(11 * u, 900); x.fillStyle = '#f3eaff'; let nm = col.name || 'J' + (i + 1); while (nm.length > 3 && x.measureText(nm).width > 90 * u) nm = nm.slice(0, -1); x.fillText(nm, X + 24 * u, y);
+      if (G.mode === 'duel') { for (let k = 0; k < G.winsNeeded; k++) { x.fillStyle = k < G.wins[i] ? col.main : 'rgba(255,255,255,0.18)'; x.beginPath(); x.arc(X + W - 16 * u - k * 12 * u, y, 4 * u, 0, TAU); x.fill(); } }
+      else { const goal = G.mode === 'altar' ? Modes.ALTAR_GOAL : Math.max(1, ...G.score), bw = 70 * u, bx = X + W - 50 * u - bw, f = clamp(G.score[i] / goal, 0, 1); x.fillStyle = 'rgba(0,0,0,0.5)'; rr(x, bx, y - 4 * u, bw, 8 * u, 4 * u); x.fill(); if (f > 0) { x.fillStyle = col.main; rr(x, bx, y - 4 * u, bw * f, 8 * u, 4 * u); x.fill(); } x.textAlign = 'right'; x.fillStyle = col.main; x.fillText(String(val(i)), X + W - 12 * u, y); }
+      x.globalAlpha = 1;
+    });
+  }
   function draw(x, G, sw, sh) {
     u = clamp(Math.min(sw / 1280, sh / 720) * (isTouch() ? 1.08 : 1), 0.62, 1.35);
     if (G.attract || !G.mages.length) return;
     if (G.state === 'count' && G.introT > 0) { intro(x, G, sw, sh); return; }
     lowHp(x, G, sw, sh); granCine(x, G, sw, sh);
-    G.mages.forEach((m, i) => { if (!(G.mode === 'school' && i === 1)) panel(x, G, m, i, sw, sh); });
+    const net = G.net && typeof NetPlay !== 'undefined' && NetPlay.on, N = G.mages.length;
+    if (net) { NetPlay.mine.slice(0, 2).forEach((seat, li) => { const m = G.mages[seat]; if (m) panel(x, G, m, seat, sw, sh, li, li); }); chips(x, G, sw, sh); }
+    else G.mages.forEach((m, i) => { if (!(G.mode === 'school' && i === 1)) panel(x, G, m, i, sw, sh); });
     // centro arriba: rondas y tiempo
     const cx = sw / 2, ty = 14 * u + (getInsets().topPad || 0) + (isTouch() ? 46 : 0);
     if (G.mode === 'camp') Camp.hud(x, G, sw, sh, u);
+    else if (N > 2 && (G.mode === 'duel' || G.mode === 'hunt' || G.mode === 'altar')) boardN(x, G, sw, sh, cx, ty);
     else if (G.mode === 'duel') {
       x.fillStyle = 'rgba(14,10,34,0.62)'; rr(x, cx - 74 * u, ty, 148 * u, 52 * u, 14 * u); x.fill(); x.strokeStyle = 'rgba(232,196,110,0.5)'; x.lineWidth = 1.5; x.stroke();
       const left = Math.max(0, Modes.ROUND_T - G.roundT), mist = G.roundT > Modes.MIST_T;
@@ -226,7 +262,7 @@ const HUD = (() => {
         for (let p = 0; p < 2; p++) { const bw = 70 * u, bx = p === 0 ? cx - 8 * u - bw : cx + 8 * u, by = ty + 12 * u; x.fillStyle = 'rgba(0,0,0,0.5)'; rr(x, bx, by, bw, 10 * u, 5 * u); x.fill(); x.fillStyle = PLAYER_COLORS[p].main; const f = G.score[p] / Modes.ALTAR_GOAL; if (f > 0) { rr(x, p === 0 ? bx + bw * (1 - f) : bx, by, Math.max(8, bw * f), 10 * u, 5 * u); x.fill(); } x.font = fontB(11 * u, 900); x.fillText(Math.floor(G.score[p]), p === 0 ? bx - 14 * u : bx + bw + 14 * u, by + 5 * u); }
       } else { x.font = fontT(26 * u); x.fillStyle = PLAYER_COLORS[0].main; x.fillText(Math.floor(G.score[0]), cx - 34 * u, ty + 20 * u); x.fillStyle = '#e8dcff'; x.fillText('–', cx, ty + 20 * u); x.fillStyle = PLAYER_COLORS[1].main; x.fillText(Math.floor(G.score[1]), cx + 34 * u, ty + 20 * u); }
       x.font = fontB(12 * u, 900); x.fillStyle = left < 15 ? '#ffb0a0' : '#e8dcff'; x.fillText(`${MODES[G.mode].name} · ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`, cx, ty + 44 * u);
-      for (let p = 0; p < 2; p++) if (!G.mages[p].alive && G.respawn) { const W = G.mages[p]; x.font = fontB(13 * u, 900); x.fillStyle = PLAYER_COLORS[p].main; x.fillText(`J${p + 1} vuelve en ${Math.ceil(3 - G.respawn[p])}`, cx, ty + 74 * u + p * 18 * u); }
+      for (let p = 0; p < Math.min(2, G.mages.length); p++) if (!G.mages[p].alive && G.respawn) { const W = G.mages[p]; x.font = fontB(13 * u, 900); x.fillStyle = PLAYER_COLORS[p].main; x.fillText(`${PLAYER_COLORS[p].name || 'J' + (p + 1)} vuelve en ${Math.ceil(3 - G.respawn[p])}`, cx, ty + 74 * u + p * 18 * u); }
     } else if (G.mode === 'school') {
       const txt = Progress.schoolText(G), w = Math.min(sw - 40, 640 * u);
       x.fillStyle = 'rgba(14,10,34,0.72)'; rr(x, cx - w / 2, ty + 100 * u, w, 56 * u, 14 * u); x.fill(); x.strokeStyle = 'rgba(232,196,110,0.6)'; x.lineWidth = 1.5; x.stroke();

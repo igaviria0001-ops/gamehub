@@ -557,7 +557,7 @@ const ArtMage = (() => {
     x.strokeStyle = col; x.globalAlpha = m.st.hidden > 0 ? 0.3 : 0.9; x.lineWidth = 2.2 / Math.max(0.6, z);
     x.beginPath(); x.ellipse(0, 1, 21 * S, 8.5 * S, 0, 0.15, Math.PI - 0.15); x.stroke();
     x.fillStyle = col; const a = m.face; x.beginPath(); x.moveTo(Math.cos(a) * 33, Math.sin(a) * 13 + 1); x.lineTo(Math.cos(a + 0.28) * 26, Math.sin(a + 0.28) * 10 + 1); x.lineTo(Math.cos(a - 0.28) * 26, Math.sin(a - 0.28) * 10 + 1); x.fill();
-    const tag = G.players === 1 && m.idx === 1 && G.mode !== 'camp' ? 'CPU' : m.ctrl && G.mode === 'camp' ? 'COMPA' : `J${m.idx + 1}`, fs = Math.max(11, 12 / Math.max(0.55, z));
+    const tag = G.net && PLAYER_COLORS[m.idx] && PLAYER_COLORS[m.idx].name ? String(PLAYER_COLORS[m.idx].name).slice(0, 12) : G.players === 1 && m.idx === 1 && G.mode !== 'camp' ? 'CPU' : m.ctrl && G.mode === 'camp' ? 'COMPA' : `J${m.idx + 1}`, fs = Math.max(11, 12 / Math.max(0.55, z));
     const ty = -(L[m.cid].head === 'rosette' ? 122 : L[m.cid].head === 'hood' ? 116 : 108) * L[m.cid].scale;
     x.font = fontB(fs, 900); x.textAlign = 'center'; x.globalAlpha = 0.95;
     x.fillStyle = 'rgba(10,8,25,0.6)'; x.fillText(tag, 1, ty + 1); x.fillStyle = col; x.fillText(tag, 0, ty);

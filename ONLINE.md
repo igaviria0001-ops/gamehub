@@ -220,3 +220,15 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   sus pilotos; HUD: paneles de los pilotos del aparato + fichas de los demás. `catalog`: ventolera `net` con 4 modos.
   Pruebas: `node test/netvto.js` (2 pilotos) y `TRES=1 node test/netvto.js` (anfitrión con 2 + remoto) → VTO EN LÍNEA OK;
   modos sin conexión siguen bien. **Sigue F6 Sortilegio** (mismo patrón: `sorti/src/…-net.js` + generalizar a 2–4 magos).
+- **18 nov 01:30** — **F6 Sortilegio en línea HECHO (base):** el juego admite 2 a 4 magos (todos contra todos; 3.º y 4.º
+  aparecen arriba/abajo al centro en sitio pisable; separación entre todas las parejas; Altar y Cacería para N; Tejo solo
+  para 2 — `catalog.net.max`, la sala lo esconde si son más; marcador `boardN` y fichas de los demás; nombres de la sala
+  sobre los magos; logros solo de los magos del aparato). Eventos partidos en `visual(e)` (efectos, sonido, cámara,
+  letreros) y lógica. `sorti/src/12b-net.js`: referencias como números (`{$u}` magos/criaturas, `{$d}` tablas del juego),
+  instantánea (~2–2,4 KB: magos, hechizos, criaturas/torretas/señuelos/tejo, estado de ronda), efectos y letreros de la
+  lógica viajan como eventos, **terreno**: foto entera al empezar cada ronda (`kf`) + cada 100 ms solo las celdas que
+  cambian de verdad (`td`, comparando con una copia que «se gasta» igual: `Terrain.decay`), el remoto arma la ronda con la
+  misma semilla (`Game.netNewRound`). Toque en el celular para marcar enemigo viaja en la entrada (`pn`).
+  Pruebas `node test/netsrt.js` y `TRES=1 …` → SRT EN LÍNEA OK; modos sin conexión bien.
+  **Pendiente F9:** bajar datos de Sortilegio (≈4 MB/min a 30/s): delta entre instantáneas o 20/s.
+  **Sigue F7 Tira y Afloja.**

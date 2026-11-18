@@ -47,6 +47,7 @@ const GAMES = [
   },
   {
     id: 'sortilegio', file: 'games/sortilegio.html', name: 'Sortilegio', short: 'Sortilegio', num: '03',
+    net: { seats: 4, mode: 'duel', modes: ['duel', 'altar', 'hunt', 'tejo'], max: { tejo: 2 }, desc: { duel: 'Todos contra todos: la ronda es del último mago en pie.', altar: 'Suma quien esté solo dentro del círculo sagrado.', hunt: 'Cada espanto cae solo con su contrario: el que más cace gana.', tejo: 'Mete el tejo en el bocín del otro (solo para dos).' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
     tag: 'Duelo de magos', kind: 'Hechizos y fusiones',
     desc: 'Magos con un elemento en cada mano: toca, carga o funde las dos para crear 28 hechizos. Reacciones con el terreno, combinaciones y el Gran Sortilegio.',
     c1: '#ffd36b', c2: '#9a5cff', c3: '#ff7a3d', ink: '#120a22', font: 'sorti',

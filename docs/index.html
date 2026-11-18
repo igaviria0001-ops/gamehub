@@ -562,6 +562,7 @@ const GAMES = [
   },
   {
     id: 'sortilegio', file: 'games/sortilegio.html', name: 'Sortilegio', short: 'Sortilegio', num: '03',
+    net: { seats: 4, mode: 'duel', modes: ['duel', 'altar', 'hunt', 'tejo'], max: { tejo: 2 }, desc: { duel: 'Todos contra todos: la ronda es del último mago en pie.', altar: 'Suma quien esté solo dentro del círculo sagrado.', hunt: 'Cada espanto cae solo con su contrario: el que más cace gana.', tejo: 'Mete el tejo en el bocín del otro (solo para dos).' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
     tag: 'Duelo de magos', kind: 'Hechizos y fusiones',
     desc: 'Magos con un elemento en cada mano: toca, carga o funde las dos para crear 28 hechizos. Reacciones con el terreno, combinaciones y el Gran Sortilegio.',
     c1: '#ffd36b', c2: '#9a5cff', c3: '#ff7a3d', ink: '#120a22', font: 'sorti',
@@ -1129,7 +1130,8 @@ const Online = (() => {
   // lo que el anfitrión puede lanzar: juego → modo, escenario y largo → ¡A jugar!
   let pick = null, pickEv = null, lastPick = null;
   const GAMES = () => (window.GAMEHUB ? GAMEHUB.GAMES : []);
-  const netModes = g => g.modes.filter(m => !g.net || !g.net.modes || g.net.modes.includes(m.id));
+  // los modos que ya van en línea (y que admiten tantos jugadores)
+  const netModes = (g, n = players(Net.room).length) => g.modes.filter(m => (!g.net || !g.net.modes || g.net.modes.includes(m.id)) && !(g.net && g.net.max && g.net.max[m.id] < n));
   const mapsFor = (g, m) => (m && m.maps === 'arenas' ? g.arenas || [] : g.maps).filter(x => !(m && m.map) || x[0] === m.map);
   const lenTxt = (g, m, n) => (g.net && g.net.lenTxt && g.net.lenTxt[m.id] ? g.net.lenTxt[m.id](n) : m.lenTxt(n));
   function evText(g, ev) {
@@ -1222,7 +1224,7 @@ const Online = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"23b6f53303","date":"2026-11-18"};
+  const BUILD = {"v":"2634bfae35","date":"2026-11-18"};
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
   const COLORS = ['#ff5d8f', '#45d6b0', '#ffb36b', '#6fc3ff', '#ffd36b', '#b07bff', '#3dffa8', '#ff7a3d'];

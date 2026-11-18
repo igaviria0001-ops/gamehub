@@ -127,5 +127,23 @@ const Terrain = (() => {
     }
     T.burning = burning;
   }
-  return { make, idx, cx, cy, solid, solidAt, isWater, isLava, burnable, forCircle, forLine, ignite, wet, cool, freeze, electrify, addWall, hitWall, under, update };
+  // en línea, remoto: solo el paso del tiempo de cada celda (sin propagar fuego ni avisar nada);
+  // el anfitrión hace lo mismo con su copia de lo que ya mandó, así sabe qué cambió de verdad
+  function decay(T, dt, rain) {
+    for (let i = 0; i < T.n; i++) {
+      if (T.fire[i] > 0) { T.fire[i] -= dt; if (T.fire[i] <= 0) { T.fire[i] = 0; if (T.base[i] === TT.BUSH) { T.base[i] = TT.DIRT; T.ash[i] = 999; } else if (T.base[i] === TT.BRIDGE) T.base[i] = T.bridgeUnder || TT.DEEP; else if (T.vine[i] > 0) T.vine[i] = 0; else T.ash[i] = 22; T.ver++; } }
+      if (T.ash[i] > 0 && T.ash[i] < 900) { T.ash[i] -= dt; if (T.ash[i] < 0) T.ash[i] = 0; }
+      if (T.wet[i] > 0) { T.wet[i] -= dt * (rain ? 0.2 : 1); if (T.wet[i] < 0) T.wet[i] = 0; }
+      if (T.ice[i] > 0) { T.ice[i] -= dt; if (T.ice[i] <= 0) { T.ice[i] = 0; if (T.base[i] !== TT.DEEP && T.base[i] !== TT.SHALLOW) T.wet[i] = 4; T.ver++; } }
+      if (T.vine[i] > 0) { T.vine[i] -= dt; if (T.vine[i] < 0) T.vine[i] = 0; }
+      if (T.mud[i] > 0) { T.mud[i] -= dt; if (T.mud[i] < 0) T.mud[i] = 0; }
+      if (T.lava[i] > 0) { T.lava[i] -= dt; if (T.lava[i] <= 0) { T.lava[i] = 0; T.ver++; } }
+      if (T.cool[i] > 0) { T.cool[i] -= dt; if (T.cool[i] <= 0) { T.cool[i] = 0; T.ver++; } }
+      if (T.elec[i] > 0) { T.elec[i] -= dt; if (T.elec[i] < 0) T.elec[i] = 0; }
+      if (T.pit[i] > 0) { T.pit[i] -= dt; if (T.pit[i] < 0) T.pit[i] = 0; }
+      if (T.wallT[i] > 0) { T.wallT[i] -= dt; if (T.wallT[i] <= 0) { T.wallT[i] = 0; if (T.wall[i] > 0) { T.wall[i] = 0; T.ver++; } } }
+    }
+  }
+  const SYNC = ['base', 'fire', 'fireO', 'ash', 'wet', 'ice', 'vine', 'vineO', 'mud', 'lava', 'wall', 'wallT', 'elec', 'elecO', 'cool', 'pit', 'pitO', 'crys'];
+  return { decay, SYNC, make, idx, cx, cy, solid, solidAt, isWater, isLava, burnable, forCircle, forLine, ignite, wet, cool, freeze, electrify, addWall, hitWall, under, update };
 })();

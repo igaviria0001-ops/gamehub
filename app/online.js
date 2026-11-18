@@ -92,7 +92,8 @@ const Online = (() => {
   // lo que el anfitrión puede lanzar: juego → modo, escenario y largo → ¡A jugar!
   let pick = null, pickEv = null, lastPick = null;
   const GAMES = () => (window.GAMEHUB ? GAMEHUB.GAMES : []);
-  const netModes = g => g.modes.filter(m => !g.net || !g.net.modes || g.net.modes.includes(m.id));
+  // los modos que ya van en línea (y que admiten tantos jugadores)
+  const netModes = (g, n = players(Net.room).length) => g.modes.filter(m => (!g.net || !g.net.modes || g.net.modes.includes(m.id)) && !(g.net && g.net.max && g.net.max[m.id] < n));
   const mapsFor = (g, m) => (m && m.maps === 'arenas' ? g.arenas || [] : g.maps).filter(x => !(m && m.map) || x[0] === m.map);
   const lenTxt = (g, m, n) => (g.net && g.net.lenTxt && g.net.lenTxt[m.id] ? g.net.lenTxt[m.id](n) : m.lenTxt(n));
   function evText(g, ev) {

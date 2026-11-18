@@ -21,7 +21,7 @@ const Modes = (() => {
   const ROUND_T = 75, MIST_T = 45, TEJO_T = 150, HUNT_T = 120, ALTAR_GOAL = 100;
   const rounds = mode => mode === 'duel';
   function setup(G) {
-    G.roundT = 0; G.ring = null; G.goals = null; G.score = [0, 0]; G.runes = []; G.runeT = 9; G.respawn = [0, 0]; G.tejo = null; G.altar = null; G.huntN = 0;
+    G.roundT = 0; G.ring = null; G.goals = null; G.score = G.mages.map(() => 0); G.runes = []; G.runeT = 9; G.respawn = G.mages.map(() => 0); G.tejo = null; G.altar = null; G.huntN = 0;
     const T = G.T, W = T.W, H = T.H;
     if (G.mode === 'tejo') {
       G.goals = [{ x: 105, y: H / 2, r: 62 }, { x: W - 105, y: H / 2, r: 62 }];
@@ -141,7 +141,7 @@ const Modes = (() => {
         G.ring = { x: W / 2, y: H / 2, r: lerp(full, 230, smooth(f)), f };
         if (!G.mistWarned) { G.mistWarned = true; G.events.push({ type: 'mist' }); }
       }
-      if (G.roundT >= ROUND_T) { const [a, b] = G.mages, fa = a.hp / a.maxHp, fb = b.hp / b.maxHp; Game.endRound(Math.abs(fa - fb) < 0.01 ? -1 : fa > fb ? 0 : 1, 'time'); }
+      if (G.roundT >= ROUND_T) { const f = G.mages.map(m => (m.alive ? m.hp / m.maxHp : -1)), mx = Math.max(...f), top = f.filter(v => v > mx - 0.01); Game.endRound(top.length === 1 ? f.indexOf(mx) : -1, 'time'); }
       return;
     }
     // reaparecer a los 3 s
@@ -160,7 +160,7 @@ const Modes = (() => {
     if (G.mode === 'hunt') {
       const alive = G.units.filter(u => u instanceof Creature && u.alive).length;
       if (alive < 5 && G.rng() < dt * 1.5) spawnSpirit(G);
-      if (G.roundT >= HUNT_T) return Game.endRound(G.score[0] === G.score[1] ? -1 : G.score[0] > G.score[1] ? 0 : 1, 'time');
+      if (G.roundT >= HUNT_T) return Game.endRound(best(G.score), 'time');
     }
     if (G.mode === 'altar') {
       const A = G.altar; A.t -= dt;
@@ -168,10 +168,12 @@ const Modes = (() => {
       const inside = G.mages.filter(m => m.alive && hypot(m.x - A.x, m.y - A.y) < A.r);
       A.owner = inside.length === 1 ? inside[0].idx : inside.length > 1 ? -2 : -1;
       if (A.owner >= 0) { G.score[A.owner] = Math.min(ALTAR_GOAL, G.score[A.owner] + 3.6 * dt); inside[0].gainEmb(G, 3 * dt); }
-      if (G.score[0] >= ALTAR_GOAL || G.score[1] >= ALTAR_GOAL) return Game.endRound(G.score[0] >= ALTAR_GOAL ? 0 : 1, 'score');
-      if (G.roundT >= 180) return Game.endRound(G.score[0] === G.score[1] ? -1 : G.score[0] > G.score[1] ? 0 : 1, 'time');
+      { const k = G.score.findIndex(v => v >= ALTAR_GOAL); if (k >= 0) return Game.endRound(k, 'score'); }
+      if (G.roundT >= 180) return Game.endRound(best(G.score), 'time');
     }
   }
+  // el que más tiene (−1 si hay empate arriba)
+  function best(a) { const m = Math.max(...a); return a.filter(v => v === m).length === 1 ? a.indexOf(m) : -1; }
   function onDown(G, m) {
     if (G.mode === 'duel') { const alive = G.mages.filter(x => x.alive); if (alive.length <= 1) Game.endRound(alive.length ? alive[0].idx : -1, 'down'); }
     else if (G.mode === 'camp') { }

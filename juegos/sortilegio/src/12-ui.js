@@ -231,10 +231,30 @@ const UI = (() => {
   /* ---------- pausa y resultados ---------- */
   function pause(v) {
     if (Game.G.state === 'attract' || Game.G.state === 'matchEnd') return;
-    paused = v; Game.G.paused = v; Music.duck(v);
+    paused = v; Game.G.paused = v; Music.duck(v && !Game.G.net);
     if (v) show('pause', false); else show(null, false);
   }
+  // en línea: arranca la partida que mandó el anfitrión (2 a 4 magos)
+  function netStart(c) { Sound.init(); paused = false; Game.G.paused = false; stack = []; Copa.on = false; Game.start(c.mode, c.chars.length, { net: true, chars: c.chars.slice(), skins: c.skins.slice(), arena: c.arena, wins: c.wins, level: 2 }); show(null, false); }
+  // en línea: resultados con los nombres de la sala; todos vuelven a la sala, el anfitrión lanza la revancha
+  function netResults(r) {
+    const w = r.winner, N = r.names.length, mine = NetPlay.mine, host = NetPlay.isHost, esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const nm = i => esc(r.names[i].split(' · ')[0]), col = i => (PLAYER_COLORS[i] || PLAYER_COLORS[0]).main;
+    $('#r-hub').hidden = false; $('#r-hub').textContent = 'Volver a la sala'; $('#r-hub').dataset.act = 'hubhome'; $('#s-results').classList.add('hubres');
+    $('#r-title').textContent = w < 0 ? '¡Empate!' : mine.includes(w) && mine.length === 1 ? '¡Ganaste!' : `¡Gana ${r.names[w].split(' · ')[0]}!`; $('#r-title').style.color = w >= 0 ? col(w) : '';
+    const val = r.mode === 'duel' ? r.wins : r.score;
+    $('#r-score').innerHTML = r.names.map((n, i) => `<span style="color:${col(i)}">${nm(i)}</span> ${val[i]}`).join(' &nbsp;·&nbsp; ') + (r.mode !== 'duel' ? `<div style="font-size:15px;color:var(--mute)">${MODES[r.mode].name}</div>` : '');
+    const s = r.stats, row = (l, k) => `<tr><td>${l}</td>${s.map((x, i) => `<td style="color:${col(i)};font-weight:900">${Math.round(x[k])}</td>`).join('')}</tr>`;
+    $('#r-stats').innerHTML = `<tr><td></td>${r.names.map((n, i) => `<td style="color:${col(i)};font-weight:900">${nm(i)}${mine.includes(i) ? ' ·tú' : ''}</td>`).join('')}</tr>` + row('Daño hecho', 'dmg') + row('Golpes', 'hits') + row('Fusiones', 'fusions') + row('Combinaciones', 'combos') + row('Grandes Sortilegios', 'gran');
+    $('#r-copa').hidden = true; $('#r-copaNext').hidden = true;
+    $('#r-rematch').hidden = !host; $('#r-rematch').textContent = 'Revancha (todos)'; $('#r-rematch').dataset.act = 'netAgain';
+    ['setupAgain', 'toTitle'].forEach(a => { const e = document.querySelector(`#s-results [data-act="${a}"]`); if (e) e.hidden = true; });
+    hero(w >= 0 ? r.chars[w] : r.chars[0], w >= 0 ? '¡Victoria!' : 'Empate', w);
+    paused = false; show('results', false); startHero(); vestAfter();
+  }
   Game.onMatchEnd = r => {
+    if (r.net && typeof NetPlay !== 'undefined' && NetPlay.on) return netResults(r);
+    $('#r-rematch').dataset.act = 'rematch'; ['setupAgain', 'toTitle'].forEach(a => { const e = document.querySelector(`#s-results [data-act="${a}"]`); if (e) e.hidden = false; });
     const w = r.winner;
     if (r.camp) { campResults(r); vestAfter(); return; }
     const hubEv = !!Hub.ev && !r.vsBot && r.mode !== 'school';
@@ -304,7 +324,7 @@ const UI = (() => {
     school: () => { Sound.init(); setup.players = 1; paused = false; Game.G.paused = false; stack = []; Copa.on = false; Game.start('school', 1, { chars: [pick[0], pick[1]], arena: 'paramo', level: 2 }); show(null, false); },
     setupAgain: () => { stack = ['title']; show(Game.G.mode === 'camp' ? 'camp' : 'setup', false); },
     toTitle: () => { if (Hub.ev) Hub.leave(); hubPick(null); paused = false; Game.G.paused = false; Music.duck(false); stack = []; Game.startAttract(); show('title', false); },
-    hubhome: () => Hub.exit(), hubback: () => Hub.exit(),
+    hubhome: () => Hub.exit(), hubback: () => Hub.exit(), netAgain: () => { if (typeof NetGame !== 'undefined') NetGame.again(); },
     fullscreen: () => FS.toggle(),
     vest: () => openVest(0),
   };
@@ -339,7 +359,7 @@ const UI = (() => {
   getInsets = insets; isTouch = touch;
   $('#ver').textContent = 'v' + GAME_META.version;
   Game.startAttract(); show('title', false);
-  return { show, insets, touch, hubPlay, syncSkins, vestBadge, vestAfter, pickOf: p => pick[p], get current() { return current; } };
+  return { show, insets, touch, hubPlay, netStart, netResults, syncSkins, vestBadge, vestAfter, pickOf: p => pick[p], get current() { return current; } };
 })();
 Hub.onPlay(ev => UI.hubPlay(ev));
 Hub.ready();

@@ -9,7 +9,8 @@ const Touch = (() => {
   let enabled = matchMedia('(pointer: coarse)').matches, active = false;
   const ptr = new Map(), st = [mk(), mk()];
   function mk() { return { stick: null, sx: 0, sy: 0, mx: 0, my: 0, h: [null, null], fuse: null, dash: null }; }
-  const solo = () => Game.G.players === 1;
+  const netOn = () => Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on;
+  const solo = () => (netOn() ? NetPlay.mine.length === 1 : Game.G.players === 1);
   // dónde va cada cosa (px de pantalla)
   function layout() {
     const sw = innerWidth, sh = innerHeight, R = clamp(Math.min(sw / 844, sh / 390) * 33, 25, 46);
@@ -73,12 +74,13 @@ const Touch = (() => {
   }
   // tocar a un enemigo en la pantalla lo marca como objetivo unos segundos
   function tapTarget(p, sx, sy) {
+    const li = p; if (netOn()) p = NetPlay.mine[p]; if (p == null) return;
     const G = Game.G, m = G.mages[p], c = Game.cam; if (!m || !m.alive || m.ctrl || G.state !== 'play') return;
     const z = c.z, wx = (sx - innerWidth / 2) / z + c.x, wy = (sy - innerHeight / 2) / z + c.y;
     let best = null, bd = Math.max(56, 40 / z);
     for (const u of G.units) { if (!m.canTarget(u)) continue; const d = Math.min(hypot(u.x - wx, u.y - 30 - wy), hypot(u.x - wx, u.y - wy)); if (d < bd) { bd = d; best = u; } }
     if (!best) { m.pin = null; return; }
-    m.pin = { u: best, until: G.time + 5 }; m.pickU = best; if (m.holding || m.fuse) m.lockOn = best;
+    m.pin = { u: best, until: G.time + 5 }; m.pickU = best; if (m.holding || m.fuse) m.lockOn = best; if (netOn() && NetPlay.isClient) NetGame.pinFrom(li, best);
     m.face = Math.atan2(best.y - m.y, best.x - m.x); G.events.push({ type: 'retarget', who: p, x: best.x, y: best.y });
   }
   function push() {

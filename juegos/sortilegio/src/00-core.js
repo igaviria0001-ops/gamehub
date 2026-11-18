@@ -46,6 +46,8 @@ const fontB = (size, w = 800) => `${w} ${size}px ${FONT_B}`;
 const PLAYER_COLORS = [
   { main: '#ffc94a', dark: '#b07a10', name: 'J1' },
   { main: '#62e0ff', dark: '#1a7fa0', name: 'J2' },
+  { main: '#ff7ad9', dark: '#a8306c', name: 'J3' },
+  { main: '#8dff6a', dark: '#3c9a22', name: 'J4' },
 ];
 let LOWFX = false, MIDFX = false; // ligera / media (o ligera): menos efectos caros
 
