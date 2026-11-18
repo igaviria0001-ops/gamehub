@@ -17,7 +17,7 @@ const Combat = (() => {
 
   function reset(G) {
     G.bullets = []; G.missiles = []; G.flares = []; G.crates = []; G.chutes = [];
-    G.crateT = 7 + G.rng() * 4; G.bumpCd = 0; G.sixCd = [0, 0];
+    G.crateT = 7 + G.rng() * 4; G.bumpCd = 0; G.bumpPair = {}; G.sixCd = G.birds.map(() => 0);
   }
 
   const ev = (G, type, o) => G.events.push(Object.assign({ type }, o));
@@ -55,8 +55,7 @@ const Combat = (() => {
   function assist(b, G) {
     if (G.bots[b.id]) return 0;
     const cands = [];
-    const o = G.birds[1 - b.id];
-    if (o && o.alive && G.mode !== 'boss') cands.push(o);
+    for (const o of foes(G, b)) if (G.mode !== 'boss') cands.push(o);
     if (G.targets) for (const T of G.targets) if (T.alive && T.kind !== 'ring') cands.push(T);
     if (G.boss) for (const P of Boss.lockables(G)) cands.push(P);
     let best = 0, bd = 0.125;
@@ -228,17 +227,19 @@ const Combat = (() => {
       if (taken || c.life <= 0) G.crates.splice(i, 1);
     }
 
-    // choques entre pilotos: recibe menos el que embiste
-    G.bumpCd = Math.max(0, G.bumpCd - dt);
-    const [A, B] = G.birds;
+    // choques entre pilotos: recibe menos el que embiste (cada pareja con su propia espera)
+    G.bumpCd = Math.max(0, (+G.bumpCd || 0) - dt); if (!G.bumpPair) G.bumpPair = {};
+    for (const k in G.bumpPair) G.bumpPair[k] = Math.max(0, G.bumpPair[k] - dt);
+    for (let ia = 0; ia < G.birds.length; ia++) for (let ib = ia + 1; ib < G.birds.length; ib++) {
+    const A = G.birds[ia], B = G.birds[ib], pk = ia + '-' + ib;
     if (A && B && A.alive && B.alive && !A.perch && !B.perch && G.mode !== 'boss' && !G.coop) {
       const dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1, R = A.r + B.r;
       if (d < R) {
         const nx = dx / d, ny = dy / d, ov = (R - d) / 2;
         A.x -= nx * ov; A.y -= ny * ov; B.x += nx * ov; B.y += ny * ov;
         const vrel = (A.vx - B.vx) * nx + (A.vy - B.vy) * ny;
-        if (vrel > 0 && G.bumpCd <= 0) {
-          G.bumpCd = 0.3;
+        if (vrel > 0 && !(G.bumpPair[pk] > 0)) {
+          G.bumpPair[pk] = 0.3;
           const aIn = Math.max(0, A.vx * nx + A.vy * ny), bIn = Math.max(0, -(B.vx * nx + B.vy * ny));
           if (vrel > 260) {
             const base = Math.min(32, (vrel - 240) * 0.04), aRams = aIn >= bIn;
@@ -253,11 +254,12 @@ const Combat = (() => {
         }
       }
     }
+    }
 
     // «¡a tus seis!»: el otro se te pega detrás y te apunta
     G.birds.forEach((b, i) => {
-      G.sixCd[i] = Math.max(0, G.sixCd[i] - dt);
-      const o = G.birds[1 - i];
+      G.sixCd[i] = Math.max(0, (G.sixCd[i] || 0) - dt);
+      const o = foe(G, b);
       if (!b.alive || !o || !o.alive || G.sixCd[i] > 0 || !G.canFight || G.mode === 'boss' || G.coop) return;
       const dx = o.x - b.x, dy = o.y - b.y, d = Math.hypot(dx, dy);
       if (d < 460 && Math.cos(angDiff(b.a, Math.atan2(dy, dx))) < -0.7 && Math.cos(angDiff(o.a, Math.atan2(-dy, -dx))) > 0.85) { G.sixCd[i] = 5; b.emit('six'); }
@@ -289,7 +291,7 @@ const Combat = (() => {
   // el misil que persigue a este piloto más de cerca (para el aviso y la alarma)
   // a quién se le puede fijar el misil: al otro piloto o, en la escuela, al dron más cercano
   function lockTarget(G, b) {
-    const o = G.birds[1 - b.id];
+    const o = foeAhead(G, b);
     if (G.tm) {
       // desafíos en equipo: solo drones enemigos (nunca al compañero)
       let best = null, bd = Infinity;
@@ -326,5 +328,10 @@ const Combat = (() => {
     for (const m of G.missiles) if (m.target === b) { const d = Math.hypot(m.x - b.x, m.y - b.y); if (d < bd) { bd = d; best = m; } }
     return best ? { m: best, d: bd } : null;
   }
-  return { reset, step, eject, threat, give, explode, CRATE_NAME, MIS };
+  // rivales (con 2 pilotos, el otro; en línea pueden ser hasta 3)
+  function foes(G, b) { return G.birds.filter(o => o !== b && o.alive); }
+  function foe(G, b) { let best = null, bd = Infinity; for (const o of G.birds) { if (o === b || !o.alive) continue; const d = Math.hypot(o.x - b.x, o.y - b.y); if (d < bd) { bd = d; best = o; } } return best || G.birds.find(o => o !== b) || null; }
+  // para fijar el misil: el rival más a tiro (adelante y cerca) o, si no, el más cercano
+  function foeAhead(G, b) { if (G.birds.length <= 2) return G.birds.find(o => o !== b) || null; let best = null, bs = Infinity; for (const o of G.birds) { if (o === b || !o.alive) continue; const dx = o.x - b.x, dy = o.y - b.y, d = Math.hypot(dx, dy), da = Math.abs(angDiff(b.a, Math.atan2(dy, dx))); const sc = d * (1 + da * 1.5); if (sc < bs) { bs = sc; best = o; } } return best; }
+  return { reset, step, eject, threat, give, explode, foe, foes, foeAhead, CRATE_NAME, MIS };
 })();

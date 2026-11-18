@@ -206,3 +206,17 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   los demás ven «EL ANFITRIÓN PREPARA: VÉRTIGO · Carrera · Venecia · 2 vueltas» (`{$:'pick'}`, se reenvía al que entra).
   `catalog.net.desc` = texto del modo en línea. Prueba `test/netvtg.js` elige Venecia a 2 vueltas desde la sala y los
   dos aparatos corren ahí → OK. Celular revisado (sin desborde). Sigue **F5 Ventolera**.
+- **18 nov 00:40** — Paquete común: la **sala de espera y el arranque** pasaron a `shared/netplay.js` (`NetPlay.gate({ me, make,
+  apply })`, `NetPlay.again(f)`, `NetPlay.cfg`, `NetPlay.okId`); VÉRTIGO ya lo usa (prueba OK). `sample()` da también `dt`.
+  En la sala, el anfitrión reparte **colores y nombres sin repetir** entre aparatos.
+  **F5 Ventolera en línea HECHO (base):** el juego ahora admite 2 a 4 pilotos (`Combat.foe/foes/foeAhead` = rival más
+  cercano o más a tiro; choques por parejas; duelo «todos contra todos» = la ronda es del último en el aire; Blancos,
+  Maletín y Carrera con marcador para 3–4 (`Modes.drawHUDN`), aros repartidos en colores, logros solo de los pilotos del
+  aparato). `vento/src/09c-net.js`: entradas remotas (tonel y misil se repiten 150 ms con número para no perderse ni
+  duplicarse), instantánea compacta (~600–750 bytes: pilotos en lista fija, balas/misiles/bengalas, cajas, paracaídas,
+  blancos, maletín, aros, tren/barco/globos/tormenta/costa), aplicar con interpolación y proyectiles llevados al mismo
+  instante, estelas armadas en el remoto, eventos con el piloto como número (efectos y sonidos en el remoto),
+  resultados a todos («¡Ganaste!», tabla de N columnas), «Revancha (todos)» del anfitrión. Cámara: cada aparato sigue a
+  sus pilotos; HUD: paneles de los pilotos del aparato + fichas de los demás. `catalog`: ventolera `net` con 4 modos.
+  Pruebas: `node test/netvto.js` (2 pilotos) y `TRES=1 node test/netvto.js` (anfitrión con 2 + remoto) → VTO EN LÍNEA OK;
+  modos sin conexión siguen bien. **Sigue F6 Sortilegio** (mismo patrón: `sorti/src/…-net.js` + generalizar a 2–4 magos).

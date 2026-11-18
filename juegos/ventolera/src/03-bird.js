@@ -210,7 +210,7 @@ class Bird {
 
     /* --- rebufo y vuelo rasante --- */
     this.drafting = false;
-    const o = G.birds[1 - this.id];
+    const o = Combat.foe(G, this);
     if (o && o.alive && !o.perch && this.s > 300) {
       const dxo = o.x - this.x, dyo = o.y - this.y, d = Math.hypot(dxo, dyo);
       if (d < 420 && d > 60 && Math.cos(angDiff(this.va, o.va)) > 0.82 && Math.cos(angDiff(this.va, Math.atan2(dyo, dxo))) > 0.9) this.drafting = true;

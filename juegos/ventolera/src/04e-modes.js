@@ -42,7 +42,7 @@ const Modes = (() => {
   const BAL = ['#ff5a7a', '#5ad8ff', '#7cf08a', '#c08cff', '#ff9a4a'];
 
   function setup(G) {
-    G.score = [0, 0]; G.targets = []; G.case = null; G.modeT = 0; G.spawnT = 0.5; G.gates = null;
+    G.score = G.birds.map(() => 0); G.targets = []; G.case = null; G.modeT = 0; G.spawnT = 0.5; G.gates = null;
     G.roundT = G.mode === 'case' ? CASE_TIME : G.mode === 'race' ? RACE_TIME : TARGET_TIME;
     if (G.mode === 'case') dropCase(G, G.world.w / 2, G.world.ceil + 60, 0, 0);
     if (G.mode === 'race') raceSetup(G);
@@ -51,14 +51,14 @@ const Modes = (() => {
   function raceSetup(G) {
     {
       const list = RACE[G.world.id] || RACE.cocora;
-      G.gates = list.map(([x, y, r], i) => ({ x, y, r: r || 95, i, flash: [0, 0] }));
-      G.laps = LAPS; G.place = [-1, -1];
+      G.gates = list.map(([x, y, r], i) => ({ x, y, r: r || 95, i, flash: G.birds.map(() => 0) }));
+      G.laps = LAPS; G.place = G.birds.map(() => -1);
       // los aros que quedan por debajo de un edificio (el arco del reloj, la catedral) abren ese paso a la máquina
       for (const B of G.world.buildings || []) B.raceOK = G.gates.some(g => g.x > B.x0 && g.x < B.x1 && g.y > B.bottom);
       G.racePaths = G.gates.map((g, i) => racePath(G.world, G.gates[(i - 1 + G.gates.length) % G.gates.length], g));
       // salen juntos desde el último aro, mirando hacia el primero
       const S = G.gates[G.gates.length - 1], A = G.gates[0], f = A.x >= S.x ? 1 : -1;
-      G.birds.forEach((b, i) => { const keep = b.stats; b.reset(S.x - f * 40, S.y + (i ? 55 : -55), f); b.G = G; if (keep) b.stats = keep; });
+      const nb = G.birds.length; G.birds.forEach((b, i) => { const keep = b.stats; b.reset(S.x - f * 40, S.y + (nb <= 2 ? (i ? 55 : -55) : (i - (nb - 1) / 2) * 60), f); b.G = G; if (keep) b.stats = keep; });
     }
   }
   // ruta para la máquina entre dos aros: A* en una cuadrícula de 40 px que esquiva lo sólido
@@ -127,7 +127,7 @@ const Modes = (() => {
   }
   function updateRace(G, dt) {
     const n = G.gates.length, goal = n * LAPS;
-    for (const g of G.gates) { g.flash[0] = Math.max(0, g.flash[0] - dt); g.flash[1] = Math.max(0, g.flash[1] - dt); }
+    for (const g of G.gates) for (let k = 0; k < g.flash.length; k++) g.flash[k] = Math.max(0, g.flash[k] - dt);
     G.birds.forEach((b, i) => {
       if (!b.alive || G.score[i] >= goal) return;
       const g = nextGate(G, i), px = b.px != null ? b.px : b.x, py = b.py != null ? b.py : b.y;
@@ -141,7 +141,7 @@ const Modes = (() => {
     });
     G.birds.forEach(b => { b.px = b.x; b.py = b.y; });
     // alcance: el que va 2 aros o más atrás recarga el turbo al doble y empuja un poco más (la carrera se mantiene pareja)
-    G.birds.forEach((b, i) => { b.catchup = G.score[1 - i] - G.score[i] >= 2; });
+    const lead = Math.max(...G.score); G.birds.forEach((b, i) => { b.catchup = lead - G.score[i] >= 2; });
     if (G.roundT <= 0) finish(G, true);
   }
   // un punto libre del cielo (ni dentro de edificios ni pegado al suelo)
@@ -220,7 +220,7 @@ const Modes = (() => {
     }
   }
   function finish(G, timeUp, w) {
-    if (w == null) w = G.score[0] > G.score[1] ? 0 : G.score[1] > G.score[0] ? 1 : -1;
+    if (w == null) { const m = Math.max(...G.score); w = G.score.filter(v => v === m).length === 1 ? G.score.indexOf(m) : -1; }
     G.events.push({ type: 'modeEnd', winner: w, timeUp });
   }
   function event(G, e) {
@@ -244,9 +244,9 @@ const Modes = (() => {
   /* ---------- dibujo ---------- */
   function drawGates(ctx, G) {
     const t = G.time, n = G.gates.length;
-    const mine = [0, 1].map(i => (G.score[i] < n * LAPS ? Math.floor(G.score[i]) % n : -1));
+    const mine = G.birds.map((b, i) => (G.score[i] < n * LAPS ? Math.floor(G.score[i]) % n : -1));
     for (const g of G.gates) {
-      const who = [0, 1].filter(i => mine[i] === g.i), fl = Math.max(g.flash[0], g.flash[1]);
+      const who = G.birds.map((b, i) => i).filter(i => mine[i] === g.i), fl = Math.max(...g.flash);
       const finishLine = g.i === n - 1;
       // aro de lado: un óvalo con brillo (el número encima)
       const rx = g.r * 0.42, ry = g.r;
@@ -259,9 +259,9 @@ const Modes = (() => {
         ctx.restore();
       }
       ctx.lineWidth = who.length ? 9 : 5;
-      if (who.length === 2) {
-        ctx.strokeStyle = PLAYER_COLORS[0].main; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, Math.PI / 2, Math.PI * 1.5); ctx.stroke();
-        ctx.strokeStyle = PLAYER_COLORS[1].main; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+      if (who.length >= 2) {
+        // el aro se reparte en tajadas del color de cada piloto que va hacia él
+        const k = who.length; who.forEach((p, j) => { ctx.strokeStyle = PLAYER_COLORS[p].main; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, Math.PI / 2 + j * TAU / k, Math.PI / 2 + (j + 1) * TAU / k); ctx.stroke(); });
       } else {
         ctx.strokeStyle = who.length ? PLAYER_COLORS[who[0]].main : finishLine ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)';
         ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.stroke();
@@ -312,8 +312,8 @@ const Modes = (() => {
   function drawPointer(ctx, G, cam, sw, sh) {
     if (G.mode === 'race' && G.gates) {
       // flecha de cada piloto (de su color) hacia su próximo aro, si no se ve
-      for (let i = 0; i < 2; i++) {
-        if (G.bots[i]) continue;
+      for (let i = 0; i < G.birds.length; i++) {
+        if (!Game.isLocal(i)) continue;
         if (G.score[i] >= G.gates.length * LAPS) continue;
         const g = nextGate(G, i), sx = sw / 2 + (g.x - cam.x) * cam.z, sy = sh / 2 + (g.y - cam.y) * cam.z, m = 40;
         if (sx > m && sx < sw - m && sy > m + 90 && sy < sh - m) continue;
@@ -347,6 +347,7 @@ const Modes = (() => {
   }
   // panel central: tiempo y marcador
   function drawHUD(ctx, G, sw, sh, u, glass) {
+    if (G.birds.length > 2) return drawHUDN(ctx, G, sw, sh, u, glass);
     const lw = (G.mode === 'race' ? 270 : 230) * u, lh = (G.mode === 'race' ? 50 : 46) * u, ly = Touch.enabled ? 60 : 10;
     ctx.save();
     glass(sw / 2 - lw / 2, ly, lw, lh, 12 * u);
@@ -391,6 +392,27 @@ const Modes = (() => {
         ctx.fillStyle = PLAYER_COLORS[i].main; ctx.fillRect(i ? x : x + bw * (1 - k), ly + 31 * u, bw * k, 5 * u);
       }
     }
+    ctx.restore();
+  }
+  // marcador para 3 o 4 pilotos (en línea): tiempo arriba y una fila por piloto, del que va ganando hacia abajo
+  function drawHUDN(ctx, G, sw, sh, u, glass) {
+    const n = G.birds.length, rh = 17 * u, lw = 250 * u, lh = 24 * u + n * rh, ly = Touch.enabled ? 60 : 10, x0 = sw / 2 - lw / 2;
+    ctx.save(); glass(x0, ly, lw, lh, 12 * u);
+    const t = Math.max(0, Math.ceil(G.roundT)), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
+    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = font(Math.max(10, 11 * u)); ctx.fillText(`${MODES[G.mode].name} · ${mm}:${ss}`, sw / 2, ly + 15 * u);
+    const goal = G.mode === 'race' ? G.gates.length * LAPS : G.mode === 'case' ? CASE_GOAL : 0, top = Math.max(1, ...G.score);
+    const order = G.birds.map((b, i) => i).sort((a, b) => G.score[b] - G.score[a]);
+    order.forEach((i, r) => {
+      const y = ly + 24 * u + r * rh, pc = PLAYER_COLORS[i], me = Game.isLocal(i), sc = Math.floor(G.score[i]);
+      ctx.fillStyle = pc.main; ctx.beginPath(); ctx.arc(x0 + 14 * u, y + 6 * u, 4 * u, 0, TAU); ctx.fill();
+      ctx.font = font(Math.max(10, (me ? 12 : 11) * u)); ctx.textAlign = 'left'; ctx.fillStyle = me ? '#ffffff' : 'rgba(255,255,255,0.82)';
+      let nm = Game.pname(i); while (nm.length > 3 && ctx.measureText(nm).width > 86 * u) nm = nm.slice(0, -1); ctx.fillText(nm, x0 + 24 * u, y + 10 * u);
+      const bx = x0 + 118 * u, bw = lw - 118 * u - 44 * u, k = goal ? Math.min(1, G.score[i] / goal) : G.score[i] / top;
+      ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fillRect(bx, y + 3 * u, bw, 5 * u); ctx.fillStyle = pc.main; ctx.fillRect(bx, y + 3 * u, bw * k, 5 * u);
+      ctx.textAlign = 'right'; ctx.fillStyle = pc.main; ctx.font = font(Math.max(10, 12 * u));
+      ctx.fillText(G.mode === 'race' ? `v${Math.min(LAPS, Math.floor(G.score[i] / G.gates.length) + 1)} · ${sc}` : String(sc), x0 + lw - 10 * u, y + 10 * u);
+      if (G.mode === 'case' && G.case && G.case.carrier === i) { ctx.fillStyle = '#ffd23f'; ctx.fillRect(bx - 12 * u, y + 1 * u, 8 * u, 8 * u); }
+    });
     ctx.restore();
   }
   return { setup, update, event, draw, drawPointer, drawHUD, carrier, nextGate, respawnPos, clearLine, raceSetup, spot, dropCase, CASE_GOAL, LAPS, RACE };

@@ -12,7 +12,7 @@ const UI = (() => {
     current = name;
     const el = name ? $('#' + SCREENS[name]) : null;
     if (name) { Touch.hide(); if (el) { el.hidden = false; const f = focusables(el)[0]; if (f && !Touch.enabled) setTimeout(() => f.focus({ preventScroll: true }), 30); } }
-    else { goFull(); Touch.show(Game.G.players === 1 ? 'single' : 'dual'); $('#cv').focus({ preventScroll: true }); }
+    else { goFull(); const one = Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on ? NetPlay.mine.length === 1 : Game.G.players === 1; Touch.show(one ? 'single' : 'dual'); $('#cv').focus({ preventScroll: true }); }
     document.body.classList.toggle('playing', !name);
     document.body.classList.toggle('in-school', Game.G.mode === 'school' && Game.G.state !== 'attract');
     if (name === 'birds') startPreview(); else stopPreview();
@@ -97,10 +97,33 @@ const UI = (() => {
   }
   let nextStage = -1, nextDuo = false;
   // resultados del duelo
+  // en línea: arranca (o vuelve a arrancar) la partida que mandó el anfitrión
+  function netStart(c) { stack = []; paused = false; Game.G.paused = false; Copa.end(); Game.startNet(c); show(null, false); }
+  // en línea: resultados con los nombres de la sala; todos pueden volver a la sala, el anfitrión lanza la revancha
+  function netResults(r) {
+    const n = r.names, s = r.stats, N = n.length, host = NetPlay.isHost, esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const mine = NetPlay.mine, w = r.winner;
+    $('#r-title').textContent = w < 0 ? '¡Empate!' : mine.includes(w) && mine.length === 1 ? '¡Ganaste!' : `¡Gana ${n[w].split(' · ')[0]}!`;
+    $('#r-title').style.color = w < 0 ? '#ffffff' : PLAYER_COLORS[w].main;
+    const val = r.mode === 'duel' ? r.wins : r.score;
+    $('#r-score').textContent = (r.mode === 'duel' ? 'Rondas' : r.mode === 'race' ? 'Carrera · aros' : MODES[r.mode].name) + ': ' + val.map((v, i) => `${n[i].split(' · ')[0]} ${v}`).join(' · ');
+    const pct = st => st.shots ? Math.round(100 * st.hits / st.shots) + ' %' : '—';
+    const rows = [['Derribos', st => st.kills], ['Daño hecho', st => Math.round(st.dmg)], ['Puntería de ráfaga', pct], ['Misiles que dieron', st => `${st.missileHits} de ${st.missiles}`], ['Cajas', st => st.crates]];
+    const T = $('#r-table'); T.style.gridTemplateColumns = `1fr repeat(${N}, auto)`;
+    T.innerHTML = `<span class="h"></span>` + n.map((nm, i) => `<span class="h n" style="color:${PLAYER_COLORS[i].main}">${esc(nm.split(' · ')[0])}${mine.includes(i) ? ' ·tú' : ''}</span>`).join('') + rows.map(([lab, f]) => `<span>${lab}</span>` + s.map((st, i) => `<span class="n" style="color:${PLAYER_COLORS[i].main}">${f(st)}</span>`).join('')).join('');
+    ['#r-next', '#r-copa', '#r-birds', '#r-trav', '#s-results [data-act="toTitle"]'].forEach(q => { const e = $(q); if (e) e.hidden = true; });
+    $('#r-stars').hidden = !(!host); $('#r-stars').innerHTML = host ? '' : '<small>El anfitrión puede lanzar la revancha para todos.</small>';
+    $('#r-hub').hidden = false; $('#r-hub').textContent = 'Volver a la sala'; $('#r-hub').dataset.act = 'hubhome'; $('#r-hub').style.gridColumn = host ? '' : '1 / -1';
+    $('#r-rematch').hidden = !host; $('#r-rematch').textContent = 'Revancha (todos)'; $('#r-rematch').dataset.act = 'netAgain';
+    stack = []; show('results', false);
+    if (VV()) VV().after();
+  }
   function results(r) {
     if (Game.G.state !== 'matchEnd') return;
+    if (r.net && typeof NetPlay !== 'undefined' && NetPlay.on) return netResults(r);
     const n = r.names, s = r.stats;
     const hubEv = !!Hub.ev && !r.vsBot;
+    $('#r-rematch').dataset.act = 'rematch'; $('#r-hub').dataset.act = 'hubback'; $('#r-hub').textContent = 'Continuar torneo ▸'; $('#r-table').style.gridTemplateColumns = '';
     if (hubEv) { Hub.result(r.winner === 0 || r.winner === 1 ? r.winner : -1, { score: r.mode === 'duel' ? r.wins.join(' – ') : r.score.join(' – ') }); Hub.release(); }
     $('#r-hub').hidden = !hubEv;
     if (r.tm) {
@@ -319,7 +342,7 @@ const UI = (() => {
     keysReset: () => { cancelCapture(); Input.resetKeys(); renderKeys(); },
     back, resume, toTitle, done: () => { if (hubPending) return hubStart(); back(); },
     // GameHub
-    hubhome: () => Hub.exit(), hubback: () => Hub.exit(),
+    hubhome: () => Hub.exit(), hubback: () => Hub.exit(), netAgain: () => { if (typeof NetGame !== 'undefined') NetGame.again(); },
     fullscreen: () => FS.toggle(),
     'prev0': () => cycle(0, -1), 'next0': () => cycle(0, 1), 'prev1': () => cycle(1, -1), 'next1': () => cycle(1, 1),
     'look0': () => recolor(0), 'look1': () => recolor(1),
@@ -372,7 +395,7 @@ const UI = (() => {
       document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
     }
   }
-  return { init, show, pause, resume, results, hubPlay, vestBadge, refreshBirds, get current() { return current; } };
+  return { init, show, pause, resume, results, netStart, hubPlay, vestBadge, refreshBirds, get current() { return current; } };
 })();
 
 // para las pruebas automáticas

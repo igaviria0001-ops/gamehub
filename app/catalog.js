@@ -27,6 +27,7 @@ const GAMES = [
   },
   {
     id: 'ventolera', file: 'games/ventolera.html', name: 'Ventolera', short: 'Ventolera', num: '02',
+    net: { seats: 4, mode: 'duel', modes: ['duel', 'targets', 'case', 'race'], desc: { duel: 'Todos contra todos: la ronda es del último que quede en el aire.', targets: 'Revienta más globos y drones que los demás en 90 segundos.', case: 'Quien lleva el maletín suma; embestirlo se lo roba.', race: 'Aros en orden a 3 vueltas, con armas: gana quien cruce primero.' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
     tag: 'Duelo de alas de chorro', kind: 'Combate aéreo',
     desc: 'Pilotos con alas de chorro se persiguen entre palmas de cera, rascacielos, galeones y globos. Ráfagas, misiles que se esquivan con un tonel, bengalas y maniobras de película.',
     c1: '#ffb36b', c2: '#6fc3ff', c3: '#ff7a8a', ink: '#141a3a', font: 'vento',

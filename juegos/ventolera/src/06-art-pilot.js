@@ -7,7 +7,7 @@
    siempre; el ala lleva la pintura del indicativo.
    ========================================================================= */
 const ENEMY_COLOR = { main: '#ff5a4e', glow: '255,90,78', deep: '#a0261e', name: 'Enemigo' };
-const PLAYER_COLORS = [{ main: '#ffcf5a', glow: '255,207,90', deep: '#c98a12', name: 'Sol' }, { main: '#5ad8ff', glow: '90,216,255', deep: '#1b8fc0', name: 'Cielo' }];
+const PLAYER_COLORS = [{ main: '#ffcf5a', glow: '255,207,90', deep: '#c98a12', name: 'Sol' }, { main: '#5ad8ff', glow: '90,216,255', deep: '#1b8fc0', name: 'Cielo' }, { main: '#ff7ad9', glow: '255,122,217', deep: '#b8399a', name: 'Rosa' }, { main: '#8dff6a', glow: '141,255,106', deep: '#3f9e22', name: 'Lima' }];
 
 const PILOT_ART = {
   guacamaya: { span: 1, looks: [

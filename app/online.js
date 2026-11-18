@@ -94,9 +94,10 @@ const Online = (() => {
   const GAMES = () => (window.GAMEHUB ? GAMEHUB.GAMES : []);
   const netModes = g => g.modes.filter(m => !g.net || !g.net.modes || g.net.modes.includes(m.id));
   const mapsFor = (g, m) => (m && m.maps === 'arenas' ? g.arenas || [] : g.maps).filter(x => !(m && m.map) || x[0] === m.map);
+  const lenTxt = (g, m, n) => (g.net && g.net.lenTxt && g.net.lenTxt[m.id] ? g.net.lenTxt[m.id](n) : m.lenTxt(n));
   function evText(g, ev) {
     if (!g || !ev) return ''; const m = g.modes.find(x => x.id === ev.mode), mp = (g.maps.concat(g.arenas || [])).find(x => x[0] === ev.map);
-    return [g.name, m && m.name, mp ? mp[1] : 'escenario al azar', m && m.len && ev.len ? m.lenTxt(ev.len) : ''].filter(Boolean).join(' · ');
+    return [g.name, m && m.name, mp ? mp[1] : 'escenario al azar', m && m.len && ev.len ? lenTxt(g, m, ev.len) : ''].filter(Boolean).join(' · ');
   }
   function hostPlayHTML(ps) {
     const gs = GAMES(), g = pick && gs.find(x => x.id === pick);
@@ -108,7 +109,7 @@ const Online = (() => {
       <div class="on-cfg" style="--c1:${g.c1};--c2:${g.c2}">
         <div class="lbl">Modo</div>${seg('mode', ms.map(x => [x.id, x.name]), m.id)}<p class="on-desc">${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</p>
         ${maps.length > 1 ? `<div class="lbl">Escenario</div>${seg('map', [['', '🎲 Al azar']].concat(maps), pickEv.map || '')}` : ''}
-        ${m.len ? `<div class="lbl">Largo</div>${seg('len', m.len.map(n => [n, m.lenTxt(n)]), pickEv.len || m.len[1] || m.len[0])}` : ''}
+        ${m.len ? `<div class="lbl">Largo</div>${seg('len', m.len.map(n => [n, lenTxt(g, m, n)]), pickEv.len || m.len[1] || m.len[0])}` : ''}
         ${over}<div class="row"><button class="btn gold big" id="on-go">¡A jugar!</button><button class="btn ghost" id="on-back">Otro juego</button></div>
       </div>`;
   }
@@ -128,6 +129,12 @@ const Online = (() => {
   function startGame(g, ev) {
     const ps = players(Net.room).slice(0, g.net.seats), sid = Math.random().toString(36).slice(2, 10);
     const seats = ps.map(p => ({ dev: p.dev, local: devLocal(p), name: p.name, color: p.color }));
+    // que nadie se repita: colores (el siguiente libre de la paleta) y nombres (con número)
+    const usedC = new Set(), usedN = {};
+    for (const st of seats) {
+      if (usedC.has(st.color) || !/^#[0-9a-f]{6}$/i.test(st.color || '')) st.color = COLORS.find(c => !usedC.has(c)) || st.color; usedC.add(st.color);
+      const nm = String(st.name || 'Jugador').trim().slice(0, 16) || 'Jugador', k = (usedN[nm.toLowerCase()] || 0) + 1; usedN[nm.toLowerCase()] = k; st.name = k > 1 ? `${nm} ${k}` : nm;
+    }
     ev = ev || { mode: g.net.mode || (g.modes[0] && g.modes[0].id), map: (g.maps[Math.floor(Math.random() * g.maps.length)] || [])[0], rounds: 3 };
     Net.send('*', { $: 'game', game: g.id, ev, seats, sid }, true);
     openNet(g.id, 'host', seats, ev, sid);

@@ -1230,7 +1230,7 @@ const NetPlay = (() => {
   }
   // solo números, textos y listas simples (sin objetos del juego, que no viajan)
   function clean(e) { const o = {}; for (const k in e) { const v = e[k]; const t = typeof v; if (t === 'number') o[k] = Math.round(v * 1000) / 1000; else if (t === 'string' || t === 'boolean') o[k] = v; else if (Array.isArray(v) && v.length < 40 && v.every(x => typeof x !== 'object' && typeof x !== 'function')) o[k] = v.slice(); } return o; }
-  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
+  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; if (typeof clearTimeout === 'function') { clearTimeout(wtick); clearTimeout(askT); } pend = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
   // anfitrión: instantánea + eventos acumulados
   function hostTick() {
     const g = G(); if (!g || !g.snap) return;
@@ -1249,7 +1249,67 @@ const NetPlay = (() => {
       lastIn[seat] = { s, t: now }; send({ t: 'in', s: seat, i }, false, 'host');
     });
   }
+  /* ---------- sala de espera y arranque (común a los 4 juegos) ----------
+     NetPlay.gate({ me(li) → lo de este jugador local (personaje, pinta…),
+                    make(want, ev) → cfg de la partida (solo el anfitrión; want[puesto] = lo que mandó cada uno),
+                    apply(cfg) → arrancar la partida con esa cfg (todos) })
+     Nadie arranca hasta que todos cargaron el juego (o pasan 25 s; el anfitrión puede «Empezar ya» a los 5 s).
+     «Otra partida»: NetPlay.again(f) → el anfitrión arma otra cfg (id+1) y todos la aplican. */
+  let gateO = null, gcfg = null, want = {}, pend = false, t0 = 0, wtick = 0, askT = 0;
+  const Wait = (() => {
+    let el = null;
+    function show() {
+      if (el) return el; el = document.createElement('div'); el.id = 'netWait';
+      el.innerHTML = `<style>#netWait{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,rgba(20,30,60,.86),rgba(3,6,13,.96));font-family:Nunito,system-ui,sans-serif;color:#eef3ff;padding:16px}
+#netWait .b{width:min(420px,100%);text-align:center;display:grid;gap:14px}#netWait h2{margin:0;font-size:clamp(20px,4.5vw,28px);font-weight:900;letter-spacing:.5px}
+#netWait .sp{width:46px;height:46px;margin:0 auto;border-radius:50%;border:4px solid rgba(255,255,255,.14);border-top-color:#5ad8ff;animation:nwS 0.9s linear infinite}@keyframes nwS{to{transform:rotate(360deg)}}
+#netWait ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}#netWait li{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:12px;background:rgba(255,255,255,.06);font-weight:800}
+#netWait li i{width:12px;height:12px;border-radius:50%;flex:none}#netWait li span{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#netWait li b{font-size:13px;color:#8a97b8}#netWait li.ok b{color:#6ff0b0}
+#netWait button{justify-self:center;font:inherit;font-weight:900;border:0;border-radius:999px;padding:11px 22px;background:linear-gradient(#3dffa0,#18b870);color:#04210f;cursor:pointer}#netWait p{margin:0;color:#8a97b8;font-size:14px}</style>
+<div class="b"><div class="sp"></div><h2>Preparando la partida…</h2><ul></ul><p></p><button hidden>Empezar ya</button></div>`;
+      document.body.appendChild(el); el.querySelector('button').onclick = () => launch(); return el;
+    }
+    function list(ready, note, canGo) {
+      const e = show(); e.querySelector('ul').innerHTML = '';
+      seats.forEach((s, i) => { const li = document.createElement('li'), ok = ready.includes(i); li.className = ok ? 'ok' : ''; li.innerHTML = '<i></i><span></span><b></b>'; li.querySelector('i').style.background = /^#[0-9a-f]{3,8}$/i.test(s.color || '') ? s.color : '#fff'; li.querySelector('span').textContent = s.name || 'J' + (i + 1); li.querySelector('b').textContent = ok ? 'listo ✓' : 'cargando…'; e.querySelector('ul').appendChild(li); });
+      e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = !canGo;
+    }
+    return { list, hide() { if (el) { el.remove(); el = null; } } };
+  })();
+  const myInfo = () => mine.map((seat, li) => { let m = null; try { m = gateO.me(li); } catch (e) { m = null; } return { s: seat, m }; });
+  function launch() {
+    if (!pend || !gateO) return; pend = false; clearTimeout(wtick);
+    let c = null; try { c = gateO.make(want, ev || {}); } catch (e) { post('error', { msg: 'make: ' + (e && e.message) }); }
+    if (!c) return; gcfg = Object.assign({ id: 1 }, c); Wait.hide(); send({ t: 'cfg', cfg: gcfg }, true, '*');
+    try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); }
+  }
+  startSubs.push(o => {
+    if (!gateO) return; gcfg = null; want = {}; clearTimeout(wtick); clearTimeout(askT);
+    if (o.role === 'host') {
+      pend = true; t0 = performance.now(); for (const x of myInfo()) want[x.s] = x.m || {};
+      const tick = () => { if (!pend || !on) return; const ready = Object.keys(want).map(Number), all = ready.length >= seats.length, el = performance.now() - t0;
+        Wait.list(ready, all ? '¡Todos listos!' : 'Esperando a que todos carguen el juego…', el > 5000); send({ t: 'wait', ready }, true, '*');
+        if (all || el > 25000) launch(); else wtick = setTimeout(tick, 250); };
+      tick();
+    } else {
+      Wait.list([], 'Esperando al anfitrión…', false);
+      const ask = () => { if (!gcfg && on && role === 'client') { send({ t: 'want', me: myInfo() }, true, 'host'); askT = setTimeout(ask, 1500); } }; ask();
+    }
+  });
+  msgSubs.push(d => {
+    if (!gateO || !d) return;
+    if (d.t === 'cfg' && role === 'client' && d.cfg && (!gcfg || gcfg.id !== d.cfg.id)) { gcfg = d.cfg; Wait.hide(); try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); } }
+    if (d.t === 'wait' && role === 'client' && !gcfg && Array.isArray(d.ready)) Wait.list(d.ready, 'Esperando a que todos carguen el juego…', false);
+    if (d.t === 'want' && role === 'host') {
+      if (Array.isArray(d.me)) for (const x of d.me) { const s = +x.s; if (s >= 0 && s < seats.length && !mine.includes(s) && !want[s]) want[s] = x.m && typeof x.m === 'object' ? x.m : {}; }
+      if (gcfg) send({ t: 'cfg', cfg: gcfg }, true, '*');
+    }
+  });
+  function again(f) { if (role !== 'host' || !gcfg || !gateO) return; const c = f ? f(gcfg) : gcfg; gcfg = Object.assign({}, c, { id: gcfg.id + 1 }); send({ t: 'cfg', cfg: gcfg }, true, '*'); try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); } }
+  // textos e identificadores que llegan de otro aparato: solo lo simple
+  const okId = v => (typeof v === 'string' && v.length < 40 && /^[\w.-]*$/.test(v) ? v : '');
   return {
+    gate(o) { gateO = o; }, again, get cfg() { return gcfg; }, okId,
     get on() { return on; }, get role() { return role; }, get isHost() { return on && role === 'host'; }, get isClient() { return on && role === 'client'; },
     get seats() { return seats; }, get mine() { return mine; }, get sid() { return sid; }, get ev() { return ev; },
     // ¿este puesto se juega en este aparato? y con qué jugador local (0 o 1)
@@ -1262,7 +1322,7 @@ const NetPlay = (() => {
     sample() {
       if (!snaps.length) return null; if (snaps.length === 1 || offset == null) { const s = snaps[snaps.length - 1]; return { a: s.d, b: s.d, k: 1 }; }
       const t = performance.now() + offset - lagMs;
-      for (let i = snaps.length - 1; i > 0; i--) { const a = snaps[i - 1], b = snaps[i]; if (a.tm <= t) { const k = b.tm > a.tm ? Math.min(1, Math.max(0, (t - a.tm) / (b.tm - a.tm))) : 1; return { a: a.d, b: b.d, k }; } }
+      for (let i = snaps.length - 1; i > 0; i--) { const a = snaps[i - 1], b = snaps[i]; if (a.tm <= t) { const k = b.tm > a.tm ? Math.min(1, Math.max(0, (t - a.tm) / (b.tm - a.tm))) : 1; return { a: a.d, b: b.d, k, dt: (b.tm - a.tm) / 1000 }; } }
       return { a: snaps[0].d, b: snaps[0].d, k: 1 };
     },
     set lag(ms) { lagMs = ms; },
@@ -2109,7 +2169,7 @@ class Bird {
 
     /* --- rebufo y vuelo rasante --- */
     this.drafting = false;
-    const o = G.birds[1 - this.id];
+    const o = Combat.foe(G, this);
     if (o && o.alive && !o.perch && this.s > 300) {
       const dxo = o.x - this.x, dyo = o.y - this.y, d = Math.hypot(dxo, dyo);
       if (d < 420 && d > 60 && Math.cos(angDiff(this.va, o.va)) > 0.82 && Math.cos(angDiff(this.va, Math.atan2(dyo, dxo))) > 0.9) this.drafting = true;
@@ -2348,7 +2408,7 @@ class Bot {
       }
       return out;
     }
-    const o = G.birds[1 - b.id], fight = G.canFight && (G.mode === 'boss' ? !!(G.boss && !G.boss.dead) : G.mode === 'race' || G.tm ? true : o && o.alive);
+    const o = Combat.foe(G, b), fight = G.canFight && (G.mode === 'boss' ? !!(G.boss && !G.boss.dead) : G.mode === 'race' || G.tm ? true : o && o.alive);
     this.mCd -= dt; this.rollCd -= dt; this.cobraT -= dt;
     this.think_t -= dt;
     if (this.think_t <= 0) {
@@ -2450,7 +2510,7 @@ const Combat = (() => {
 
   function reset(G) {
     G.bullets = []; G.missiles = []; G.flares = []; G.crates = []; G.chutes = [];
-    G.crateT = 7 + G.rng() * 4; G.bumpCd = 0; G.sixCd = [0, 0];
+    G.crateT = 7 + G.rng() * 4; G.bumpCd = 0; G.bumpPair = {}; G.sixCd = G.birds.map(() => 0);
   }
 
   const ev = (G, type, o) => G.events.push(Object.assign({ type }, o));
@@ -2488,8 +2548,7 @@ const Combat = (() => {
   function assist(b, G) {
     if (G.bots[b.id]) return 0;
     const cands = [];
-    const o = G.birds[1 - b.id];
-    if (o && o.alive && G.mode !== 'boss') cands.push(o);
+    for (const o of foes(G, b)) if (G.mode !== 'boss') cands.push(o);
     if (G.targets) for (const T of G.targets) if (T.alive && T.kind !== 'ring') cands.push(T);
     if (G.boss) for (const P of Boss.lockables(G)) cands.push(P);
     let best = 0, bd = 0.125;
@@ -2661,17 +2720,19 @@ const Combat = (() => {
       if (taken || c.life <= 0) G.crates.splice(i, 1);
     }
 
-    // choques entre pilotos: recibe menos el que embiste
-    G.bumpCd = Math.max(0, G.bumpCd - dt);
-    const [A, B] = G.birds;
+    // choques entre pilotos: recibe menos el que embiste (cada pareja con su propia espera)
+    G.bumpCd = Math.max(0, (+G.bumpCd || 0) - dt); if (!G.bumpPair) G.bumpPair = {};
+    for (const k in G.bumpPair) G.bumpPair[k] = Math.max(0, G.bumpPair[k] - dt);
+    for (let ia = 0; ia < G.birds.length; ia++) for (let ib = ia + 1; ib < G.birds.length; ib++) {
+    const A = G.birds[ia], B = G.birds[ib], pk = ia + '-' + ib;
     if (A && B && A.alive && B.alive && !A.perch && !B.perch && G.mode !== 'boss' && !G.coop) {
       const dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1, R = A.r + B.r;
       if (d < R) {
         const nx = dx / d, ny = dy / d, ov = (R - d) / 2;
         A.x -= nx * ov; A.y -= ny * ov; B.x += nx * ov; B.y += ny * ov;
         const vrel = (A.vx - B.vx) * nx + (A.vy - B.vy) * ny;
-        if (vrel > 0 && G.bumpCd <= 0) {
-          G.bumpCd = 0.3;
+        if (vrel > 0 && !(G.bumpPair[pk] > 0)) {
+          G.bumpPair[pk] = 0.3;
           const aIn = Math.max(0, A.vx * nx + A.vy * ny), bIn = Math.max(0, -(B.vx * nx + B.vy * ny));
           if (vrel > 260) {
             const base = Math.min(32, (vrel - 240) * 0.04), aRams = aIn >= bIn;
@@ -2686,11 +2747,12 @@ const Combat = (() => {
         }
       }
     }
+    }
 
     // «¡a tus seis!»: el otro se te pega detrás y te apunta
     G.birds.forEach((b, i) => {
-      G.sixCd[i] = Math.max(0, G.sixCd[i] - dt);
-      const o = G.birds[1 - i];
+      G.sixCd[i] = Math.max(0, (G.sixCd[i] || 0) - dt);
+      const o = foe(G, b);
       if (!b.alive || !o || !o.alive || G.sixCd[i] > 0 || !G.canFight || G.mode === 'boss' || G.coop) return;
       const dx = o.x - b.x, dy = o.y - b.y, d = Math.hypot(dx, dy);
       if (d < 460 && Math.cos(angDiff(b.a, Math.atan2(dy, dx))) < -0.7 && Math.cos(angDiff(o.a, Math.atan2(-dy, -dx))) > 0.85) { G.sixCd[i] = 5; b.emit('six'); }
@@ -2722,7 +2784,7 @@ const Combat = (() => {
   // el misil que persigue a este piloto más de cerca (para el aviso y la alarma)
   // a quién se le puede fijar el misil: al otro piloto o, en la escuela, al dron más cercano
   function lockTarget(G, b) {
-    const o = G.birds[1 - b.id];
+    const o = foeAhead(G, b);
     if (G.tm) {
       // desafíos en equipo: solo drones enemigos (nunca al compañero)
       let best = null, bd = Infinity;
@@ -2759,7 +2821,12 @@ const Combat = (() => {
     for (const m of G.missiles) if (m.target === b) { const d = Math.hypot(m.x - b.x, m.y - b.y); if (d < bd) { bd = d; best = m; } }
     return best ? { m: best, d: bd } : null;
   }
-  return { reset, step, eject, threat, give, explode, CRATE_NAME, MIS };
+  // rivales (con 2 pilotos, el otro; en línea pueden ser hasta 3)
+  function foes(G, b) { return G.birds.filter(o => o !== b && o.alive); }
+  function foe(G, b) { let best = null, bd = Infinity; for (const o of G.birds) { if (o === b || !o.alive) continue; const d = Math.hypot(o.x - b.x, o.y - b.y); if (d < bd) { bd = d; best = o; } } return best || G.birds.find(o => o !== b) || null; }
+  // para fijar el misil: el rival más a tiro (adelante y cerca) o, si no, el más cercano
+  function foeAhead(G, b) { if (G.birds.length <= 2) return G.birds.find(o => o !== b) || null; let best = null, bs = Infinity; for (const o of G.birds) { if (o === b || !o.alive) continue; const dx = o.x - b.x, dy = o.y - b.y, d = Math.hypot(dx, dy), da = Math.abs(angDiff(b.a, Math.atan2(dy, dx))); const sc = d * (1 + da * 1.5); if (sc < bs) { bs = sc; best = o; } } return best; }
+  return { reset, step, eject, threat, give, explode, foe, foes, foeAhead, CRATE_NAME, MIS };
 })();
 
 /* ===== 04c-style.js ===== */
@@ -3130,7 +3197,7 @@ const Modes = (() => {
   const BAL = ['#ff5a7a', '#5ad8ff', '#7cf08a', '#c08cff', '#ff9a4a'];
 
   function setup(G) {
-    G.score = [0, 0]; G.targets = []; G.case = null; G.modeT = 0; G.spawnT = 0.5; G.gates = null;
+    G.score = G.birds.map(() => 0); G.targets = []; G.case = null; G.modeT = 0; G.spawnT = 0.5; G.gates = null;
     G.roundT = G.mode === 'case' ? CASE_TIME : G.mode === 'race' ? RACE_TIME : TARGET_TIME;
     if (G.mode === 'case') dropCase(G, G.world.w / 2, G.world.ceil + 60, 0, 0);
     if (G.mode === 'race') raceSetup(G);
@@ -3139,14 +3206,14 @@ const Modes = (() => {
   function raceSetup(G) {
     {
       const list = RACE[G.world.id] || RACE.cocora;
-      G.gates = list.map(([x, y, r], i) => ({ x, y, r: r || 95, i, flash: [0, 0] }));
-      G.laps = LAPS; G.place = [-1, -1];
+      G.gates = list.map(([x, y, r], i) => ({ x, y, r: r || 95, i, flash: G.birds.map(() => 0) }));
+      G.laps = LAPS; G.place = G.birds.map(() => -1);
       // los aros que quedan por debajo de un edificio (el arco del reloj, la catedral) abren ese paso a la máquina
       for (const B of G.world.buildings || []) B.raceOK = G.gates.some(g => g.x > B.x0 && g.x < B.x1 && g.y > B.bottom);
       G.racePaths = G.gates.map((g, i) => racePath(G.world, G.gates[(i - 1 + G.gates.length) % G.gates.length], g));
       // salen juntos desde el último aro, mirando hacia el primero
       const S = G.gates[G.gates.length - 1], A = G.gates[0], f = A.x >= S.x ? 1 : -1;
-      G.birds.forEach((b, i) => { const keep = b.stats; b.reset(S.x - f * 40, S.y + (i ? 55 : -55), f); b.G = G; if (keep) b.stats = keep; });
+      const nb = G.birds.length; G.birds.forEach((b, i) => { const keep = b.stats; b.reset(S.x - f * 40, S.y + (nb <= 2 ? (i ? 55 : -55) : (i - (nb - 1) / 2) * 60), f); b.G = G; if (keep) b.stats = keep; });
     }
   }
   // ruta para la máquina entre dos aros: A* en una cuadrícula de 40 px que esquiva lo sólido
@@ -3215,7 +3282,7 @@ const Modes = (() => {
   }
   function updateRace(G, dt) {
     const n = G.gates.length, goal = n * LAPS;
-    for (const g of G.gates) { g.flash[0] = Math.max(0, g.flash[0] - dt); g.flash[1] = Math.max(0, g.flash[1] - dt); }
+    for (const g of G.gates) for (let k = 0; k < g.flash.length; k++) g.flash[k] = Math.max(0, g.flash[k] - dt);
     G.birds.forEach((b, i) => {
       if (!b.alive || G.score[i] >= goal) return;
       const g = nextGate(G, i), px = b.px != null ? b.px : b.x, py = b.py != null ? b.py : b.y;
@@ -3229,7 +3296,7 @@ const Modes = (() => {
     });
     G.birds.forEach(b => { b.px = b.x; b.py = b.y; });
     // alcance: el que va 2 aros o más atrás recarga el turbo al doble y empuja un poco más (la carrera se mantiene pareja)
-    G.birds.forEach((b, i) => { b.catchup = G.score[1 - i] - G.score[i] >= 2; });
+    const lead = Math.max(...G.score); G.birds.forEach((b, i) => { b.catchup = lead - G.score[i] >= 2; });
     if (G.roundT <= 0) finish(G, true);
   }
   // un punto libre del cielo (ni dentro de edificios ni pegado al suelo)
@@ -3308,7 +3375,7 @@ const Modes = (() => {
     }
   }
   function finish(G, timeUp, w) {
-    if (w == null) w = G.score[0] > G.score[1] ? 0 : G.score[1] > G.score[0] ? 1 : -1;
+    if (w == null) { const m = Math.max(...G.score); w = G.score.filter(v => v === m).length === 1 ? G.score.indexOf(m) : -1; }
     G.events.push({ type: 'modeEnd', winner: w, timeUp });
   }
   function event(G, e) {
@@ -3332,9 +3399,9 @@ const Modes = (() => {
   /* ---------- dibujo ---------- */
   function drawGates(ctx, G) {
     const t = G.time, n = G.gates.length;
-    const mine = [0, 1].map(i => (G.score[i] < n * LAPS ? Math.floor(G.score[i]) % n : -1));
+    const mine = G.birds.map((b, i) => (G.score[i] < n * LAPS ? Math.floor(G.score[i]) % n : -1));
     for (const g of G.gates) {
-      const who = [0, 1].filter(i => mine[i] === g.i), fl = Math.max(g.flash[0], g.flash[1]);
+      const who = G.birds.map((b, i) => i).filter(i => mine[i] === g.i), fl = Math.max(...g.flash);
       const finishLine = g.i === n - 1;
       // aro de lado: un óvalo con brillo (el número encima)
       const rx = g.r * 0.42, ry = g.r;
@@ -3347,9 +3414,9 @@ const Modes = (() => {
         ctx.restore();
       }
       ctx.lineWidth = who.length ? 9 : 5;
-      if (who.length === 2) {
-        ctx.strokeStyle = PLAYER_COLORS[0].main; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, Math.PI / 2, Math.PI * 1.5); ctx.stroke();
-        ctx.strokeStyle = PLAYER_COLORS[1].main; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+      if (who.length >= 2) {
+        // el aro se reparte en tajadas del color de cada piloto que va hacia él
+        const k = who.length; who.forEach((p, j) => { ctx.strokeStyle = PLAYER_COLORS[p].main; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, Math.PI / 2 + j * TAU / k, Math.PI / 2 + (j + 1) * TAU / k); ctx.stroke(); });
       } else {
         ctx.strokeStyle = who.length ? PLAYER_COLORS[who[0]].main : finishLine ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)';
         ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.stroke();
@@ -3400,8 +3467,8 @@ const Modes = (() => {
   function drawPointer(ctx, G, cam, sw, sh) {
     if (G.mode === 'race' && G.gates) {
       // flecha de cada piloto (de su color) hacia su próximo aro, si no se ve
-      for (let i = 0; i < 2; i++) {
-        if (G.bots[i]) continue;
+      for (let i = 0; i < G.birds.length; i++) {
+        if (!Game.isLocal(i)) continue;
         if (G.score[i] >= G.gates.length * LAPS) continue;
         const g = nextGate(G, i), sx = sw / 2 + (g.x - cam.x) * cam.z, sy = sh / 2 + (g.y - cam.y) * cam.z, m = 40;
         if (sx > m && sx < sw - m && sy > m + 90 && sy < sh - m) continue;
@@ -3435,6 +3502,7 @@ const Modes = (() => {
   }
   // panel central: tiempo y marcador
   function drawHUD(ctx, G, sw, sh, u, glass) {
+    if (G.birds.length > 2) return drawHUDN(ctx, G, sw, sh, u, glass);
     const lw = (G.mode === 'race' ? 270 : 230) * u, lh = (G.mode === 'race' ? 50 : 46) * u, ly = Touch.enabled ? 60 : 10;
     ctx.save();
     glass(sw / 2 - lw / 2, ly, lw, lh, 12 * u);
@@ -3479,6 +3547,27 @@ const Modes = (() => {
         ctx.fillStyle = PLAYER_COLORS[i].main; ctx.fillRect(i ? x : x + bw * (1 - k), ly + 31 * u, bw * k, 5 * u);
       }
     }
+    ctx.restore();
+  }
+  // marcador para 3 o 4 pilotos (en línea): tiempo arriba y una fila por piloto, del que va ganando hacia abajo
+  function drawHUDN(ctx, G, sw, sh, u, glass) {
+    const n = G.birds.length, rh = 17 * u, lw = 250 * u, lh = 24 * u + n * rh, ly = Touch.enabled ? 60 : 10, x0 = sw / 2 - lw / 2;
+    ctx.save(); glass(x0, ly, lw, lh, 12 * u);
+    const t = Math.max(0, Math.ceil(G.roundT)), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
+    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = font(Math.max(10, 11 * u)); ctx.fillText(`${MODES[G.mode].name} · ${mm}:${ss}`, sw / 2, ly + 15 * u);
+    const goal = G.mode === 'race' ? G.gates.length * LAPS : G.mode === 'case' ? CASE_GOAL : 0, top = Math.max(1, ...G.score);
+    const order = G.birds.map((b, i) => i).sort((a, b) => G.score[b] - G.score[a]);
+    order.forEach((i, r) => {
+      const y = ly + 24 * u + r * rh, pc = PLAYER_COLORS[i], me = Game.isLocal(i), sc = Math.floor(G.score[i]);
+      ctx.fillStyle = pc.main; ctx.beginPath(); ctx.arc(x0 + 14 * u, y + 6 * u, 4 * u, 0, TAU); ctx.fill();
+      ctx.font = font(Math.max(10, (me ? 12 : 11) * u)); ctx.textAlign = 'left'; ctx.fillStyle = me ? '#ffffff' : 'rgba(255,255,255,0.82)';
+      let nm = Game.pname(i); while (nm.length > 3 && ctx.measureText(nm).width > 86 * u) nm = nm.slice(0, -1); ctx.fillText(nm, x0 + 24 * u, y + 10 * u);
+      const bx = x0 + 118 * u, bw = lw - 118 * u - 44 * u, k = goal ? Math.min(1, G.score[i] / goal) : G.score[i] / top;
+      ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fillRect(bx, y + 3 * u, bw, 5 * u); ctx.fillStyle = pc.main; ctx.fillRect(bx, y + 3 * u, bw * k, 5 * u);
+      ctx.textAlign = 'right'; ctx.fillStyle = pc.main; ctx.font = font(Math.max(10, 12 * u));
+      ctx.fillText(G.mode === 'race' ? `v${Math.min(LAPS, Math.floor(G.score[i] / G.gates.length) + 1)} · ${sc}` : String(sc), x0 + lw - 10 * u, y + 10 * u);
+      if (G.mode === 'case' && G.case && G.case.carrier === i) { ctx.fillStyle = '#ffd23f'; ctx.fillRect(bx - 12 * u, y + 1 * u, 8 * u, 8 * u); }
+    });
     ctx.restore();
   }
   return { setup, update, event, draw, drawPointer, drawHUD, carrier, nextGate, respawnPos, clearLine, raceSetup, spot, dropCase, CASE_GOAL, LAPS, RACE };
@@ -3970,7 +4059,7 @@ const Progress = (() => {
   let P = Object.assign(def(), Store.get('prog', {}));
   P.n = Object.assign(def().n, P.n); P.best = Object.assign(def().best, P.best); P.got = P.got || {};
   const save = () => Store.set('prog', P);
-  const human = (G, b) => b && b.id != null && !G.bots[b.id] && G.state !== 'attract';
+  const human = (G, b) => b && b.id != null && Game.isLocal(b.id) && G.state !== 'attract';
   function unlock(G, id) {
     if (P.got[id]) return;
     P.got[id] = Date.now(); save();
@@ -4009,7 +4098,7 @@ const Progress = (() => {
   // al terminar una partida (resultados)
   function matchEnd(G, r) {
     P.n.partidas++;
-    const humans = [0, 1].filter(i => !G.bots[i]);
+    const humans = G.birds.map((b, i) => i).filter(i => Game.isLocal(i));
     if (r.mode === 'case' && humans.includes(r.winner)) unlock(G, 'maletin');
     if (r.mode === 'race' && humans.includes(r.winner)) unlock(G, 'carrera');
     if (r.mode === 'boss' && r.coopWin) { unlock(G, 'jefe'); const t = Math.round(G.time); if (!P.best.jefe || t < P.best.jefe) P.best.jefe = t; }
@@ -6500,7 +6589,7 @@ const ArtCapa = (() => {
    siempre; el ala lleva la pintura del indicativo.
    ========================================================================= */
 const ENEMY_COLOR = { main: '#ff5a4e', glow: '255,90,78', deep: '#a0261e', name: 'Enemigo' };
-const PLAYER_COLORS = [{ main: '#ffcf5a', glow: '255,207,90', deep: '#c98a12', name: 'Sol' }, { main: '#5ad8ff', glow: '90,216,255', deep: '#1b8fc0', name: 'Cielo' }];
+const PLAYER_COLORS = [{ main: '#ffcf5a', glow: '255,207,90', deep: '#c98a12', name: 'Sol' }, { main: '#5ad8ff', glow: '90,216,255', deep: '#1b8fc0', name: 'Cielo' }, { main: '#ff7ad9', glow: '255,122,217', deep: '#b8399a', name: 'Rosa' }, { main: '#8dff6a', glow: '141,255,106', deep: '#3f9e22', name: 'Lima' }];
 
 const PILOT_ART = {
   guacamaya: { span: 1, looks: [
@@ -7704,6 +7793,10 @@ const Game = (() => {
   if (cfg.arena !== 'azar' && !ARENAS[cfg.arena]) cfg.arena = 'medellin';
   if (!SPECIES[cfg.species[0]]) cfg.species = ['guacamaya', 'condor'];
   let onMatchEnd = null, onSchoolEnd = null, attractN = 0;
+  // en línea: G.net = true; cada aparato maneja solo sus pilotos (NetPlay.mine) y ve sus nombres
+  const netOn = () => !!G.net && typeof NetPlay !== 'undefined' && NetPlay.on;
+  const isLocal = i => (netOn() ? NetPlay.mine.includes(i) : !G.bots[i]);
+  function pname(i) { const S = netOn() ? NetPlay.seats : null; return (S && S[i] && S[i].name) || `J${i + 1}`; }
 
   function resize() {
     sw = Math.max(1, innerWidth); sh = Math.max(1, innerHeight);
@@ -7719,19 +7812,19 @@ const Game = (() => {
   function setup(opts) {
     G.world = World.build(opts.arena || 'cocora');
     G.time = 0; G.events = []; G.rng = makeRng(opts.seed || 1); G.paused = false;
-    G.birds = [0, 1].map(i => new Bird(i, opts.species[i], opts.looks[i]));
+    G.birds = opts.species.map((sp, i) => new Bird(i, sp, opts.looks[i]));
     G.birds.forEach(b => { b.G = G; });
-    G.vtr = (opts.trails || []).map(id => (id ? String(id).replace(/^t\./, '') : null)); trailT = [0, 0]; trailP = [null, null];
-    if (typeof Vest !== 'undefined') { Vest.trailReset('vto0'); Vest.trailReset('vto1'); }
-    G.bots = [null, null]; G.targets = []; G.boss = null;
+    G.vtr = (opts.trails || []).map(id => (id ? String(id).replace(/^t\./, '') : null)); trailT = G.birds.map(() => 0); trailP = G.birds.map(() => null);
+    if (typeof Vest !== 'undefined') G.birds.forEach((b, i) => Vest.trailReset('vto' + i));
+    G.bots = G.birds.map(() => null); G.respawn = G.birds.map(() => 0); G.targets = []; G.boss = null;
     FX.clear();
   }
   function placeBirds() {
     // salen de espaldas desde el centro (como en un entrenamiento de combate): hay que dar la vuelta para pelear
-    const W = G.world, xs = [W.w * 0.42, W.w * 0.58];
+    const W = G.world, n = G.birds.length, xs = n <= 2 ? [W.w * 0.42, W.w * 0.58] : G.birds.map((b, i) => W.w * (0.3 + 0.4 * i / (n - 1)));
     G.birds.forEach((b, i) => {
       const keep = b.stats;
-      b.reset(xs[i], World.safeY(W, xs[i], 820), i === 0 ? -1 : 1); b.G = G;
+      b.reset(xs[i], World.safeY(W, xs[i], 820), xs[i] < W.w / 2 ? -1 : 1); b.G = G;
       if (keep) b.stats = keep;
     });
     World.resetRound(W); Combat.reset(G);
@@ -7766,7 +7859,7 @@ const Game = (() => {
     // Travesía para dos: G.duo; en las etapas «juntos» (Blancos) G.coop con la meta entre los dos
     G.duo = !!(over && over.duo); G.coop = !!(over && over.duo && over.coop); G.coopGoal = G.coop ? over.coop : null; G.tm = null;
     applyAdv();
-    G.wins = [0, 0]; G.round = 1; G.cratesOn = true; G.winsNeeded = mode === 'duel' ? (over && over.wins || 3) : 1; G.score = [0, 0]; G.coopWin = false;
+    G.wins = G.birds.map(() => 0); G.round = 1; G.cratesOn = true; G.winsNeeded = mode === 'duel' ? (over && over.wins || 3) : 1; G.score = G.birds.map(() => 0); G.coopWin = false;
     if (players === 1) G.bots[1] = new Bot(G.birds[1], 5, lvl);
     G.hintT = 10;
     if (mode === 'duel') startRound();
@@ -7824,8 +7917,8 @@ const Game = (() => {
     if (G.state === 'play' && G.mode === 'duel') {
       G.roundT -= dt;
       if (G.roundT <= 0) {
-        const k = G.birds.map(b => b.hp / b.sp.hp);
-        endRound(k[0] > k[1] + 0.001 ? 0 : k[1] > k[0] + 0.001 ? 1 : -1, true);
+        const k = G.birds.map(b => (b.alive ? b.hp / b.sp.hp : -1)), mx = Math.max(...k), top = k.filter(v => v > mx - 0.001);
+        endRound(top.length === 1 ? k.indexOf(mx) : -1, true);
       }
     }
     // práctica y título: el derribado vuelve a los 2,5 s
@@ -7839,7 +7932,7 @@ const Game = (() => {
           const tp = G.tm ? Team.respawnPos(G, i) : null;
           if (tp) { b.reset(tp.x, tp.y, tp.f); b.px = tp.x; b.py = tp.y; }
           else if (G.mode === 'race' && G.gates) { const p = Modes.respawnPos(G, i); b.reset(p.x, p.y, p.f); b.px = p.x; b.py = p.y; }
-          else { const x = i === 0 ? W.w * 0.2 : W.w * 0.8; b.reset(x, World.safeY(W, x, 800), i === 0 ? 1 : -1); }
+          else { const n = G.birds.length, x = n <= 2 ? (i === 0 ? W.w * 0.2 : W.w * 0.8) : W.w * (0.15 + 0.7 * i / (n - 1)); b.reset(x, World.safeY(W, x, 800), x < W.w / 2 ? 1 : -1); }
           b.G = G; b.stats = keep;
           // dos segundos de escudo al volver: que no lo tumben apenas aparece
           if (G.mode !== 'school') b.shield = 2;
@@ -7850,8 +7943,9 @@ const Game = (() => {
   }
   let sndT = {};
   function handleEvents() {
-    const quiet = G.state === 'attract';
+    const quiet = G.state === 'attract', fwd = netOn() && NetPlay.isHost;
     for (const e of G.events) {
+      if (fwd && !quiet) NetGame.fwd(e);
       FX.event(e, G);
       Style.event(G, e);
       Progress.event(G, e);
@@ -7871,8 +7965,9 @@ const Game = (() => {
         e.b.stats.downs = (e.b.stats.downs || 0) + 1;
         if (e.from >= 0 && G.birds[e.from]) G.birds[e.from].stats.kills++;
         if (G.mode === 'duel' && G.state === 'play') {
-          const other = G.birds[1 - e.b.id];
-          endRound(other.alive ? other.id : -1, false, e);
+          // todos contra todos: la ronda acaba cuando queda uno solo en el aire
+          const alive = G.birds.filter(b => b.alive);
+          if (alive.length <= 1) endRound(alive.length ? alive[0].id : -1, false, e);
         }
       }
       if (quiet && !['boom', 'down'].includes(e.type)) continue;
@@ -7883,6 +7978,20 @@ const Game = (() => {
       if (!quiet && Touch.enabled && (e.type === 'hurt' && e.n >= 10)) buzz(35);
     }
     G.events.length = 0;
+  }
+  // en línea, aparato remoto: los eventos llegan del anfitrión; aquí solo efectos, sonidos y logros propios
+  function clientEvents(list) {
+    for (const e of list) {
+      if (e.bid != null) e.b = G.birds[e.bid]; if (e.bid != null && !e.b) continue;
+      FX.event(e, G);
+      if (e.b ? isLocal(e.b.id) : e.from >= 0 && isLocal(e.from)) Progress.event(G, e);
+      const gap = { shot: 0.03, hit: 0.04, whiz: 0.15, skim: 0.15, spark: 0.05, glass: 0.07 }[e.type];
+      if (gap) { if ((sndT[e.type] || 0) > G.time) continue; sndT[e.type] = G.time + gap; }
+      Sound.play(e.type, e, false);
+      if (e.type === 'down' && e.b && isLocal(e.b.id)) buzz([60, 40, 120]);
+      if (e.type === 'hurt' && e.b && isLocal(e.b.id) && Touch.enabled && e.n >= 10) buzz(35);
+    }
+    if (G.events.length) { for (const e of G.events) { FX.event(e, G); if (e.type === 'achievement') G.toast = { name: e.name, t: 0 }; } G.events.length = 0; }
   }
   function buzz(ms) { if (!Store.get('vibrate', true)) return; try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* nada */ } }
 
@@ -7903,7 +8012,7 @@ const Game = (() => {
     G.state = 'roundEnd'; G.stateT = 0; G.roundWinner = winner; G.canFight = false;
     if (winner >= 0) G.wins[winner]++;
     G.cineTarget = 1;
-    const sc = (G.mode === 'race' ? 'aros ' : '') + `${Math.floor(G.score[0])} – ${Math.floor(G.score[1])}`;
+    const sc = (G.mode === 'race' ? 'aros ' : '') + G.score.map(v => Math.floor(v)).join(' – ');
     if (G.mode === 'boss') {
       const win = winner >= 0, fb = G.boss && G.boss.lastHit;
       G.coopWin = win;
@@ -7929,10 +8038,10 @@ const Game = (() => {
       return;
     }
     G.banner = { t: 0, big: timeUp ? '¡TIEMPO!' : G.mode === 'race' ? '¡PRIMERO EN LA META!' : '¡MALETÍN ENTREGADO!', sub: winner >= 0 ? `Gana ${who(winner)} · ${sc}` : `Empate · ${sc}`, color: winner >= 0 ? PLAYER_COLORS[winner].main : '#ffffff', delay: 0 };
-    if (winner < 0) G.wins = [1, 1];
+    if (winner < 0) G.wins = G.birds.map(() => 1);
     Sound.play(timeUp ? 'timeUp' : 'roundEnd');
   }
-  function who(i) { const b = G.birds[i]; return G.players === 1 && i === 1 ? (G.mode === 'boss' ? `la compañera (${b.sp.name})` : `la máquina (${b.sp.name})`) : `J${i + 1} · ${b.sp.name}`; }
+  function who(i) { const b = G.birds[i]; if (G.net) return `${pname(i)} · ${b.sp.name}`; return G.players === 1 && i === 1 ? (G.mode === 'boss' ? `la compañera (${b.sp.name})` : `la máquina (${b.sp.name})`) : `J${i + 1} · ${b.sp.name}`; }
   function updateRounds(realDt) {
     if (G.state === 'countdown') {
       G.stateT += realDt;
@@ -7947,6 +8056,7 @@ const Game = (() => {
           // el ganador da una vuelta de honor mientras se ven los resultados
           const R = results(); Progress.matchEnd(G, R);
           G.birds.forEach((b, i) => { if (b.alive) G.bots[i] = new Bot(b, 77 + i, 1); });
+          if (netOn() && NetPlay.isHost) NetGame.results(R);
           if (onMatchEnd) onMatchEnd(R);
         }
         else { G.round++; startRound(); }
@@ -7955,9 +8065,12 @@ const Game = (() => {
     G.cine += (G.cineTarget - G.cine) * Math.min(1, realDt * 4);
   }
   function results() {
-    const w = G.wins[0] > G.wins[1] ? 0 : 1;
-    return { winner: G.mode !== 'duel' && G.score[0] === G.score[1] ? -1 : G.mode !== 'duel' ? (G.score[0] > G.score[1] ? 0 : 1) : w, wins: G.wins.slice(), names: [who(0), who(1)], stats: G.birds.map(b => Object.assign({}, b.stats)), vsBot: G.players === 1, mode: G.mode, score: (G.score || [0, 0]).map(Math.floor), coopWin: !!G.coopWin, bossDmg: G.boss ? G.boss.dmg.map(Math.round) : null, hp: G.birds.map(b => (b.alive ? b.hp / b.sp.hp : 0)), lives: G.lives, playT: G.playT, trav: G.trav, lvl: G.lvl, duo: !!G.duo, coop: !!G.coop, tm: G.tm ? { ok: G.tm.ok, stars: G.tm.stars, kind: G.tm.kind, summary: Team.summary(G) } : null };
+    const n = G.birds.length, best = arr => { const m = Math.max(...arr), k = arr.filter(v => v === m).length; return k === 1 ? arr.indexOf(m) : -1; };
+    const w = n <= 2 ? (G.wins[0] > G.wins[1] ? 0 : 1) : best(G.wins);
+    const sc = (G.score || []).map(Math.floor);
+    return { winner: G.mode !== 'duel' ? (n <= 2 ? (sc[0] === sc[1] ? -1 : sc[0] > sc[1] ? 0 : 1) : best(sc)) : w, wins: G.wins.slice(), names: G.birds.map((b, i) => who(i)), stats: G.birds.map(b => Object.assign({}, b.stats)), vsBot: G.players === 1, mode: G.mode, score: sc.length ? sc : [0, 0], coopWin: !!G.coopWin, bossDmg: G.boss ? G.boss.dmg.map(Math.round) : null, hp: G.birds.map(b => (b.alive ? b.hp / b.sp.hp : 0)), lives: G.lives, playT: G.playT, trav: G.trav, lvl: G.lvl, duo: !!G.duo, coop: !!G.coop, tm: G.tm ? { ok: G.tm.ok, stars: G.tm.stars, kind: G.tm.kind, summary: Team.summary(G) } : null, net: !!G.net };
   }
+
 
   /* ---------- cámara: los dos a la vista; en un derribo, cámara lenta y de cerca ---------- */
   function snapCamera() { updateCamera(0, true); }
@@ -7967,9 +8080,12 @@ const Game = (() => {
     const pts = [];
     // en la Carrera contra la máquina, la cámara es tuya: te sigue a ti mirando hacia tu próximo aro
     const solo = G.mode === 'race' && G.players === 1 && G.gates && G.state !== 'attract' && B[0].alive;
-    for (const b of B) { if (b.alive && !(solo && b.id === 1)) { pts.push([b.x, b.y], [b.x + b.vx * 0.25, b.y + b.vy * 0.2]); } }
+    // en línea, cada aparato encuadra a sus pilotos (y, si están caídos, el paracaídas o a quien siga en el aire)
+    const mineB = netOn() && G.state !== 'attract' ? B.filter(b => NetPlay.mine.includes(b.id)) : null;
+    const camB = mineB ? (mineB.some(b => b.alive) ? mineB : B) : B;
+    for (const b of camB) { if (b.alive && !(solo && b.id === 1)) { pts.push([b.x, b.y], [b.x + b.vx * 0.25, b.y + b.vy * 0.2]); } }
     if (solo) { const g = Modes.nextGate(G, 0); if (Math.hypot(g.x - B[0].x, g.y - B[0].y) < 900) pts.push([g.x, g.y]); else pts.push([B[0].x + B[0].vx * 0.5, B[0].y + B[0].vy * 0.4]); }
-    for (const p of G.chutes) pts.push([p.x, p.y]);
+    for (const p of G.chutes) if (!mineB || NetPlay.mine.includes(p.id)) pts.push([p.x, p.y]);
     if (G.boss && !G.boss.dead && G.state !== 'attract') pts.push([G.boss.x - 260, G.boss.y - Boss.RY - 170], [G.boss.x + 260, G.boss.y + Boss.RY + 60]);
     if (!pts.length) pts.push([cam.x, cam.y]);
     for (const [x, y] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
@@ -7986,7 +8102,7 @@ const Game = (() => {
       if (I) {
         const lowTop = I.top - 18, hudBot = hudTop + 10;
         let need = 0, room = Infinity;
-        for (const b of B) {
+        for (const b of camB) {
           if (!b.alive) continue;
           const sx = sw / 2 + (b.x - tx) * tz, sy = sh / 2 + (b.y - ty) * tz;
           room = Math.min(room, sy - hudBot);
@@ -8119,16 +8235,19 @@ const Game = (() => {
   function drawHUD() {
     const u = hudUnit(), pad = 10 * u;
     if (G.mode === 'school') School.drawHUD(ctx, G, sw, sh, u, glass);
-    for (let i = 0; i < 2; i++) {
-      if (G.mode === 'school' && i === 1) continue;
-      const b = G.birds[i], pc = PLAYER_COLORS[i], w = 214 * u, h = 82 * u;
-      const right = i === 1, x = right ? sw - pad - w : pad, y = pad;
+    // paneles: los dos de siempre; en línea, los pilotos de este aparato (y los demás en fichas pequeñas)
+    const panels = netOn() ? NetPlay.mine.slice(0, 2) : [0, 1];
+    panels.forEach((i, slot) => {
+      if (G.mode === 'school' && i === 1) return;
+      const b = G.birds[i], pc = PLAYER_COLORS[i] || PLAYER_COLORS[0], w = 214 * u, h = 82 * u;
+      if (!b) return;
+      const right = slot === 1, x = right ? sw - pad - w : pad, y = pad;
       glass(x, y, w, h, 14 * u);
       ctx.save();
       const inX = right ? x + w - 14 * u : x + 14 * u, dir = right ? -1 : 1;
       ctx.textAlign = right ? 'right' : 'left'; ctx.fillStyle = '#ffffff'; ctx.font = font(Math.max(12, 14 * u));
       ctx.shadowColor = 'rgba(10,6,30,0.5)'; ctx.shadowBlur = 4;
-      const name = G.players === 1 && i === 1 ? `${G.mode === 'boss' ? 'Compañera' : 'Máquina'} · ${b.sp.name}` : `J${i + 1} · ${b.sp.name}`;
+      const name = netOn() ? `${pname(i)} · ${b.sp.name}` : G.players === 1 && i === 1 ? `${G.mode === 'boss' ? 'Compañera' : 'Máquina'} · ${b.sp.name}` : `J${i + 1} · ${b.sp.name}`;
       ctx.fillText(name, inX, y + 20 * u); ctx.shadowBlur = 0;
       const av = G.adv ? G.adv[i] : 0;
       if (av) {
@@ -8169,7 +8288,8 @@ const Game = (() => {
       if (b.rapid > 0) { ctx.fillStyle = '#ffe36b'; ctx.font = font(Math.max(10, 11 * u)); ctx.textAlign = right ? 'right' : 'left'; ctx.fillText(`ráfaga ${Math.ceil(b.rapid)}`, ix, y + 79 * u); ix += dir * 62 * u; }
       if (b.rocket > 0) { ctx.fillStyle = '#ff8ae6'; ctx.font = font(Math.max(10, 11 * u)); ctx.textAlign = right ? 'right' : 'left'; ctx.fillText(`cohete ${Math.ceil(b.rocket)}`, ix, y + 79 * u); }
       ctx.restore();
-    }
+    });
+    if (netOn()) rivalChips(u, pad);
     // centro: ronda y tiempo (en táctil, la pausa va ahí y esto baja un poco)
     ctx.save();
     const lw = 150 * u, lh = 38 * u, ly = Touch.enabled ? pad + 50 : pad;
@@ -8222,7 +8342,7 @@ const Game = (() => {
     if (G.hintT > 0 && !Touch.enabled && G.state !== 'attract') {
       const a = clamp(G.hintT, 0, 1);
       ctx.save(); ctx.globalAlpha = a;
-      const lines = G.players === 2 ? ['J1: ' + keyHint(0), 'J2: ' + keyHint(1)] : [keyHint(0) + '  (o las de J2)', 'Maniobras distintas llenan la Adrenalina' + (Input.dtap ? ' · doble toque = tonel' : '')];
+      const lines = netOn() ? (NetPlay.mine.length > 1 ? NetPlay.mine.slice(0, 2).map((seat, li) => `${pname(seat)}: ` + keyHint(li)) : [keyHint(0), 'Maniobras distintas llenan la Adrenalina' + (Input.dtap ? ' · doble toque = tonel' : '')]) : G.players === 2 ? ['J1: ' + keyHint(0), 'J2: ' + keyHint(1)] : [keyHint(0) + '  (o las de J2)', 'Maniobras distintas llenan la Adrenalina' + (Input.dtap ? ' · doble toque = tonel' : '')];
       let fs = Math.max(12, 14 * u); ctx.font = font(fs);
       let tw = Math.max(...lines.map(l => ctx.measureText(l).width)) + 40 * u;
       if (tw > sw - 24) { fs *= (sw - 24) / tw; ctx.font = font(fs); tw = sw - 24; }
@@ -8232,6 +8352,26 @@ const Game = (() => {
       lines.forEach((l, k) => ctx.fillText(l, sw / 2, y0 + 8 * u + lh * (k + 0.5)));
       ctx.restore();
     }
+  }
+  // en línea: ficha chica por cada piloto de otro aparato (nombre, blindaje y rondas o puntos)
+  function rivalChips(u, pad) {
+    const others = G.birds.filter(b => !NetPlay.mine.includes(b.id)); if (!others.length) return;
+    const cw = 128 * u, ch = 34 * u, gap = 6 * u, two = NetPlay.mine.length > 1;
+    // con un piloto aquí, van en columna arriba a la derecha; con dos, en fila debajo del panel del centro
+    others.forEach((b, k) => {
+      const x = two ? sw / 2 - (others.length * (cw + gap) - gap) / 2 + k * (cw + gap) : sw - pad - cw, y = two ? (Touch.enabled ? pad + 104 * u : pad + 62 * u) : pad + k * (ch + gap);
+      const pc = PLAYER_COLORS[b.id] || PLAYER_COLORS[0];
+      ctx.save(); ctx.globalAlpha = b.alive ? 1 : 0.55; glass(x, y, cw, ch, 10 * u);
+      ctx.fillStyle = pc.main; ctx.beginPath(); ctx.arc(x + 11 * u, y + 12 * u, 4.5 * u, 0, TAU); ctx.fill();
+      ctx.font = font(Math.max(10, 11 * u)); ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff';
+      let nm = pname(b.id); while (nm.length > 3 && ctx.measureText(nm).width > cw - 46 * u) nm = nm.slice(0, -1);
+      ctx.fillText(nm, x + 20 * u, y + 16 * u);
+      ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      const right = G.mode === 'duel' ? '●'.repeat(G.wins[b.id] || 0) : String(Math.floor((G.score || [])[b.id] || 0));
+      ctx.fillStyle = pc.main; ctx.fillText(right, x + cw - 9 * u, y + 16 * u);
+      const k2 = b.alive ? b.hp / b.sp.hp : 0; bar(x + 9 * u, y + 23 * u, cw - 18 * u, 5 * u, k2, b.hitT > 0 ? '#ffffff' : k2 > 0.5 ? pc.main : k2 > 0.25 ? '#ffb347' : '#ff5a4e', false);
+      ctx.restore();
+    });
   }
   function bigText(txt, y, scale, col, alpha, size) {
     ctx.save(); ctx.globalAlpha = alpha; ctx.translate(sw / 2, y); ctx.scale(scale, scale);
@@ -8250,15 +8390,20 @@ const Game = (() => {
     const now = ts / 1000, fdt = Math.min(0.1, last ? now - last : 0.016); last = now;
     watchPerf(fdt);
     Input.pollPads();
-    if (!G.paused && G.world) {
+    if (G.world && netOn() && NetPlay.isClient && G.state !== 'attract') {
+      // en línea, remoto: no simula; dibuja lo que manda el anfitrión (interpolado) y anima el escenario
+      if (Touch.enabled) Touch.tick(); World.step(G.world, fdt); G.time += fdt; G.birds.forEach(b => { b.G = G; });
+      NetGame.clientStep(fdt); G.hintT = Math.max(0, G.hintT - fdt);
+    } else if ((!G.paused || netOn()) && G.world) {
       acc += fdt * G.timeScale;
       while (acc >= DT) { step(DT); acc -= DT; }
       updateRounds(fdt);
       G.hintT = Math.max(0, G.hintT - fdt);
     }
     if (G.world) {
-      updateCamera(G.paused ? 0 : fdt, false);
-      FX.update(G.paused ? 0 : fdt * G.timeScale, G, cam, sw, sh);
+      const pz = G.paused && !netOn();
+      updateCamera(pz ? 0 : fdt, false);
+      FX.update(pz ? 0 : fdt * G.timeScale, G, cam, sw, sh);
       render();
       Sound.update(G, cam, sw);
     }
@@ -8285,8 +8430,19 @@ const Game = (() => {
   // ventaja por jugador (para jugar parejo entre amigos de distinto nivel); en la Travesía y la Escuela no cuenta
   function applyAdv() { const A = Store.get('adv', [0, 0]); G.adv = (G.trav && !G.duo) || G.mode === 'school' ? [0, 0] : [A[0] || 0, A[1] || 0]; }
 
+  // en línea: todos los pilotos de la sala (2 a 4), sin máquina; el anfitrión simula, los remotos dibujan
+  function startNet(o) {
+    lastOver = null; G.net = true; G.players = o.species.length; G.mode = o.mode; G.arena = o.arena;
+    setup({ species: o.species, looks: o.looks, trails: o.trails, seed: o.seed || 1, arena: o.arena });
+    G.trav = null; G.playT = 0; G.lvl = 1; G.copa = null; G.duo = false; G.coop = false; G.coopGoal = null; G.tm = null; G.boss = null;
+    G.adv = G.birds.map(() => 0); G.wins = G.birds.map(() => 0); G.round = 1; G.cratesOn = true; G.winsNeeded = o.mode === 'duel' ? o.wins || 3 : 1; G.score = G.birds.map(() => 0); G.coopWin = false;
+    G.hintT = 8; G.paused = false; acc = 0;
+    if (o.mode === 'duel') startRound();
+    else { startRound(); Modes.setup(G); G.cratesOn = o.mode === 'case'; snapCamera(); }
+  }
+  function netEnd() { G.net = false; }
   function advance(dt) { let n = Math.max(1, Math.round(dt / DT)); while (n--) { step(DT); updateRounds(DT); updateCamera(DT); } }
-  return { G, cam, cfg, applyAdv, begin, start, advance, startAttract, rematch, setQuality, setSpecies, setArena, setMode, setBotLevel, step, updateCamera, results, set onMatchEnd(fn) { onMatchEnd = fn; }, set onSchoolEnd(fn) { onSchoolEnd = fn; }, get quality() { return quality; }, get screen() { return { sw, sh, dpr }; } };
+  return { G, cam, cfg, applyAdv, begin, start, startNet, netEnd, clientEvents, isLocal, pname, handleEvents, updateRounds, advance, startAttract, rematch, setQuality, setSpecies, setArena, setMode, setBotLevel, step, updateCamera, results, set onMatchEnd(fn) { onMatchEnd = fn; }, set onSchoolEnd(fn) { onSchoolEnd = fn; }, get quality() { return quality; }, get screen() { return { sw, sh, dpr }; } };
 })();
 
 /* ===== 09-ui.js ===== */
@@ -8304,7 +8460,7 @@ const UI = (() => {
     current = name;
     const el = name ? $('#' + SCREENS[name]) : null;
     if (name) { Touch.hide(); if (el) { el.hidden = false; const f = focusables(el)[0]; if (f && !Touch.enabled) setTimeout(() => f.focus({ preventScroll: true }), 30); } }
-    else { goFull(); Touch.show(Game.G.players === 1 ? 'single' : 'dual'); $('#cv').focus({ preventScroll: true }); }
+    else { goFull(); const one = Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on ? NetPlay.mine.length === 1 : Game.G.players === 1; Touch.show(one ? 'single' : 'dual'); $('#cv').focus({ preventScroll: true }); }
     document.body.classList.toggle('playing', !name);
     document.body.classList.toggle('in-school', Game.G.mode === 'school' && Game.G.state !== 'attract');
     if (name === 'birds') startPreview(); else stopPreview();
@@ -8389,10 +8545,33 @@ const UI = (() => {
   }
   let nextStage = -1, nextDuo = false;
   // resultados del duelo
+  // en línea: arranca (o vuelve a arrancar) la partida que mandó el anfitrión
+  function netStart(c) { stack = []; paused = false; Game.G.paused = false; Copa.end(); Game.startNet(c); show(null, false); }
+  // en línea: resultados con los nombres de la sala; todos pueden volver a la sala, el anfitrión lanza la revancha
+  function netResults(r) {
+    const n = r.names, s = r.stats, N = n.length, host = NetPlay.isHost, esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const mine = NetPlay.mine, w = r.winner;
+    $('#r-title').textContent = w < 0 ? '¡Empate!' : mine.includes(w) && mine.length === 1 ? '¡Ganaste!' : `¡Gana ${n[w].split(' · ')[0]}!`;
+    $('#r-title').style.color = w < 0 ? '#ffffff' : PLAYER_COLORS[w].main;
+    const val = r.mode === 'duel' ? r.wins : r.score;
+    $('#r-score').textContent = (r.mode === 'duel' ? 'Rondas' : r.mode === 'race' ? 'Carrera · aros' : MODES[r.mode].name) + ': ' + val.map((v, i) => `${n[i].split(' · ')[0]} ${v}`).join(' · ');
+    const pct = st => st.shots ? Math.round(100 * st.hits / st.shots) + ' %' : '—';
+    const rows = [['Derribos', st => st.kills], ['Daño hecho', st => Math.round(st.dmg)], ['Puntería de ráfaga', pct], ['Misiles que dieron', st => `${st.missileHits} de ${st.missiles}`], ['Cajas', st => st.crates]];
+    const T = $('#r-table'); T.style.gridTemplateColumns = `1fr repeat(${N}, auto)`;
+    T.innerHTML = `<span class="h"></span>` + n.map((nm, i) => `<span class="h n" style="color:${PLAYER_COLORS[i].main}">${esc(nm.split(' · ')[0])}${mine.includes(i) ? ' ·tú' : ''}</span>`).join('') + rows.map(([lab, f]) => `<span>${lab}</span>` + s.map((st, i) => `<span class="n" style="color:${PLAYER_COLORS[i].main}">${f(st)}</span>`).join('')).join('');
+    ['#r-next', '#r-copa', '#r-birds', '#r-trav', '#s-results [data-act="toTitle"]'].forEach(q => { const e = $(q); if (e) e.hidden = true; });
+    $('#r-stars').hidden = !(!host); $('#r-stars').innerHTML = host ? '' : '<small>El anfitrión puede lanzar la revancha para todos.</small>';
+    $('#r-hub').hidden = false; $('#r-hub').textContent = 'Volver a la sala'; $('#r-hub').dataset.act = 'hubhome'; $('#r-hub').style.gridColumn = host ? '' : '1 / -1';
+    $('#r-rematch').hidden = !host; $('#r-rematch').textContent = 'Revancha (todos)'; $('#r-rematch').dataset.act = 'netAgain';
+    stack = []; show('results', false);
+    if (VV()) VV().after();
+  }
   function results(r) {
     if (Game.G.state !== 'matchEnd') return;
+    if (r.net && typeof NetPlay !== 'undefined' && NetPlay.on) return netResults(r);
     const n = r.names, s = r.stats;
     const hubEv = !!Hub.ev && !r.vsBot;
+    $('#r-rematch').dataset.act = 'rematch'; $('#r-hub').dataset.act = 'hubback'; $('#r-hub').textContent = 'Continuar torneo ▸'; $('#r-table').style.gridTemplateColumns = '';
     if (hubEv) { Hub.result(r.winner === 0 || r.winner === 1 ? r.winner : -1, { score: r.mode === 'duel' ? r.wins.join(' – ') : r.score.join(' – ') }); Hub.release(); }
     $('#r-hub').hidden = !hubEv;
     if (r.tm) {
@@ -8611,7 +8790,7 @@ const UI = (() => {
     keysReset: () => { cancelCapture(); Input.resetKeys(); renderKeys(); },
     back, resume, toTitle, done: () => { if (hubPending) return hubStart(); back(); },
     // GameHub
-    hubhome: () => Hub.exit(), hubback: () => Hub.exit(),
+    hubhome: () => Hub.exit(), hubback: () => Hub.exit(), netAgain: () => { if (typeof NetGame !== 'undefined') NetGame.again(); },
     fullscreen: () => FS.toggle(),
     'prev0': () => cycle(0, -1), 'next0': () => cycle(0, 1), 'prev1': () => cycle(1, -1), 'next1': () => cycle(1, 1),
     'look0': () => recolor(0), 'look1': () => recolor(1),
@@ -8664,7 +8843,7 @@ const UI = (() => {
       document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
     }
   }
-  return { init, show, pause, resume, results, hubPlay, vestBadge, refreshBirds, get current() { return current; } };
+  return { init, show, pause, resume, results, netStart, hubPlay, vestBadge, refreshBirds, get current() { return current; } };
 })();
 
 // para las pruebas automáticas
@@ -8794,6 +8973,170 @@ const Vestidor = (() => {
 })();
 if (UI.vestBadge) UI.vestBadge();
 if (UI.refreshBirds) UI.refreshBirds();
+
+/* ===== 09c-net.js ===== */
+/* =========================================================================
+   VENTOLERA EN LÍNEA — adaptador entre la partida y NetPlay (src/00k-net.js).
+   · Anfitrión: juega la partida de verdad con 2 a 4 pilotos (los de otros
+     aparatos vuelan con lo que llega por la red); manda instantáneas
+     compactas 30 veces por segundo y los eventos (tiros, golpes, sonidos).
+   · Remoto: no simula; aplica las instantáneas (interpoladas 100 ms atrás),
+     anima el escenario y dibuja con su propia cámara (sus pilotos).
+   ========================================================================= */
+const NetGame = (() => {
+  const NEUTRAL = { dx: 0, dy: 0, roll: false, rdx: 0, rdy: 0, fire: false, boost: false, missile: false };
+  const MODES_NET = ['duel', 'targets', 'case', 'race'], ST = ['countdown', 'play', 'roundEnd', 'matchEnd'];
+  const r1 = v => Math.round((+v || 0) * 10) / 10, r2 = v => Math.round((+v || 0) * 100) / 100, ri = v => Math.round(+v || 0);
+  const _read = Input.read;
+
+  /* ---------- entradas ---------- */
+  // anfitrión: el piloto de otro aparato vuela con lo que llega; el tonel cuenta una sola vez aunque llegue repetido
+  const lastRid = {};
+  Input.read = i => {
+    if (!(NetPlay.isHost && Game.G.net)) return _read(i);
+    const li = NetPlay.local(i); if (li >= 0) return _read(li);
+    const r = NetPlay.input(i); if (!r) return NEUTRAL;
+    if (r.roll) { if (r.rid === lastRid[i]) return Object.assign({}, r, { roll: false }); lastRid[i] = r.rid; }
+    return r;
+  };
+  // remoto: lo que aprieta cada jugador de este aparato; el tonel y el misil se repiten ~150 ms (por si se pierde un paquete)
+  const latch = [], mlatch = []; let ridN = 0;
+  function readLocal(li) {
+    const i = _read(li), now = performance.now();
+    if (i.roll) latch[li] = { rdx: i.rdx, rdy: i.rdy, rid: ++ridN, until: now + 150 };
+    if (i.missile) mlatch[li] = now + 120;
+    const L = latch[li] && latch[li].until > now ? latch[li] : null;
+    return { dx: r2(i.dx), dy: r2(i.dy), fire: !!i.fire, boost: !!i.boost, missile: !!i.missile || (mlatch[li] || 0) > now, roll: !!L, rdx: L ? r2(L.rdx) : 0, rdy: L ? r2(L.rdy) : 0, rid: L ? L.rid : 0 };
+  }
+
+  /* ---------- arranque (sala de espera común) ---------- */
+  // los colores de la sala pasan a ser los de los pilotos
+  const rgb = h => { const n = parseInt(String(h).slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  NetPlay.onStart(o => { o.seats.forEach((s, i) => { if (s && /^#[0-9a-f]{6}$/i.test(s.color)) { const c = rgb(s.color); PLAYER_COLORS[i] = { main: s.color, glow: c.join(','), deep: '#' + c.map(v => Math.round(v * 0.6).toString(16).padStart(2, '0')).join(''), name: s.name }; } }); });
+  const okLook = v => (typeof v === 'number' && v >= 0 && v < 9 ? v : NetPlay.okId(v) || 0);
+  NetPlay.gate({
+    me(li) { const c = Game.cfg; return { sp: c.species[li], look: c.looks[li], trail: c.trails[li] }; },
+    make(want, ev) {
+      const S = NetPlay.seats, mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel';
+      const arena = ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
+      const species = S.map((s, i) => { const w = want[i] || {}; return SPECIES[w.sp] ? w.sp : ['guacamaya', 'condor', 'colibri', 'halcon'].find(k => SPECIES[k]) || Object.keys(SPECIES)[i % Object.keys(SPECIES).length]; });
+      return { mode, arena, species, looks: S.map((s, i) => okLook((want[i] || {}).look)), trails: S.map((s, i) => NetPlay.okId((want[i] || {}).trail) || 't.ninguna'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), seed: 1 + Math.floor(Math.random() * 60000) };
+    },
+    apply(c) { snaps0(); UI.netStart(c); },
+  });
+  function again() { NetPlay.again(c => Object.assign({}, c, { seed: 1 + Math.floor(Math.random() * 60000) })); }
+
+  /* ---------- instantánea (anfitrión) ---------- */
+  // del piloto, lo que se ve: posición, rumbo, estado y barras (en el orden de BF)
+  const BF = ['x', 'y', 'vx', 'vy', 'a', 'va', 'c', 's', 'hp', 'alive', 'boosting', 'legendT', 'shield', 'adren', 'missiles', 'locked', 'lockT', 'hitT', 'stun', 'spin', 'spinDir', 'rocket', 'rasante', 'rapid', 'mis', 'flipT', 'flares', 'drafting', 'stalled', 'lift', 'regen', 'overheat', 'heat', 'fuelLock', 'fuel', 'flapPh', 'evadeT', 'catchup', 'perch', 'lockTgt'];
+  const BOOL = new Set(['alive', 'boosting', 'locked', 'rasante', 'drafting', 'stalled', 'regen', 'overheat', 'fuelLock', 'catchup']);
+  const IX = Object.fromEntries(BF.map((k, i) => [k, i]));
+  let nid = 0;
+  function tgtCode(G, T) { if (!T) return -1; const bi = G.birds.indexOf(T); if (bi >= 0) return bi; const ti = G.targets.indexOf(T); return ti >= 0 ? 100 + ti : -1; }
+  function birdArr(G, b) { return BF.map(k => (k === 'perch' ? (b.perch ? 1 : 0) : k === 'lockTgt' ? tgtCode(G, b.lockTgt) : BOOL.has(k) ? (b[k] ? 1 : 0) : k === 'x' || k === 'y' ? r1(b[k]) : k === 'vx' || k === 'vy' || k === 's' ? ri(b[k]) : r2(b[k]))); }
+  // lo demás del mundo: copia simple (números, textos, listas cortas de cosas simples)
+  function prim(o, depth = 0) {
+    if (o == null || typeof o !== 'object') return o; if (Array.isArray(o)) { if (o.length > 60) return undefined; return o.map(v => (typeof v === 'number' ? r2(v) : v && typeof v === 'object' ? (depth < 2 ? prim(v, depth + 1) : undefined) : v)); }
+    const r = {}; for (const k in o) { const v = o[k]; const t = typeof v; if (t === 'number') r[k] = r2(v); else if (t === 'string' || t === 'boolean') r[k] = v; else if (v && t === 'object' && depth < 2 && !(v instanceof Bird) && !v.nodeType && !(v instanceof CanvasRenderingContext2D)) { const p = prim(v, depth + 1); if (p !== undefined) r[k] = p; } }
+    return r;
+  }
+  function worldSnap(W) {
+    const o = { t: r2(W.time) };
+    if (W.train) o.train = prim(W.train); if (W.ship) o.ship = prim(W.ship); if (W.hotair) o.hot = W.hotair.map(h => prim(h)); if (W.storm) o.storm = prim(W.storm); if (W.coast) o.coast = prim(W.coast);
+    return o;
+  }
+  function snap() {
+    const G = Game.G; if (!G.net || !NetPlay.cfg || !G.world || G.state === 'attract') return null;
+    const sn = {
+      s: [ST.indexOf(G.state), r2(G.stateT), G.round, r1(G.roundT), r2(G.timeScale), r2(G.cineTarget), G.freeze ? 1 : 0, G.canFight ? 1 : 0, G.roundWinner, G.winsNeeded],
+      w: G.wins.slice(), sc: G.score.map(r2), fo: G.focus ? [ri(G.focus.x), ri(G.focus.y)] : 0, bn: G.banner ? prim(G.banner) : 0,
+      b: G.birds.map(b => birdArr(G, b)),
+      bu: [].concat(...G.bullets.map(u => [ri(u.x), ri(u.y), ri(u.vx), ri(u.vy), u.owner, u.enemy ? 1 : 0])),
+      mi: G.missiles.map(m => { if (m.nid == null) m.nid = ++nid; return [m.nid, ri(m.x), ri(m.y), r2(m.a), m.owner, m.enemy ? 1 : 0, tgtCode(G, m.target), ri(m.s)]; }),
+      fl: G.flares.map(f => { if (f.nid == null) f.nid = ++nid; return [f.nid, ri(f.x), ri(f.y), ri(f.vx), ri(f.vy), r2(f.life), f.owner]; }),
+      cr: G.crates.map(c => prim(c)), ch: G.chutes.map(p => prim(p)),
+      wd: worldSnap(G.world),
+    };
+    if (G.mode === 'targets' || (G.targets && G.targets.length)) sn.tg = G.targets.slice(0, 40).map(t => prim(t));
+    if (G.case) sn.cs = prim(G.case);
+    if (G.gates) sn.gf = G.gates.map(g => g.flash.map(r2));
+    return sn;
+  }
+
+  /* ---------- aplicar (remoto) ---------- */
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const lerpA = (a, b, k) => { let d = b - a; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return a + d * k; };
+  const ANG = new Set(['a', 'va']), LIN = new Set(['x', 'y', 'vx', 'vy', 's', 'c', 'fuel', 'heat', 'adren', 'lift']);
+  // asignar sin romper las referencias que guarda el juego (listas y objetos del escenario)
+  function deepSet(dst, src) { for (const k in src) { const v = src[k]; if (v && typeof v === 'object' && !Array.isArray(v) && dst[k] && typeof dst[k] === 'object' && !Array.isArray(dst[k])) deepSet(dst[k], v); else dst[k] = v && typeof v === 'object' ? JSON.parse(JSON.stringify(v)) : v; } }
+  const mTrail = new Map(), fTrail = new Map();
+  let lastSN = -1;
+  function snaps0() { mTrail.clear(); fTrail.clear(); lastSN = -1; }
+  function apply(A, B, k, dtAB) {
+    const G = Game.G; if (!A || !B || !G.world) return;
+    const s = B.s; G.state = ST[s[0]] || 'play'; G.stateT = s[1]; G.round = s[2]; G.roundT = s[3]; G.timeScale = s[4]; G.cineTarget = s[5]; G.freeze = !!s[6]; G.canFight = !!s[7]; G.roundWinner = s[8]; G.winsNeeded = s[9];
+    G.wins = B.w.slice(); G.score = B.sc.slice(); G.focus = B.fo ? { x: B.fo[0], y: B.fo[1] } : null; G.banner = B.bn ? Object.assign({}, B.bn) : null;
+    G.birds.forEach((b, i) => {
+      const a = A.b[i], c = B.b[i]; if (!a || !c) return;
+      BF.forEach((f, j) => {
+        if (f === 'perch') { b.perch = c[j] ? b.perch || { x: c[IX.x], y: c[IX.y] } : null; return; }
+        if (f === 'lockTgt') { const v = c[j]; b.lockTgt = v < 0 ? null : v >= 100 ? G.targets[v - 100] || null : G.birds[v] || null; return; }
+        if (BOOL.has(f)) { b[f] = !!c[j]; return; }
+        b[f] = ANG.has(f) ? lerpA(a[j], c[j], k) : LIN.has(f) && a[IX.alive] && c[IX.alive] && Math.abs(c[IX.x] - a[IX.x]) < 600 ? lerp(a[j], c[j], k) : c[j];
+      });
+    });
+    // proyectiles: los de B, llevados hacia atrás al mismo instante que los pilotos
+    const back = (k - 1) * dtAB;
+    G.bullets = []; for (let q = 0; q < B.bu.length; q += 6) { const x = B.bu[q] + B.bu[q + 2] * back, y = B.bu[q + 1] + B.bu[q + 3] * back; G.bullets.push({ x, y, px: x - B.bu[q + 2] / 60, py: y - B.bu[q + 3] / 60, vx: B.bu[q + 2], vy: B.bu[q + 3], owner: B.bu[q + 4], enemy: !!B.bu[q + 5], life: 1 }); }
+    const seenM = new Set();
+    G.missiles = B.mi.map(m => { const [id, x0, y0, a, owner, enemy, tg, sp] = m; seenM.add(id); const x = x0 + Math.cos(a) * sp * back, y = y0 + Math.sin(a) * sp * back;
+      let tr = mTrail.get(id); if (!tr) mTrail.set(id, (tr = []));
+      const target = tg < 0 ? null : tg >= 100 ? G.targets[tg - 100] || null : G.birds[tg] || null;
+      return { x, y, a, s: sp, owner, enemy: !!enemy, target, orig: target, trail: tr, age: 1, life: 1 }; });
+    for (const id of [...mTrail.keys()]) if (!seenM.has(id) && mTrail.get(id).lastT < G.time - 1) mTrail.delete(id);
+    const seenF = new Set();
+    G.flares = B.fl.map(f => { const [id, x0, y0, vx, vy, life, owner] = f; seenF.add(id); let tr = fTrail.get(id); if (!tr) fTrail.set(id, (tr = [])); return { x: x0 + vx * back, y: y0 + vy * back, vx, vy, life, owner, flare: true, trail: tr }; });
+    for (const id of [...fTrail.keys()]) if (!seenF.has(id)) fTrail.delete(id);
+    G.crates = B.cr.map(c => Object.assign({}, c)); G.chutes = B.ch.map(c => Object.assign({}, c));
+    if (B.tg) G.targets = B.tg.map(t => Object.assign({}, t)); else if (G.mode !== 'targets') G.targets = [];
+    G.case = B.cs ? Object.assign({}, B.cs) : null;
+    if (B.gf && G.gates) B.gf.forEach((f, i) => { if (G.gates[i]) G.gates[i].flash = f.slice(); });
+    // escenario: solo cuando llega una instantánea nueva (entre medio se anima solo)
+    if (B !== lastSN && B.wd) { lastSN = B; const W = G.world, D = B.wd; W.time = D.t; if (D.train && W.train) deepSet(W.train, D.train); if (D.ship && W.ship) deepSet(W.ship, D.ship); if (D.hot && W.hotair) D.hot.forEach((h, i) => { if (W.hotair[i]) deepSet(W.hotair[i], h); }); if (D.storm && W.storm) deepSet(W.storm, D.storm); if (D.coast && W.coast) deepSet(W.coast, D.coast); }
+  }
+  // estelas de misiles y bengalas (se arman aquí con las posiciones que se ven)
+  function trails(G) {
+    for (const m of G.missiles) { const tr = m.trail; tr.lastT = G.time; const L = tr[tr.length - 1]; if (!L || Math.hypot(L.x - m.x, L.y - m.y) > 6) { tr.push({ x: m.x, y: m.y, t: G.time }); if (tr.length > 40) tr.shift(); } }
+    for (const f of G.flares) { const tr = f.trail; tr.push({ x: f.x, y: f.y, t: G.time }); if (tr.length > 30) tr.shift(); }
+  }
+
+  /* ---------- un cuadro del remoto ---------- */
+  let evQ = [], resQ = null, shownRes = false, prevState = null;
+  function clientStep(dt) {
+    const G = Game.G, S = NetPlay.sample();
+    if (S) apply(S.a, S.b, S.k, S.dt || 0.033);
+    for (const b of G.birds) { b.G = G; if (b.alive) b.pushTrail(dt, !!b.perch); else b.trail.length = 0; }
+    trails(G);
+    G.cine += (G.cineTarget - G.cine) * Math.min(1, dt * 4);
+    if (G.banner) G.banner.t = (G.banner.t || 0) + 0; // el anfitrión ya manda cuánto lleva
+    if (evQ.length) { const l = evQ; evQ = []; Game.clientEvents(l); }
+    // fin de la partida: los resultados llegan del anfitrión
+    if (G.state !== prevState) { if (G.state === 'countdown' || G.state === 'play') shownRes = false; prevState = G.state; }
+    if (G.state === 'matchEnd' && resQ && !shownRes) { shownRes = true; const r = resQ; resQ = null; try { Progress.matchEnd(G, r); } catch (e) { /* nada */ } UI.results(r); }
+  }
+  NetPlay.onMsg(d => { if (d.t === 'res' && NetPlay.isClient && d.r) resQ = d.r; });
+
+  return {
+    seatsMax: 4, again, snap, apply, clientStep, readLocal,
+    neutral: () => NEUTRAL,
+    // anfitrión: cada evento de la partida viaja a los remotos (el piloto va como número)
+    fwd(e) { const o = {}; for (const k in e) { const v = e[k], t = typeof v; if (t === 'number' || t === 'string' || t === 'boolean') o[k] = v; else if (k === 'b' && v && v.id != null) o.bid = v.id; } NetPlay.event(o); },
+    // remoto: los eventos que llegan del anfitrión se muestran en el próximo cuadro
+    event(e) { evQ.push(e); if (evQ.length > 400) evQ.splice(0, evQ.length - 400); },
+    // anfitrión: resultados a todos
+    results(r) { NetPlay.send({ t: 'res', r }, true, '*'); },
+  };
+})();
 
 </script>
 </body>

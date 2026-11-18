@@ -144,7 +144,7 @@ class Bot {
       }
       return out;
     }
-    const o = G.birds[1 - b.id], fight = G.canFight && (G.mode === 'boss' ? !!(G.boss && !G.boss.dead) : G.mode === 'race' || G.tm ? true : o && o.alive);
+    const o = Combat.foe(G, b), fight = G.canFight && (G.mode === 'boss' ? !!(G.boss && !G.boss.dead) : G.mode === 'race' || G.tm ? true : o && o.alive);
     this.mCd -= dt; this.rollCd -= dt; this.cobraT -= dt;
     this.think_t -= dt;
     if (this.think_t <= 0) {

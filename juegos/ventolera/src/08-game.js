@@ -20,6 +20,10 @@ const Game = (() => {
   if (cfg.arena !== 'azar' && !ARENAS[cfg.arena]) cfg.arena = 'medellin';
   if (!SPECIES[cfg.species[0]]) cfg.species = ['guacamaya', 'condor'];
   let onMatchEnd = null, onSchoolEnd = null, attractN = 0;
+  // en línea: G.net = true; cada aparato maneja solo sus pilotos (NetPlay.mine) y ve sus nombres
+  const netOn = () => !!G.net && typeof NetPlay !== 'undefined' && NetPlay.on;
+  const isLocal = i => (netOn() ? NetPlay.mine.includes(i) : !G.bots[i]);
+  function pname(i) { const S = netOn() ? NetPlay.seats : null; return (S && S[i] && S[i].name) || `J${i + 1}`; }
 
   function resize() {
     sw = Math.max(1, innerWidth); sh = Math.max(1, innerHeight);
@@ -35,19 +39,19 @@ const Game = (() => {
   function setup(opts) {
     G.world = World.build(opts.arena || 'cocora');
     G.time = 0; G.events = []; G.rng = makeRng(opts.seed || 1); G.paused = false;
-    G.birds = [0, 1].map(i => new Bird(i, opts.species[i], opts.looks[i]));
+    G.birds = opts.species.map((sp, i) => new Bird(i, sp, opts.looks[i]));
     G.birds.forEach(b => { b.G = G; });
-    G.vtr = (opts.trails || []).map(id => (id ? String(id).replace(/^t\./, '') : null)); trailT = [0, 0]; trailP = [null, null];
-    if (typeof Vest !== 'undefined') { Vest.trailReset('vto0'); Vest.trailReset('vto1'); }
-    G.bots = [null, null]; G.targets = []; G.boss = null;
+    G.vtr = (opts.trails || []).map(id => (id ? String(id).replace(/^t\./, '') : null)); trailT = G.birds.map(() => 0); trailP = G.birds.map(() => null);
+    if (typeof Vest !== 'undefined') G.birds.forEach((b, i) => Vest.trailReset('vto' + i));
+    G.bots = G.birds.map(() => null); G.respawn = G.birds.map(() => 0); G.targets = []; G.boss = null;
     FX.clear();
   }
   function placeBirds() {
     // salen de espaldas desde el centro (como en un entrenamiento de combate): hay que dar la vuelta para pelear
-    const W = G.world, xs = [W.w * 0.42, W.w * 0.58];
+    const W = G.world, n = G.birds.length, xs = n <= 2 ? [W.w * 0.42, W.w * 0.58] : G.birds.map((b, i) => W.w * (0.3 + 0.4 * i / (n - 1)));
     G.birds.forEach((b, i) => {
       const keep = b.stats;
-      b.reset(xs[i], World.safeY(W, xs[i], 820), i === 0 ? -1 : 1); b.G = G;
+      b.reset(xs[i], World.safeY(W, xs[i], 820), xs[i] < W.w / 2 ? -1 : 1); b.G = G;
       if (keep) b.stats = keep;
     });
     World.resetRound(W); Combat.reset(G);
@@ -82,7 +86,7 @@ const Game = (() => {
     // Travesía para dos: G.duo; en las etapas «juntos» (Blancos) G.coop con la meta entre los dos
     G.duo = !!(over && over.duo); G.coop = !!(over && over.duo && over.coop); G.coopGoal = G.coop ? over.coop : null; G.tm = null;
     applyAdv();
-    G.wins = [0, 0]; G.round = 1; G.cratesOn = true; G.winsNeeded = mode === 'duel' ? (over && over.wins || 3) : 1; G.score = [0, 0]; G.coopWin = false;
+    G.wins = G.birds.map(() => 0); G.round = 1; G.cratesOn = true; G.winsNeeded = mode === 'duel' ? (over && over.wins || 3) : 1; G.score = G.birds.map(() => 0); G.coopWin = false;
     if (players === 1) G.bots[1] = new Bot(G.birds[1], 5, lvl);
     G.hintT = 10;
     if (mode === 'duel') startRound();
@@ -140,8 +144,8 @@ const Game = (() => {
     if (G.state === 'play' && G.mode === 'duel') {
       G.roundT -= dt;
       if (G.roundT <= 0) {
-        const k = G.birds.map(b => b.hp / b.sp.hp);
-        endRound(k[0] > k[1] + 0.001 ? 0 : k[1] > k[0] + 0.001 ? 1 : -1, true);
+        const k = G.birds.map(b => (b.alive ? b.hp / b.sp.hp : -1)), mx = Math.max(...k), top = k.filter(v => v > mx - 0.001);
+        endRound(top.length === 1 ? k.indexOf(mx) : -1, true);
       }
     }
     // práctica y título: el derribado vuelve a los 2,5 s
@@ -155,7 +159,7 @@ const Game = (() => {
           const tp = G.tm ? Team.respawnPos(G, i) : null;
           if (tp) { b.reset(tp.x, tp.y, tp.f); b.px = tp.x; b.py = tp.y; }
           else if (G.mode === 'race' && G.gates) { const p = Modes.respawnPos(G, i); b.reset(p.x, p.y, p.f); b.px = p.x; b.py = p.y; }
-          else { const x = i === 0 ? W.w * 0.2 : W.w * 0.8; b.reset(x, World.safeY(W, x, 800), i === 0 ? 1 : -1); }
+          else { const n = G.birds.length, x = n <= 2 ? (i === 0 ? W.w * 0.2 : W.w * 0.8) : W.w * (0.15 + 0.7 * i / (n - 1)); b.reset(x, World.safeY(W, x, 800), x < W.w / 2 ? 1 : -1); }
           b.G = G; b.stats = keep;
           // dos segundos de escudo al volver: que no lo tumben apenas aparece
           if (G.mode !== 'school') b.shield = 2;
@@ -166,8 +170,9 @@ const Game = (() => {
   }
   let sndT = {};
   function handleEvents() {
-    const quiet = G.state === 'attract';
+    const quiet = G.state === 'attract', fwd = netOn() && NetPlay.isHost;
     for (const e of G.events) {
+      if (fwd && !quiet) NetGame.fwd(e);
       FX.event(e, G);
       Style.event(G, e);
       Progress.event(G, e);
@@ -187,8 +192,9 @@ const Game = (() => {
         e.b.stats.downs = (e.b.stats.downs || 0) + 1;
         if (e.from >= 0 && G.birds[e.from]) G.birds[e.from].stats.kills++;
         if (G.mode === 'duel' && G.state === 'play') {
-          const other = G.birds[1 - e.b.id];
-          endRound(other.alive ? other.id : -1, false, e);
+          // todos contra todos: la ronda acaba cuando queda uno solo en el aire
+          const alive = G.birds.filter(b => b.alive);
+          if (alive.length <= 1) endRound(alive.length ? alive[0].id : -1, false, e);
         }
       }
       if (quiet && !['boom', 'down'].includes(e.type)) continue;
@@ -199,6 +205,20 @@ const Game = (() => {
       if (!quiet && Touch.enabled && (e.type === 'hurt' && e.n >= 10)) buzz(35);
     }
     G.events.length = 0;
+  }
+  // en línea, aparato remoto: los eventos llegan del anfitrión; aquí solo efectos, sonidos y logros propios
+  function clientEvents(list) {
+    for (const e of list) {
+      if (e.bid != null) e.b = G.birds[e.bid]; if (e.bid != null && !e.b) continue;
+      FX.event(e, G);
+      if (e.b ? isLocal(e.b.id) : e.from >= 0 && isLocal(e.from)) Progress.event(G, e);
+      const gap = { shot: 0.03, hit: 0.04, whiz: 0.15, skim: 0.15, spark: 0.05, glass: 0.07 }[e.type];
+      if (gap) { if ((sndT[e.type] || 0) > G.time) continue; sndT[e.type] = G.time + gap; }
+      Sound.play(e.type, e, false);
+      if (e.type === 'down' && e.b && isLocal(e.b.id)) buzz([60, 40, 120]);
+      if (e.type === 'hurt' && e.b && isLocal(e.b.id) && Touch.enabled && e.n >= 10) buzz(35);
+    }
+    if (G.events.length) { for (const e of G.events) { FX.event(e, G); if (e.type === 'achievement') G.toast = { name: e.name, t: 0 }; } G.events.length = 0; }
   }
   function buzz(ms) { if (!Store.get('vibrate', true)) return; try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* nada */ } }
 
@@ -219,7 +239,7 @@ const Game = (() => {
     G.state = 'roundEnd'; G.stateT = 0; G.roundWinner = winner; G.canFight = false;
     if (winner >= 0) G.wins[winner]++;
     G.cineTarget = 1;
-    const sc = (G.mode === 'race' ? 'aros ' : '') + `${Math.floor(G.score[0])} – ${Math.floor(G.score[1])}`;
+    const sc = (G.mode === 'race' ? 'aros ' : '') + G.score.map(v => Math.floor(v)).join(' – ');
     if (G.mode === 'boss') {
       const win = winner >= 0, fb = G.boss && G.boss.lastHit;
       G.coopWin = win;
@@ -245,10 +265,10 @@ const Game = (() => {
       return;
     }
     G.banner = { t: 0, big: timeUp ? '¡TIEMPO!' : G.mode === 'race' ? '¡PRIMERO EN LA META!' : '¡MALETÍN ENTREGADO!', sub: winner >= 0 ? `Gana ${who(winner)} · ${sc}` : `Empate · ${sc}`, color: winner >= 0 ? PLAYER_COLORS[winner].main : '#ffffff', delay: 0 };
-    if (winner < 0) G.wins = [1, 1];
+    if (winner < 0) G.wins = G.birds.map(() => 1);
     Sound.play(timeUp ? 'timeUp' : 'roundEnd');
   }
-  function who(i) { const b = G.birds[i]; return G.players === 1 && i === 1 ? (G.mode === 'boss' ? `la compañera (${b.sp.name})` : `la máquina (${b.sp.name})`) : `J${i + 1} · ${b.sp.name}`; }
+  function who(i) { const b = G.birds[i]; if (G.net) return `${pname(i)} · ${b.sp.name}`; return G.players === 1 && i === 1 ? (G.mode === 'boss' ? `la compañera (${b.sp.name})` : `la máquina (${b.sp.name})`) : `J${i + 1} · ${b.sp.name}`; }
   function updateRounds(realDt) {
     if (G.state === 'countdown') {
       G.stateT += realDt;
@@ -263,6 +283,7 @@ const Game = (() => {
           // el ganador da una vuelta de honor mientras se ven los resultados
           const R = results(); Progress.matchEnd(G, R);
           G.birds.forEach((b, i) => { if (b.alive) G.bots[i] = new Bot(b, 77 + i, 1); });
+          if (netOn() && NetPlay.isHost) NetGame.results(R);
           if (onMatchEnd) onMatchEnd(R);
         }
         else { G.round++; startRound(); }
@@ -271,9 +292,12 @@ const Game = (() => {
     G.cine += (G.cineTarget - G.cine) * Math.min(1, realDt * 4);
   }
   function results() {
-    const w = G.wins[0] > G.wins[1] ? 0 : 1;
-    return { winner: G.mode !== 'duel' && G.score[0] === G.score[1] ? -1 : G.mode !== 'duel' ? (G.score[0] > G.score[1] ? 0 : 1) : w, wins: G.wins.slice(), names: [who(0), who(1)], stats: G.birds.map(b => Object.assign({}, b.stats)), vsBot: G.players === 1, mode: G.mode, score: (G.score || [0, 0]).map(Math.floor), coopWin: !!G.coopWin, bossDmg: G.boss ? G.boss.dmg.map(Math.round) : null, hp: G.birds.map(b => (b.alive ? b.hp / b.sp.hp : 0)), lives: G.lives, playT: G.playT, trav: G.trav, lvl: G.lvl, duo: !!G.duo, coop: !!G.coop, tm: G.tm ? { ok: G.tm.ok, stars: G.tm.stars, kind: G.tm.kind, summary: Team.summary(G) } : null };
+    const n = G.birds.length, best = arr => { const m = Math.max(...arr), k = arr.filter(v => v === m).length; return k === 1 ? arr.indexOf(m) : -1; };
+    const w = n <= 2 ? (G.wins[0] > G.wins[1] ? 0 : 1) : best(G.wins);
+    const sc = (G.score || []).map(Math.floor);
+    return { winner: G.mode !== 'duel' ? (n <= 2 ? (sc[0] === sc[1] ? -1 : sc[0] > sc[1] ? 0 : 1) : best(sc)) : w, wins: G.wins.slice(), names: G.birds.map((b, i) => who(i)), stats: G.birds.map(b => Object.assign({}, b.stats)), vsBot: G.players === 1, mode: G.mode, score: sc.length ? sc : [0, 0], coopWin: !!G.coopWin, bossDmg: G.boss ? G.boss.dmg.map(Math.round) : null, hp: G.birds.map(b => (b.alive ? b.hp / b.sp.hp : 0)), lives: G.lives, playT: G.playT, trav: G.trav, lvl: G.lvl, duo: !!G.duo, coop: !!G.coop, tm: G.tm ? { ok: G.tm.ok, stars: G.tm.stars, kind: G.tm.kind, summary: Team.summary(G) } : null, net: !!G.net };
   }
+
 
   /* ---------- cámara: los dos a la vista; en un derribo, cámara lenta y de cerca ---------- */
   function snapCamera() { updateCamera(0, true); }
@@ -283,9 +307,12 @@ const Game = (() => {
     const pts = [];
     // en la Carrera contra la máquina, la cámara es tuya: te sigue a ti mirando hacia tu próximo aro
     const solo = G.mode === 'race' && G.players === 1 && G.gates && G.state !== 'attract' && B[0].alive;
-    for (const b of B) { if (b.alive && !(solo && b.id === 1)) { pts.push([b.x, b.y], [b.x + b.vx * 0.25, b.y + b.vy * 0.2]); } }
+    // en línea, cada aparato encuadra a sus pilotos (y, si están caídos, el paracaídas o a quien siga en el aire)
+    const mineB = netOn() && G.state !== 'attract' ? B.filter(b => NetPlay.mine.includes(b.id)) : null;
+    const camB = mineB ? (mineB.some(b => b.alive) ? mineB : B) : B;
+    for (const b of camB) { if (b.alive && !(solo && b.id === 1)) { pts.push([b.x, b.y], [b.x + b.vx * 0.25, b.y + b.vy * 0.2]); } }
     if (solo) { const g = Modes.nextGate(G, 0); if (Math.hypot(g.x - B[0].x, g.y - B[0].y) < 900) pts.push([g.x, g.y]); else pts.push([B[0].x + B[0].vx * 0.5, B[0].y + B[0].vy * 0.4]); }
-    for (const p of G.chutes) pts.push([p.x, p.y]);
+    for (const p of G.chutes) if (!mineB || NetPlay.mine.includes(p.id)) pts.push([p.x, p.y]);
     if (G.boss && !G.boss.dead && G.state !== 'attract') pts.push([G.boss.x - 260, G.boss.y - Boss.RY - 170], [G.boss.x + 260, G.boss.y + Boss.RY + 60]);
     if (!pts.length) pts.push([cam.x, cam.y]);
     for (const [x, y] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
@@ -302,7 +329,7 @@ const Game = (() => {
       if (I) {
         const lowTop = I.top - 18, hudBot = hudTop + 10;
         let need = 0, room = Infinity;
-        for (const b of B) {
+        for (const b of camB) {
           if (!b.alive) continue;
           const sx = sw / 2 + (b.x - tx) * tz, sy = sh / 2 + (b.y - ty) * tz;
           room = Math.min(room, sy - hudBot);
@@ -435,16 +462,19 @@ const Game = (() => {
   function drawHUD() {
     const u = hudUnit(), pad = 10 * u;
     if (G.mode === 'school') School.drawHUD(ctx, G, sw, sh, u, glass);
-    for (let i = 0; i < 2; i++) {
-      if (G.mode === 'school' && i === 1) continue;
-      const b = G.birds[i], pc = PLAYER_COLORS[i], w = 214 * u, h = 82 * u;
-      const right = i === 1, x = right ? sw - pad - w : pad, y = pad;
+    // paneles: los dos de siempre; en línea, los pilotos de este aparato (y los demás en fichas pequeñas)
+    const panels = netOn() ? NetPlay.mine.slice(0, 2) : [0, 1];
+    panels.forEach((i, slot) => {
+      if (G.mode === 'school' && i === 1) return;
+      const b = G.birds[i], pc = PLAYER_COLORS[i] || PLAYER_COLORS[0], w = 214 * u, h = 82 * u;
+      if (!b) return;
+      const right = slot === 1, x = right ? sw - pad - w : pad, y = pad;
       glass(x, y, w, h, 14 * u);
       ctx.save();
       const inX = right ? x + w - 14 * u : x + 14 * u, dir = right ? -1 : 1;
       ctx.textAlign = right ? 'right' : 'left'; ctx.fillStyle = '#ffffff'; ctx.font = font(Math.max(12, 14 * u));
       ctx.shadowColor = 'rgba(10,6,30,0.5)'; ctx.shadowBlur = 4;
-      const name = G.players === 1 && i === 1 ? `${G.mode === 'boss' ? 'Compañera' : 'Máquina'} · ${b.sp.name}` : `J${i + 1} · ${b.sp.name}`;
+      const name = netOn() ? `${pname(i)} · ${b.sp.name}` : G.players === 1 && i === 1 ? `${G.mode === 'boss' ? 'Compañera' : 'Máquina'} · ${b.sp.name}` : `J${i + 1} · ${b.sp.name}`;
       ctx.fillText(name, inX, y + 20 * u); ctx.shadowBlur = 0;
       const av = G.adv ? G.adv[i] : 0;
       if (av) {
@@ -485,7 +515,8 @@ const Game = (() => {
       if (b.rapid > 0) { ctx.fillStyle = '#ffe36b'; ctx.font = font(Math.max(10, 11 * u)); ctx.textAlign = right ? 'right' : 'left'; ctx.fillText(`ráfaga ${Math.ceil(b.rapid)}`, ix, y + 79 * u); ix += dir * 62 * u; }
       if (b.rocket > 0) { ctx.fillStyle = '#ff8ae6'; ctx.font = font(Math.max(10, 11 * u)); ctx.textAlign = right ? 'right' : 'left'; ctx.fillText(`cohete ${Math.ceil(b.rocket)}`, ix, y + 79 * u); }
       ctx.restore();
-    }
+    });
+    if (netOn()) rivalChips(u, pad);
     // centro: ronda y tiempo (en táctil, la pausa va ahí y esto baja un poco)
     ctx.save();
     const lw = 150 * u, lh = 38 * u, ly = Touch.enabled ? pad + 50 : pad;
@@ -538,7 +569,7 @@ const Game = (() => {
     if (G.hintT > 0 && !Touch.enabled && G.state !== 'attract') {
       const a = clamp(G.hintT, 0, 1);
       ctx.save(); ctx.globalAlpha = a;
-      const lines = G.players === 2 ? ['J1: ' + keyHint(0), 'J2: ' + keyHint(1)] : [keyHint(0) + '  (o las de J2)', 'Maniobras distintas llenan la Adrenalina' + (Input.dtap ? ' · doble toque = tonel' : '')];
+      const lines = netOn() ? (NetPlay.mine.length > 1 ? NetPlay.mine.slice(0, 2).map((seat, li) => `${pname(seat)}: ` + keyHint(li)) : [keyHint(0), 'Maniobras distintas llenan la Adrenalina' + (Input.dtap ? ' · doble toque = tonel' : '')]) : G.players === 2 ? ['J1: ' + keyHint(0), 'J2: ' + keyHint(1)] : [keyHint(0) + '  (o las de J2)', 'Maniobras distintas llenan la Adrenalina' + (Input.dtap ? ' · doble toque = tonel' : '')];
       let fs = Math.max(12, 14 * u); ctx.font = font(fs);
       let tw = Math.max(...lines.map(l => ctx.measureText(l).width)) + 40 * u;
       if (tw > sw - 24) { fs *= (sw - 24) / tw; ctx.font = font(fs); tw = sw - 24; }
@@ -548,6 +579,26 @@ const Game = (() => {
       lines.forEach((l, k) => ctx.fillText(l, sw / 2, y0 + 8 * u + lh * (k + 0.5)));
       ctx.restore();
     }
+  }
+  // en línea: ficha chica por cada piloto de otro aparato (nombre, blindaje y rondas o puntos)
+  function rivalChips(u, pad) {
+    const others = G.birds.filter(b => !NetPlay.mine.includes(b.id)); if (!others.length) return;
+    const cw = 128 * u, ch = 34 * u, gap = 6 * u, two = NetPlay.mine.length > 1;
+    // con un piloto aquí, van en columna arriba a la derecha; con dos, en fila debajo del panel del centro
+    others.forEach((b, k) => {
+      const x = two ? sw / 2 - (others.length * (cw + gap) - gap) / 2 + k * (cw + gap) : sw - pad - cw, y = two ? (Touch.enabled ? pad + 104 * u : pad + 62 * u) : pad + k * (ch + gap);
+      const pc = PLAYER_COLORS[b.id] || PLAYER_COLORS[0];
+      ctx.save(); ctx.globalAlpha = b.alive ? 1 : 0.55; glass(x, y, cw, ch, 10 * u);
+      ctx.fillStyle = pc.main; ctx.beginPath(); ctx.arc(x + 11 * u, y + 12 * u, 4.5 * u, 0, TAU); ctx.fill();
+      ctx.font = font(Math.max(10, 11 * u)); ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff';
+      let nm = pname(b.id); while (nm.length > 3 && ctx.measureText(nm).width > cw - 46 * u) nm = nm.slice(0, -1);
+      ctx.fillText(nm, x + 20 * u, y + 16 * u);
+      ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      const right = G.mode === 'duel' ? '●'.repeat(G.wins[b.id] || 0) : String(Math.floor((G.score || [])[b.id] || 0));
+      ctx.fillStyle = pc.main; ctx.fillText(right, x + cw - 9 * u, y + 16 * u);
+      const k2 = b.alive ? b.hp / b.sp.hp : 0; bar(x + 9 * u, y + 23 * u, cw - 18 * u, 5 * u, k2, b.hitT > 0 ? '#ffffff' : k2 > 0.5 ? pc.main : k2 > 0.25 ? '#ffb347' : '#ff5a4e', false);
+      ctx.restore();
+    });
   }
   function bigText(txt, y, scale, col, alpha, size) {
     ctx.save(); ctx.globalAlpha = alpha; ctx.translate(sw / 2, y); ctx.scale(scale, scale);
@@ -566,15 +617,20 @@ const Game = (() => {
     const now = ts / 1000, fdt = Math.min(0.1, last ? now - last : 0.016); last = now;
     watchPerf(fdt);
     Input.pollPads();
-    if (!G.paused && G.world) {
+    if (G.world && netOn() && NetPlay.isClient && G.state !== 'attract') {
+      // en línea, remoto: no simula; dibuja lo que manda el anfitrión (interpolado) y anima el escenario
+      if (Touch.enabled) Touch.tick(); World.step(G.world, fdt); G.time += fdt; G.birds.forEach(b => { b.G = G; });
+      NetGame.clientStep(fdt); G.hintT = Math.max(0, G.hintT - fdt);
+    } else if ((!G.paused || netOn()) && G.world) {
       acc += fdt * G.timeScale;
       while (acc >= DT) { step(DT); acc -= DT; }
       updateRounds(fdt);
       G.hintT = Math.max(0, G.hintT - fdt);
     }
     if (G.world) {
-      updateCamera(G.paused ? 0 : fdt, false);
-      FX.update(G.paused ? 0 : fdt * G.timeScale, G, cam, sw, sh);
+      const pz = G.paused && !netOn();
+      updateCamera(pz ? 0 : fdt, false);
+      FX.update(pz ? 0 : fdt * G.timeScale, G, cam, sw, sh);
       render();
       Sound.update(G, cam, sw);
     }
@@ -601,6 +657,17 @@ const Game = (() => {
   // ventaja por jugador (para jugar parejo entre amigos de distinto nivel); en la Travesía y la Escuela no cuenta
   function applyAdv() { const A = Store.get('adv', [0, 0]); G.adv = (G.trav && !G.duo) || G.mode === 'school' ? [0, 0] : [A[0] || 0, A[1] || 0]; }
 
+  // en línea: todos los pilotos de la sala (2 a 4), sin máquina; el anfitrión simula, los remotos dibujan
+  function startNet(o) {
+    lastOver = null; G.net = true; G.players = o.species.length; G.mode = o.mode; G.arena = o.arena;
+    setup({ species: o.species, looks: o.looks, trails: o.trails, seed: o.seed || 1, arena: o.arena });
+    G.trav = null; G.playT = 0; G.lvl = 1; G.copa = null; G.duo = false; G.coop = false; G.coopGoal = null; G.tm = null; G.boss = null;
+    G.adv = G.birds.map(() => 0); G.wins = G.birds.map(() => 0); G.round = 1; G.cratesOn = true; G.winsNeeded = o.mode === 'duel' ? o.wins || 3 : 1; G.score = G.birds.map(() => 0); G.coopWin = false;
+    G.hintT = 8; G.paused = false; acc = 0;
+    if (o.mode === 'duel') startRound();
+    else { startRound(); Modes.setup(G); G.cratesOn = o.mode === 'case'; snapCamera(); }
+  }
+  function netEnd() { G.net = false; }
   function advance(dt) { let n = Math.max(1, Math.round(dt / DT)); while (n--) { step(DT); updateRounds(DT); updateCamera(DT); } }
-  return { G, cam, cfg, applyAdv, begin, start, advance, startAttract, rematch, setQuality, setSpecies, setArena, setMode, setBotLevel, step, updateCamera, results, set onMatchEnd(fn) { onMatchEnd = fn; }, set onSchoolEnd(fn) { onSchoolEnd = fn; }, get quality() { return quality; }, get screen() { return { sw, sh, dpr }; } };
+  return { G, cam, cfg, applyAdv, begin, start, startNet, netEnd, clientEvents, isLocal, pname, handleEvents, updateRounds, advance, startAttract, rematch, setQuality, setSpecies, setArena, setMode, setBotLevel, step, updateCamera, results, set onMatchEnd(fn) { onMatchEnd = fn; }, set onSchoolEnd(fn) { onSchoolEnd = fn; }, get quality() { return quality; }, get screen() { return { sw, sh, dpr }; } };
 })();

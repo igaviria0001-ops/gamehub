@@ -33,7 +33,7 @@ const Progress = (() => {
   let P = Object.assign(def(), Store.get('prog', {}));
   P.n = Object.assign(def().n, P.n); P.best = Object.assign(def().best, P.best); P.got = P.got || {};
   const save = () => Store.set('prog', P);
-  const human = (G, b) => b && b.id != null && !G.bots[b.id] && G.state !== 'attract';
+  const human = (G, b) => b && b.id != null && Game.isLocal(b.id) && G.state !== 'attract';
   function unlock(G, id) {
     if (P.got[id]) return;
     P.got[id] = Date.now(); save();
@@ -72,7 +72,7 @@ const Progress = (() => {
   // al terminar una partida (resultados)
   function matchEnd(G, r) {
     P.n.partidas++;
-    const humans = [0, 1].filter(i => !G.bots[i]);
+    const humans = G.birds.map((b, i) => i).filter(i => Game.isLocal(i));
     if (r.mode === 'case' && humans.includes(r.winner)) unlock(G, 'maletin');
     if (r.mode === 'race' && humans.includes(r.winner)) unlock(G, 'carrera');
     if (r.mode === 'boss' && r.coopWin) { unlock(G, 'jefe'); const t = Math.round(G.time); if (!P.best.jefe || t < P.best.jefe) P.best.jefe = t; }
