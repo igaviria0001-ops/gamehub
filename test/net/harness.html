@@ -1,0 +1,5 @@
+<!doctype html><meta charset="utf-8"><title>net</title>
+<script src="../../app/net.js"></script>
+<script>
+  window.LOG = []; Net.on('msg', (from, m, rel) => LOG.push({ from, m, rel })); Net.on('room', r => { window.ROOM = r; });
+</script>

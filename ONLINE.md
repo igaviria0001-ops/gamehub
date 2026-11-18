@@ -56,7 +56,7 @@
 
 ## Fases (marcar al terminar; el detalle de cada paso va en la bitácora)
 
-- [ ] **F1 · Red base** `shared/net.js`: sala con código de 5 letras + enlace `?sala=` + QR,
+- [x] **F1 · Red base** (base hecha y probada; faltan prueba de relevo y TURN en F9) `shared/net.js`: sala con código de 5 letras + enlace `?sala=` + QR,
       señalización MQTT cifrada con varios brokers, WebRTC (canal confiable + no confiable),
       TURN de respaldo, relevo por MQTT, ping/reloj, reconexión, salida de un aparato.
       Transporte de prueba por `BroadcastChannel` para las pruebas automáticas.
@@ -89,3 +89,8 @@
 
 - **17 nov 20:15** — Investigación y decisiones (arriba). npm sin acceso en el contenedor →
   red escrita a mano sin librerías. Rama `online` creada. Sigue: F1 `shared/net.js`.
+- **17 nov 20:40** — F1: `app/net.js` (MQTT mínimo propio sobre WebSocket a 3 brokers, AES-GCM, WebRTC con
+  canales negociados `r` confiable y `u` sin orden, TURN Open Relay por HMAC, relevo por MQTT a los 12 s,
+  ping/reloj, sala transmitida por el anfitrión, salida). Prueba `node test/net.js` (3 páginas, WebRTC real,
+  señalización BroadcastChannel con `?net=bc`): conectan en ~2 s, ping 2–3 ms, mensajes en los dos canales,
+  salida de un aparato → RED OK. Sigue: F2 sala en GameHub (leer app/app.js: pantallas y portada).
