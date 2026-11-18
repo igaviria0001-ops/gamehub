@@ -8028,7 +8028,8 @@ const Game = (() => {
   function clientEvents(list) {
     for (const e of list) {
       if (e.bid != null) e.b = G.birds[e.bid]; if (e.bid != null && !e.b) continue;
-      FX.event(e, G);
+      if (e.bid == null && e.bx != null) e.b = { x: e.bx, y: e.by };
+      try { FX.event(e, G); } catch (er) { continue; } // un efecto raro no debe parar el cuadro
       if (e.b ? isLocal(e.b.id) : e.from >= 0 && isLocal(e.from)) Progress.event(G, e);
       const gap = { shot: 0.03, hit: 0.04, whiz: 0.15, skim: 0.15, spark: 0.05, glass: 0.07 }[e.type];
       if (gap) { if ((sndT[e.type] || 0) > G.time) continue; sndT[e.type] = G.time + gap; }
@@ -9248,7 +9249,7 @@ const NetGame = (() => {
     seatsMax: 4, again, snap, apply, clientStep, readLocal, get pst() { return PST; },
     neutral: () => NEUTRAL,
     // anfitrión: cada evento de la partida viaja a los remotos (el piloto va como número)
-    fwd(e) { const o = {}; for (const k in e) { const v = e[k], t = typeof v; if (t === 'number' || t === 'string' || t === 'boolean') o[k] = v; else if (k === 'b' && v && v.id != null) o.bid = v.id; } NetPlay.event(o); },
+    fwd(e) { const o = {}; for (const k in e) { const v = e[k], t = typeof v; if (t === 'number' || t === 'string' || t === 'boolean') o[k] = v; else if (k === 'b' && v && v.id != null) o.bid = v.id; else if (k === 'b' && v && typeof v.x === 'number') { o.bx = Math.round(v.x); o.by = Math.round(v.y); } } NetPlay.event(o); }, // (el jefe y sus partes no son pilotos: viaja su posición)
     // remoto: los eventos que llegan del anfitrión se muestran en el próximo cuadro
     event(e) { evQ.push(e); if (evQ.length > 400) evQ.splice(0, evQ.length - 400); },
     // anfitrión: resultados a todos

@@ -216,7 +216,7 @@ const NetGame = (() => {
     seatsMax: 4, again, snap, apply, clientStep, readLocal, get pst() { return PST; },
     neutral: () => NEUTRAL,
     // anfitrión: cada evento de la partida viaja a los remotos (el piloto va como número)
-    fwd(e) { const o = {}; for (const k in e) { const v = e[k], t = typeof v; if (t === 'number' || t === 'string' || t === 'boolean') o[k] = v; else if (k === 'b' && v && v.id != null) o.bid = v.id; } NetPlay.event(o); },
+    fwd(e) { const o = {}; for (const k in e) { const v = e[k], t = typeof v; if (t === 'number' || t === 'string' || t === 'boolean') o[k] = v; else if (k === 'b' && v && v.id != null) o.bid = v.id; else if (k === 'b' && v && typeof v.x === 'number') { o.bx = Math.round(v.x); o.by = Math.round(v.y); } } NetPlay.event(o); }, // (el jefe y sus partes no son pilotos: viaja su posición)
     // remoto: los eventos que llegan del anfitrión se muestran en el próximo cuadro
     event(e) { evQ.push(e); if (evQ.length > 400) evQ.splice(0, evQ.length - 400); },
     // anfitrión: resultados a todos

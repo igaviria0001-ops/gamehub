@@ -210,7 +210,8 @@ const Game = (() => {
   function clientEvents(list) {
     for (const e of list) {
       if (e.bid != null) e.b = G.birds[e.bid]; if (e.bid != null && !e.b) continue;
-      FX.event(e, G);
+      if (e.bid == null && e.bx != null) e.b = { x: e.bx, y: e.by };
+      try { FX.event(e, G); } catch (er) { continue; } // un efecto raro no debe parar el cuadro
       if (e.b ? isLocal(e.b.id) : e.from >= 0 && isLocal(e.from)) Progress.event(G, e);
       const gap = { shot: 0.03, hit: 0.04, whiz: 0.15, skim: 0.15, spark: 0.05, glass: 0.07 }[e.type];
       if (gap) { if ((sndT[e.type] || 0) > G.time) continue; sndT[e.type] = G.time + gap; }
