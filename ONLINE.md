@@ -276,3 +276,28 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   Afloja v39. Bitácoras de los 4 docs con la fila «En línea». **Gran misión terminada.** Ideas para después: predicción
   local del propio personaje (respuesta aún más inmediata), duelo/eliminación/batalla de VÉRTIGO en línea, elegir quién
   juega cuando sobran personas en Tira y Afloja, bajar más los datos de Sortilegio.
+
+## Segunda tanda (pedido 18 nov 06:01) — plan
+Pedido: (1) asegurar que el modo SIN conexión quedó idéntico y perfecto; (2) que el propio personaje responda más rápido;
+(3) todos los modos de todos los juegos también en línea, sin cambiar la estructura de los juegos (solo agregar); el
+estilo de la app se adapta; (4) revisar su lista de ideas (inspiración, no obligación) y hacer las que sí mejoren, o
+mejores; (5) todo optimizado y comprobado.
+- **G1 · Sin conexión idéntico** — prueba de EQUIVALENCIA: la versión de antes del en línea (main 28e6638) y la nueva,
+  con el mismo azar (Math.random sembrado) y pasos fijos, máquina contra máquina en cada modo de cada juego: el
+  resultado debe ser idéntico (posiciones, vida, puntos). Más las pruebas propias de cada juego (soak/chaos/modos).
+- **G2 · Red más sólida** (de la lista y propias): pantalla siempre encendida en la sala (Wake Lock); aviso al anfitrión
+  de no salir de la app y aviso a los demás cuando sale; reloj recalibrado (mínimo de ventana, se adapta en 2 s si cambia
+  de wifi a datos); relevo MQTT con ritmo propio (~12/s, solo lo último) para no saturar los brokers; TURN propio en
+  Ajustes con botón «Probar» y que el anfitrión lo comparta con la sala por la señal cifrada; mapa completo a pedido
+  (Sortilegio) si alguien entra o se reconecta a mitad de ronda; **sucesión automática del anfitrión** (mismo código de
+  sala: el siguiente aparato toma el mando y los demás se reconectan solos; el torneo sigue).
+  Descartadas: contador de toques en Tira y Afloja (tirar/aflojar se mantienen apretados; saltar/pegarse ya se repiten
+  con número); vibración en cada toque (la predicción del personaje propio resuelve el retraso de verdad);
+  interpolación dinámica (ya está hecha).
+- **G3 · Respuesta inmediata** — predicción del personaje propio en el aparato remoto (se mueve con tus teclas al
+  instante con la misma física del juego y se corrige suave con lo que manda el anfitrión): Ventolera, VÉRTIGO,
+  Sortilegio (movimiento), Tira y Afloja (movimiento).
+- **G4 · Todos los modos en línea** — VÉRTIGO: duelo, eliminación, batalla, Gran Premio, Persecución; Ventolera: Copa,
+  Jefe en pareja; Sortilegio: Copa; Tira y Afloja: Modo Fiesta, jefes y Fuga en pareja; campañas en pareja si alcanza.
+- **G5 · Comprobar y publicar** — todas las pruebas (sin conexión, equivalencia, en línea por modo, celular, red mala),
+  unir a main, artefactos, bitácoras, memoria.
