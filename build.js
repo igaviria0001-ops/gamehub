@@ -38,13 +38,13 @@ fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 // versión: huella de todo lo que se publica (cambia sola cuando cambia cualquier cosa)
 const crypto = require('crypto'), hash = crypto.createHash('sha1');
 const assetFiles = ['assets/galaxia.jpg', ...fs.readdirSync(path.join(OUT, 'assets', 'shots')).map(f => 'assets/shots/' + f), ...fs.readdirSync(path.join(OUT, 'assets', 'icons')).map(f => 'assets/icons/' + f)];
-for (const f of ['index.html', 'app.css', 'catalog.js', 'torneo.js', 'app.js']) hash.update(read(f));
+for (const f of ['index.html', 'app.css', 'catalog.js', 'torneo.js', 'net.js', 'online.js', 'app.js']) hash.update(read(f));
 hash.update(fonts);
 for (const f of [...GAMES.map(([id]) => `games/${id}.html`), ...assetFiles]) hash.update(fs.readFileSync(path.join(OUT, f)));
 const ver = hash.digest('hex').slice(0, 10), today = new Date().toISOString().slice(0, 10);
 const BUILD = { v: ver, date: today };
 
-const js = ['catalog.js', 'torneo.js', 'app.js'].map(f => `/* ===== ${f} ===== */\n` + read(f)).join('\n').replace("/*__BUILD__*/ { v: 'dev', date: '' }", () => JSON.stringify(BUILD));
+const js = ['catalog.js', 'torneo.js', 'net.js', 'online.js', 'app.js'].map(f => `/* ===== ${f} ===== */\n` + read(f)).join('\n').replace("/*__BUILD__*/ { v: 'dev', date: '' }", () => JSON.stringify(BUILD));
 const html = read('index.html').replace('/*__FONTS__*/', () => fonts).replace('/*__CSS__*/', () => read('app.css')).replace('/*__JS__*/', () => js);
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
 fs.writeFileSync(path.join(OUT, 'version.json'), JSON.stringify(BUILD));

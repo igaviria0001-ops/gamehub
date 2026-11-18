@@ -115,7 +115,7 @@
     view = v; if (v !== 'game') lastMain = v;
     const el = $('#v-' + v); el.hidden = false; void el.offsetWidth; el.classList.add('enter'); el.scrollTop = 0;
     $$('.nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.go === (v === 'game' ? 'home' : v))));
-    if (v === 'home') renderHome(); else if (v === 'game') renderGame(arg); else if (v === 'torneo') renderTorneo(); else if (v === 'fama') renderFame(); else if (v === 'ajustes') renderSettings();
+    if (v === 'home') renderHome(); else if (v === 'game') renderGame(arg); else if (v === 'torneo') renderTorneo(); else if (v === 'fama') renderFame(); else if (v === 'ajustes') renderSettings(); else if (v === 'online') Online.render();
     const hash = v === 'home' ? '' : v === 'game' ? 'ficha-' + arg : v;
     if (push) { try { history.replaceState(null, '', hash ? '#' + hash : location.pathname + location.search); } catch (e) { /* nada */ } }
   }
@@ -780,8 +780,11 @@
 
   /* ---------- arranque ---------- */
   const h = (location.hash || '').slice(1);
-  if (h.startsWith('ficha-') && GAME[h.slice(6)]) go('game', h.slice(6), false);
-  else if (['torneo', 'fama', 'ajustes'].includes(h)) go(h, null, false);
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App };
+  // un enlace de invitación (?sala=CÓDIGO) abre directo la sala en línea
+  if (new URLSearchParams(location.search).get('sala')) go('online', null, false);
+  else if (h.startsWith('ficha-') && GAME[h.slice(6)]) go('game', h.slice(6), false);
+  else if (['torneo', 'fama', 'ajustes', 'online'].includes(h)) go(h, null, false);
   else go('home', null, false);
   BG.start();
   // en GitHub Pages: app instalable, sin internet y con actualizaciones que no tocan el progreso

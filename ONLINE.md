@@ -94,3 +94,8 @@
   ping/reloj, sala transmitida por el anfitrión, salida). Prueba `node test/net.js` (3 páginas, WebRTC real,
   señalización BroadcastChannel con `?net=bc`): conectan en ~2 s, ping 2–3 ms, mensajes en los dos canales,
   salida de un aparato → RED OK. Sigue: F2 sala en GameHub (leer app/app.js: pantallas y portada).
+- **17 nov 21:05** — F2 (primera parte): vista «En línea» (`app/online.js`, botón en la barra, `#online`,
+  enlace `?sala=CÓDIGO` abre la sala). Quién juega en este aparato (1 o 2, nombre y color), crear/unirse,
+  código grande, copiar enlace/compartir, aparatos con jugadores, ping y tipo de conexión, el anfitrión ve
+  los 4 juegos («pronto»). Prueba `node test/sala.js` (PC anfitrión + celular con 2 + otro PC) → SALA OK.
+  Sigue: F3 `shared/netplay.js` (enlace juego ↔ red) y luego VÉRTIGO en línea (F4).

@@ -431,6 +431,38 @@ main { position: relative; flex: 1; min-height: 0; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
 
+/* ---------- en línea ---------- */
+.on-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 720px) { .on-two { grid-template-columns: 1fr; } }
+.on-card { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.on-card .note { margin: 0; color: var(--mute); font-size: 13.5px; }
+.on-code { width: 9.5ch; text-transform: uppercase; letter-spacing: .25em; font-size: 20px; text-align: center; }
+.on-colors { display: flex; gap: 8px; flex-wrap: wrap; }
+.on-col { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); background: var(--c); cursor: pointer; box-shadow: 0 0 0 0 transparent; }
+.on-col[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 0 16px var(--c); transform: scale(1.08); }
+.on-room { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; }
+.on-codebox { display: flex; flex-direction: column; gap: 6px; }
+.on-big { font: 900 clamp(38px, 7vw, 64px)/1 var(--display, var(--body)); letter-spacing: .18em; background: linear-gradient(180deg, #fff, #d4b3ff 60%, #ff9be6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.on-sum { color: var(--mute); font-weight: 800; } .on-sum b { color: var(--text); }
+.on-ping { font-weight: 900; } .on-ping.ok, .on-via.ok { color: var(--ok); } .on-ping.mid, .on-via.mid { color: var(--gold); } .on-ping.bad, .on-via.bad { color: var(--bad); }
+.on-devs { display: grid; gap: 10px; margin: 6px 0 4px; }
+.on-dev { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; background: rgba(255,255,255,.035); }
+.on-dev.me { border-color: var(--line2); background: rgba(255,255,255,.06); }
+.on-dh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.on-di { font-size: 18px; }
+.on-tag { font-size: 11px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--mute); }
+.on-tag.gold { background: rgba(255,211,107,.16); color: var(--gold); }
+.on-via { margin-left: auto; font-size: 12.5px; font-weight: 900; }
+.on-ps { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.on-p { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px; background: rgba(255,255,255,.07); font-weight: 900; font-size: 13.5px; }
+.on-p i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+.on-me { margin-top: 8px; } .on-me summary { cursor: pointer; color: var(--mute); font-weight: 800; font-size: 13.5px; padding: 6px 0; }
+.on-games { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 10px; }
+.on-game { border: 0; border-radius: 16px; padding: 16px 14px; text-align: left; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--c1), var(--c2)); box-shadow: 0 10px 26px rgba(0,0,0,.35); display: flex; flex-direction: column; gap: 4px; font: inherit; }
+.on-game b { font-size: 17px; font-weight: 900; } .on-game small { opacity: .85; font-weight: 800; }
+.on-game[disabled] { opacity: .45; cursor: default; }
+.on-note { color: var(--gold); font-weight: 800; word-break: break-all; }
+
 </style>
 </head>
 <body>
@@ -441,6 +473,7 @@ main { position: relative; flex: 1; min-height: 0; }
     <nav class="nav" aria-label="Secciones">
       <button data-go="home" aria-current="true"><span class="n-txt">Juegos</span><span class="n-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7 10.5v4M5 12.5h4"/><circle cx="15.5" cy="11.5" r="1" fill="currentColor"/><circle cx="17.5" cy="13.8" r="1" fill="currentColor"/></svg></span></button>
       <button data-go="torneo"><span class="n-txt">Torneo</span><span class="n-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3.5 4M17 6h3a3 3 0 0 1-3.5 4M12 14v4M8 20h8"/></svg></span></button>
+      <button data-go="online"><span class="n-txt">En línea</span><span class="n-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg></span></button>
       <button data-go="fama"><span class="n-txt">Salón de la fama</span><span class="n-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg></span></button>
       <button data-go="ajustes"><span class="n-txt">Ajustes</span><span class="n-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></span></button>
     </nav>
@@ -451,6 +484,7 @@ main { position: relative; flex: 1; min-height: 0; }
     <section class="view" id="v-home" aria-label="Juegos"></section>
     <section class="view" id="v-game" hidden></section>
     <section class="view" id="v-torneo" hidden aria-label="Torneo combinado"></section>
+    <section class="view" id="v-online" hidden aria-label="En línea"></section>
     <section class="view" id="v-fama" hidden aria-label="Salón de la fama"></section>
     <section class="view" id="v-ajustes" hidden aria-label="Ajustes"></section>
   </main>
@@ -786,6 +820,312 @@ const Torneo = (() => {
   return { create, nextMatch, makeEvent, curEvent, reroll, chooseFor, record, standings, progress, undo, need, enabledModes, enabledMaps, shuffle };
 })();
 
+/* ===== net.js ===== */
+/* =========================================================================
+   RED DE GAMEHUB — salas en línea sin servidor propio.
+   · Señalización: brokers MQTT públicos por WebSocket (varios a la vez) con
+     los mensajes cifrados (AES-GCM, clave sacada del código de la sala).
+   · Conexión: WebRTC entre aparatos (estrella: el anfitrión con cada uno).
+     Dos canales: «r» confiable y ordenado (eventos, sala) y «u» sin orden ni
+     reenvíos (entradas e instantáneas: nunca espera paquetes perdidos).
+   · NAT / datos móviles: STUN públicos + TURN de respaldo (Open Relay, con
+     credenciales temporales calculadas aquí) o los de Ajustes.
+   · Si WebRTC no conecta en 12 s: relevo por el mismo MQTT (más lento, pero
+     nadie se queda por fuera).
+   · Pruebas: transporte «bc» (BroadcastChannel) en vez de MQTT (?net=bc).
+   API: Net.host(info) → código · Net.join(código, info) · Net.leave()
+        Net.send(a, datos, confiable) (a = id | '*') · Net.on(tipo, fn)
+        Net.id · Net.isHost · Net.code · Net.peers (Map) · Net.now() (reloj del anfitrión)
+   ========================================================================= */
+const Net = (() => {
+  const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
+  const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }, { urls: 'stun:stun1.l.google.com:19302' }];
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const rid = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => ALPHA[b % ALPHA.length]).join('');
+  const b64 = u8 => btoa(String.fromCharCode(...u8)), unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const L = { peers: [], msg: [], status: [], room: [] };
+  const emit = (t, ...a) => { for (const f of L[t] || []) { try { f(...a); } catch (e) { console.error(e); } } };
+
+  /* ---------- estado ---------- */
+  const S = { id: rid(8), code: null, isHost: false, hostId: null, info: null, key: null, topic: null, sig: null, alive: false, seen: new Map(), clockOff: 0 };
+  const peers = new Map(); // id → { id, info, pc, r, u, via: 'p2p'|'relay'|'…', rtt, t0, open, lastSeen, pend: [] }
+
+  /* ---------- cifrado ---------- */
+  async function deriveKey(code) {
+    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('gamehub-sala:' + code)));
+    S.topic = 'gamehub/v1/' + Array.from(h.slice(0, 10), b => b.toString(16).padStart(2, '0')).join('');
+    const k2 = await crypto.subtle.digest('SHA-256', enc.encode('gamehub-clave:' + code + ':' + b64(h)));
+    S.key = await crypto.subtle.importKey('raw', k2, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  }
+  async function seal(obj) { const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, S.key, enc.encode(JSON.stringify(obj)))); const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return out; }
+  async function open(u8) { try { const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u8.slice(0, 12) }, S.key, u8.slice(12)); return JSON.parse(dec.decode(pt)); } catch (e) { return null; } }
+
+  /* ---------- MQTT mínimo (3.1.1, QoS 0) sobre WebSocket ---------- */
+  function mqttStr(s) { const b = enc.encode(s); const o = new Uint8Array(2 + b.length); o[0] = b.length >> 8; o[1] = b.length & 255; o.set(b, 2); return o; }
+  function mqttPacket(type, body) { const len = []; let n = body.length; do { let d = n % 128; n = Math.floor(n / 128); if (n > 0) d |= 128; len.push(d); } while (n > 0); const o = new Uint8Array(1 + len.length + body.length); o[0] = type; o.set(len, 1); o.set(body, 1 + len.length); return o; }
+  const cat = (...a) => { const o = new Uint8Array(a.reduce((s, x) => s + x.length, 0)); let p = 0; for (const x of a) { o.set(x, p); p += x.length; } return o; };
+  function Broker(url, onMsg) {
+    let ws = null, buf = new Uint8Array(0), ping = 0, dead = false, tries = 0, ready = false;
+    const queue = [];
+    function connect() {
+      if (dead) return; ready = false;
+      try { ws = new WebSocket(url, ['mqtt']); } catch (e) { return retry(); }
+      ws.binaryType = 'arraybuffer';
+      ws.onopen = () => { tries = 0; const cid = 'gh' + S.id + rid(4); ws.send(mqttPacket(0x10, cat(mqttStr('MQTT'), new Uint8Array([4, 2, 0, 30]), mqttStr(cid)))); };
+      ws.onmessage = e => { buf = cat(buf, new Uint8Array(e.data)); parse(); };
+      ws.onclose = ws.onerror = () => { clearInterval(ping); ready = false; if (ws) { ws.onclose = ws.onerror = ws.onmessage = null; ws = null; } retry(); };
+    }
+    function retry() { if (dead) return; tries++; setTimeout(connect, Math.min(15000, 800 * tries)); }
+    function parse() {
+      for (;;) {
+        if (buf.length < 2) return; let mul = 1, len = 0, i = 1, d;
+        do { if (i >= buf.length) return; d = buf[i++]; len += (d & 127) * mul; mul *= 128; } while (d & 128);
+        if (buf.length < i + len) return;
+        const h0 = buf[0], type = h0 >> 4, body = buf.slice(i, i + len); buf = buf.slice(i + len);
+        if (type === 2) { ready = true; ws.send(mqttPacket(0x82, cat(new Uint8Array([0, 1]), mqttStr(S.topic), new Uint8Array([0])))); ping = setInterval(() => { try { ws && ws.send(new Uint8Array([0xc0, 0])); } catch (e) { /* nada */ } }, 20000); while (queue.length) send(queue.shift()); emit('status', { broker: url, ok: true }); }
+        else if (type === 3) { const tl = (body[0] << 8) | body[1], qos = (h0 >> 1) & 3; onMsg(body.slice(2 + tl + (qos ? 2 : 0))); }
+      }
+    }
+    function send(u8) { if (!ws || !ready) { if (queue.length < 40) queue.push(u8); return; } try { ws.send(mqttPacket(0x30, cat(mqttStr(S.topic), u8))); } catch (e) { /* nada */ } }
+    connect();
+    return { send, close() { dead = true; clearInterval(ping); try { ws && ws.close(); } catch (e) { /* nada */ } }, get ready() { return ready; } };
+  }
+  // señalización: varios brokers a la vez (o BroadcastChannel en pruebas); los repetidos se descartan
+  function Signal() {
+    const useBC = new URLSearchParams(location.search).get('net') === 'bc' || Net.transport === 'bc';
+    const onRaw = async u8 => { const m = await open(u8); if (!m || m.from === S.id || (m.to && m.to !== S.id)) return; if (S.seen.has(m.mid)) return; S.seen.set(m.mid, Date.now()); if (S.seen.size > 600) { const old = Date.now() - 60000; for (const [k, t] of S.seen) if (t < old) S.seen.delete(k); } onSignal(m); };
+    if (useBC) { const bc = new BroadcastChannel(S.topic); bc.onmessage = e => onRaw(new Uint8Array(e.data)); return { send: u8 => bc.postMessage(u8.buffer), close: () => bc.close(), get ready() { return true; } }; }
+    const bs = BROKERS.map(u => Broker(u, onRaw));
+    return { send: u8 => bs.forEach(b => b.send(u8)), close: () => bs.forEach(b => b.close()), get ready() { return bs.some(b => b.ready); } };
+  }
+  async function signal(obj) { if (!S.sig) return; obj.from = S.id; obj.mid = rid(10); S.sig.send(await seal(obj)); }
+
+  /* ---------- servidores de ICE ---------- */
+  async function iceServers() {
+    const list = STUN.slice();
+    try { const own = JSON.parse(localStorage.getItem('gamehub_turn') || 'null'); if (Array.isArray(own) && own.length) return list.concat(own); } catch (e) { /* nada */ }
+    try { // Open Relay «static auth»: usuario = vencimiento:nombre, clave = HMAC-SHA1(secreto público)
+      const user = Math.floor(Date.now() / 1000 + 86400) + ':gamehub', k = await crypto.subtle.importKey('raw', enc.encode('openrelayprojectsecret'), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+      const cred = b64(new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(user)))), h = 'staticauth.openrelay.metered.ca';
+      list.push({ urls: [`turn:${h}:80`, `turn:${h}:80?transport=tcp`, `turn:${h}:443`, `turns:${h}:443?transport=tcp`], username: user, credential: cred });
+    } catch (e) { /* sin TURN */ }
+    return list;
+  }
+
+  /* ---------- pares (WebRTC) ---------- */
+  function newPeer(id, info) {
+    let p = peers.get(id); if (p) { if (info) p.info = info; return p; }
+    p = { id, info: info || null, pc: null, r: null, u: null, via: 'conectando', rtt: 0, open: false, lastSeen: Date.now(), pend: [], relayT: 0 };
+    peers.set(id, p); return p;
+  }
+  async function makePC(p, initiator) {
+    if (p.pc) { try { p.pc.close(); } catch (e) { /* nada */ } }
+    const pc = new RTCPeerConnection({ iceServers: await iceServers(), bundlePolicy: 'max-bundle' });
+    p.pc = pc; p.open = false; p.via = 'conectando';
+    pc.onicecandidate = e => { if (e.candidate) signal({ t: 'ice', to: p.id, c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
+    pc.onconnectionstatechange = () => { const st = pc.connectionState; if (st === 'failed') toRelay(p); if (st === 'disconnected') setTimeout(() => { if (pc.connectionState === 'disconnected') toRelay(p); }, 5000); emit('peers'); };
+    const wire = (ch, kind) => { ch.binaryType = 'arraybuffer'; p[kind] = ch; ch.onopen = () => { if (p.r && p.r.readyState === 'open') { p.open = true; p.via = route(pc); flush(p); emit('peers'); } }; ch.onmessage = e => onData(p, e.data, kind === 'r'); ch.onclose = () => { if (p[kind] === ch) p[kind] = null; }; };
+    // canales negociados: los dos lados los crean igual (sin esperar a «ondatachannel»)
+    wire(pc.createDataChannel('r', { negotiated: true, id: 1, ordered: true }), 'r');
+    wire(pc.createDataChannel('u', { negotiated: true, id: 2, ordered: false, maxRetransmits: 0 }), 'u');
+    if (initiator) { const o = await pc.createOffer(); await pc.setLocalDescription(o); signal({ t: 'offer', to: p.id, sdp: pc.localDescription.sdp }); }
+    clearTimeout(p.relayT); p.relayT = setTimeout(() => { if (!p.open) toRelay(p); }, 12000);
+    return pc;
+  }
+  function route(pc) { return 'p2p'; }
+  async function refineRoute(p) { // ¿directo o por TURN? (para mostrarlo en la sala)
+    try { const st = await p.pc.getStats(); let pair = null; st.forEach(s => { if (s.type === 'transport' && s.selectedCandidatePairId) pair = st.get(s.selectedCandidatePairId); }); if (!pair) st.forEach(s => { if (s.type === 'candidate-pair' && s.nominated && s.state === 'succeeded') pair = s; }); if (pair) { const lc = st.get(pair.localCandidateId), rc = st.get(pair.remoteCandidateId); p.via = (lc && lc.candidateType === 'relay') || (rc && rc.candidateType === 'relay') ? 'turn' : 'p2p'; } } catch (e) { /* nada */ }
+  }
+  function toRelay(p) { if (p.via === 'relay') return; p.via = 'relay'; p.open = true; flush(p); emit('peers'); }
+  function flush(p) { const q = p.pend; p.pend = []; for (const [d, rel] of q) rawSend(p, d, rel); }
+  function rawSend(p, data, rel) {
+    const s = typeof data === 'string' ? data : JSON.stringify(data);
+    if (p.via === 'relay') { if (rel || Math.random() < 0.5) signal({ t: 'relay', to: p.id, d: s }); return; } // sin WebRTC: lo urgente a la mitad (no saturar el broker)
+    const ch = (!rel && p.u && p.u.readyState === 'open') ? p.u : p.r;
+    if (!ch || ch.readyState !== 'open') { if (rel && p.pend.length < 200) p.pend.push([s, rel]); return; }
+    if (!rel && ch.bufferedAmount > 64000) return; // la red va atrasada: se salta este (llega otro enseguida)
+    try { ch.send(s); } catch (e) { /* nada */ }
+  }
+  function onData(p, raw, rel) {
+    p.lastSeen = Date.now();
+    let m; try { m = JSON.parse(typeof raw === 'string' ? raw : dec.decode(raw)); } catch (e) { return; }
+    if (m && m.$ === 'ping') { rawSend(p, { $: 'pong', t: m.t, h: S.isHost ? performance.now() : undefined }, false); return; }
+    if (m && m.$ === 'pong') { const now = performance.now(), rtt = now - m.t; p.rtt = p.rtt ? p.rtt * 0.8 + rtt * 0.2 : rtt; if (m.h != null && !S.isHost) { const off = m.h + rtt / 2 - now; S.clockOff = S.clockOff ? S.clockOff * 0.85 + off * 0.15 : off; } return; }
+    if (m && m.$ === 'room' && !S.isHost) { S.room = m.room; emit('room', m.room); return; }
+    if (m && m.$ === 'bye') { dropPeer(p.id); return; }
+    emit('msg', p.id, m, rel);
+  }
+  function dropPeer(id) { const p = peers.get(id); if (!p) return; clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } peers.delete(id); emit('peers'); if (S.isHost) broadcastRoom(); else if (id === S.hostId) emit('status', { hostGone: true }); }
+
+  /* ---------- señales ---------- */
+  async function onSignal(m) {
+    if (m.t === 'hello' && S.isHost) { // alguien quiere entrar: el anfitrión lo llama
+      const p = newPeer(m.from, m.info); p.lastSeen = Date.now();
+      if (!p.pc || p.pc.connectionState === 'failed' || p.pc.connectionState === 'closed' || (!p.open && Date.now() - (p.callT || 0) > 6000)) { p.callT = Date.now(); await makePC(p, true); }
+      signal({ t: 'welcome', to: m.from, host: S.id }); broadcastRoom(); return;
+    }
+    if (m.t === 'welcome' && !S.isHost) { S.hostId = m.host; newPeer(m.host); return; }
+    if (m.t === 'offer' && !S.isHost) { S.hostId = m.from; const p = newPeer(m.from); const pc = await makePC(p, false); await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); signal({ t: 'answer', to: m.from, sdp: pc.localDescription.sdp }); for (const c of p.iceQ || []) try { await pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; return; }
+    if (m.t === 'answer' && S.isHost) { const p = peers.get(m.from); if (p && p.pc) { await p.pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); for (const c of p.iceQ || []) try { await p.pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; } return; }
+    if (m.t === 'ice') { const p = peers.get(m.from); if (!p) return; if (p.pc && p.pc.remoteDescription) { try { await p.pc.addIceCandidate(m.c); } catch (e) { /* nada */ } } else (p.iceQ = p.iceQ || []).push(m.c); return; }
+    if (m.t === 'relay') { const p = peers.get(m.from); if (p) { if (p.via !== 'relay') toRelay(p); onData(p, m.d, true); } return; }
+    if (m.t === 'bye') { dropPeer(m.from); return; }
+  }
+
+  /* ---------- la sala ---------- */
+  function roomState() { return { code: S.code, host: S.id, devices: [{ id: S.id, info: S.info, host: true, rtt: 0, via: 'local' }].concat([...peers.values()].filter(p => p.info).map(p => ({ id: p.id, info: p.info, rtt: Math.round(p.rtt), via: p.via, open: p.open }))) }; }
+  function broadcastRoom() { if (!S.isHost) return; const room = roomState(); S.room = room; emit('room', room); for (const p of peers.values()) if (p.open) rawSend(p, { $: 'room', room }, true); }
+  let tick = 0;
+  function loop() {
+    clearInterval(tick);
+    tick = setInterval(() => {
+      if (!S.alive) return; const now = Date.now();
+      for (const p of peers.values()) { if (p.open && p.via !== 'relay') rawSend(p, { $: 'ping', t: performance.now() }, false); if (p.via === 'p2p' && p.pc && !p.routeChecked) { p.routeChecked = true; refineRoute(p); } }
+      if (S.isHost) { for (const p of [...peers.values()]) if (now - p.lastSeen > 20000) dropPeer(p.id); broadcastRoom(); }
+      else { const h = peers.get(S.hostId); if (!h || !h.open) signal({ t: 'hello', info: S.info }); else if (now - h.lastSeen > 15000) { emit('status', { hostGone: true }); } }
+    }, 2000);
+  }
+  async function start(code, info, host) {
+    leave(true); S.code = code; S.info = info; S.isHost = host; S.hostId = host ? S.id : null; S.alive = true; S.clockOff = 0;
+    await deriveKey(code); S.sig = Signal(); loop();
+    if (host) broadcastRoom(); else { signal({ t: 'hello', info }); setTimeout(() => S.alive && !S.hostId && signal({ t: 'hello', info }), 1200); }
+    return code;
+  }
+  function leave(quiet) {
+    if (S.alive) { for (const p of peers.values()) { try { rawSend(p, { $: 'bye' }, true); } catch (e) { /* nada */ } } signal({ t: 'bye' }); }
+    S.alive = false; clearInterval(tick);
+    for (const p of peers.values()) { clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } }
+    peers.clear(); const sg = S.sig; S.sig = null; if (sg) setTimeout(() => sg.close(), 300);
+    S.code = null; S.isHost = false; S.hostId = null; S.room = null; if (!quiet) emit('peers');
+  }
+  addEventListener('pagehide', () => { if (S.alive) leave(true); });
+  return {
+    transport: null,
+    host: info => start(rid(5), info, true),
+    join: (code, info) => start(String(code).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5), info, false),
+    leave: () => leave(false),
+    // a: id de un aparato o '*' (todos); confiable = true para lo que no se puede perder
+    send(a, data, rel = true) { if (a === '*') { for (const p of peers.values()) rawSend(p, data, rel); } else { const p = peers.get(a); if (p) rawSend(p, data, rel); } },
+    setInfo(info) { S.info = info; if (S.isHost) broadcastRoom(); else { const h = peers.get(S.hostId); if (h && h.open) rawSend(h, { $: 'info', info }, true); signal({ t: 'hello', info }); } },
+    on(t, f) { (L[t] = L[t] || []).push(f); return () => { L[t] = L[t].filter(x => x !== f); }; },
+    now: () => performance.now() + (S.isHost ? 0 : S.clockOff),
+    get id() { return S.id; }, get code() { return S.code; }, get isHost() { return S.isHost; }, get hostId() { return S.hostId; }, get alive() { return S.alive; },
+    get room() { return S.room; }, get peers() { return peers; }, get signalReady() { return !!(S.sig && S.sig.ready); },
+    _onInfo(id, info) { const p = peers.get(id); if (p) { p.info = info; broadcastRoom(); } },
+  };
+})();
+// el anfitrión recibe cambios de jugadores de un aparato
+Net.on('msg', (from, m) => { if (m && m.$ === 'info' && Net.isHost) Net._onInfo(from, m.info); });
+
+/* ===== online.js ===== */
+/* =========================================================================
+   EN LÍNEA — la sala de GameHub (vista «online»).
+   · Cada aparato dice quién juega en él: 1 o 2 personas, con nombre y color.
+   · «Crear sala» → código de 5 letras + enlace para invitar (?sala=CÓDIGO).
+   · «Unirme» con el código (o abriendo el enlace).
+   · En la sala: aparatos conectados, sus jugadores, ping y tipo de conexión
+     (directa, por TURN o por relevo). El anfitrión elige qué jugar.
+   Usa Net (app/net.js). Lo de jugar de verdad está en netplay (fases F3+).
+   ========================================================================= */
+const Online = (() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const touch = (() => { try { return matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) { return false; } })();
+  const COLORS = ['#ff6fae', '#5ad8ff', '#ffd36b', '#6ff0b0', '#b98aff', '#ff8a4a', '#f6f2ff', '#7a9bff'];
+  const KEY = 'gamehub_online';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } };
+  const st = Object.assign({ players: [{ name: '', color: COLORS[0] }], n: 1 }, load());
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ players: st.players, n: st.n })); } catch (e) { /* nada */ } };
+  const params = new URLSearchParams(location.search);
+  let code0 = (params.get('sala') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5), note = '', busy = false;
+  const el = () => $('#v-online');
+  const visible = () => el() && !el().hidden;
+  const myPlayers = () => st.players.slice(0, st.n).map((p, i) => ({ name: (p.name || '').trim() || (st.n === 1 ? 'Jugador' : 'Jugador ' + (i + 1)), color: p.color || COLORS[i] }));
+  const info = () => ({ name: myPlayers().map(p => p.name).join(' y '), players: myPlayers(), dev: touch ? 'cel' : 'pc' });
+  const VIA = { local: ['este aparato', 'ok'], p2p: ['directo', 'ok'], turn: ['por TURN', 'mid'], relay: ['por relevo · lento', 'bad'], conectando: ['conectando…', 'mid'] };
+  const DEV = { cel: '📱', pc: '💻' };
+  const sig = ms => ms <= 0 ? '' : ms < 60 ? 'ok' : ms < 140 ? 'mid' : 'bad';
+  function linkFor(code) { const u = new URL(location.href); u.search = ''; u.hash = 'online'; u.searchParams.set('sala', code); if (params.get('net')) u.searchParams.set('net', params.get('net')); return u.toString(); }
+  function players(room) { const out = []; for (const d of (room && room.devices) || []) for (const p of (d.info && d.info.players) || []) out.push(Object.assign({ dev: d.id, devName: d.info.name, kind: d.info.dev }, p)); return out; }
+
+  /* ---------- quién juega en este aparato ---------- */
+  function whoHTML() {
+    return `<div class="field"><span class="lbl">¿Cuántos juegan en este aparato?</span>
+        <div class="seg" id="on-n"><button data-v="1" aria-pressed="${st.n === 1}">1 persona</button><button data-v="2" aria-pressed="${st.n === 2}">2 personas</button></div>
+        <div class="hint">${st.n === 2 ? (touch ? 'En el celular, cada uno usa su mitad de la pantalla.' : 'En el computador, cada uno con su lado del teclado (como siempre).') : 'Cada quien en su propio aparato, o dos en uno: como quieran.'}</div></div>
+      ${st.players.slice(0, st.n).map((p, i) => `<div class="field"><span class="lbl">${st.n === 2 ? 'Jugador ' + (i + 1) : 'Tu nombre'}</span>
+        <input class="textin" data-pname="${i}" maxlength="14" placeholder="${st.n === 2 ? 'Nombre del J' + (i + 1) : 'Tu nombre'}" value="${esc(p.name || '')}">
+        <div class="on-colors">${COLORS.map(c => `<button class="on-col" data-pcol="${i}" data-c="${c}" style="--c:${c}" aria-pressed="${(p.color || COLORS[i]) === c}" aria-label="Color"></button>`).join('')}</div></div>`).join('')}`;
+  }
+  function bindWho(root) {
+    $$('#on-n button', root).forEach(b => b.onclick = () => { st.n = +b.dataset.v; while (st.players.length < st.n) st.players.push({ name: '', color: COLORS[st.players.length] }); save(); if (Net.alive) Net.setInfo(info()); render(); });
+    $$('[data-pname]', root).forEach(inp => inp.oninput = () => { st.players[+inp.dataset.pname].name = inp.value; save(); clearTimeout(inp._t); inp._t = setTimeout(() => { if (Net.alive) Net.setInfo(info()); }, 500); });
+    $$('[data-pcol]', root).forEach(b => b.onclick = () => { st.players[+b.dataset.pcol].color = b.dataset.c; save(); if (Net.alive) Net.setInfo(info()); render(); });
+  }
+
+  /* ---------- pantalla ---------- */
+  function render() {
+    const root = el(); if (!root) return;
+    const R = Net.alive ? Net.room : null;
+    if (!Net.alive) {
+      root.innerHTML = `<div class="wrap" style="max-width:860px"><div class="thead"><div><h1 class="h1">En línea</h1><p class="sub">Jueguen desde varios aparatos: cada uno con su celular, dos en uno y otro aparte, computadores y celulares mezclados. Por wifi o con datos.</p></div></div>
+        <div class="stack">
+          <div class="panel">${whoHTML()}</div>
+          <div class="on-two">
+            <div class="panel on-card"><div class="h2">CREAR UNA SALA</div><p class="note">Este aparato será el anfitrión: aquí corre la partida y los demás se unen con el código.</p><button class="btn gold big" id="on-host" ${busy ? 'disabled' : ''}>Crear sala</button></div>
+            <div class="panel on-card"><div class="h2">UNIRME A UNA SALA</div><p class="note">Escribe el código que te pasaron (o abre el enlace de invitación).</p>
+              <div class="row" style="flex-wrap:nowrap"><input class="textin on-code" id="on-code" maxlength="5" placeholder="CÓDIGO" value="${esc(code0)}" autocapitalize="characters" autocomplete="off"><button class="btn" id="on-join" ${busy ? 'disabled' : ''}>Unirme</button></div></div>
+          </div>
+          ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
+        </div></div>`;
+      bindWho(root);
+      $('#on-host', root).onclick = async () => { busy = true; note = ''; render(); try { await Net.host(info()); } catch (e) { note = 'No se pudo crear la sala: ' + e.message; } busy = false; render(); };
+      const join = async () => { const c = $('#on-code', root).value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length < 5) { note = 'El código tiene 5 letras o números.'; render(); return; } busy = true; note = ''; render(); try { await Net.join(c, info()); waitHost(); } catch (e) { note = 'No se pudo entrar: ' + e.message; } busy = false; render(); };
+      $('#on-join', root).onclick = join; $('#on-code', root).onkeydown = e => { if (e.key === 'Enter') join(); };
+      return;
+    }
+    const devs = (R && R.devices) || [], ps = players(R), me = Net.id, host = Net.isHost;
+    const hostPeer = !host && Net.peers.get(Net.hostId), myRtt = hostPeer ? Math.round(hostPeer.rtt) : 0, connected = host || (hostPeer && hostPeer.open);
+    root.innerHTML = `<div class="wrap" style="max-width:920px"><div class="thead"><div><h1 class="h1">Sala en línea</h1><p class="sub">${host ? 'Eres el anfitrión: aquí corren las partidas. Pásales el código o el enlace a los demás.' : connected ? 'Estás dentro. El anfitrión elige qué jugar.' : 'Buscando al anfitrión…'}</p></div><button class="btn small danger" id="on-leave">Salir de la sala</button></div>
+      <div class="stack">
+        <div class="panel on-room">
+          <div class="on-codebox"><span class="lbl">CÓDIGO</span><b class="on-big">${esc(Net.code)}</b>
+            <div class="row"><button class="btn small" id="on-copy">Copiar enlace</button>${navigator.share ? '<button class="btn small ghost" id="on-share">Compartir</button>' : ''}</div></div>
+          <div class="on-sum"><b>${ps.length}</b> jugador${ps.length === 1 ? '' : 'es'} en <b>${devs.length}</b> aparato${devs.length === 1 ? '' : 's'}${!host && connected ? ` · tu ping <span class="on-ping ${sig(myRtt)}">${myRtt} ms</span>` : ''}${Net.signalReady ? '' : ' · <span class="on-ping mid">buscando la red…</span>'}</div>
+        </div>
+        <div class="panel"><div class="h2">APARATOS Y JUGADORES</div>
+          <div class="on-devs">${devs.map(d => { const hp = d.host && !host ? hostPeer : null; if (hp) d = Object.assign({}, d, { via: hp.via, rtt: Math.round(hp.rtt) }); const v = VIA[d.id === me ? 'local' : d.via] || VIA.conectando; return `<div class="on-dev${d.id === me ? ' me' : ''}">
+            <div class="on-dh"><span class="on-di">${DEV[d.info && d.info.dev] || '🎮'}</span><b>${esc(d.info ? d.info.name : '…')}</b>${d.host ? '<span class="on-tag gold">anfitrión</span>' : ''}${d.id === me ? '<span class="on-tag">tú</span>' : ''}
+              <span class="on-via ${v[1]}">${v[0]}${d.id !== me && d.rtt ? ` · ${d.rtt} ms` : ''}</span></div>
+            <div class="on-ps">${((d.info && d.info.players) || []).map(p => `<span class="on-p" style="--c:${esc(p.color)}"><i></i>${esc(p.name)}</span>`).join('')}</div></div>`; }).join('')}</div>
+          <details class="on-me"><summary>Cambiar quién juega en este aparato</summary>${whoHTML()}</details>
+        </div>
+        <div class="panel" id="on-play"><div class="h2">${host ? '¿QUÉ JUGAMOS?' : 'LO QUE VIENE'}</div>${host ? hostPlayHTML(ps) : `<p class="note">${connected ? 'Esperando a que el anfitrión elija…' : 'Conectando con el anfitrión…'}</p>`}</div>
+        ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
+      </div></div>`;
+    bindWho(root);
+    $('#on-leave', root).onclick = () => { Net.leave(); note = ''; render(); };
+    $('#on-copy', root).onclick = async () => { const u = linkFor(Net.code); try { await navigator.clipboard.writeText(u); note = 'Enlace copiado: ' + u; } catch (e) { note = u; } render(); };
+    if ($('#on-share', root)) $('#on-share', root).onclick = () => navigator.share({ title: 'GameHub', text: `¡Juguemos en GameHub! Sala ${Net.code}`, url: linkFor(Net.code) }).catch(() => {});
+    if (host) bindHostPlay(root);
+  }
+  // lo que el anfitrión puede lanzar (las partidas en línea llegan en las fases siguientes)
+  function hostPlayHTML(ps) {
+    return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: una partida de un juego o un torneo con todos.`}</p>
+      <div class="on-games">${(window.GAMEHUB ? GAMEHUB.GAMES : []).map(g => `<button class="on-game" data-ong="${g.id}" style="--c1:${g.c1};--c2:${g.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(g.name)}</b><small>en línea · pronto</small></button>`).join('')}</div>`;
+  }
+  function bindHostPlay(root) { $$('[data-ong]', root).forEach(b => b.onclick = () => { note = 'Las partidas en línea de cada juego están en construcción: la sala y la conexión ya funcionan.'; render(); }); }
+  let hostT = 0;
+  function waitHost() { clearTimeout(hostT); hostT = setTimeout(() => { if (Net.alive && !Net.isHost && !Net.room) { note = 'No aparece el anfitrión. Revisa el código, o que su GameHub siga abierto en la sala.'; render(); } }, 15000); }
+  Net.on('room', () => { if (visible()) render(); });
+  Net.on('peers', () => { if (visible()) render(); });
+  Net.on('status', s => { if (s.hostGone && Net.alive && !Net.isHost) { note = 'El anfitrión salió de la sala.'; Net.leave(); if (visible()) render(); } });
+  // refrescar el ping de vez en cuando (sin tocar lo que se está escribiendo)
+  setInterval(() => { if (visible() && Net.alive && !el().contains(document.activeElement && document.activeElement.tagName === 'INPUT' ? document.activeElement : null)) render(); }, 3000);
+  return { render, get code0() { return code0; }, info, players: () => players(Net.room) };
+})();
+
 /* ===== app.js ===== */
 /* =========================================================================
    GAMEHUB — la colección: portada, fichas, lanzador aislado de cada juego,
@@ -807,7 +1147,7 @@ const Torneo = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"632972f286","date":"2026-11-13"};
+  const BUILD = {"v":"b666fff58f","date":"2026-11-18"};
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
   const COLORS = ['#ff5d8f', '#45d6b0', '#ffb36b', '#6fc3ff', '#ffd36b', '#b07bff', '#3dffa8', '#ff7a3d'];
@@ -904,7 +1244,7 @@ const Torneo = (() => {
     view = v; if (v !== 'game') lastMain = v;
     const el = $('#v-' + v); el.hidden = false; void el.offsetWidth; el.classList.add('enter'); el.scrollTop = 0;
     $$('.nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.go === (v === 'game' ? 'home' : v))));
-    if (v === 'home') renderHome(); else if (v === 'game') renderGame(arg); else if (v === 'torneo') renderTorneo(); else if (v === 'fama') renderFame(); else if (v === 'ajustes') renderSettings();
+    if (v === 'home') renderHome(); else if (v === 'game') renderGame(arg); else if (v === 'torneo') renderTorneo(); else if (v === 'fama') renderFame(); else if (v === 'ajustes') renderSettings(); else if (v === 'online') Online.render();
     const hash = v === 'home' ? '' : v === 'game' ? 'ficha-' + arg : v;
     if (push) { try { history.replaceState(null, '', hash ? '#' + hash : location.pathname + location.search); } catch (e) { /* nada */ } }
   }
@@ -1569,8 +1909,11 @@ const Torneo = (() => {
 
   /* ---------- arranque ---------- */
   const h = (location.hash || '').slice(1);
-  if (h.startsWith('ficha-') && GAME[h.slice(6)]) go('game', h.slice(6), false);
-  else if (['torneo', 'fama', 'ajustes'].includes(h)) go(h, null, false);
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App };
+  // un enlace de invitación (?sala=CÓDIGO) abre directo la sala en línea
+  if (new URLSearchParams(location.search).get('sala')) go('online', null, false);
+  else if (h.startsWith('ficha-') && GAME[h.slice(6)]) go('game', h.slice(6), false);
+  else if (['torneo', 'fama', 'ajustes', 'online'].includes(h)) go(h, null, false);
   else go('home', null, false);
   BG.start();
   // en GitHub Pages: app instalable, sin internet y con actualizaciones que no tocan el progreso
