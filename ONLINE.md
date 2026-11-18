@@ -270,3 +270,9 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   lo prueba); aviso en vistas previas (dentro del artefacto el navegador no deja conectar: «abre GameHub desde su
   dirección»). README con la sección «En línea» y las pruebas nuevas. Pruebas de siempre al día (flujo, app, ui, motor).
   **F10:** `online` → `main` y publicar.
+- **18 nov 05:15** — **F10 PUBLICADO:** `online` unido a `main` (f19221c) y subido: GitHub Pages
+  (https://igaviria0001-ops.github.io/gamehub/) ya trae el modo En línea. Artefactos: GameHub v8 (en la vista previa el
+  navegador no deja conectar: allí sale el aviso con la dirección), Ventolera v34, Sortilegio v24, VÉRTIGO v27, Tira y
+  Afloja v39. Bitácoras de los 4 docs con la fila «En línea». **Gran misión terminada.** Ideas para después: predicción
+  local del propio personaje (respuesta aún más inmediata), duelo/eliminación/batalla de VÉRTIGO en línea, elegir quién
+  juega cuando sobran personas en Tira y Afloja, bajar más los datos de Sortilegio.
