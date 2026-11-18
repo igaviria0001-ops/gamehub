@@ -6862,8 +6862,9 @@ const Game = (() => {
   const humansCars = () => R ? R.cars.filter(c => !c.bot) : [];
   // los humanos que se ven en ESTE aparato (en línea: solo los puestos de este aparato; si no, todos)
   const netOn = () => typeof NetPlay !== 'undefined' && NetPlay.on;
-  const viewCars = () => { const h = humansCars(); return netOn() ? NetPlay.mine.map(s => h.find(c => c.human === s)).filter(Boolean) : h; };
-  const vIdx = c => (netOn() ? NetPlay.mine.indexOf(c.human) : c.human);
+  // en línea: las cámaras de los jugadores de este aparato; si solo mira (sala llena), sigue al que va adelante
+  const viewCars = () => { const h = humansCars(); if (!netOn()) return h; if (!NetPlay.mine.length) { const lead = (R && R.order.find(c => !c.bot)) || h[0]; return lead ? [lead] : []; } return NetPlay.mine.map(s => h.find(c => c.human === s)).filter(Boolean); };
+  const vIdx = c => (netOn() ? (NetPlay.mine.length ? NetPlay.mine.indexOf(c.human) : 0) : c.human);
   /* ---------- eventos → HUD ---------- */
   const DRIFT_NAME = ['', 'AZUL', 'NARANJA', 'ESMERALDA'], DRIFT_COL = ['', '#5ab8ff', '#ff9a3a', '#3dffa8'];
   const TRICK_NAME = { flip: 'MORTAL', back: 'MORTAL ATRÁS', rollR: 'TONEL', rollL: 'TONEL', spin: 'TROMPO' };
@@ -7074,7 +7075,7 @@ const Game = (() => {
     G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode: 'quick', laps: o.laps }); G.gp = null; G.duel = null; clearShow();
     newRace(o.tid, o.humans, o.bots, undefined, { laps: o.laps });
     G.mode = 'race'; G.paused = false; G.shownResults = false; G.introT = G.INTRO = 3.6;
-    if (isTouch()) Touch.start(G.nHumans); else Touch.stop();
+    if (isTouch() && NetPlay.mine.length) Touch.start(G.nHumans); else Touch.stop();
     UI.show(null); Sound.startRace(G.nHumans); Music.play(TRACKS[o.tid].theme); resize();
   }
   Object.defineProperty(G, 'R', { get: () => R });

@@ -151,7 +151,26 @@ const Game = (() => {
   }
 
   /* ---------------- actualización ---------------- */
+  // en línea, remoto: no simula; aplica lo que manda el anfitrión y anima los cuerpos aquí
+  function clientUpdate(realDt) {
+    G.t += realDt;
+    NetGame.clientStep(realDt);
+    const [A, B] = G.players;
+    A.animate(realDt, G, B.alive ? B : null, G.t); B.animate(realDt, G, A.alive ? A : null, G.t);
+    FX.update(realDt); updateCamera(realDt);
+    if (G.rope.visible && G.state === 'play') { Sound.setTension(G.rope.strain, true); const reelP = G.players.find(p => p.pulling), reelR = G.players.find(p => p.releasing); Sound.setReel(reelP || reelR ? 1 : 0, !!reelP); } else Sound.silenceLoops();
+  }
+  // en línea: los dos de la sala con sus sabores y accesorios; nada de la máquina ni de ventajas
+  function startNet(c) {
+    G.net = true; G.daily = null; G.campBoss = null; Fiesta.force(null);
+    G.flavors = c.flavors.slice(); G.winsNeeded = c.wins || 3;
+    startMatch(c.mode, false, c.arena || 'random', false);
+    const S = typeof NetPlay !== 'undefined' ? NetPlay.seats : [];
+    G.players.forEach((p, i) => { if (S[i] && S[i].name) p.name = String(S[i].name).slice(0, 14); if (c.accs && c.accs[i]) p.acc = c.accs[i]; });
+    G.handicap = [0, 0];
+  }
   function update(realDt) {
+    if (G.net && typeof NetPlay !== 'undefined' && NetPlay.isClient && G.state !== 'attract') return clientUpdate(realDt);
     G.t += realDt;
     if (G.state === 'replay') { G.stateT += realDt; stateLogic(realDt); FX.update(realDt); return; }
     G.stateT += realDt;
@@ -266,6 +285,7 @@ const Game = (() => {
     } else if (S === 'matchEnd') {
       if (G.quiet) { if (G.stateT > 1.5) startAttract(); }
       else if (G.stateT > 2.6 && G.onMatchEnd && !G.matchReported) {
+        if (G.net && typeof NetPlay !== 'undefined' && NetPlay.isHost) NetGame.results(results());
         G.matchReported = true;
         G.onMatchEnd(results());
       }
@@ -1127,8 +1147,13 @@ const Game = (() => {
     if (G.hintsT > 0 && !Touch.enabled) {
       const a = clamp(G.hintsT / 1.5, 0, 1);
       ctx.save(); ctx.globalAlpha = a;
-      drawHint(ctx, 28, H - 28, 0, ['A', 'D', 'mover'], ['W', 'saltar'], ['S', 'pegarse'], ['E', 'tirar'], ['Q', 'aflojar']);
-      if (!G.vsBot) drawHint(ctx, W - 28, H - 28, 1, ['J', 'L', 'mover'], ['I', 'saltar'], ['K', 'pegarse'], ['O', 'tirar'], ['U', 'aflojar']);
+      // en línea: cada aparato ve las teclas de SUS jugadores, del lado donde está su chicle
+      const K1 = [['A', 'D', 'mover'], ['W', 'saltar'], ['S', 'pegarse'], ['E', 'tirar'], ['Q', 'aflojar']], K2 = [['J', 'L', 'mover'], ['I', 'saltar'], ['K', 'pegarse'], ['O', 'tirar'], ['U', 'aflojar']];
+      if (G.net && typeof NetPlay !== 'undefined' && NetPlay.on) NetPlay.mine.forEach((seat, li) => drawHint(ctx, seat === 0 ? 28 : W - 28, H - 28, seat === 0 ? 0 : 1, ...(li === 0 ? K1 : K2)));
+      else {
+      drawHint(ctx, 28, H - 28, 0, ...K1);
+      if (!G.vsBot) drawHint(ctx, W - 28, H - 28, 1, ...K2);
+      }
       ctx.restore();
     }
   }
@@ -1181,7 +1206,7 @@ const Game = (() => {
   }
 
   return {
-    G, init, update, render, startMatch, startAttract, resetRound, setArena, randomArena,
+    G, init, update, render, startMatch, startNet, startAttract, resetRound, setArena, randomArena,
     chooseArena(id) {
       // el torneo sigue en la arena elegida
       setArena(id || randomArena(G.arenaId));

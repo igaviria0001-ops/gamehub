@@ -232,3 +232,12 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   Pruebas `node test/netsrt.js` y `TRES=1 …` → SRT EN LÍNEA OK; modos sin conexión bien.
   **Pendiente F9:** bajar datos de Sortilegio (≈4 MB/min a 30/s): delta entre instantáneas o 20/s.
   **Sigue F7 Tira y Afloja.**
+- **18 nov 02:20** — **F7 Tira y Afloja en línea HECHO:** el hilo es de a dos → juegan 2 (cada uno en su aparato o los dos en
+  uno) y **los demás de la sala miran en vivo** (aparatos sin puesto = espectadores; en la sala: «juegan X y Y; los demás
+  miran»). `tya/src/09c-net.js`: entradas (saltar/pegarse se repiten 120 ms), instantánea (~1,5 KB: los dos chicles, el
+  hilo de 30 puntos, bolitas, escenario que se mueve + su estado propio, estado del modo `Modes.M`, Fiesta), **efectos y
+  sonidos copiados** (cada llamada a `FX.*`, `Sound.play` y `Player.bump` del anfitrión se repite en los remotos), el
+  remoto anima los cuerpos él mismo; resultados con nombres, «Revancha (todos)», «Volver a la sala»; teclas y botones
+  táctiles solo de los jugadores del aparato (del lado de su chicle). Espectadores también en VÉRTIGO (cámara al que va
+  adelante; sin botones táctiles). Pruebas: `node test/nettya.js` y `TRES=1` (con mirón) → TYA EN LÍNEA OK; sin conexión OK.
+  **Los 4 juegos ya se juegan en línea.** Sigue **F8**: torneo y Salón de la fama en línea.

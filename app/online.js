@@ -102,10 +102,10 @@ const Online = (() => {
   }
   function hostPlayHTML(ps) {
     const gs = GAMES(), g = pick && gs.find(x => x.id === pick);
-    const cards = `<div class="on-games">${gs.map(x => `<button class="on-game${x.id === pick ? ' sel' : ''}" data-ong="${x.id}" style="--c1:${x.c1};--c2:${x.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(x.name)}</b><small>${x.net ? `en línea · hasta ${x.net.seats}` : 'en línea · pronto'}</small></button>`).join('')}</div>`;
+    const cards = `<div class="on-games">${gs.map(x => `<button class="on-game${x.id === pick ? ' sel' : ''}" data-ong="${x.id}" style="--c1:${x.c1};--c2:${x.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(x.name)}</b><small>${x.net ? (x.net.watch ? `en línea · juegan ${x.net.seats}, los demás miran` : `en línea · hasta ${x.net.seats}`) : 'en línea · pronto'}</small></button>`).join('')}</div>`;
     if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: elige un juego.`}</p>${cards}`;
     const ms = netModes(g), m = ms.find(x => x.id === pickEv.mode) || ms[0], maps = mapsFor(g, m), seg = (k, items, v) => `<div class="seg" data-onseg="${k}">${items.map(([id, t]) => `<button data-v="${esc(id)}" aria-pressed="${String(id) === String(v)}">${esc(t)}</button>`).join('')}</div>`;
-    const over = ps.length > g.net.seats ? `<p class="note warn">Este juego es de hasta ${g.net.seats}: juegan los primeros ${g.net.seats} de la lista.</p>` : '';
+    const over = ps.length > g.net.seats ? `<p class="note warn">Este juego es de ${g.net.watch ? '' : 'hasta '}${g.net.seats}: juegan ${ps.slice(0, g.net.seats).map(p => esc(p.name)).join(' y ')}; ${g.net.watch ? 'los demás miran en vivo' : 'los demás esperan'}.</p>` : '';
     return `<p class="note">Con ${ps.length} jugadores.</p>${cards}
       <div class="on-cfg" style="--c1:${g.c1};--c2:${g.c2}">
         <div class="lbl">Modo</div>${seg('mode', ms.map(x => [x.id, x.name]), m.id)}<p class="on-desc">${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</p>

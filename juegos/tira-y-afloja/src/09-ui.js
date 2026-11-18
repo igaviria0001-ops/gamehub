@@ -26,7 +26,7 @@ const UI = (() => {
     if (push && current && current !== name) stack.push(current);
     $$('.screen').forEach(s => { s.hidden = true; });
     current = name;
-    if (name) Touch.hide(); else { goFull(); Touch.show(vsBot ? 'single' : 'dual'); const tt = $('#toast'); if (tt) tt.hidden = true; }
+    if (name) Touch.hide(); else { goFull(); const net = Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on; if (net && !NetPlay.mine.length) Touch.hide(); else Touch.show(net ? (NetPlay.mine.length === 1 ? 'single' : 'dual') : vsBot ? 'single' : 'dual'); const tt = $('#toast'); if (tt) tt.hidden = true; }
     const el = screenEl(name);
     if (el) {
       el.hidden = false;
@@ -163,6 +163,7 @@ const UI = (() => {
     // GameHub: volver a la colección / seguir con el torneo
     hubhome() { Hub.exit(); },
     hubback() { Hub.exit(); },
+    netAgain() { if (typeof NetGame !== 'undefined') NetGame.again(); },
     rematch() { stack = []; show(null, false); Game.restart(); },
     changemode() { if (Game.G.mode === 'campana' || Game.G.campBoss != null) { stack = ['title', 'modes']; fillCampaign(); show('campana', false); return; } vsBot = lastRes ? lastRes.vsBot : vsBot; Game.G.daily = null; Fiesta.force(null); stack = []; show('modes', false); stack = ['title']; },
     fullscreen() { FS.toggle(); },
@@ -375,9 +376,16 @@ const UI = (() => {
     // prueba de un torneo de la colección: se reporta el ganador y solo queda «Continuar torneo»
     const hubEv = !!Hub.ev && !res.vsBot;
     if (hubEv) { Hub.result(res.winner === 0 || res.winner === 1 ? res.winner : -1, { score: (res.mode === 'caneca' || res.mode === 'escalada' ? res.wins : res.points || res.wins).join(' – ') }); hubRestore(); Hub.release(); }
-    $('#btn-hub').hidden = !hubEv;
+    $('#btn-hub').hidden = !hubEv; $('#btn-hub').dataset.act = 'hubback'; $('#btn-hub').textContent = 'Continuar torneo ▸'; $('#btn-rematch').dataset.act = 'rematch';
     if (hubEv) { $('#btn-next').hidden = true; $('#btn-rematch').hidden = true; $('#s-results [data-act="changemode"]').hidden = true; $('#s-results [data-act="menu"]').hidden = true; }
     else { $('#btn-rematch').hidden = false; $('#s-results [data-act="changemode"]').hidden = false; $('#s-results [data-act="menu"]').hidden = false; }
+    // en línea: todos vuelven a la sala; el anfitrión lanza la revancha para los dos
+    if (Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on) {
+      $('#btn-hub').hidden = false; $('#btn-hub').textContent = 'Volver a la sala'; $('#btn-hub').dataset.act = 'hubhome';
+      $('#btn-next').hidden = true; $('#s-results [data-act="changemode"]').hidden = true; $('#s-results [data-act="menu"]').hidden = true;
+      $('#btn-rematch').hidden = !NetPlay.isHost; $('#btn-rematch').textContent = 'Revancha (todos)'; $('#btn-rematch').dataset.act = 'netAgain';
+      if (!NetPlay.isHost) { ra.hidden = false; ra.textContent = (ra.textContent && parts.length ? ra.textContent + ' · ' : '') + 'El anfitrión puede lanzar la revancha.'; }
+    }
     const P = Game.G.players;
     const t = $('#r-title');
     if (camp) {
@@ -688,7 +696,9 @@ const UI = (() => {
     show(null, false);
     Game.startMatch(ev.mode, false, ev.map && ev.map !== 'random' ? ev.map : 'random', !!(ev.opts && ev.opts.fiesta));
   }
-  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge };
+  // en línea: arranca (o repite) la partida que mandó el anfitrión
+  function netStart(c) { vsBot = false; paused = false; stack = []; show(null, false); Game.startNet(c); }
+  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge, netStart, showResults: r => showResults(r) };
 })();
 
 /* =========================================================================
@@ -738,7 +748,7 @@ const UI = (() => {
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
     Input.pollPads();
-    if (!UI.paused) Game.update(dt);
+    if (!UI.paused || Game.G.net) Game.update(dt);
     Game.render(ctx, cw, ch, dpr);
     requestAnimationFrame(frame);
   }

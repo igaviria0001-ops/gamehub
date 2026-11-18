@@ -186,7 +186,8 @@ const Touch = (() => {
     groups = []; ptrs.clear();
     root = document.createElement('div'); root.id = 'touch'; root.className = 'touch ' + mode;
     root.classList.toggle('big', big);
-    const c0 = Game.G.players[0].col.base, c1 = Game.G.players[1].col.base;
+    const net = Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on, s0 = net && NetPlay.mine.length ? NetPlay.mine[0] : 0, s1 = net && NetPlay.mine.length > 1 ? NetPlay.mine[1] : 1;
+    const c0 = Game.G.players[s0].col.base, c1 = Game.G.players[s1].col.base;
     if (mode === 'single') {
       root.append(group('move left', 0, ['left', 'right'], c0));
       root.append(group('act right', 0, ['release', 'pull', 'stick', 'jump'], c0));

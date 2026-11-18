@@ -462,7 +462,7 @@ const Modes = (() => {
     get waterY() { return M.waterY; },
     fugaStatus, fugaPar, FUGA_LEVELS, get fugaResult() { return M.fugaResult; }, get fugaData() { return M.fugaData; },
     fugaUnlocked: n => n === 1 || !!M.fugaData.stars[n - 1],
-    get throne() { return M.throne; }, get ball() { return M.ball; }, get golden() { return M.golden; }, get goalT() { return M.goalT; },
+    get M() { return M; }, get throne() { return M.throne; }, get ball() { return M.ball; }, get golden() { return M.golden; }, get goalT() { return M.goalT; },
     isPoints: mode => mode !== 'caneca' && mode !== 'escalada' && mode !== 'fuga' && mode !== 'jefe' && mode !== 'campana',
     isRounds: mode => mode === 'caneca' || mode === 'escalada',
     dunkPoints: mode => cfg(mode).dunk || 0,
