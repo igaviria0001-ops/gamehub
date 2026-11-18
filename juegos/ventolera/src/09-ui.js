@@ -107,6 +107,9 @@ const UI = (() => {
     $('#r-title').style.color = w < 0 ? '#ffffff' : PLAYER_COLORS[w].main;
     const val = r.mode === 'duel' ? r.wins : r.score;
     $('#r-score').textContent = (r.mode === 'duel' ? 'Rondas' : r.mode === 'race' ? 'Carrera · aros' : MODES[r.mode].name) + ': ' + val.map((v, i) => `${n[i].split(' · ')[0]} ${v}`).join(' · ');
+    // Jefe en pareja: se gana o se pierde en equipo; la cuenta es el daño de cada uno al dirigible
+    if (r.mode === 'boss') { $('#r-title').textContent = r.coopWin ? '¡Derribaron a La Sombra!' : 'Se acabaron las vidas'; $('#r-title').style.color = r.coopWin ? '#ffd36b' : '#ff8f8f';
+      $('#r-score').textContent = 'Daño al dirigible: ' + (r.bossDmg || []).map((v, i) => `${n[i].split(' · ')[0]} ${v || 0}`).join(' · '); }
     const pct = st => st.shots ? Math.round(100 * st.hits / st.shots) + ' %' : '—';
     const rows = [['Derribos', st => st.kills], ['Daño hecho', st => Math.round(st.dmg)], ['Puntería de ráfaga', pct], ['Misiles que dieron', st => `${st.missileHits} de ${st.missiles}`], ['Cajas', st => st.crates]];
     const T = $('#r-table'); T.style.gridTemplateColumns = `1fr repeat(${N}, auto)`;

@@ -980,6 +980,9 @@ const NetPlay = (() => {
       lastIn[seat] = { s, t: now }; send({ t: 'in', s: seat, i }, false, 'host');
     });
   }
+  // remoto: al apretar o soltar algo, la entrada sale YA (no espera al próximo tick de 16 ms); después de que el juego la registró
+  const nowIn = () => { if (on && role === 'client') setTimeout(clientTick, 0); };
+  for (const ev of ['keydown', 'keyup', 'pointerdown', 'pointerup', 'touchstart', 'touchend']) addEventListener(ev, nowIn, { passive: true });
   /* ---------- sala de espera y arranque (común a los 4 juegos) ----------
      NetPlay.gate({ me(li) → lo de este jugador local (personaje, pinta…),
                     make(want, ev) → cfg de la partida (solo el anfitrión; want[puesto] = lo que mandó cada uno),
@@ -6472,6 +6475,10 @@ const UI = (() => {
         $('resMain').textContent = champ >= 0 ? 'Otro mano a mano (todos)' : 'Siguiente ronda (todos)'; }
       if (GP && GP.list) { const last = GP.i >= GP.list.length - 1; $('resMain').textContent = last ? 'Otro Gran Premio (todos)' : 'Siguiente pista (todos)';
         if (last) { const order = PILOT_ORDER.filter(k => GP.pts[k] != null).sort((a, b) => GP.pts[b] - GP.pts[a]), hc = R.cars.find(c => c.pid === order[0] && !c.bot); $('resTitle').textContent = hc ? `¡${nm(hc.human)} gana la ${GP.cup}!` : `Campeón: ${PILOTS[order[0]].name}`; $('resTitle').style.color = hc ? col(hc.human) : ''; } }
+      // torneo en línea: el anfitrión le cuenta a GameHub quién ganó la prueba (J1 = puesto 0, J2 = puesto 1); en el mano a mano, al haber campeón
+      if (NetPlay.isHost && tourM) { const hs = R.cars.filter(c => !c.bot), a = hs.find(c => c.human === 0), b = hs.find(c => c.human === 1);
+        if (D) { const champ = D.w.findIndex(w => w >= 2); if (champ >= 0) NetPlay.send({ t: 'res', r: { winner: champ, mode: 'duel', wins: D.w.slice(0, 2) } }, true, '*'); else $('resMain').hidden = false; }
+        else if (a && b) NetPlay.send({ t: 'res', r: { winner: a.place === b.place ? -1 : a.place < b.place ? 0 : 1, mode: G.cfg.mode, score: [a.place + 'º', b.place + 'º'] } }, true, '*'); }
       $('resAlt').hidden = true; if (sal) sal.hidden = true;
       if (!NetPlay.isHost && !tourM) { const w = document.getElementById('resWait') || document.createElement('div'); w.id = 'resWait'; w.className = 'mhelp'; w.textContent = 'El anfitrión puede lanzar otra carrera para todos.'; $('resBtns').after(w); }
     }
@@ -7238,23 +7245,26 @@ const NetGame = (() => {
   function ghostOf(R, seat, b) {
     let g = ghosts[seat]; if (g && g.R === R) return g;
     const PR = Object.create(R); PR.events = []; const c = R.cars[seat];
+    PST.made = (PST.made || 0) + 1;
     g = ghosts[seat] = { R, PR, car: new Car(PR, c.idx, c.pid, c.s, c.u), hist: [], lastN: 0, acc: 0 };
     if (b) hardSet(g.car, b); return g;
   }
   // lo que predijo la copia en el instante t (entre dos cuadros guardados)
   function histAt(H, t) {
-    if (!H.length || t < H[0].t) return null;
+    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 150 ? H[0] : null; // un poco antes del comienzo: el primero
     for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t), o = {}; for (const key in a) o[key] = key === 'a' ? lerpA(a.a, b.a, k) : a[key] + (b[key] - a[key]) * k; if (Math.abs(b.s - a.s) > 100) o.s = a.s; return o; }
     return null;
   }
+  // tras tomar lo del anfitrión, la historia arranca en ese instante (si no, la siguiente instantánea no tendría con qué compararse)
+  const rebase = (g, t) => { const k = g.car; g.hist = [{ t, s: k.s, u: k.u, h: k.h, a: k.a, f: k.f, l: k.l || 0, vn: k.vn }]; };
   function reconcile(g, b, tAt) {
     const car = g.car, L = g.R.track.L;
-    if (b[21] > 0 || b[22] || car.respawnT > 0) { hardSet(car, b); g.hist.length = 0; return; } // cayéndose o fuera: igual que el anfitrión
-    const h = histAt(g.hist, tAt); if (!h) { hardSet(car, b); g.hist.length = 0; PST.hard++; return; }
+    if (b[21] > 0 || b[22] || car.respawnT > 0) { hardSet(car, b); rebase(g, tAt); return; } // cayéndose o fuera: igual que el anfitrión
+    const h = histAt(g.hist, tAt); if (!h) { hardSet(car, b); rebase(g, tAt); PST.hard++; return; }
     let es = b[0] - h.s; if (es > L / 2) es -= L; else if (es < -L / 2) es += L;
     const e = { s: es, u: b[1] - h.u, h: b[2] - h.h, a: angWrap(b[3] - h.a), f: b[6] - h.f, l: (b[40] || 0) - h.l, vn: (b[41] || 0) - h.vn };
     PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(es, e.u) * 0.05;
-    if (Math.abs(es) > 24 || Math.abs(e.u) > 7 || Math.abs(e.h) > 7 || Math.abs(e.a) > 1.2) { hardSet(car, b); g.hist.length = 0; PST.hard++; return; }
+    if (Math.abs(es) > 24 || Math.abs(e.u) > 7 || Math.abs(e.h) > 7 || Math.abs(e.a) > 1.2) { hardSet(car, b); rebase(g, tAt); PST.hard++; return; }
     const k = 0.3; // de a poquito: no se nota y no tiembla
     car.s = g.R.track.wrap(car.s + es * k); car.u += e.u * k; car.h += e.h * k; car.a = angWrap(car.a + e.a * k); car.vn += e.vn * k;
     const f = car.f + e.f * k, l = (car.l || 0) + e.l * k; car.f = f; car.l = l; car.vs = f * Math.cos(car.a) - l * Math.sin(car.a); car.vu = f * Math.sin(car.a) + l * Math.cos(car.a);
@@ -7274,7 +7284,7 @@ const NetGame = (() => {
       if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, D.c[seat], Lt.arr - NetPlay.rtt - 12); }
       const inp = Object.assign({}, NEUTRAL, lastIn[NetPlay.mine.indexOf(seat)] || {}, { item: false });
       g.acc += dt; let n = 0; while (g.acc >= DT && n < 14) { g.car.step(DT, inp); g.PR.events.length = 0; g.acc -= DT; n++; } if (n >= 14) g.acc = 0;
-      const k = g.car; g.hist.push({ t: now, s: k.s, u: k.u, h: k.h, a: k.a, f: k.f, l: k.l || 0, vn: k.vn }); while (g.hist.length > 90) g.hist.shift();
+      const k = g.car; g.hist.push({ t: now, s: k.s, u: k.u, h: k.h, a: k.a, f: k.f, l: k.l || 0, vn: k.vn }); while (g.hist.length > 2 && now - g.hist[0].t > 1500) g.hist.shift();
       // se dibuja la copia (lo de la carrera —vueltas, puesto, objeto— sigue siendo lo del anfitrión)
       c.s = k.s; c.u = k.u; c.h = k.h; c.a = k.a; c.roll = k.roll; c.pitch = k.pitch; c.f = k.f; c.mode = k.mode; c.grounded = k.grounded; c.steerS = k.steerS; c.hopT = k.hopT;
       c.drift.on = k.drift.on; c.drift.dir = k.drift.dir; c.drift.lv = k.drift.lv; c.drift.t = k.drift.t; c.trick = k.trick; c.boostT = k.boostT; c.boostK = k.boostK; c.vs = k.vs; c.vu = k.vu; c.vn = k.vn;

@@ -119,7 +119,7 @@ const sameImg = (a, b) => { if (a.equals(b)) return true; fs.writeFileSync(TMP +
   await new Promise(r => srv.listen(0, '127.0.0.1', r)); const port = srv.address().port;
   const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
   const open = async (build, g) => {
-    const ctx = await browser.newContext({ viewport: { width: 960, height: 540 } }); await ctx.addInitScript(INIT);
+    const ctx = await browser.newContext({ viewport: process.env.VIEW ? { width: +process.env.VIEW.split('x')[0], height: +process.env.VIEW.split('x')[1] } : { width: 960, height: 540 } }); await ctx.addInitScript(INIT);
     const p = await ctx.newPage(); p.__errs = []; p.on('pageerror', e => p.__errs.push(e.message.slice(0, 200)));
     await p.goto(`http://127.0.0.1:${port}/${build}/${g}.html`);
     await p.waitForFunction(SC[g].ready, null, { timeout: 30000, polling: 100 });

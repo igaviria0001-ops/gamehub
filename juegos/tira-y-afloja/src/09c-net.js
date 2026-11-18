@@ -119,19 +119,24 @@ const NetGame = (() => {
   function ghostOf(p, row) {
     let g = ghosts[p.id]; if (g && g.p === p) return g;
     const q = Object.assign(Object.create(Object.getPrototypeOf(p)), p); q.events = []; q.contacts = []; q.stats = Object.assign({}, p.stats); q.prevJump = false; q.prevStick = false;
+    PST.made = (PST.made || 0) + 1;
     hardSet(q, row); return (ghosts[p.id] = { p, q, hist: [], lastN: 0, acc: 0 });
   }
   function histAt(H, t) {
-    if (!H.length || t < H[0].t) return null;
+    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 150 ? H[0] : null; // un poco antes del comienzo: el primero
     for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), vx: lerp(a.vx, b.vx, k), vy: lerp(a.vy, b.vy, k), stuck: a.stuck }; }
     return null;
   }
+  const rebase = (g, t) => { const q = g.q; g.hist = [{ t, x: q.x, y: q.y, vx: q.vx, vy: q.vy, stuck: q.stuck }]; };
   function reconcile(g, row, tAt) {
     const q = g.q, X = f => row[IXP[f]];
-    if (!X('alive') || X('dunked') || !q.alive) { hardSet(q, row); g.hist.length = 0; return; }
-    const h = histAt(g.hist, tAt); if (!h || !!h.stuck !== !!X('stuck')) { hardSet(q, row); g.hist.length = 0; PST.hard++; return; }
+    if (!X('alive') || X('dunked') || !q.alive) { hardSet(q, row); rebase(g, tAt); return; }
+    const h = histAt(g.hist, tAt); if (!h) { hardSet(q, row); rebase(g, tAt); PST.hard++; return; }
+    // pegado/despegado distinto justo en ese instante: si unos ms antes o después la copia estaba igual, es solo el momento
+    // exacto del toque (no se corrige esta vez); si no, de verdad pasó otra cosa allá
+    if (!!h.stuck !== !!X('stuck')) { if (g.hist.some(o => Math.abs(o.t - tAt) < 90 && !!o.stuck === !!X('stuck'))) return; hardSet(q, row); rebase(g, tAt); PST.hard++; return; }
     const ex = X('x') - h.x, ey = X('y') - h.y, evx = X('vx') - h.vx, evy = X('vy') - h.vy; PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(ex, ey) * 0.05;
-    if (Math.hypot(ex, ey) > 150) { hardSet(q, row); g.hist.length = 0; PST.hard++; return; }
+    if (Math.hypot(ex, ey) > 150) { hardSet(q, row); rebase(g, tAt); PST.hard++; return; }
     const k = 0.3; q.x += ex * k; q.y += ey * k; q.vx += evx * k; q.vy += evy * k; if (q.stuck) { q.stuckX = q.x; q.stuckY = q.y; }
     for (const o of g.hist) { o.x += ex * k; o.y += ey * k; o.vx += evx * k; o.vy += evy * k; }
     // lo que decide el anfitrión: el cuerpo (tamaño del chicle), golpes, lo pegajoso
@@ -152,7 +157,7 @@ const NetGame = (() => {
         q.step(PDT, inp, { x: d.x * T * kk, y: d.y * T * kk }, GP); q.events.length = 0; g.acc -= PDT; n++;
       }
       if (n >= 14) g.acc = 0;
-      g.hist.push({ t: now, x: q.x, y: q.y, vx: q.vx, vy: q.vy, stuck: q.stuck }); while (g.hist.length > 90) g.hist.shift();
+      g.hist.push({ t: now, x: q.x, y: q.y, vx: q.vx, vy: q.vy, stuck: q.stuck }); while (g.hist.length > 2 && now - g.hist[0].t > 1500) g.hist.shift();
       if (!p.alive || !q.alive) continue;
       // se dibuja la copia; el hilo se corre hacia ella (todo en la punta de este jugador, nada en la del otro)
       const dx = q.x - p.x, dy = q.y - p.y;

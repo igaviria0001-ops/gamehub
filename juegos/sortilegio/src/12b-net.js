@@ -182,6 +182,7 @@ const NetGame = (() => {
   const PDT = 1 / 120, ghosts = {}, PST = { hard: 0, soft: 0, err: 0 };
   function ghostOf(m) {
     let g = ghosts[m.idx]; if (g && g.m === m) return g;
+    PST.made = (PST.made || 0) + 1;
     return (ghosts[m.idx] = { m, x: m.x, y: m.y, vx: m.vx || 0, vy: m.vy || 0, face: m.face || 0, r: m.r, dash: { t: 0, dx: 0, dy: 0 }, prevDash: false, hist: [], lastN: 0, acc: 0, walk: m.walk || 0 });
   }
   // la misma cuenta de moverse de Mage.update (sin daño, sin hechizos, sin tocar el terreno)
@@ -220,13 +221,13 @@ const NetGame = (() => {
     }
   }
   function histAt(H, t) {
-    if (!H.length || t < H[0].t) return null;
+    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 150 ? H[0] : null; // un poco antes del comienzo: el primero
     for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), vx: lerp(a.vx, b.vx, k), vy: lerp(a.vy, b.vy, k) }; }
     return null;
   }
   function reconcile(g, c, tAt) {
     const sx = c.x || 0, sy = c.y || 0, svx = c.vx || 0, svy = c.vy || 0;
-    const hardSet = () => { g.x = sx; g.y = sy; g.vx = svx; g.vy = svy; g.hist.length = 0; g.dash.t = 0; };
+    const hardSet = () => { g.x = sx; g.y = sy; g.vx = svx; g.vy = svy; g.dash.t = 0; g.hist = [{ t: tAt, x: sx, y: sy, vx: svx, vy: svy }]; }; // la historia arranca en ese instante
     if (!c.alive || (c.granCharge || 0) > 0) { hardSet(); return; }
     // el anfitrión empezó a esquivar (y aquí no): se toma su esquive
     if (c.dash && c.dash.t > 0 && g.dash.t <= 0 && !(g.dashAt && performance.now() - g.dashAt < 400)) { g.dash = { t: c.dash.t, dx: c.dash.dx || 0, dy: c.dash.dy || 0 }; }
@@ -244,7 +245,7 @@ const NetGame = (() => {
       if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, dec(c), Lt.arr - NetPlay.rtt - 12); }
       const inp = lastIn[NetPlay.mine.indexOf(seat)] || { mx: 0, my: 0, dash: false };
       g.acc += dt; let n = 0; while (g.acc >= PDT && n < 14) { moveGhost(g, m, inp, G, PDT); g.acc -= PDT; n++; } if (n >= 14) g.acc = 0;
-      g.hist.push({ t: now, x: g.x, y: g.y, vx: g.vx, vy: g.vy }); while (g.hist.length > 90) g.hist.shift();
+      g.hist.push({ t: now, x: g.x, y: g.y, vx: g.vx, vy: g.vy }); while (g.hist.length > 2 && now - g.hist[0].t > 1500) g.hist.shift();
       if (!m.alive) continue;
       // se dibuja la copia: posición, rumbo y paso
       m.x = g.x; m.y = g.y; m.vx = g.vx; m.vy = g.vy; m.face = g.face; m.moving = Math.hypot(g.vx, g.vy); m.walk = g.walk;

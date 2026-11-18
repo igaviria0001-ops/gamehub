@@ -161,6 +161,7 @@ const Net = (() => {
     if (m && m.$ === 'pong') { const now = performance.now(), rtt = now - m.t; p.rtt = p.rtt ? p.rtt * 0.8 + rtt * 0.2 : rtt; if (m.h != null && !S.isHost) { const off = m.h + rtt / 2 - now; S.clockOff = S.clockOff ? S.clockOff * 0.85 + off * 0.15 : off; } return; }
     if (m && m.$ === 'room' && !S.isHost) { if (p.id !== S.hostId) return; S.room = m.room; S.term = Math.max(S.term, m.room.term | 0); for (const d of m.room.devices || []) if (d.id !== S.hostId) S.dead.delete(d.id); emit('room', m.room); return; }
     if (m && m.$ === 'bye') { dropPeer(p.id); return; }
+    if (m && m.$ === 'moved' && !S.isHost && p.id === S.hostId) { S.dead.add(p.id); clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } peers.delete(p.id); S.hostId = null; S.term = Math.max(S.term, m.term | 0); S.moved = true; emit('status', { hostGone: true, old: p.id }); emit('peers'); signal({ t: 'hello', info: S.info, term: S.term }); return; }
     emit('msg', p.id, m, rel);
   }
   function dropPeer(id) { const p = peers.get(id); if (!p) return; clearTimeout(p.relayT); clearTimeout(p.rqT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } peers.delete(id); emit('peers'); if (S.isHost) broadcastRoom(); else if (id === S.hostId) succeed(); }
@@ -193,7 +194,8 @@ const Net = (() => {
   function announce() { if (S.isHost && S.alive) signal({ t: 'host', term: S.term, n: nOpen() }); }
   function stepDown(to, term) {
     S.isHost = false; S.hostId = null; S.succ = null; S.dead.delete(to); S.term = Math.max(0, term | 0);
-    for (const p of [...peers.values()]) { if (p.open) { try { rawSend(p, { $: 'bye' }, true); } catch (e) { /* nada */ } } clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } } peers.clear();
+    // a los suyos les avisa que la sala sigue con otro anfitrión (no «adiós»: si no, empezarían otra sucesión)
+    for (const p of [...peers.values()]) { if (p.open) { try { rawSend(p, { $: 'moved', term: S.term }, true); } catch (e) { /* nada */ } } clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } } peers.clear();
     S.room = null; emit('peers'); emit('status', { steppedDown: true });
     signal({ t: 'hello', info: S.info, term: S.term });
   }
@@ -211,8 +213,8 @@ const Net = (() => {
       return;
     }
     if ((m.t === 'welcome' || m.t === 'offer') && !S.isHost && (S.dead.has(m.from) || (m.term | 0) < S.term || (S.hostId && S.hostId !== m.from && (m.term | 0) <= S.term))) return; // de un anfitrión viejo
-    if (m.t === 'welcome' && !S.isHost) { const was = S.hostId; S.hostId = m.host; S.term = Math.max(S.term, m.term | 0); const hp = newPeer(m.host); if (SIM.relay) toRelay(hp); if (S.succ) { S.succ = null; emit('status', { newHost: m.host }); } else if (was && was !== m.host) emit('status', { newHost: m.host }); return; }
-    if (m.t === 'offer' && !S.isHost) { S.hostId = m.from; S.term = Math.max(S.term, m.term | 0); if (S.succ) { S.succ = null; emit('status', { newHost: m.from }); } const p = newPeer(m.from); const pc = await makePC(p, false, m.ice); await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); signal({ t: 'answer', to: m.from, sdp: pc.localDescription.sdp }); for (const c of p.iceQ || []) try { await pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; return; }
+    if (m.t === 'welcome' && !S.isHost) { const was = S.hostId; S.hostId = m.host; S.term = Math.max(S.term, m.term | 0); const hp = newPeer(m.host); if (SIM.relay) toRelay(hp); if (S.succ || S.moved) { S.succ = null; S.moved = false; emit('status', { newHost: m.host }); } else if (was && was !== m.host) emit('status', { newHost: m.host }); return; }
+    if (m.t === 'offer' && !S.isHost) { S.hostId = m.from; S.term = Math.max(S.term, m.term | 0); if (S.succ || S.moved) { S.succ = null; S.moved = false; emit('status', { newHost: m.from }); } const p = newPeer(m.from); const pc = await makePC(p, false, m.ice); await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); signal({ t: 'answer', to: m.from, sdp: pc.localDescription.sdp }); for (const c of p.iceQ || []) try { await pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; return; }
     if (m.t === 'answer' && S.isHost) { const p = peers.get(m.from); if (p && p.pc) { await p.pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); for (const c of p.iceQ || []) try { await p.pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; } return; }
     if (m.t === 'ice') { const p = peers.get(m.from); if (!p) return; if (p.pc && p.pc.remoteDescription) { try { await p.pc.addIceCandidate(m.c); } catch (e) { /* nada */ } } else (p.iceQ = p.iceQ || []).push(m.c); return; }
     if (m.t === 'relay') { const p = peers.get(m.from); if (p) { if (p.via !== 'relay') toRelay(p); onData(p, m.d, true); } return; }
@@ -222,11 +224,15 @@ const Net = (() => {
   /* ---------- la sala ---------- */
   function roomState() { return { code: S.code, host: S.id, term: S.term, devices: [{ id: S.id, info: S.info, host: true, rtt: 0, via: 'local' }].concat([...peers.values()].filter(p => p.info).map(p => ({ id: p.id, info: p.info, rtt: Math.round(p.rtt), via: p.via, open: p.open }))) }; }
   function broadcastRoom() { if (!S.isHost) return; const room = roomState(); S.room = room; emit('room', room); for (const p of peers.values()) if (p.open) rawSend(p, { $: 'room', room }, true); }
-  let tick = 0, annN = 0;
+  let tick = 0, annN = 0, lastTick = 0;
   function loop() {
     clearInterval(tick);
     tick = setInterval(() => {
       if (!S.alive) return; const now = Date.now();
+      // si ESTE aparato estuvo trabado (cargando un juego pesado, en segundo plano), lo que le llegó aún está en la fila:
+      // no se juzga a nadie por ese silencio (se les da el beneficio de haber hablado justo ahora)
+      if (lastTick && now - lastTick > 4500) for (const p of peers.values()) p.lastSeen = Math.max(p.lastSeen, now - 1000);
+      lastTick = now;
       for (const p of peers.values()) { if (p.open) rawSend(p, { $: 'ping', t: performance.now() }, p.via === 'relay'); if (p.via === 'p2p' && p.pc && !p.routeChecked) { p.routeChecked = true; refineRoute(p); } }
       // silencio largo = se fue (con margen: mientras un aparato carga un juego pesado puede callar varios segundos)
       const gone = p => now - p.lastSeen > (p.pc && p.pc.connectionState === 'connected' ? 60000 : p.via === 'relay' ? 30000 : 20000);
@@ -236,7 +242,7 @@ const Net = (() => {
     }, 2000);
   }
   async function start(code, info, host) {
-    leave(true); S.code = code; S.info = info; S.isHost = host; S.hostId = host ? S.id : null; S.alive = true; S.clockOff = 0; S.term = host ? 1 : 0; S.dead.clear(); S.succ = null;
+    leave(true); S.code = code; S.info = info; S.isHost = host; S.hostId = host ? S.id : null; S.alive = true; S.clockOff = 0; S.term = host ? 1 : 0; S.dead.clear(); S.succ = null; S.moved = false;
     await deriveKey(code); S.sig = Signal(); loop();
     if (host) { broadcastRoom(); announce(); } else { signal({ t: 'hello', info }); setTimeout(() => S.alive && !S.hostId && signal({ t: 'hello', info }), 1200); }
     return code;

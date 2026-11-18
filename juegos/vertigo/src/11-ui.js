@@ -178,6 +178,10 @@ const UI = (() => {
         $('resMain').textContent = champ >= 0 ? 'Otro mano a mano (todos)' : 'Siguiente ronda (todos)'; }
       if (GP && GP.list) { const last = GP.i >= GP.list.length - 1; $('resMain').textContent = last ? 'Otro Gran Premio (todos)' : 'Siguiente pista (todos)';
         if (last) { const order = PILOT_ORDER.filter(k => GP.pts[k] != null).sort((a, b) => GP.pts[b] - GP.pts[a]), hc = R.cars.find(c => c.pid === order[0] && !c.bot); $('resTitle').textContent = hc ? `¡${nm(hc.human)} gana la ${GP.cup}!` : `Campeón: ${PILOTS[order[0]].name}`; $('resTitle').style.color = hc ? col(hc.human) : ''; } }
+      // torneo en línea: el anfitrión le cuenta a GameHub quién ganó la prueba (J1 = puesto 0, J2 = puesto 1); en el mano a mano, al haber campeón
+      if (NetPlay.isHost && tourM) { const hs = R.cars.filter(c => !c.bot), a = hs.find(c => c.human === 0), b = hs.find(c => c.human === 1);
+        if (D) { const champ = D.w.findIndex(w => w >= 2); if (champ >= 0) NetPlay.send({ t: 'res', r: { winner: champ, mode: 'duel', wins: D.w.slice(0, 2) } }, true, '*'); else $('resMain').hidden = false; }
+        else if (a && b) NetPlay.send({ t: 'res', r: { winner: a.place === b.place ? -1 : a.place < b.place ? 0 : 1, mode: G.cfg.mode, score: [a.place + 'º', b.place + 'º'] } }, true, '*'); }
       $('resAlt').hidden = true; if (sal) sal.hidden = true;
       if (!NetPlay.isHost && !tourM) { const w = document.getElementById('resWait') || document.createElement('div'); w.id = 'resWait'; w.className = 'mhelp'; w.textContent = 'El anfitrión puede lanzar otra carrera para todos.'; $('resBtns').after(w); }
     }

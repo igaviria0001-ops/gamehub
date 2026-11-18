@@ -326,3 +326,13 @@ mejores; (5) todo optimizado y comprobado.
   instantánea; si pasó algo grande allá, se toma lo del anfitrión. `?nopred` la apaga (para comparar).
 - **G4** — VÉRTIGO en línea: carrera, mano a mano (sin máquina, hasta que alguien gane 2), eliminación, batalla en arena y
   Gran Premio (Copa Esmeralda, Dorada o Gran Copa, con puntos). Tira y Afloja: Modo Fiesta en línea (opción en la sala).
+  Ventolera: Jefe en pareja en línea (2 a 4 contra La Sombra; vidas = 4 + pilotos; con 3–4, el dirigible aguanta más).
+  En torneo en línea, VÉRTIGO ahora anota solo el resultado (antes no mandaba `res`). La sala admite modos «extra» del
+  juego (`net.extra` en catalog.js: Gran Premio con copas como escenario, Jefe en pareja) y opciones sí/no (`net.opts`).
+  No van en línea (se juegan en el aparato porque guardan avance ahí): campañas, escuelas, jefes de Tira y Afloja,
+  Persecución de VÉRTIGO, Copa y Travesía de Ventolera.
+- **Más robustez encontrada en las pruebas** — si un aparato estuvo trabado (cargando un juego pesado), no se juzga el
+  silencio de los demás por eso; si el anfitrión vuelve a la sala, los demás también vuelven solos («El anfitrión volvió
+  a la sala»); al ceder el mando, el anfitrión viejo manda a los suyos con el nuevo (no «adiós», que dispararía otra
+  sucesión). Nota de pruebas: en este contenedor (2 núcleos, sin GPU) VÉRTIGO necesita `VIEW=400x225` para que dos
+  copias 3D quepan; `test/todo.sh` corre todo en fila.

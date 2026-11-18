@@ -665,6 +665,12 @@ const Game = (() => {
     G.adv = G.birds.map(() => 0); G.wins = G.birds.map(() => 0); G.round = 1; G.cratesOn = true; G.winsNeeded = o.mode === 'duel' ? o.wins || 3 : 1; G.score = G.birds.map(() => 0); G.coopWin = false;
     G.hintT = 8; G.paused = false; acc = 0;
     if (o.mode === 'duel') startRound();
+    else if (o.mode === 'boss') {
+      // Jefe en pareja en línea: todos contra La Sombra, vidas compartidas (una más por piloto); con 3 o 4, el dirigible aguanta más
+      startRound(); Boss.setup(G, false); G.roundT = 999; const n = G.birds.length; G.lives = 4 + n;
+      if (n > 2 && G.boss) for (const p of G.boss.parts) { p.max = Math.round(p.max * (1 + 0.25 * (n - 2))); p.hp = p.max; }
+      G.boss.dmg = G.birds.map(() => 0);
+    }
     else { startRound(); Modes.setup(G); G.cratesOn = o.mode === 'case'; snapCamera(); }
   }
   function netEnd() { G.net = false; }

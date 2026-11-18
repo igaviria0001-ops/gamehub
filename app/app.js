@@ -263,7 +263,10 @@
     }
     function fail(msg) { $('#lerr').textContent = msg; $('#lerr').hidden = false; $('#lbtns').hidden = false; $('.lbar').hidden = true; }
     function close() {
-      const wasNet = !!netCfg, wasTour = !!(netCfg && netCfg.tour); if (wasNet) post({ cmd: 'netoff' }); netCfg = null;
+      const wasNet = !!netCfg, wasTour = !!(netCfg && netCfg.tour); if (wasNet) post({ cmd: 'netoff' });
+      // el anfitrión volvió a la sala: los demás también vuelven (si no, se quedarían mirando una partida quieta)
+      if (wasNet && netCfg.role === 'host' && typeof Net !== 'undefined' && Net.alive) Net.send('*', { $: 'endgame', sid: netCfg.sid }, true);
+      netCfg = null;
       clearTimeout(readyT); cur = null; tourEv = null;
       stage.hidden = true; stage.classList.remove('ready'); frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; hideToast();
       document.body.classList.remove('playing'); if (touch) FS.unlock();
@@ -314,6 +317,7 @@
       else if (m.event === 'error') toast('El juego avisó un error: ' + esc(m.msg || ''), !!tourEv);
     });
     if (typeof Net !== 'undefined') Net.on('msg', (from, m) => { if (m && m.$g && netCfg && m.$g === netCfg.sid && cur) post({ cmd: 'netin', from, d: m.d }); });
+    if (typeof Net !== 'undefined') Net.on('msg', (from, m) => { if (m && m.$ === 'endgame' && netCfg && netCfg.role === 'client' && m.sid === netCfg.sid && from === Net.hostId && cur) { toast('El anfitrión volvió a la sala', false); setTimeout(() => { if (netCfg && netCfg.sid === m.sid) close(); }, 1600); } });
     // por el relevo (sin WebRTC) solo sale la instantánea más nueva: lo «lento» de la saltada pasa a esa
     // el remoto le cuenta a su juego el ping al anfitrión (para predecir su propio personaje)
     setInterval(() => { if (!cur || !netCfg || netCfg.role !== 'client' || typeof Net === 'undefined' || !Net.alive) return; const h = Net.peers.get(Net.hostId); if (h && h.rtt > 0) post({ cmd: 'netrtt', rtt: Math.round(h.rtt) }); }, 1000);

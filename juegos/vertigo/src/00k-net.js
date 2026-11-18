@@ -77,6 +77,9 @@ const NetPlay = (() => {
       lastIn[seat] = { s, t: now }; send({ t: 'in', s: seat, i }, false, 'host');
     });
   }
+  // remoto: al apretar o soltar algo, la entrada sale YA (no espera al próximo tick de 16 ms); después de que el juego la registró
+  const nowIn = () => { if (on && role === 'client') setTimeout(clientTick, 0); };
+  for (const ev of ['keydown', 'keyup', 'pointerdown', 'pointerup', 'touchstart', 'touchend']) addEventListener(ev, nowIn, { passive: true });
   /* ---------- sala de espera y arranque (común a los 4 juegos) ----------
      NetPlay.gate({ me(li) → lo de este jugador local (personaje, pinta…),
                     make(want, ev) → cfg de la partida (solo el anfitrión; want[puesto] = lo que mandó cada uno),

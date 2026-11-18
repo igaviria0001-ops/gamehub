@@ -21,6 +21,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await H.click(`[data-onseg="mode"] [data-v="${MODE}"]`); await wait(150);
   await H.click('[data-onseg="map"] [data-v="pupitre"]'); await wait(150);
   if (MODE === 'caneca') await H.click('[data-onseg="len"] [data-v="2"]');
+  const FIESTA = !!process.env.FIESTA; if (FIESTA) await H.click('[data-onseg="opt:fiesta"] [data-v="1"]');
   await wait(600); await H.screenshot({ path: OUT + 'nettya-sala.png' });
   await H.click('#on-go');
   const frameOf = async p => { for (let i = 0; i < 120; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(() => typeof Game !== 'undefined' && Game.G.net && ['countdown', 'play'].includes(Game.G.state))) return f; } catch (e) {} } await wait(500); } return null; };
@@ -30,6 +31,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   for (let i = 0; i < 60; i++) { if (await fh.evaluate(() => Game.G.state === 'play')) break; await wait(500); }
   await wait(1500);
   const n = await fh.evaluate(() => Game.G.players.length), remSeat = await fc.evaluate(() => NetPlay.mine[0]);
+  const fiesta = [await fh.evaluate(() => !!Game.G.fiestaMatch), await fc.evaluate(() => !!Game.G.fiestaMatch)]; if (FIESTA) console.log('Modo Fiesta (anfitrión, remoto):', JSON.stringify(fiesta));
   const pos = async f => f.evaluate(s => { const b = Game.G.players[s]; return [Math.round(b.x), Math.round(b.y), Math.round(b.mass * 100) / 100]; }, remSeat);
   const before = { h: await pos(fh), c: await pos(fc) };
   // el remoto camina a la derecha (D) 1,2 s, salta (W) y tira del hilo (E) 0,6 s
@@ -57,6 +59,6 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   errs.push(...(await ferr(fh)).map(e => 'anfitrión: ' + e), ...(await ferr(fc)).map(e => 'remoto: ' + e));
   const resOk = !!resH && !!resC && bh[0] === 'Revancha (todos)' && bh[1] === 'Volver a la sala' && !bc[0] && bc[1] === 'Volver a la sala';
   console.log({ jugadores: n, remotoMueveSuChicle: moved, remotoVeLoMismo: synced, tiraDelHilo: shots > 0, resultados: resOk, revancha: again, errores: errs.slice(0, 6) });
-  console.log(moved && synced && shots > 0 && resOk && again && !errs.length && n === 2 && (!V || (watch && watch[2] === 0)) ? 'TYA EN LÍNEA OK' : 'TYA EN LÍNEA FALLA');
+  console.log(moved && synced && shots > 0 && resOk && again && !errs.length && n === 2 && (!V || (watch && watch[2] === 0)) && (!FIESTA || (fiesta[0] && fiesta[1])) ? 'TYA EN LÍNEA OK' : 'TYA EN LÍNEA FALLA');
   await b.close();
 })();

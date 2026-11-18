@@ -1267,6 +1267,9 @@ const NetPlay = (() => {
       lastIn[seat] = { s, t: now }; send({ t: 'in', s: seat, i }, false, 'host');
     });
   }
+  // remoto: al apretar o soltar algo, la entrada sale YA (no espera al próximo tick de 16 ms); después de que el juego la registró
+  const nowIn = () => { if (on && role === 'client') setTimeout(clientTick, 0); };
+  for (const ev of ['keydown', 'keyup', 'pointerdown', 'pointerup', 'touchstart', 'touchend']) addEventListener(ev, nowIn, { passive: true });
   /* ---------- sala de espera y arranque (común a los 4 juegos) ----------
      NetPlay.gate({ me(li) → lo de este jugador local (personaje, pinta…),
                     make(want, ev) → cfg de la partida (solo el anfitrión; want[puesto] = lo que mandó cada uno),
@@ -8480,6 +8483,12 @@ const Game = (() => {
     G.adv = G.birds.map(() => 0); G.wins = G.birds.map(() => 0); G.round = 1; G.cratesOn = true; G.winsNeeded = o.mode === 'duel' ? o.wins || 3 : 1; G.score = G.birds.map(() => 0); G.coopWin = false;
     G.hintT = 8; G.paused = false; acc = 0;
     if (o.mode === 'duel') startRound();
+    else if (o.mode === 'boss') {
+      // Jefe en pareja en línea: todos contra La Sombra, vidas compartidas (una más por piloto); con 3 o 4, el dirigible aguanta más
+      startRound(); Boss.setup(G, false); G.roundT = 999; const n = G.birds.length; G.lives = 4 + n;
+      if (n > 2 && G.boss) for (const p of G.boss.parts) { p.max = Math.round(p.max * (1 + 0.25 * (n - 2))); p.hp = p.max; }
+      G.boss.dmg = G.birds.map(() => 0);
+    }
     else { startRound(); Modes.setup(G); G.cratesOn = o.mode === 'case'; snapCamera(); }
   }
   function netEnd() { G.net = false; }
@@ -8597,6 +8606,9 @@ const UI = (() => {
     $('#r-title').style.color = w < 0 ? '#ffffff' : PLAYER_COLORS[w].main;
     const val = r.mode === 'duel' ? r.wins : r.score;
     $('#r-score').textContent = (r.mode === 'duel' ? 'Rondas' : r.mode === 'race' ? 'Carrera · aros' : MODES[r.mode].name) + ': ' + val.map((v, i) => `${n[i].split(' · ')[0]} ${v}`).join(' · ');
+    // Jefe en pareja: se gana o se pierde en equipo; la cuenta es el daño de cada uno al dirigible
+    if (r.mode === 'boss') { $('#r-title').textContent = r.coopWin ? '¡Derribaron a La Sombra!' : 'Se acabaron las vidas'; $('#r-title').style.color = r.coopWin ? '#ffd36b' : '#ff8f8f';
+      $('#r-score').textContent = 'Daño al dirigible: ' + (r.bossDmg || []).map((v, i) => `${n[i].split(' · ')[0]} ${v || 0}`).join(' · '); }
     const pct = st => st.shots ? Math.round(100 * st.hits / st.shots) + ' %' : '—';
     const rows = [['Derribos', st => st.kills], ['Daño hecho', st => Math.round(st.dmg)], ['Puntería de ráfaga', pct], ['Misiles que dieron', st => `${st.missileHits} de ${st.missiles}`], ['Cajas', st => st.crates]];
     const T = $('#r-table'); T.style.gridTemplateColumns = `1fr repeat(${N}, auto)`;
@@ -9028,7 +9040,7 @@ if (UI.refreshBirds) UI.refreshBirds();
    ========================================================================= */
 const NetGame = (() => {
   const NEUTRAL = { dx: 0, dy: 0, roll: false, rdx: 0, rdy: 0, fire: false, boost: false, missile: false };
-  const MODES_NET = ['duel', 'targets', 'case', 'race'], ST = ['countdown', 'play', 'roundEnd', 'matchEnd'];
+  const MODES_NET = ['duel', 'targets', 'case', 'race', 'boss'], ST = ['countdown', 'play', 'roundEnd', 'matchEnd'];
   const r1 = v => Math.round((+v || 0) * 10) / 10, r2 = v => Math.round((+v || 0) * 100) / 100, ri = v => Math.round(+v || 0);
   const _read = Input.read;
 
@@ -9103,6 +9115,8 @@ const NetGame = (() => {
     if (G.mode === 'targets' || (G.targets && G.targets.length)) sn.tg = G.targets.slice(0, 40).map(t => prim(t));
     if (G.case) sn.cs = prim(G.case);
     if (G.gates) sn.gf = G.gates.map(g => g.flash.map(r2));
+    // Jefe en pareja: el dirigible (posición, fase, caída) y sus partes (dónde, vida, golpes, a punto de disparar); vidas del equipo
+    if (G.boss) { const B = G.boss; sn.bo = { s: [ri(B.x), ri(B.y), B.dir, r2(B.flip), B.phase, B.dead ? 1 : 0, r2(B.fallT), r2(B.hitT), r2(B.t), B.lastHit], p: B.parts.map(p => [ri(p.x), ri(p.y), r1(p.hp), p.alive ? 1 : 0, r2(p.hitT || 0), r2(p.fireT || 0), r2(p.aim || 0)]) }; sn.lv = G.lives; }
     return sn;
   }
 
@@ -9144,6 +9158,9 @@ const NetGame = (() => {
     if (B.tg) G.targets = B.tg.map(t => Object.assign({}, t)); else if (G.mode !== 'targets') G.targets = [];
     G.case = B.cs ? Object.assign({}, B.cs) : null;
     if (B.gf && G.gates) B.gf.forEach((f, i) => { if (G.gates[i]) G.gates[i].flash = f.slice(); });
+    if (B.bo && G.boss) { const O = G.boss, a = A.bo, s = B.bo.s, sa = a ? a.s : s; O.x = lerp(sa[0], s[0], k); O.y = lerp(sa[1], s[1], k); O.dir = s[2]; O.flip = s[3]; O.phase = s[4]; O.dead = !!s[5]; O.fallT = s[6]; O.hitT = s[7]; O.t = s[8]; O.lastHit = s[9];
+      B.bo.p.forEach((q, i) => { const P = O.parts[i], qa = a && a.p[i]; if (!P) return; P.x = qa ? lerp(qa[0], q[0], k) : q[0]; P.y = qa ? lerp(qa[1], q[1], k) : q[1]; P.hp = q[2]; P.alive = !!q[3]; P.hitT = q[4]; P.fireT = q[5]; P.aim = q[6]; }); }
+    if (B.lv != null) G.lives = B.lv;
     // escenario: solo cuando llega una instantánea nueva (entre medio se anima solo)
     if (B !== lastSN && B.wd) { lastSN = B; const W = G.world, D = B.wd; W.time = D.t; if (D.train && W.train) deepSet(W.train, D.train); if (D.ship && W.ship) deepSet(W.ship, D.ship); if (D.hot && W.hotair) D.hot.forEach((h, i) => { if (W.hotair[i]) deepSet(W.hotair[i], h); }); if (D.storm && W.storm) deepSet(W.storm, D.storm); if (D.coast && W.coast) deepSet(W.coast, D.coast); }
   }
@@ -9170,20 +9187,24 @@ const NetGame = (() => {
     let g = ghosts[seat]; if (g && g.G === G && g.world === G.world) return g;
     const src = G.birds[seat], GP = Object.create(G); GP.events = [];
     const b = Object.assign(Object.create(Object.getPrototypeOf(src)), src); b.trail = []; b.stats = Object.assign({}, src.stats); b.perch = null; b.G = GP;
+    PST.made = (PST.made || 0) + 1;
     hardSet(b, c); return (ghosts[seat] = { G, world: G.world, GP, bird: b, hist: [], lastN: 0, acc: 0 });
   }
   function histAt(H, t) {
-    if (!H.length || t < H[0].t) return null;
-    for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), vx: lerp(a.vx, b.vx, k), vy: lerp(a.vy, b.vy, k), a: lerpA(a.a, b.a, k) }; }
+    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 150 ? H[0] : null; // un poco antes del comienzo: el primero
+    for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), vx: lerp(a.vx, b.vx, k), vy: lerp(a.vy, b.vy, k), a: lerpA(a.a, b.a, k), perch: a.perch }; }
     return null;
   }
+  const rebase = (g, t) => { const b = g.bird; g.hist = [{ t, x: b.x, y: b.y, vx: b.vx, vy: b.vy, a: b.a, perch: !!b.perch }]; };
   function reconcile(g, c, tAt) {
     const b = g.bird;
-    if (!c[IX.alive] || !b.alive || !!c[IX.perch] !== !!b.perch) { hardSet(b, c); g.hist.length = 0; return; } // tumbado, reapareciendo, posado o despegando: lo del anfitrión
-    const h = histAt(g.hist, tAt); if (!h) { hardSet(b, c); g.hist.length = 0; PST.hard++; return; }
+    if (!c[IX.alive] || !b.alive) { hardSet(b, c); rebase(g, tAt); return; } // tumbado o reapareciendo: lo del anfitrión
+    const h = histAt(g.hist, tAt); if (!h) { hardSet(b, c); rebase(g, tAt); PST.hard++; return; }
+    // posado/volando distinto: si unos ms antes o después la copia estaba igual, es solo el instante exacto (no se corrige esta vez)
+    if (!!h.perch !== !!c[IX.perch]) { if (g.hist.some(o => Math.abs(o.t - tAt) < 90 && !!o.perch === !!c[IX.perch])) return; hardSet(b, c); rebase(g, tAt); PST.hard++; return; }
     const e = { x: c[IX.x] - h.x, y: c[IX.y] - h.y, vx: c[IX.vx] - h.vx, vy: c[IX.vy] - h.vy, a: angDiff(h.a, c[IX.a]) };
     PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(e.x, e.y) * 0.05;
-    if (Math.hypot(e.x, e.y) > 170 || Math.abs(e.a) > 1.6) { hardSet(b, c); g.hist.length = 0; PST.hard++; return; }
+    if (Math.hypot(e.x, e.y) > 170 || Math.abs(e.a) > 1.6) { hardSet(b, c); rebase(g, tAt); PST.hard++; return; }
     const k = 0.3;
     b.x += e.x * k; b.y += e.y * k; b.vx += e.vx * k; b.vy += e.vy * k; b.a += e.a * k; b.s = Math.hypot(b.vx, b.vy); b.va = Math.atan2(b.vy, b.vx); b.c = Math.cos(b.a) >= 0 ? 1 : -1;
     for (const q of g.hist) { q.x += e.x * k; q.y += e.y * k; q.vx += e.vx * k; q.vy += e.vy * k; q.a += e.a * k; }
@@ -9202,7 +9223,7 @@ const NetGame = (() => {
       g.acc += dt; let n = 0; const keep = NOW.map(k => World[k]); NOW.forEach(k => { World[k] = NOP; });
       try { while (g.acc >= PDT && n < 14) { if (!G.freeze) b.step(PDT, inp, g.GP); g.GP.events.length = 0; g.acc -= PDT; n++; } } finally { NOW.forEach((k, i) => { World[k] = keep[i]; }); }
       if (n >= 14) g.acc = 0;
-      g.hist.push({ t: now, x: b.x, y: b.y, vx: b.vx, vy: b.vy, a: b.a }); while (g.hist.length > 90) g.hist.shift();
+      g.hist.push({ t: now, x: b.x, y: b.y, vx: b.vx, vy: b.vy, a: b.a, perch: !!b.perch }); while (g.hist.length > 2 && now - g.hist[0].t > 1500) g.hist.shift();
       if (!b.alive || !shown.alive) continue;
       for (const f of VIS) shown[f] = b[f];
       shown.perch = b.perch ? shown.perch || { x: b.x, y: b.y } : null; if (shown.perch) { shown.perch.x = b.x; shown.perch.y = b.y; }
