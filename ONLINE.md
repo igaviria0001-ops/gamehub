@@ -197,3 +197,7 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
   páginas 3D por CPU en la misma máquina la prueba a veces va lenta (no es fallo del juego).
   **Pendiente F4:** el anfitrión en segundo plano detiene la carrera (rAF): seguir simulando con temporizador si
   `document.hidden`; modos duelo/eliminación/batalla en línea; elegir modo/pista en la sala; prueba con pérdida.
+- **17 nov 21:45** — F4: si el anfitrión tapa el juego (otra app/pestaña), la carrera sigue con un temporizador de
+  respaldo (`12-main.js`, cada 50 ms con `document.hidden`; probado: +1,7 s de carrera en 2 s ocultos). En la sala, el
+  anfitrión ve «deja esta pantalla abierta mientras juegan». Orden decidido: F2 (elegir modo/escenario en la sala,
+  sirve para todos) → F5 Ventolera → F6 Sortilegio → F7 Tira y Afloja → F8 torneo/Salón → modos extra de VÉRTIGO.

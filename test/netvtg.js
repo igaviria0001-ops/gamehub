@@ -36,6 +36,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await H.screenshot({ path: OUT + 'netvtg-host.png' }); await C.screenshot({ path: OUT + 'netvtg-remoto.png' });
   const moved = after.h[1][0] !== before.h[1][0], synced = Math.abs(after.c[1][0] - after.h[1][0]) < 60;
   console.log({ autoRemotoAvanza: moved, remotoVeLoMismo: synced, errores: errs.slice(0, 5) });
+  // anfitrión «oculto» (otra app encima): la carrera sigue por temporizador
+  const hid = await fh.evaluate(async () => { const sl = ms => new Promise(r => setTimeout(r, ms)); const a0 = Game.R.time; await sl(2000); const a = Game.R.time - a0; Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); const b0 = Game.R.time; await sl(2000); const b = Game.R.time - b0; delete document.hidden; return Math.round((b - a) * 10) / 10; });
+  console.log('anfitrión oculto: el temporizador de respaldo sumó', hid, 's de carrera en 2 s');
   // fin de carrera forzado en el anfitrión → resultados en los dos; el anfitrión lanza «Otra carrera (todos)»
   const L0 = await fh.evaluate(() => Game.R.track.L);
   await fh.evaluate(() => { const R = Game.R; R.cars.forEach((c, i) => { c.finished = true; c.finishT = 60 + i; }); R.state = 'done'; R.doneT = 3.3; });
@@ -48,7 +51,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const L1h = await fh.evaluate(() => Game.R.track.L), L1c = await fc.evaluate(() => Game.R.track.L);
   const again = await fc.evaluate(() => Game.mode === 'race' && !document.getElementById('resWait') && Game.R.state !== 'done');
   const resOk = resH.main === 'Otra carrera (todos)' && resH.hub === 'Volver a la sala' && !resC.main && resC.hub === 'Volver a la sala';
-  const againOk = again && L1h === L1c && L1h !== L0;
+  const againOk = again && L1h === L1c && L1h !== L0 && hid > 1;
   const ferr = async f => f.evaluate(() => window.__errs.slice(0, 4)).catch(() => ['?']); errs.push(...(await ferr(fh)).map(e => 'anfitrión: ' + e), ...(await ferr(fc)).map(e => 'remoto: ' + e));
   console.log('remoto:', JSON.stringify(await fc.evaluate(() => ({ mode: Game.mode, st: Game.R.state, on: NetPlay.on, n: NetPlay.sample() && 1 }))), 'errores juego:', errs.slice(0, 6));
   console.log({ pantallaResultados: resOk, otraCarreraParaTodos: againOk, pista: [L0, L1h, L1c] });

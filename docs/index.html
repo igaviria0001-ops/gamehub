@@ -1089,7 +1089,7 @@ const Online = (() => {
     }
     const devs = (R && R.devices) || [], ps = players(R), me = Net.id, host = Net.isHost;
     const hostPeer = !host && Net.peers.get(Net.hostId), myRtt = hostPeer ? Math.round(hostPeer.rtt) : 0, connected = host || (hostPeer && hostPeer.open);
-    root.innerHTML = `<div class="wrap" style="max-width:920px"><div class="thead"><div><h1 class="h1">Sala en línea</h1><p class="sub">${host ? 'Eres el anfitrión: aquí corren las partidas. Pásales el código o el enlace a los demás.' : connected ? 'Estás dentro. El anfitrión elige qué jugar.' : 'Buscando al anfitrión…'}</p></div><button class="btn small danger" id="on-leave">Salir de la sala</button></div>
+    root.innerHTML = `<div class="wrap" style="max-width:920px"><div class="thead"><div><h1 class="h1">Sala en línea</h1><p class="sub">${host ? 'Eres el anfitrión: aquí corren las partidas. Pásales el código o el enlace a los demás y deja esta pantalla abierta mientras juegan.' : connected ? 'Estás dentro. El anfitrión elige qué jugar.' : 'Buscando al anfitrión…'}</p></div><button class="btn small danger" id="on-leave">Salir de la sala</button></div>
       <div class="stack">
         <div class="panel on-room">
           <div class="on-codebox"><span class="lbl">CÓDIGO</span><b class="on-big">${esc(Net.code)}</b>
@@ -1164,7 +1164,7 @@ const Online = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"f0bc359e25","date":"2026-11-18"};
+  const BUILD = {"v":"be0a24706c","date":"2026-11-18"};
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
   const COLORS = ['#ff5d8f', '#45d6b0', '#ffb36b', '#6fc3ff', '#ffd36b', '#b07bff', '#3dffa8', '#ff7a3d'];

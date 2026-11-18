@@ -6928,6 +6928,15 @@ const Game = (() => {
     if (GFX.setResScale(Math.round(k * 100) / 100)) { DR.cool = 5; resize(); }
   }
   /* ---------- bucle ---------- */
+  // en línea, anfitrión con la pestaña oculta (otra app encima): el navegador deja de dibujar, pero la carrera sigue para los demás
+  let bgLast = 0;
+  setInterval(() => {
+    if (!document.hidden || !R || !netOn() || !NetPlay.isHost || G.mode !== 'race') { bgLast = 0; return; }
+    const now = performance.now(), dt = Math.min(1, (now - (bgLast || now)) / 1000); bgLast = now; last = 0;
+    if (G.introT > 0) { G.introT = Math.max(0, G.introT - dt); return; }
+    acc += dt; let n = 0; while (acc >= DT && n < 130) { R.step(DT); Input.endStep(); for (const e of R.events) NetPlay.event(e); acc -= DT; n++; } if (n >= 130) acc = 0;
+    if (R.state === 'done' && R.doneT > 3.2 && !G.shownResults) { G.shownResults = true; UI.results(R, G); }
+  }, 50);
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
