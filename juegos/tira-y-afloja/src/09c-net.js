@@ -123,7 +123,7 @@ const NetGame = (() => {
     hardSet(q, row); return (ghosts[p.id] = { p, q, hist: [], lastN: 0, acc: 0 });
   }
   function histAt(H, t) {
-    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 150 ? H[0] : null; // un poco antes del comienzo: el primero
+    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 250 ? H[0] : null; // un poco antes del comienzo: el primero
     for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), vx: lerp(a.vx, b.vx, k), vy: lerp(a.vy, b.vy, k), stuck: a.stuck }; }
     return null;
   }
@@ -143,6 +143,8 @@ const NetGame = (() => {
     if (Math.abs((X('mass') || 0) - q.mass) > 0.02) q.setMass(X('mass')); if ((X('stun') || 0) > q.stun + 0.05) q.stun = X('stun');
     for (const f of ['inv', 'sticky', 'slingT', 'whipT', 'anchor', 'pinned', 'hangT']) q[f] = X(f);
   }
+  // cuadros muy lentos (el juego frena su reloj a 0,1 s por cuadro): la copia sigue el tiempo real para no quedarse atrás
+  const realDt = (g, dt) => { const now = performance.now(), real = g.lastT ? (now - g.lastT) / 1000 : dt; g.lastT = now; return real > 0.1 ? Math.min(0.25, real) : dt; };
   function predict(dt) {
     const Lt = NetPlay.latest(), D = Lt && Lt.d; if (!D || !D.p || !G.rope) return; const now = performance.now(), R = G.rope;
     for (const seat of NetPlay.mine) {
@@ -151,13 +153,13 @@ const NetGame = (() => {
       if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, row, Lt.arr - NetPlay.rtt - 12); }
       const inp = Object.assign({}, NEUTRAL, lastIn[NetPlay.mine.indexOf(seat)] || {});
       const GP = Object.create(G); GP.rope = Object.assign(Object.create(Object.getPrototypeOf(R)), R); GP.players = G.players.slice(); GP.players[seat] = q;
-      g.acc += dt; let n = 0;
-      while (g.acc >= PDT && n < 14) {
+      g.acc += realDt(g, dt); let n = 0;
+      while (g.acc >= PDT && n < 32) {
         const o = G.players[1 - seat], both = q.alive && o && o.alive && R.visible, d = seat === 0 ? R.dirA : R.dirB, T = both ? R.tension : 0, kk = (q.slingT > 0.62 ? 0 : 1);
         q.step(PDT, inp, { x: d.x * T * kk, y: d.y * T * kk }, GP); q.events.length = 0; g.acc -= PDT; n++;
       }
-      if (n >= 14) g.acc = 0;
-      g.hist.push({ t: now, x: q.x, y: q.y, vx: q.vx, vy: q.vy, stuck: q.stuck }); while (g.hist.length > 2 && now - g.hist[0].t > 1500) g.hist.shift();
+      if (n >= 32) g.acc = 0;
+      g.hist.push({ t: now, x: q.x, y: q.y, vx: q.vx, vy: q.vy, stuck: q.stuck }); while (g.hist.length > 2 && now - g.hist[0].t > 3000) g.hist.shift();
       if (!p.alive || !q.alive) continue;
       // se dibuja la copia; el hilo se corre hacia ella (todo en la punta de este jugador, nada en la del otro)
       const dx = q.x - p.x, dy = q.y - p.y;

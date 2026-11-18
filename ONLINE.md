@@ -336,3 +336,12 @@ mejores; (5) todo optimizado y comprobado.
   a la sala»); al ceder el mando, el anfitrión viejo manda a los suyos con el nuevo (no «adiós», que dispararía otra
   sucesión). Nota de pruebas: en este contenedor (2 núcleos, sin GPU) VÉRTIGO necesita `VIEW=400x225` para que dos
   copias 3D quepan; `test/todo.sh` corre todo en fila.
+- **Pruebas finales (18 nov)** — `test/todo.sh` (todo en fila). En línea: red, sala, Ventolera (2, 3 y Jefe en pareja),
+  Sortilegio (y con red mala 15 % de pérdida + 120 ms), Tira y Afloja (y Fiesta), VÉRTIGO y sus 4 modos, torneo, celular
+  (Tira y Afloja y Ventolera), sucesión del anfitrión, datos y relevo: todo OK. Predicción: reacción en 2–3 cuadros en
+  Ventolera, Sortilegio y Tira y Afloja (sin predicción: 16–25 cuadros con red de 70 ms + 70 ms), error promedio 3–24 px;
+  VÉRTIGO responde en 2 cuadros (en esta máquina sin GPU el ping sube a ~2 s por la carga y no se juzga el error).
+  Sin conexión idéntico en los 4. Arreglos que salieron de las pruebas: el jefe de Ventolera mandaba eventos sin piloto
+  (el remoto se trababa); la copia predicha sigue el ritmo de la carrera del anfitrión y el tiempo real si los cuadros
+  son muy lentos; historia de 3 s (pings altos); **torneo**: en una llave de muchos, dos cruces podían salir con el mismo
+  id y la prueba se anotaba en el equivocado (muy de vez en cuando) → ids sin repetir (`test/motor.js` 6 veces sin falla).

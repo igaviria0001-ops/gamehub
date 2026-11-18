@@ -221,7 +221,7 @@ const NetGame = (() => {
     }
   }
   function histAt(H, t) {
-    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 150 ? H[0] : null; // un poco antes del comienzo: el primero
+    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 250 ? H[0] : null; // un poco antes del comienzo: el primero
     for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), vx: lerp(a.vx, b.vx, k), vy: lerp(a.vy, b.vy, k) }; }
     return null;
   }
@@ -237,6 +237,8 @@ const NetGame = (() => {
     const k = 0.3; g.x += ex * k; g.y += ey * k; g.vx += evx * k; g.vy += evy * k;
     for (const q of g.hist) { q.x += ex * k; q.y += ey * k; q.vx += evx * k; q.vy += evy * k; }
   }
+  // cuadros muy lentos (el juego frena su reloj a 0,1 s por cuadro): la copia sigue el tiempo real para no quedarse atrás
+  const realDt = (g, dt) => { const now = performance.now(), real = g.lastT ? (now - g.lastT) / 1000 : dt; g.lastT = now; return real > 0.1 ? Math.min(0.25, real) : dt; };
   function predict(G, dt) {
     const Lt = NetPlay.latest(), D = Lt && Lt.d; if (!D || !D.m || !G.T || D.seed !== kfSeed) return; const now = performance.now();
     for (const seat of NetPlay.mine) {
@@ -244,8 +246,8 @@ const NetGame = (() => {
       const g = ghostOf(m);
       if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, dec(c), Lt.arr - NetPlay.rtt - 12); }
       const inp = lastIn[NetPlay.mine.indexOf(seat)] || { mx: 0, my: 0, dash: false };
-      g.acc += dt; let n = 0; while (g.acc >= PDT && n < 14) { moveGhost(g, m, inp, G, PDT); g.acc -= PDT; n++; } if (n >= 14) g.acc = 0;
-      g.hist.push({ t: now, x: g.x, y: g.y, vx: g.vx, vy: g.vy }); while (g.hist.length > 2 && now - g.hist[0].t > 1500) g.hist.shift();
+      g.acc += realDt(g, dt); let n = 0; while (g.acc >= PDT && n < 32) { moveGhost(g, m, inp, G, PDT); g.acc -= PDT; n++; } if (n >= 32) g.acc = 0;
+      g.hist.push({ t: now, x: g.x, y: g.y, vx: g.vx, vy: g.vy }); while (g.hist.length > 2 && now - g.hist[0].t > 3000) g.hist.shift();
       if (!m.alive) continue;
       // se dibuja la copia: posición, rumbo y paso
       m.x = g.x; m.y = g.y; m.vx = g.vx; m.vy = g.vy; m.face = g.face; m.moving = Math.hypot(g.vx, g.vy); m.walk = g.walk;

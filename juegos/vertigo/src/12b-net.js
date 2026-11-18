@@ -104,12 +104,12 @@ const NetGame = (() => {
     let g = ghosts[seat]; if (g && g.R === R) return g;
     const PR = Object.create(R); PR.events = []; const c = R.cars[seat];
     PST.made = (PST.made || 0) + 1;
-    g = ghosts[seat] = { R, PR, car: new Car(PR, c.idx, c.pid, c.s, c.u), hist: [], lastN: 0, acc: 0 };
+    g = ghosts[seat] = { R, PR, car: new Car(PR, c.idx, c.pid, c.s, c.u), hist: [], lastN: 0, acc: 0, rs: [] };
     if (b) hardSet(g.car, b); return g;
   }
   // lo que predijo la copia en el instante t (entre dos cuadros guardados)
   function histAt(H, t) {
-    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 150 ? H[0] : null; // un poco antes del comienzo: el primero
+    if (!H.length) return null; if (t < H[0].t) return t > H[0].t - 250 ? H[0] : null; // un poco antes del comienzo: el primero
     for (let i = H.length - 1; i >= 0; i--) if (H[i].t <= t) { const a = H[i], b = H[i + 1]; if (!b) return a; const k = (t - a.t) / Math.max(1e-6, b.t - a.t), o = {}; for (const key in a) o[key] = key === 'a' ? lerpA(a.a, b.a, k) : a[key] + (b[key] - a[key]) * k; if (Math.abs(b.s - a.s) > 100) o.s = a.s; return o; }
     return null;
   }
@@ -118,11 +118,11 @@ const NetGame = (() => {
   function reconcile(g, b, tAt) {
     const car = g.car, L = g.R.track.L;
     if (b[21] > 0 || b[22] || car.respawnT > 0) { hardSet(car, b); rebase(g, tAt); return; } // cayéndose o fuera: igual que el anfitrión
-    const h = histAt(g.hist, tAt); if (!h) { hardSet(car, b); rebase(g, tAt); PST.hard++; return; }
+    const h = histAt(g.hist, tAt); if (!h) { hardSet(car, b); rebase(g, tAt); PST.hard++; PST.noh = (PST.noh || 0) + 1; return; }
     let es = b[0] - h.s; if (es > L / 2) es -= L; else if (es < -L / 2) es += L;
     const e = { s: es, u: b[1] - h.u, h: b[2] - h.h, a: angWrap(b[3] - h.a), f: b[6] - h.f, l: (b[40] || 0) - h.l, vn: (b[41] || 0) - h.vn };
     PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(es, e.u) * 0.05;
-    if (Math.abs(es) > 24 || Math.abs(e.u) > 7 || Math.abs(e.h) > 7 || Math.abs(e.a) > 1.2) { hardSet(car, b); rebase(g, tAt); PST.hard++; return; }
+    if (Math.abs(es) > 24 || Math.abs(e.u) > 7 || Math.abs(e.h) > 7 || Math.abs(e.a) > 1.2) { PST.big = [Math.round(es), +e.u.toFixed(1), +e.h.toFixed(1), +e.a.toFixed(2)]; hardSet(car, b); rebase(g, tAt); PST.hard++; return; }
     const k = 0.3; // de a poquito: no se nota y no tiembla
     car.s = g.R.track.wrap(car.s + es * k); car.u += e.u * k; car.h += e.h * k; car.a = angWrap(car.a + e.a * k); car.vn += e.vn * k;
     const f = car.f + e.f * k, l = (car.l || 0) + e.l * k; car.f = f; car.l = l; car.vs = f * Math.cos(car.a) - l * Math.sin(car.a); car.vu = f * Math.sin(car.a) + l * Math.cos(car.a);
@@ -134,15 +134,20 @@ const NetGame = (() => {
     car.lap = b[17]; car.finished = !!b[19]; car.shieldT = b[30]; car.specT = b[31];
     if (!!b[36] !== car.grounded && Math.abs(e.h) < 0.6) { car.grounded = !!b[36]; if (car.grounded) { car.vn = 0; car.airT = 0; car.trick = null; } }
   }
+  // cuadros muy lentos (el juego frena su reloj a 0,1 s por cuadro): la copia sigue el tiempo real para no quedarse atrás
+  const realDt = (g, dt) => { const now = performance.now(), real = g.lastT ? (now - g.lastT) / 1000 : dt; g.lastT = now; return real > 0.1 ? Math.min(0.25, real) : dt; };
   function predict(R, dt) {
     const Lt = NetPlay.latest(), now = performance.now(), D = Lt && Lt.d;
+    PST.fdt = Math.round(((PST.fdt || 16) * 0.9 + dt * 1000 * 0.1) * 10) / 10; PST.rtt = NetPlay.rtt;
     for (const seat of NetPlay.mine) {
       const c = R.cars[seat]; if (!c || !D || !D.c[seat]) continue;
       const g = ghostOf(R, seat, D.c[seat]); g.PR.state = ST[D.st] || 'race'; g.PR.events.length = 0;
-      if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, D.c[seat], Lt.arr - NetPlay.rtt - 12); }
+      if (Lt.n !== g.lastN) { g.lastN = Lt.n; reconcile(g, D.c[seat], Lt.arr - NetPlay.rtt - 12); g.rs.push([Lt.tm, D.tm]); while (g.rs.length > 2 && Lt.tm - g.rs[0][0] > 1500) g.rs.shift(); }
+      // la copia avanza al ritmo de la carrera del anfitrión (si allá va lento o en la cuenta, aquí también)
+      const r0 = g.rs[0], r1 = g.rs[g.rs.length - 1], rate = r1 && r1[0] - r0[0] > 300 ? clamp((r1[1] - r0[1]) / ((r1[0] - r0[0]) / 1000), 0, 1.25) : 1;
       const inp = Object.assign({}, NEUTRAL, lastIn[NetPlay.mine.indexOf(seat)] || {}, { item: false });
-      g.acc += dt; let n = 0; while (g.acc >= DT && n < 14) { g.car.step(DT, inp); g.PR.events.length = 0; g.acc -= DT; n++; } if (n >= 14) g.acc = 0;
-      const k = g.car; g.hist.push({ t: now, s: k.s, u: k.u, h: k.h, a: k.a, f: k.f, l: k.l || 0, vn: k.vn }); while (g.hist.length > 2 && now - g.hist[0].t > 1500) g.hist.shift();
+      g.acc += realDt(g, dt) * rate; let n = 0; while (g.acc >= DT && n < 32) { g.car.step(DT, inp); g.PR.events.length = 0; g.acc -= DT; n++; } if (n >= 32) g.acc = 0;
+      const k = g.car; g.hist.push({ t: now, s: k.s, u: k.u, h: k.h, a: k.a, f: k.f, l: k.l || 0, vn: k.vn }); while (g.hist.length > 2 && now - g.hist[0].t > 3000) g.hist.shift();
       // se dibuja la copia (lo de la carrera —vueltas, puesto, objeto— sigue siendo lo del anfitrión)
       c.s = k.s; c.u = k.u; c.h = k.h; c.a = k.a; c.roll = k.roll; c.pitch = k.pitch; c.f = k.f; c.mode = k.mode; c.grounded = k.grounded; c.steerS = k.steerS; c.hopT = k.hopT;
       c.drift.on = k.drift.on; c.drift.dir = k.drift.dir; c.drift.lv = k.drift.lv; c.drift.t = k.drift.t; c.trick = k.trick; c.boostT = k.boostT; c.boostK = k.boostK; c.vs = k.vs; c.vu = k.vu; c.vn = k.vn;

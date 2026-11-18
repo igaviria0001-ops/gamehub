@@ -63,7 +63,11 @@ const Torneo = (() => {
     return T;
   }
   function roundName(r, total) { const left = total - r; return left === 1 ? 'Final' : left === 2 ? 'Semifinal' : left === 3 ? 'Cuartos de final' : left === 4 ? 'Octavos de final' : 'Ronda ' + (r + 1); }
-  function match(T, a, b, bestOf, stage, extra) { return Object.assign({ id: 'm' + (T.matches.length + 1 + (extra && extra.final ? 900 : 0) + (extra && extra.third ? 800 : 0)) + '_' + rnd(1e4), a, b, bestOf: bestOf || 1, stage, wins: {}, draws: 0, events: [], done: false, winner: null }, extra || {}); }
+  // id de cruce sin repetir (las llaves se arman de a varios antes de guardarse: el número solo no bastaba y, muy de vez en
+  // cuando, dos cruces salían con el mismo id y la prueba se anotaba en el que no era)
+  const madeIds = new Set();
+  function matchId(T, extra) { let id; do { id = 'm' + (T.matches.length + 1 + (extra && extra.final ? 900 : 0) + (extra && extra.third ? 800 : 0)) + '_' + rnd(1e4); } while (madeIds.has(id) || T.matches.some(m => m.id === id)); madeIds.add(id); return id; }
+  function match(T, a, b, bestOf, stage, extra) { return Object.assign({ id: matchId(T, extra), a, b, bestOf: bestOf || 1, stage, wins: {}, draws: 0, events: [], done: false, winner: null }, extra || {}); }
   // llena los cruces que dependen de otros (eliminatoria y final de la liga)
   function resolve(T) {
     const byId = id => T.matches.find(m => m.id === id);
