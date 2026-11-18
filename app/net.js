@@ -159,8 +159,10 @@ const Net = (() => {
     tick = setInterval(() => {
       if (!S.alive) return; const now = Date.now();
       for (const p of peers.values()) { if (p.open && p.via !== 'relay') rawSend(p, { $: 'ping', t: performance.now() }, false); if (p.via === 'p2p' && p.pc && !p.routeChecked) { p.routeChecked = true; refineRoute(p); } }
-      if (S.isHost) { for (const p of [...peers.values()]) if (now - p.lastSeen > 20000) dropPeer(p.id); broadcastRoom(); }
-      else { const h = peers.get(S.hostId); if (!h || !h.open) signal({ t: 'hello', info: S.info }); else if (now - h.lastSeen > 15000) { emit('status', { hostGone: true }); } }
+      // silencio largo = se fue (con margen: mientras un aparato carga un juego pesado puede callar varios segundos)
+      const gone = p => now - p.lastSeen > (p.pc && p.pc.connectionState === 'connected' ? 60000 : 30000);
+      if (S.isHost) { for (const p of [...peers.values()]) if (gone(p)) dropPeer(p.id); broadcastRoom(); }
+      else { const h = peers.get(S.hostId); if (!h || !h.open) signal({ t: 'hello', info: S.info }); else if (gone(h)) { emit('status', { hostGone: true }); } }
     }, 2000);
   }
   async function start(code, info, host) {

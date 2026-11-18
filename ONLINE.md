@@ -66,7 +66,7 @@
 - [x] **F3 · Enlace juego ↔ red** (puente hecho; se prueba de verdad con el primer adaptador, F4) (`shared/netplay.js`, copiado como `src/00k-net.js`):
       anfitrión: entradas remotas → `Input`; instantáneas y eventos → red. Remoto: modo
       «títere» (no simula, aplica instantáneas, interpola, dibuja, efectos por eventos).
-- [ ] **F4 · VÉRTIGO en línea** (encaja mejor: estado pequeño, cámara por aparato, hasta 4).
+- [~] **F4 · VÉRTIGO en línea** (carrera rápida en línea FUNCIONA; faltan pulidos, ver bitácora) (encaja mejor: estado pequeño, cámara por aparato, hasta 4).
 - [ ] **F5 · Ventolera en línea** (pájaros, balas, misiles, cajas, blancos; hasta 4).
 - [ ] **F6 · Sortilegio en línea** (magos, hechizos, terreno por cambios, criaturas; hasta 4).
 - [ ] **F7 · Tira y Afloja en línea** (chicles, hilo, objetos; 2 o 2 contra 2).
@@ -171,3 +171,16 @@ finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,spec
 7. Ficha en `app/catalog.js`: `net: { seats: 4, mode: 'quick' }` y prueba `test/netvtg.js` (2 páginas con
    `?net=bc`, anfitrión + remoto: la posición del auto remoto en el anfitrión cambia con sus teclas y el remoto
    ve el mismo orden de carrera).
+- **17 nov 22:30** — F4 base FUNCIONANDO: `vertigo/src/12b-net.js` (`NetGame`: `Input.read` envuelto, `HUD.msg` por
+  vista, arranque del anfitrión con `seats.length` humanos + máquina hasta 6, `{t:'cfg'}` + el remoto lo pide con
+  `{t:'want'}` hasta tenerlo, instantánea compacta por auto (40 números) + peligros/cajas/esmeraldas, `apply` con
+  interpolación de `s` con vuelta y ángulos, eventos al `frameEv`). `12-main.js`: `viewCars()`/`vIdx()` (cámaras,
+  HUD y avisos solo de los puestos de este aparato), `startNet(o)`, `Game.R`, pausa sin detener en línea, pieles por
+  puesto local. `app/net.js`: un aparato «se fue» solo tras 30 s de silencio (60 s si WebRTC sigue conectado), porque
+  al cargar un juego pesado se calla un rato. `catalog.js`: vertigo `net: { seats: 4, mode: 'quick' }`.
+  Prueba `node test/netvtg.js` → VTG EN LÍNEA OK (el remoto abre la carrera, ve lo mismo que el anfitrión y su
+  tecla mueve SU auto en el anfitrión; captura: el remoto dibuja su auto con su HUD).
+  **Sigue F4 (pulido):** pantalla de resultados en línea (botón «Volver a la sala» para todos; el anfitrión «Otra
+  carrera» = nueva partida con los mismos puestos); elegir piloto y pista antes de lanzar (en la sala, por aparato:
+  `info.players[i].pilot` y `skin`); nombres sobre los autos de otros jugadores; modos duelo/eliminación/batalla/
+  Gran Premio en línea; prueba con pérdida de paquetes. Luego **F5 Ventolera** (mismo patrón: `09c-net.js`).

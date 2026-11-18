@@ -566,7 +566,7 @@ const GAMES = [
     extras: ['Campaña en equipo de 18 niveles (cielo e infierno)', '13 magos con atuendos', 'Grimorio de 28 fusiones', 'Escuela de magia'],
   },
   {
-    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04',
+    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick' },
     tag: 'La Copa Esmeralda', kind: 'Carreras en 3D',
     desc: 'Bólidos que derrapan, saltan, flotan en lancha y planean con alas por 10 pistas del mundo. Objetos, turbos esmeralda, batallas y pantalla dividida para dos.',
     c1: '#3dffa8', c2: '#00c8ff', c3: '#ffd23d', ink: '#04140f', font: 'vtg',
@@ -982,8 +982,10 @@ const Net = (() => {
     tick = setInterval(() => {
       if (!S.alive) return; const now = Date.now();
       for (const p of peers.values()) { if (p.open && p.via !== 'relay') rawSend(p, { $: 'ping', t: performance.now() }, false); if (p.via === 'p2p' && p.pc && !p.routeChecked) { p.routeChecked = true; refineRoute(p); } }
-      if (S.isHost) { for (const p of [...peers.values()]) if (now - p.lastSeen > 20000) dropPeer(p.id); broadcastRoom(); }
-      else { const h = peers.get(S.hostId); if (!h || !h.open) signal({ t: 'hello', info: S.info }); else if (now - h.lastSeen > 15000) { emit('status', { hostGone: true }); } }
+      // silencio largo = se fue (con margen: mientras un aparato carga un juego pesado puede callar varios segundos)
+      const gone = p => now - p.lastSeen > (p.pc && p.pc.connectionState === 'connected' ? 60000 : 30000);
+      if (S.isHost) { for (const p of [...peers.values()]) if (gone(p)) dropPeer(p.id); broadcastRoom(); }
+      else { const h = peers.get(S.hostId); if (!h || !h.open) signal({ t: 'hello', info: S.info }); else if (gone(h)) { emit('status', { hostGone: true }); } }
     }, 2000);
   }
   async function start(code, info, host) {
@@ -1162,7 +1164,7 @@ const Online = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"e790b4e931","date":"2026-11-18"};
+  const BUILD = {"v":"181f6197a5","date":"2026-11-18"};
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
   const COLORS = ['#ff5d8f', '#45d6b0', '#ffb36b', '#6fc3ff', '#ffd36b', '#b07bff', '#3dffa8', '#ff7a3d'];

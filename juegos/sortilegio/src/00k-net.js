@@ -38,6 +38,8 @@ const NetPlay = (() => {
     else inT = setInterval(clientTick, 16);
     for (const f of startSubs) { try { f({ role, seats, mine, sid, ev }); } catch (err) { post('error', { msg: String(err && err.message || err) }); } }
   }
+  // solo números, textos y listas simples (sin objetos del juego, que no viajan)
+  function clean(e) { const o = {}; for (const k in e) { const v = e[k]; const t = typeof v; if (t === 'number') o[k] = Math.round(v * 1000) / 1000; else if (t === 'string' || t === 'boolean') o[k] = v; else if (Array.isArray(v) && v.length < 40 && v.every(x => typeof x !== 'object' && typeof x !== 'function')) o[k] = v.slice(); } return o; }
   function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
   // anfitrión: instantánea + eventos acumulados
   function hostTick() {
@@ -65,7 +67,7 @@ const NetPlay = (() => {
     // anfitrión: la entrada del puesto remoto (o neutra si dejó de llegar)
     input(seat) { const r = remote[seat]; const g = G(); if (!r || performance.now() - r.at > 500) return g && g.neutral ? g.neutral() : null; return r.i; },
     // el juego avisa eventos (golpes, sonidos, efectos) para los remotos
-    event(e) { if (on && role === 'host') { evQ.push(e); if (evQ.length > 200) evQ.splice(0, evQ.length - 200); } },
+    event(e) { if (on && role === 'host') { evQ.push(clean(e)); if (evQ.length > 200) evQ.splice(0, evQ.length - 200); } },
     // remoto: las dos instantáneas alrededor del momento a dibujar y cuánto avanzar entre ellas (0..1)
     sample() {
       if (!snaps.length) return null; if (snaps.length === 1 || offset == null) { const s = snaps[snaps.length - 1]; return { a: s.d, b: s.d, k: 1 }; }

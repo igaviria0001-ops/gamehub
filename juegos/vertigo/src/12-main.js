@@ -16,7 +16,7 @@ const Game = (() => {
     meshes = []; show = []; scene = GFX.buildWorld(T, TRACKS[tid]); worldFor = tid; FX.init(scene, T, GQ.lv < 2);
   }
   // lo que tiene puesto en el garaje el jugador i con ese piloto
-  const garageSkin = (i, pid) => { try { return Vestidor.skinOf(i, pid); } catch (e) { return null; } };
+  const garageSkin = (i, pid) => { try { if (typeof NetPlay !== 'undefined' && NetPlay.on) { i = NetPlay.local(i); if (i < 0) return null; } return Vestidor.skinOf(i, pid); } catch (e) { return null; } };
   const drop = m => { scene.remove(m.root); scene.remove(m.shadow); GFX.disposeScene(m.root); GFX.disposeScene(m.shadow); };
   function clearCars() { for (const m of meshes) drop(m); meshes = []; }
   function newRace(tid, humans, bots, countT, opts = {}) {
@@ -26,7 +26,7 @@ const Game = (() => {
     clearCars();
     meshes = R.cars.map(c => { const m = CarArt.build(c.pid, c.bot ? null : c.human, c.bot ? null : garageSkin(c.human, c.pid)); scene.add(m.root); scene.add(m.shadow); return m; });
     ItemArt.init(scene, R); BossArt.init(scene, R);
-    const nv = Math.max(1, humans.length); cams = []; camSt = [];
+    const nv = Math.max(1, netOn() ? NetPlay.mine.length : humans.length); cams = []; camSt = [];
     for (let i = 0; i < nv; i++) { cams.push(new THREE.PerspectiveCamera(68, 1, 0.3, 5000)); camSt.push(null); }
     acc = 0; frameEv = [];
     return R;
@@ -108,9 +108,14 @@ const Game = (() => {
   // cambiar la calidad gráfica: resolución, sombras y posproceso al instante; la portada se rearma para que se note
   function requality(lv) { GQ.lv = lv; Store.set('gq', lv); GFX.setResScale(1); GFX.applyQuality(); POST.quality(); const tid = worldFor; worldFor = null; world(tid); demo(); resize(); }
   function pause(p) {
-    if (G.mode !== 'race') return; G.paused = p; UI.show(p ? 's-pause' : null); if (p) Sound.update(R, humansCars(), true);
+    if (G.mode !== 'race') return; if (netOn()) { UI.show(p ? 's-pause' : null); return; } // en línea la carrera no se detiene
+    G.paused = p; UI.show(p ? 's-pause' : null); if (p) Sound.update(R, humansCars(), true);
   }
   const humansCars = () => R ? R.cars.filter(c => !c.bot) : [];
+  // los humanos que se ven en ESTE aparato (en línea: solo los puestos de este aparato; si no, todos)
+  const netOn = () => typeof NetPlay !== 'undefined' && NetPlay.on;
+  const viewCars = () => { const h = humansCars(); return netOn() ? NetPlay.mine.map(s => h.find(c => c.human === s)).filter(Boolean) : h; };
+  const vIdx = c => (netOn() ? NetPlay.mine.indexOf(c.human) : c.human);
   /* ---------- eventos → HUD ---------- */
   const DRIFT_NAME = ['', 'AZUL', 'NARANJA', 'ESMERALDA'], DRIFT_COL = ['', '#5ab8ff', '#ff9a3a', '#3dffa8'];
   const TRICK_NAME = { flip: 'MORTAL', back: 'MORTAL ATRÁS', rollR: 'TONEL', rollL: 'TONEL', spin: 'TROMPO' };
@@ -243,11 +248,13 @@ const Game = (() => {
     if (intro) { G.introT -= dt; if (G.introT <= 0) { G.introT = 0; camSt.fill(null); resize(); } }
     const run = !(G.mode === 'race' && G.paused) && !intro && G.mode !== 'setup';
     frameEv.length = 0;
-    if (run) { t += dt; acc += dt; let n = 0; while (acc >= DT && n < 14) { R.step(DT); Input.endStep(); if (R.events.length) frameEv.push(...R.events); acc -= DT; n++; } if (n >= 14) acc = 0; }
+    if (run && netOn() && NetPlay.isClient && G.mode === 'race') { t += dt; NetGame.clientStep(R, frameEv); } // en línea, remoto: dibuja lo que manda el anfitrión
+    else if (run) { t += dt; acc += dt; let n = 0; while (acc >= DT && n < 14) { R.step(DT); Input.endStep(); if (R.events.length) frameEv.push(...R.events); acc -= DT; n++; } if (n >= 14) acc = 0; }
+    if (netOn() && NetPlay.isHost && G.mode === 'race') for (const e of frameEv) NetPlay.event(e);
     // demostración infinita: reiniciar cuando terminen
     if (G.mode === 'title' && R.state === 'done' && R.doneT > 4) { demo(); resize(); }
     // eventos
-    if (G.mode === 'race') { hudEvents(frameEv); Sound.onEvents(R, frameEv); for (const e of frameEv) { const c = e.car != null ? R.cars[e.car] : null; if (c && !c.bot && camSt[c.human]) { if (e.type === 'teleport') camSt[c.human] = null; else if (e.type === 'wall' && e.hit > 8) camSt[c.human].shake = Math.min(0.5, e.hit * 0.02); if (e.type === 'landBad' || (e.type === 'land' && e.hard > 14)) camSt[c.human].shake = 0.35; } } }
+    if (G.mode === 'race') { hudEvents(frameEv); Sound.onEvents(R, frameEv); for (const e of frameEv) { const c = e.car != null ? R.cars[e.car] : null; if (c && !c.bot && camSt[vIdx(c)]) { if (e.type === 'teleport') camSt[vIdx(c)] = null; else if (e.type === 'wall' && e.hit > 8) camSt[vIdx(c)].shake = Math.min(0.5, e.hit * 0.02); if (e.type === 'landBad' || (e.type === 'land' && e.hard > 14)) camSt[c.human].shake = 0.35; } } }
     HUD.update(run ? dt : 0);
     // dibujar bólidos
     if (G.mode !== 'setup') for (let i = 0; i < R.cars.length; i++) { CarArt.pose(meshes[i], R.cars[i], R.track, t, run ? dt : 0); meshes[i].root.updateMatrixWorld(); }
@@ -255,11 +262,11 @@ const Game = (() => {
     ItemArt.update(R, meshes, frameEv, t, run ? dt : 0); BossArt.update(R, t, run ? dt : 0, frameEv);
     GFX.update(t, dt);
     // cámaras
-    if (G.freeCam) { /* depuración */ } else if (G.mode === 'setup') showroom(dt); else if (intro) introCam(dt); else if (G.mode === 'race') humansCars().forEach((c, i) => chase(i, c.out ? (R.order.find(o => !o.out) || c) : c, dt, false)); else cinema(dt);
+    if (G.freeCam) { /* depuración */ } else if (G.mode === 'setup') showroom(dt); else if (intro) introCam(dt); else if (G.mode === 'race') viewCars().forEach((c, i) => chase(i, c.out ? (R.order.find(o => !o.out) || c) : c, dt, false)); else cinema(dt);
     // render por vista
     const r = GFX.renderer, H = innerHeight, post = POST.on;
     if (post) POST.begin(); else if (views.length > 1) { r.setScissor(0, 0, innerWidth, H); r.setViewport(0, 0, innerWidth, H); r.setClearColor(0x03060d); r.clear(); }
-    const hcs = G.mode === 'race' ? humansCars() : [];
+    const hcs = G.mode === 'race' ? viewCars() : [];
     views.forEach((v, i) => { const cam = cams[i] || cams[0], asp = v.w / v.h; if (Math.abs(cam.aspect - asp) > 1e-3) { cam.aspect = asp; cam.updateProjectionMatrix(); } // cada vista con su proporción (evita la imagen aplastada)
       GFX.shadowFocus(cam);
       if (post) POST.setView(v); else { r.setViewport(v.x, H - v.y - v.h, v.w, v.h); r.setScissor(v.x, H - v.y - v.h, v.w, v.h); }
@@ -270,7 +277,7 @@ const Game = (() => {
     HUD.clear();
     if (intro) { titleCard(); }
     else if (G.mode === 'race') {
-      const hc = humansCars(), split = hc.length === 2, touch = Touch.active, W = innerWidth, H = innerHeight, x = HUD.ctx();
+      const hc = viewCars(), split = hc.length === 2, touch = Touch.active, W = innerWidth, H = innerHeight, x = HUD.ctx();
       const mmS = Math.min(W, H) * (split ? (touch ? 0.17 : 0.2) : touch ? 0.17 : 0.22), mmR = mmS * 0.62;
       hc.forEach((c, i) => HUD.player(views[i], c, R, i, t, { split, touch, mirror: split && i === 1, innerInset: split ? mmR + 8 : 0, insetT: touch ? 4 : 0, itemKey: touch ? '' : i ? 'L' : 'G' }));
       if (split) { x.fillStyle = '#03060d'; x.fillRect(W / 2 - 2, 0, 4, H); }
@@ -286,6 +293,15 @@ const Game = (() => {
     demo(); resize(); UI.show('s-title'); requestAnimationFrame(frame);
     window.__vtg = { get R() { return R; }, get G() { return G; }, cams: () => cams, meshes: () => meshes, look(px, py, pz, tx, ty, tz, fov = 60) { G.freeCam = true; const c = cams[0]; c.position.set(px, py, pz); c.up.set(0, 1, 0); c.lookAt(tx, ty, tz); c.fov = fov; c.updateProjectionMatrix(); } };
   }
-  return Object.assign(G, { start, startCfg, setup, showPilot, gpNext, duelNext, lessonNext, worldNext, toTitle, pause, boot, requality, preview });
+  // en línea (12b-net.js): armar la carrera con N humanos sin tocar lo guardado
+  function startNet(o) {
+    G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode: 'quick', laps: o.laps }); G.gp = null; G.duel = null; clearShow();
+    newRace(o.tid, o.humans, o.bots, undefined, { laps: o.laps });
+    G.mode = 'race'; G.paused = false; G.shownResults = false; G.introT = G.INTRO = 3.6;
+    if (isTouch()) Touch.start(G.nHumans); else Touch.stop();
+    UI.show(null); Sound.startRace(G.nHumans); Music.play(TRACKS[o.tid].theme); resize();
+  }
+  Object.defineProperty(G, 'R', { get: () => R });
+  return Object.assign(G, { start, startCfg, setup, showPilot, gpNext, duelNext, lessonNext, worldNext, toTitle, pause, boot, requality, preview, startNet });
 })();
 (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { try { Game.boot(); Hub.onPlay(ev => UI.hubPlay(ev)); Hub.ready(); } catch (e) { console.error(e); const v = document.getElementById('ver'); if (v) v.textContent = 'Este navegador no pudo iniciar los gráficos 3D (WebGL): ' + e.message; } });
