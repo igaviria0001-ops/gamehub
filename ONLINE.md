@@ -139,3 +139,35 @@ Orden sugerido: VÉRTIGO (autos = pocos números; hasta 4 humanos + máquina), V
   `humans` de cada aparato, títere en remotos (sin `Race.step`, autos desde la instantánea, cámaras de `mine`),
   eventos → `FX.onEvents`/`Sound.onEvents`/HUD; luego `catalog.js` vertigo `net: { seats: 4, mode: 'quick' }`
   y una prueba `test/netvtg.js` con 2 páginas (anfitrión + remoto) que compare posiciones.
+
+## Diseño F4 · VÉRTIGO en línea (estudiado el 17 nov; implementar así)
+
+Archivos: `vertigo/src/04-race.js` (Race: `cars`, `order`, `state`, `countT`, `time`, `hz` peligros de objetos
+`{k,s,u,h,life,owner,…}`, `boxes[].gone`, `track.gems[].gone`, `boss`/`bz` en Persecución, `rules`),
+`03-car.js` (Car: `s,u,h,a,roll,pitch,f,mode,drift{on,dir,lv},boostT,boostK,gem,item,itemN,lap,laps[],finished,
+finishT,place,respawnT,out,trick{kind,t,dur},hopT,wobT,spinT,steerS,shieldT,specT,fogT,invT,magnetT`),
+`12-main.js` (`newRace`, `startCfg`, `frame`: `R.step` a 1/120, `humansCars()`, `views` por `G.nHumans`,
+`cams[i]`, `chase(i, car)`, `HUD.player(views[i], car…)`, `UI.results`), `07b-gfx-items.js` (dibuja `R.hz`, `R.boxes`).
+
+1. **Adaptador** nuevo `vertigo/src/12b-net.js` (después de 12-main): `NetGame` + ganchos:
+   - `Input.read` envuelto: si `NetPlay.isHost`, puesto local → `Input.read(local)`; remoto → `NetPlay.input(seat)`
+     (neutra `{steer:0,up:false,down:false,drift:false,item:false,turbo:false}`). `Input.solo = mine.length === 1`.
+   - `readLocal(li)` = `Input.read(li)` original (táctil: mitad li).
+2. **Arranque** (`NetPlay.onStart`): el anfitrión arma la carrera con `seats.length` humanos (pilotos: el que cada
+   aparato tenga elegido → mandar en la info de la sala; por ahora `PILOT_ORDER[i]`), bots hasta 6, modo `quick`
+   (luego duel/gp/elim/battle) y manda `{t:'cfg', tid, humans, bots, laps}` por `r`; los remotos hacen
+   `newRace(tid, humans, bots)` igual (sin simular).
+3. **Vistas por aparato:** reemplazar `humansCars()` en cámaras/render/HUD por `viewCars()` = humanos cuyo puesto
+   está en `mine` (orden por `local`); `G.nHumans` = `mine.length` (1 o 2 vistas); `newRace` crea `cams` para
+   esas vistas. Los demás autos humanos se ven como rivales (con su etiqueta de jugador).
+4. **Instantánea** (20–30/s, compacta, números redondeados): por auto un arreglo
+   `[s,u,h,a,roll,pitch,f,modo,driftOn,driftDir,driftLv,boostT,boostK,gem,itemId,itemN,lap,place,finished,finishT,
+   respawnT,out,trickKind,trickT,trickDur,hopT,wobT,spinT,steerS,shieldT,specT]`; carrera `{st,cd,tm,ord,hz:[[k,s,u,h,life,o]],
+   bx:[gone…], gm:[gone…]}`. Interpolar `s` con vuelta de pista (`T.L`), ángulos por el camino corto.
+5. **Remoto títere:** en `frame`, si `NetPlay.isClient`: no `R.step`; `NetPlay.sample()` → aplicar a `R.cars` y
+   `R`; eventos (`NetGame.event`) → `frameEv` (sonido, FX, HUD). Resultado: el del anfitrión (`{t:'fin'}`).
+6. **Pieles:** cada aparato manda en su info de sala `skins` por jugador (pintura/neón/turbo) para que el
+   anfitrión y los demás vean el garaje de cada quien (`CarArt.build(pid, seat, skin)`).
+7. Ficha en `app/catalog.js`: `net: { seats: 4, mode: 'quick' }` y prueba `test/netvtg.js` (2 páginas con
+   `?net=bc`, anfitrión + remoto: la posición del auto remoto en el anfitrión cambia con sus teclas y el remoto
+   ve el mismo orden de carrera).
