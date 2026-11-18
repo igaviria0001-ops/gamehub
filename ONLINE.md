@@ -99,3 +99,32 @@
   código grande, copiar enlace/compartir, aparatos con jugadores, ping y tipo de conexión, el anfitrión ve
   los 4 juegos («pronto»). Prueba `node test/sala.js` (PC anfitrión + celular con 2 + otro PC) → SALA OK.
   Sigue: F3 `shared/netplay.js` (enlace juego ↔ red) y luego VÉRTIGO en línea (F4).
+
+## Especificación F3 · enlace juego ↔ red (para implementar)
+
+**Puestos (seats):** el anfitrión arma `seats = [{ dev, local, name, color }]` (orden = J1, J2, J3…) con los
+jugadores de la sala que van a jugar esa partida. `local` = 0 o 1 (qué jugador de ese aparato: teclado
+izquierdo/derecho o mitad de la pantalla). Cada aparato sabe `mine = [índices de seats suyos]`.
+
+**Arranque:** el anfitrión manda por `r` `{ $:'game', game, ev, seats, sid }` (sid = id de partida) → cada
+aparato abre el juego con `Launcher.open(game, null, { net })` y, cuando el juego avisa `ready`, le manda
+`{ cmd:'net', role:'host'|'client', seats, mine, ev, sid }`.
+
+**Mensajes juego ↔ GameHub (postMessage, ya existe el canal `hub:'gamehub'`):**
+- juego → app: `{ event:'net', ch:'u'|'r', to:'host'|'*', d }` · app → juego: `{ cmd:'netin', from, d }`.
+- La app reenvía con `Net.send(to === 'host' ? Net.hostId : '*', { $g: sid, d }, ch === 'r')`.
+
+**En el juego (`shared/netplay.js` → `src/00k-net.js`, objeto `NetPlay`):**
+- `NetPlay.on`, `role`, `seats`, `mine`, `seatOf(localIdx)`, `send(d, reliable)`, `onMsg(fn)`.
+- Remoto: cada cuadro manda `{ t:'in', s: seat, i: entrada, q: n }` por `u` (60/s; si no cambia, 15/s).
+- Anfitrión: guarda la última entrada de cada seat remoto (si no llega en 0,5 s → neutra) y el juego la usa
+  en lugar del teclado (Sortilegio: `Input.virt[i]`; los demás: un gancho igual en `Input.read`).
+- Anfitrión: a 30/s `{ t:'s', n, tm, d: NetGame.snap() }` por `u` y los eventos del paso `{ t:'e', l:[…] }` por `r`.
+- Remoto en modo títere: no simula; guarda las 3 últimas instantáneas y dibuja interpolando 100 ms atrás
+  (`NetGame.apply(a, b, k)`); efectos y sonidos con los eventos (`NetGame.event(e)`); su HUD y su cámara son
+  los de sus seats.
+- Resultado: lo da el anfitrión (como hoy con `Hub.result`); la app del anfitrión lo reparte a todos `{ $:'res' }`.
+
+**Por juego (`src/1x-net.js` en cada uno, objeto `NetGame`):** `seatsMax`, `start(ev, seats)` (armar la
+partida con N humanos), `snap()`, `apply(a, b, k)`, `event(e)`, `views(mine)` (qué cámaras/HUD dibujar).
+Orden sugerido: VÉRTIGO (autos = pocos números; hasta 4 humanos + máquina), Ventolera, Sortilegio, Tira y Afloja.
