@@ -92,9 +92,24 @@ const Online = (() => {
   // lo que el anfitrión puede lanzar (las partidas en línea llegan en las fases siguientes)
   function hostPlayHTML(ps) {
     return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: una partida de un juego o un torneo con todos.`}</p>
-      <div class="on-games">${(window.GAMEHUB ? GAMEHUB.GAMES : []).map(g => `<button class="on-game" data-ong="${g.id}" style="--c1:${g.c1};--c2:${g.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(g.name)}</b><small>en línea · pronto</small></button>`).join('')}</div>`;
+      <div class="on-games">${(window.GAMEHUB ? GAMEHUB.GAMES : []).map(g => `<button class="on-game" data-ong="${g.id}" style="--c1:${g.c1};--c2:${g.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(g.name)}</b><small>${g.net ? `en línea · hasta ${g.net.seats}` : 'en línea · pronto'}</small></button>`).join('')}</div>`;
   }
-  function bindHostPlay(root) { $$('[data-ong]', root).forEach(b => b.onclick = () => { note = 'Las partidas en línea de cada juego están en construcción: la sala y la conexión ya funcionan.'; render(); }); }
+  function bindHostPlay(root) { $$('[data-ong]', root).forEach(b => b.onclick = () => { const g = GAMEHUB.GAMES.find(x => x.id === b.dataset.ong); if (!g || !g.net) { note = 'Ese juego todavía no está listo para jugar en línea (en construcción).'; render(); return; } startGame(g); }); }
+  // el anfitrión arranca una partida: puestos con los jugadores de la sala (en orden), y todos abren el juego
+  function startGame(g, ev) {
+    const ps = players(Net.room).slice(0, g.net.seats), sid = Math.random().toString(36).slice(2, 10);
+    const seats = ps.map(p => ({ dev: p.dev, local: devLocal(p), name: p.name, color: p.color }));
+    ev = ev || { mode: g.net.mode || (g.modes[0] && g.modes[0].id), map: (g.maps[Math.floor(Math.random() * g.maps.length)] || {}).id, rounds: 3 };
+    Net.send('*', { $: 'game', game: g.id, ev, seats, sid }, true);
+    openNet(g.id, 'host', seats, ev, sid);
+  }
+  function devLocal(p) { const d = (Net.room.devices || []).find(x => x.id === p.dev); return d ? (d.info.players || []).findIndex(q => q.name === p.name && q.color === p.color) : 0; }
+  function openNet(gid, role, seats, ev, sid) {
+    const mine = seats.map((s, i) => (s.dev === Net.id ? i : -1)).filter(i => i >= 0).sort((a, b) => seats[a].local - seats[b].local);
+    GAMEHUB.Launcher.open(gid, null, { role, seats, mine, ev, sid });
+  }
+  // los remotos: el anfitrión arrancó una partida → abrirla aquí también
+  Net.on('msg', (from, m) => { if (m && m.$ === 'game' && !Net.isHost && from === Net.hostId) openNet(m.game, 'client', m.seats, m.ev, m.sid); });
   let hostT = 0;
   function waitHost() { clearTimeout(hostT); hostT = setTimeout(() => { if (Net.alive && !Net.isHost && !Net.room) { note = 'No aparece el anfitrión. Revisa el código, o que su GameHub siga abierto en la sala.'; render(); } }, 15000); }
   Net.on('room', () => { if (visible()) render(); });

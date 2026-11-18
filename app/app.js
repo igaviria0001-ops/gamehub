@@ -237,7 +237,7 @@
   /* ---------- lanzador: cada juego en su propio marco ---------- */
   const Launcher = (() => {
     const stage = $('#stage'), frame = $('#frame'), cache = {};
-    let cur = null, readyT = 0, tourEv = null, resultGot = false;
+    let cur = null, readyT = 0, tourEv = null, resultGot = false, netCfg = null;
     async function load(g) {
       if (cache[g.id]) return cache[g.id];
       const r = await fetch(g.file, { cache: 'no-cache' }); if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -245,8 +245,9 @@
     }
     const post = msg => { try { frame.contentWindow.postMessage(Object.assign({ hub: 'gamehub' }, msg), '*'); } catch (e) { /* nada */ } };
     const focusGame = () => { try { frame.focus({ preventScroll: true }); frame.contentWindow.focus(); } catch (e) { /* nada */ } };
-    async function open(id, ev) {
-      const g = GAME[id]; if (!g) return;
+    // net = { role, seats, mine, sid, ev } para una partida en línea (ver ONLINE.md, F3)
+    async function open(id, ev, net) {
+      const g = GAME[id]; if (!g) return; netCfg = net || null;
       // se pide ya, mientras dura el toque o clic en «Jugar» (los navegadores solo la dejan así)
       if (SET.fsPlay) FS.enter(); else if (FS.on) FS.lock();
       cur = g; tourEv = ev || null; resultGot = false;
@@ -262,11 +263,12 @@
     }
     function fail(msg) { $('#lerr').textContent = msg; $('#lerr').hidden = false; $('#lbtns').hidden = false; $('.lbar').hidden = true; }
     function close() {
+      const wasNet = !!netCfg; if (wasNet) post({ cmd: 'netoff' }); netCfg = null;
       clearTimeout(readyT); cur = null; tourEv = null;
       stage.hidden = true; stage.classList.remove('ready'); frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; hideToast();
       document.body.classList.remove('playing'); if (touch) FS.unlock();
       BG.start();
-      if (view === 'torneo') renderTorneo(); else if (view === 'home') renderHome();
+      if (wasNet) go('online'); else if (view === 'torneo') renderTorneo(); else if (view === 'home') renderHome();
       if (Tour.T && Tour.T.done && !Tour.T.celebrated) Champ.show(Tour.T);
       App.afterGame();
     }
@@ -284,6 +286,7 @@
         clearTimeout(readyT); stage.classList.add('ready');
         const vs = Store.get('versions', {}); vs[m.source] = m.version; Store.set('versions', vs);
         focusGame(); post({ cmd: 'fs', on: FS.on, can: FS.can });
+        if (netCfg) post(Object.assign({ cmd: 'net' }, netCfg));
         if (tourEv) { const ev = tourEv, g = cur; post({ cmd: 'play', ev: { id: ev.id, game: g.id, mode: ev.mode, map: ev.map, rounds: ev.rounds, chars: ev.chars, opts: ev.opts, p1: tName(ev.j1), p2: tName(ev.j2), title: `Torneo · prueba ${ev.n} · ${tName(ev.j1)} (J1) contra ${tName(ev.j2)} (J2)` } }); }
       } else if (m.event === 'fs') {
         // el juego pidió pantalla completa (o salir) desde sus opciones: la pone la colección
@@ -294,13 +297,17 @@
         Tour.result(ev.id, w, m.info);
         Snd.ok();
         toast(w === 'draw' ? 'Empate: la prueba quedó anotada' : `¡Gana ${esc(tName(w))}! Resultado anotado`, true);
+      } else if (m.event === 'net' && netCfg && typeof Net !== 'undefined' && Net.alive) {
+        // el juego habla con los otros aparatos: anfitrión ↔ remotos, por la sala
+        const to = m.to === 'host' ? Net.hostId : '*'; if (to) Net.send(to, { $g: netCfg.sid, d: m.d }, m.ch === 'r');
       } else if (m.event === 'exit') close();
       else if (m.event === 'abort' && tourEv) { toast('La prueba quedó pendiente: pueden volver a jugarla', true); }
       else if (m.event === 'error') toast('El juego avisó un error: ' + esc(m.msg || ''), !!tourEv);
     });
-    $('#lretry').addEventListener('click', () => { const g = cur, ev = tourEv; if (g) { delete cache[g.id]; open(g.id, ev); } });
+    if (typeof Net !== 'undefined') Net.on('msg', (from, m) => { if (m && m.$g && netCfg && m.$g === netCfg.sid && cur) post({ cmd: 'netin', from, d: m.d }); });
+    $('#lretry').addEventListener('click', () => { const g = cur, ev = tourEv, nc = netCfg; if (g) { delete cache[g.id]; open(g.id, ev, nc); } });
     $('#lback').addEventListener('click', () => close());
-    return { open, close, get open_() { return !!cur; } };
+    return { open, close, get open_() { return !!cur; }, get net() { return netCfg; } };
   })();
 
   /* ---------- torneo: estado guardado y asistente ---------- */

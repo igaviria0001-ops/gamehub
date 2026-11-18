@@ -60,10 +60,10 @@
       señalización MQTT cifrada con varios brokers, WebRTC (canal confiable + no confiable),
       TURN de respaldo, relevo por MQTT, ping/reloj, reconexión, salida de un aparato.
       Transporte de prueba por `BroadcastChannel` para las pruebas automáticas.
-- [ ] **F2 · Sala en GameHub**: botón «En línea» → crear / unirse; cada aparato pone sus
+- [x] **F2 · Sala en GameHub** (falta: chat rápido y elegir modo/escenario antes de lanzar): botón «En línea» → crear / unirse; cada aparato pone sus
       jugadores (1 o 2) con nombre y color; lista con aparato, ping y señal; el anfitrión
       elige juego/modo/escenario o arma un torneo con todos; chat rápido (emojis).
-- [ ] **F3 · Enlace juego ↔ red** (`shared/netplay.js`, copiado como `src/00k-net.js`):
+- [x] **F3 · Enlace juego ↔ red** (puente hecho; se prueba de verdad con el primer adaptador, F4) (`shared/netplay.js`, copiado como `src/00k-net.js`):
       anfitrión: entradas remotas → `Input`; instantáneas y eventos → red. Remoto: modo
       «títere» (no simula, aplica instantáneas, interpola, dibuja, efectos por eventos).
 - [ ] **F4 · VÉRTIGO en línea** (encaja mejor: estado pequeño, cámara por aparato, hasta 4).
@@ -128,3 +128,14 @@ aparato abre el juego con `Launcher.open(game, null, { net })` y, cuando el jueg
 **Por juego (`src/1x-net.js` en cada uno, objeto `NetGame`):** `seatsMax`, `start(ev, seats)` (armar la
 partida con N humanos), `snap()`, `apply(a, b, k)`, `event(e)`, `views(mine)` (qué cámaras/HUD dibujar).
 Orden sugerido: VÉRTIGO (autos = pocos números; hasta 4 humanos + máquina), Ventolera, Sortilegio, Tira y Afloja.
+- **17 nov 21:30** — F3: `shared/netplay.js` (copiado como `src/00k-net.js` en los 4 juegos; inerte si no hay
+  partida en línea): `NetPlay` con roles, puestos, entradas remotas (`NetPlay.input(seat)`), instantáneas a 30/s,
+  eventos confiables, interpolación (`NetPlay.sample()` 100 ms atrás). Puente en `app/app.js`
+  (`Launcher.open(id, ev, net)`, reenvío `net`/`netin`, `netoff` al cerrar, vuelve a la sala). `online.js`:
+  `startGame(g)` arma los puestos y avisa `{ $:'game' }`; los remotos abren el mismo juego. Los juegos se activan
+  en la sala cuando su ficha en `app/catalog.js` tenga `net: { seats, mode }`. Pruebas: sala OK, flujo OK.
+  Sigue: **F4 VÉRTIGO** — adaptador `vertigo/src/12b-net.js` (`NetGame`): estudiar `04-race.js` (Race, cars),
+  `12-main.js` (bucle, cámaras/vistas, `newRace`, `startCfg`), `08-hud.js`; hacer: N humanos (hasta 4) con
+  `humans` de cada aparato, títere en remotos (sin `Race.step`, autos desde la instantánea, cámaras de `mine`),
+  eventos → `FX.onEvents`/`Sound.onEvents`/HUD; luego `catalog.js` vertigo `net: { seats: 4, mode: 'quick' }`
+  y una prueba `test/netvtg.js` con 2 páginas (anfitrión + remoto) que compare posiciones.
