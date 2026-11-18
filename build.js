@@ -34,11 +34,15 @@ const copyDir = (from, to) => { fs.mkdirSync(to, { recursive: true }); for (cons
 copyDir(path.join(A, 'shots'), path.join(OUT, 'assets', 'shots'));
 copyDir(path.join(A, 'icons'), path.join(OUT, 'assets', 'icons'));
 fs.copyFileSync(path.join(A, 'galaxia.jpg'), path.join(OUT, 'assets', 'galaxia.jpg'));
+// vista previa al compartir (WhatsApp, Telegram…) y favicon (tools/enlace.js); el favicon también en la raíz del repositorio
+fs.copyFileSync(path.join(A, 'enlace.jpg'), path.join(OUT, 'assets', 'enlace.jpg'));
+fs.copyFileSync(path.join(A, 'favicon.ico'), path.join(OUT, 'favicon.ico'));
+fs.copyFileSync(path.join(A, 'favicon.ico'), path.join(ROOT, 'favicon.ico'));
 fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
 // versión: huella de todo lo que se publica (cambia sola cuando cambia cualquier cosa)
 const crypto = require('crypto'), hash = crypto.createHash('sha1');
-const assetFiles = ['assets/galaxia.jpg', ...fs.readdirSync(path.join(OUT, 'assets', 'shots')).map(f => 'assets/shots/' + f), ...fs.readdirSync(path.join(OUT, 'assets', 'icons')).map(f => 'assets/icons/' + f)];
+const assetFiles = ['assets/galaxia.jpg', 'assets/enlace.jpg', 'favicon.ico', ...fs.readdirSync(path.join(OUT, 'assets', 'shots')).map(f => 'assets/shots/' + f), ...fs.readdirSync(path.join(OUT, 'assets', 'icons')).map(f => 'assets/icons/' + f)];
 for (const f of ['index.html', 'app.css', 'catalog.js', 'torneo.js', 'net.js', 'online.js', 'app.js']) hash.update(read(f));
 hash.update(fonts);
 for (const f of [...GAMES.map(([id]) => `games/${id}.html`), ...assetFiles]) hash.update(fs.readFileSync(path.join(OUT, f)));

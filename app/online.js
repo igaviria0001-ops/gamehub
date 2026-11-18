@@ -26,6 +26,14 @@ const Online = (() => {
   const DEV = { cel: '📱', pc: '💻' };
   const sig = ms => ms <= 0 ? '' : ms < 60 ? 'ok' : ms < 140 ? 'mid' : 'bad';
   function linkFor(code) { const u = new URL(location.href); u.search = ''; u.hash = 'online'; u.searchParams.set('sala', code); if (params.get('net')) u.searchParams.set('net', params.get('net')); return u.toString(); }
+  // Mientras estás en una sala, la dirección de la página ES el enlace de invitación. Así el navegador ya tiene guardado el ícono
+  // de GameHub para ese enlace exacto y, al compartirlo, no busca «otra página del mismo sitio» (las apps de Ignacio comparten
+  // igaviria0001-ops.github.io y Chrome tomaba el ícono del cubo de Rubik). También sirve para volver a la sala si recargas.
+  function syncUrl() {
+    if (!Net.alive || !Net.code) return;
+    try { const w = new URL(linkFor(Net.code)); w.hash = location.hash || '#online'; if (w.toString() !== location.href) history.replaceState(history.state, '', w.toString()); } catch (e) { /* nada */ }
+  }
+  function clearUrl() { try { const u = new URL(location.href); if (u.searchParams.has('sala')) { u.searchParams.delete('sala'); history.replaceState(history.state, '', u.toString()); } } catch (e) { /* nada */ } }
   // todos los jugadores de la sala, en orden; colores y nombres sin repetir (el que llegó después cede)
   function players(room) {
     const out = [], usedC = new Set(), usedN = {};
@@ -76,6 +84,7 @@ const Online = (() => {
       $('#on-join', root).onclick = join; $('#on-code', root).onkeydown = e => { if (e.key === 'Enter') join(); };
       return;
     }
+    syncUrl();
     const devs = (R && R.devices) || [], ps = players(R), me = Net.id, host = Net.isHost;
     const hostPeer = !host && Net.peers.get(Net.hostId), myRtt = hostPeer ? Math.round(hostPeer.rtt) : 0, connected = host || (hostPeer && hostPeer.open);
     root.innerHTML = `<div class="wrap" style="max-width:920px"><div class="thead"><div><h1 class="h1">Sala en línea</h1><p class="sub">${host ? 'Eres el anfitrión: aquí corren las partidas. Pásales el código o el enlace a los demás y deja esta pantalla abierta mientras juegan.' : connected ? (hostAway ? 'El anfitrión salió de la app un momento: todo sigue cuando vuelva.' : 'Estás dentro. El anfitrión elige qué jugar.') : 'Buscando al anfitrión…'}</p></div><button class="btn small danger" id="on-leave">Salir de la sala</button></div>
@@ -98,9 +107,9 @@ const Online = (() => {
         ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
       </div></div>`;
     bindWho(root);
-    $('#on-leave', root).onclick = () => { Net.leave(); note = ''; hostAway = false; render(); };
+    $('#on-leave', root).onclick = () => { Net.leave(); clearUrl(); note = ''; hostAway = false; render(); };
     $('#on-copy', root).onclick = async () => { const u = linkFor(Net.code); try { await navigator.clipboard.writeText(u); note = 'Enlace copiado: ' + u; } catch (e) { note = u; } render(); };
-    if ($('#on-share', root)) $('#on-share', root).onclick = () => navigator.share({ title: 'GameHub', text: `¡Juguemos en GameHub! Sala ${Net.code}`, url: linkFor(Net.code) }).catch(() => {});
+    if ($('#on-share', root)) $('#on-share', root).onclick = () => { syncUrl(); navigator.share({ title: 'GameHub · Sala ' + Net.code, text: `¡Juguemos en GameHub! Sala ${Net.code}`, url: linkFor(Net.code) }).catch(() => {}); };
     if (host) bindHostPlay(root);
     bindResume(root); bindReact(root);
   }

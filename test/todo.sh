@@ -8,6 +8,7 @@ V=${VIEW:-400x225}
 run() { local name="$1"; shift; local t0=$(date +%s); local out; out=$(timeout 1500 "$@" 2>&1 | tail -40); local last=$(echo "$out" | grep -E "OK|FALLA|IDÉNTICO|DIFERENCIAS|ERR |fallas|errores" | tail -1); echo "$(date +%H:%M) · $name · $(( $(date +%s) - t0 )) s · ${last:-sin resultado}"; echo "$out" > "/tmp/todo-$name.log"; }
 run red node test/net.js
 run sala node test/sala.js
+run enlace node test/enlace.js
 run vto node test/netvto.js
 run vto3 env TRES=1 node test/netvto.js
 run vtoJefe env MODE=boss node test/netvto.js

@@ -345,3 +345,15 @@ mejores; (5) todo optimizado y comprobado.
   (el remoto se trababa); la copia predicha sigue el ritmo de la carrera del anfitrión y el tiempo real si los cuadros
   son muy lentos; historia de 3 s (pings altos); **torneo**: en una llave de muchos, dos cruces podían salir con el mismo
   id y la prueba se anotaba en el equivocado (muy de vez en cuando) → ids sin repetir (`test/motor.js` 6 veces sin falla).
+
+### Enlace de invitación con el nombre y el ícono de GameHub (18 nov, tarde)
+- **Problema** (lo vio Ignacio): al compartir el enlace de una sala salía el ícono del cubo de Rubik. Causa: todas sus apps
+  viven en `igaviria0001-ops.github.io`; el enlace de la sala (`?sala=CÓDIGO`) nunca se había abierto en ese aparato y,
+  para enlaces sin ícono propio, Chrome toma el de «otra página del mismo sitio» (la primera que encuentra: `/cubo/`).
+  Además GameHub no traía vista previa para WhatsApp, Telegram, etc.
+- **Arreglo**: dentro de una sala la dirección de la página pasa a ser exactamente el enlace de invitación
+  (`history.replaceState`), así Chrome ya tiene el ícono de GameHub para ese enlace; al salir de la sala se quita `?sala`
+  (recargar dentro de la sala deja el código listo para volver). Cabecera con `og:*` y `twitter:*` (direcciones completas)
+  y tarjeta `assets/enlace.jpg` 1200×630 (lo importante en el cuadrado del centro, por si la app la recorta), `favicon.ico`
+  (16/32/48) en docs/ y en la raíz, ícono de 192 en la cabecera. La página de la raíz también lleva la vista previa y ya no
+  pierde `?sala` al redirigir. Herramienta `tools/enlace.js`; prueba `test/enlace.js` (en `todo.sh`).
