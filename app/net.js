@@ -27,8 +27,26 @@ const Net = (() => {
   const emit = (t, ...a) => { for (const f of L[t] || []) { try { f(...a); } catch (e) { console.error(e); } } };
 
   /* ---------- estado ---------- */
-  // pruebas: ?netloss=0.1 (se pierde 10 % de lo que va sin orden) · ?netlag=80 (ms de más) · ?netforce=relay (sin WebRTC)
-  const SIM = (() => { try { const q = new URLSearchParams(location.search); return { loss: Math.min(0.9, +q.get('netloss') || 0), lag: Math.min(2000, +q.get('netlag') || 0), relay: q.get('netforce') === 'relay' }; } catch (e) { return { loss: 0, lag: 0, relay: false }; } })();
+  // pruebas (red simulada, la manda cada aparato): ?netloss=0.1 (pérdida) · ?netlag=80 (ms de ida) · ?netjit=25 (vaivén, ms)
+  // · ?netspike=0.05 (por segundo: rachas de congestión de 0,4–1 s con +150–500 ms, como en datos móviles)
+  // · ?netcut=25:6 (a los 25 s de entrar a la sala, 6 s sin red: la conexión se da por «desconectada»)
+  // · ?netmob=1 (perfil de datos móviles: 60 ms, vaivén 25, 3 % de pérdida, rachas 0,05/s; el relevo suma 220 ms)
+  // · ?netforce=relay (sin WebRTC). Lo confiable nunca se desordena: si «se pierde», llega tarde y frena lo que viene detrás.
+  const SIM = (() => { try { const q = new URLSearchParams(location.search), mob = q.get('netmob') === '1', n = (k, d, mx) => Math.min(mx, q.has(k) ? +q.get(k) || 0 : d), cut = (q.get('netcut') || '').split(':').map(Number);
+    const o = { loss: n('netloss', mob ? 0.03 : 0, 0.9), lag: n('netlag', mob ? 60 : 0, 2000), jit: n('netjit', mob ? 25 : 0, 1000), spike: n('netspike', mob ? 0.05 : 0, 5), rlag: mob || q.has('netlag') ? n('netrlag', 220, 3000) : 0, cut: cut.length === 2 && cut[1] > 0 ? cut : null, relay: q.get('netforce') === 'relay' };
+    o.on = !!(o.loss || o.lag || o.jit || o.spike || o.cut); return o; } catch (e) { return { on: false, loss: 0, lag: 0, jit: 0, spike: 0, rlag: 0, cut: null, relay: false }; } })();
+  const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  let simDrop = null; // pruebas: { f(m) → true = se pierde, until }
+  let cutA = 0, cutB = 0, cutDirect = false; // corte simulado: [desde, hasta) en performance.now(); cutDirect = solo se cae lo directo
+  const simCut = (now, p) => (now >= cutA && now < cutB && !(cutDirect && p && p.via === 'relay') ? cutB : 0);
+  function simDelay(p, now) {
+    let d = SIM.lag + Math.abs(gauss()) * SIM.jit;
+    if (SIM.spike) { const dt = Math.min(1000, now - (p.simChk || now)); p.simChk = now; if (now > (p.congUntil || 0) && Math.random() < SIM.spike * dt / 1000) { p.congUntil = now + 400 + Math.random() * 600; p.congAdd = 150 + Math.random() * 350; } if (now < (p.congUntil || 0)) d += p.congAdd; }
+    if (p.via === 'relay') d += SIM.rlag + Math.abs(gauss()) * SIM.rlag * 0.3;
+    return d;
+  }
+  // estado de la conexión directa (en las pruebas, durante ?netcut se ve «desconectada»)
+  const pcState = p => (simCut(performance.now()) ? 'disconnected' : p.pc ? p.pc.connectionState : 'none');
   const ST = { out: 0, in: 0, nOut: 0, nIn: 0, t0: Date.now() };
   const S = { id: rid(8), code: null, isHost: false, hostId: null, info: null, key: null, topic: null, sig: null, alive: false, seen: new Map(), clockOff: 0, term: 0, dead: new Set(), succ: null };
   const peers = new Map(); // id → { id, info, pc, r, u, via: 'p2p'|'relay'|'…', rtt, t0, open, lastSeen, pend: [] }
@@ -111,10 +129,11 @@ const Net = (() => {
     if (SIM.relay) { toRelay(p); return null; }
     if (p.pc) { try { p.pc.close(); } catch (e) { /* nada */ } }
     const pc = new RTCPeerConnection({ iceServers: await iceServers(extraIce), bundlePolicy: 'max-bundle' });
-    p.pc = pc; p.open = false; p.via = 'conectando';
+    p.pc = pc; if (p.via !== 'relay') { p.open = false; p.via = 'conectando'; } // si va por el relevo, sigue por ahí hasta que abra la nueva
     pc.onicecandidate = e => { if (e.candidate) signal({ t: 'ice', to: p.id, c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
-    pc.onconnectionstatechange = () => { const st = pc.connectionState; if (st === 'failed') toRelay(p); if (st === 'disconnected') setTimeout(() => { if (pc.connectionState === 'disconnected') toRelay(p); }, 5000); emit('peers'); };
-    const wire = (ch, kind) => { ch.binaryType = 'arraybuffer'; p[kind] = ch; ch.onopen = () => { if (p.r && p.r.readyState === 'open') { p.open = true; p.via = route(pc); flush(p); emit('peers'); } }; ch.onmessage = e => onData(p, e.data, kind === 'r'); ch.onclose = () => { if (p[kind] === ch) p[kind] = null; }; };
+    // se cayó: al relevo (2,5 s de gracia: en datos móviles hay baches cortos); volvió: de nuevo directo
+    pc.onconnectionstatechange = () => { if (p.pc !== pc) return; const st = pc.connectionState; if (st === 'failed') toRelay(p); if (st === 'disconnected') setTimeout(() => { if (p.pc === pc && pc.connectionState === 'disconnected') toRelay(p); }, 2500); if (st === 'connected') backToDirect(p); emit('peers'); };
+    const wire = (ch, kind) => { ch.binaryType = 'arraybuffer'; p[kind] = ch; ch.onopen = () => { if (p.pc === pc && p.r && p.r.readyState === 'open') { const was = p.via; p.open = true; p.via = route(pc); p.routeChecked = false; p.relayN = 0; flush(p); emit('peers'); if (was === 'relay') emit('status', { direct: p.id }); } }; ch.onmessage = e => onData(p, e.data, kind === 'r'); ch.onclose = () => { if (p[kind] === ch) p[kind] = null; }; };
     // canales negociados: los dos lados los crean igual (sin esperar a «ondatachannel»)
     wire(pc.createDataChannel('r', { negotiated: true, id: 1, ordered: true }), 'r');
     wire(pc.createDataChannel('u', { negotiated: true, id: 2, ordered: false, maxRetransmits: 0 }), 'u');
@@ -126,17 +145,24 @@ const Net = (() => {
   async function refineRoute(p) { // ¿directo o por TURN? (para mostrarlo en la sala)
     try { const st = await p.pc.getStats(); let pair = null; st.forEach(s => { if (s.type === 'transport' && s.selectedCandidatePairId) pair = st.get(s.selectedCandidatePairId); }); if (!pair) st.forEach(s => { if (s.type === 'candidate-pair' && s.nominated && s.state === 'succeeded') pair = s; }); if (pair) { const lc = st.get(pair.localCandidateId), rc = st.get(pair.remoteCandidateId); p.via = (lc && lc.candidateType === 'relay') || (rc && rc.candidateType === 'relay') ? 'turn' : 'p2p'; } } catch (e) { /* nada */ }
   }
-  function toRelay(p) { if (p.via === 'relay') return; p.via = 'relay'; p.open = true; flush(p); emit('peers'); }
+  // relevo = solo mientras la conexión directa no sirve: el anfitrión vuelve a intentarla (6 s, 15 s, 30 s, 45 s…) y, si la
+  // misma conexión revive (bache de la red), se vuelve a ella sola. Antes, un bache de unos segundos dejaba la partida
+  // por el relevo lento hasta el final.
+  function toRelay(p) { if (p.via === 'relay') return; p.via = 'relay'; p.open = true; p.relayAt = Date.now(); p.retryAt = Date.now() + (p.relayN ? Math.min(45000, 15000 * p.relayN) : 6000); flush(p); emit('peers'); }
+  const directOk = p => !!(p.pc && pcState(p) === 'connected' && p.r && p.r.readyState === 'open' && p.u && p.u.readyState === 'open');
+  function backToDirect(p) { if (p.via !== 'relay' || !directOk(p)) return; p.via = 'p2p'; p.routeChecked = false; p.relayN = 0; flush(p); emit('peers'); emit('status', { direct: p.id }); }
   function flush(p) { const q = p.pend; p.pend = []; for (const [d, rel] of q) rawSend(p, d, rel); }
   function rawSend(p, data, rel) {
     const s = typeof data === 'string' ? data : JSON.stringify(data);
-    if (SIM.loss && !rel && Math.random() < SIM.loss) return;
-    if (SIM.lag) { setTimeout(() => sendNow(p, s, rel), SIM.lag * (0.8 + Math.random() * 0.4)); return; }
-    sendNow(p, s, rel);
+    if (!SIM.on) { sendNow(p, s, rel); return; }
+    const now = performance.now(), cut = simCut(now, p);
+    if (!rel) { if (cut || Math.random() < SIM.loss) return; setTimeout(() => sendNow(p, s, rel), simDelay(p, now)); return; }
+    let t = now + simDelay(p, now); if (cut) t = Math.max(t, cut + simDelay(p, cut)); if (Math.random() < SIM.loss) t += 2 * SIM.lag + 200;
+    t = Math.max(t, p.relT || 0); p.relT = t; setTimeout(() => sendNow(p, s, rel), t - now);
   }
   // relevo (sin WebRTC): lo confiable sale ya; lo urgente (instantáneas, entradas) a lo más ~12 por segundo y siempre lo
   // más nuevo de cada tipo (lo saltado no hace falta: lo trae el siguiente; las partes «lentas» pasan al que sí sale)
-  const RELAY_MS = 80;
+  const RELAY_MS = 66; // ~15 por segundo
   const relayKey = o => (o && o.$g ? 'g' + (o.d && o.d.t) + (o.d && o.d.s != null ? ':' + o.d.s : '') : 'n' + (o && o.$));
   function relayOut(p, s) {
     let o; try { o = JSON.parse(s); } catch (e) { return; }
@@ -157,6 +183,7 @@ const Net = (() => {
   function onData(p, raw, rel) {
     p.lastSeen = Date.now(); ST.in += typeof raw === 'string' ? raw.length : raw.byteLength || 0; ST.nIn++;
     let m; try { m = JSON.parse(typeof raw === 'string' ? raw : dec.decode(raw)); } catch (e) { return; }
+    if (simDrop && performance.now() < simDrop.until) { try { if (simDrop.f(m)) return; } catch (e) { /* nada */ } } // pruebas: «se perdió»
     if (m && m.$ === 'ping') { rawSend(p, { $: 'pong', t: m.t, h: S.isHost ? performance.now() : undefined }, p.via === 'relay'); return; }
     if (m && m.$ === 'pong') { const now = performance.now(), rtt = now - m.t; p.rtt = p.rtt ? p.rtt * 0.8 + rtt * 0.2 : rtt; if (m.h != null && !S.isHost) { const off = m.h + rtt / 2 - now; S.clockOff = S.clockOff ? S.clockOff * 0.85 + off * 0.15 : off; } return; }
     if (m && m.$ === 'room' && !S.isHost) { if (p.id !== S.hostId) return; S.room = m.room; S.term = Math.max(S.term, m.room.term | 0); for (const d of m.room.devices || []) if (d.id !== S.hostId) S.dead.delete(d.id); emit('room', m.room); return; }
@@ -185,7 +212,7 @@ const Net = (() => {
     signal({ t: 'hello', info: S.info, term: S.term });
   }
   function becomeHost(term) {
-    S.succ = null; S.isHost = true; S.hostId = S.id; S.term = Math.max(S.term + 1, term || 0);
+    S.succ = null; S.isHost = true; S.hostId = S.id; S.play = null; S.term = Math.max(S.term + 1, term || 0);
     for (const p of [...peers.values()]) { clearTimeout(p.relayT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } } peers.clear();
     announce(); broadcastRoom(); emit('peers'); emit('status', { newHost: S.id, me: true });
   }
@@ -217,16 +244,16 @@ const Net = (() => {
     if (m.t === 'offer' && !S.isHost) { S.hostId = m.from; S.term = Math.max(S.term, m.term | 0); if (S.succ || S.moved) { S.succ = null; S.moved = false; emit('status', { newHost: m.from }); } const p = newPeer(m.from); const pc = await makePC(p, false, m.ice); await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp }); const a = await pc.createAnswer(); await pc.setLocalDescription(a); signal({ t: 'answer', to: m.from, sdp: pc.localDescription.sdp }); for (const c of p.iceQ || []) try { await pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; return; }
     if (m.t === 'answer' && S.isHost) { const p = peers.get(m.from); if (p && p.pc) { await p.pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); for (const c of p.iceQ || []) try { await p.pc.addIceCandidate(c); } catch (e) { /* nada */ } p.iceQ = []; } return; }
     if (m.t === 'ice') { const p = peers.get(m.from); if (!p) return; if (p.pc && p.pc.remoteDescription) { try { await p.pc.addIceCandidate(m.c); } catch (e) { /* nada */ } } else (p.iceQ = p.iceQ || []).push(m.c); return; }
-    if (m.t === 'relay') { const p = peers.get(m.from); if (p) { if (p.via !== 'relay') toRelay(p); onData(p, m.d, true); } return; }
+    if (m.t === 'relay') { const p = peers.get(m.from); if (p) { if (p.via !== 'relay' && !directOk(p)) toRelay(p); onData(p, m.d, true); } return; }
     if (m.t === 'bye') { dropPeer(m.from); return; }
   }
 
   /* ---------- la sala ---------- */
-  function roomState() { return { code: S.code, host: S.id, term: S.term, devices: [{ id: S.id, info: S.info, host: true, rtt: 0, via: 'local' }].concat([...peers.values()].filter(p => p.info).map(p => ({ id: p.id, info: p.info, rtt: Math.round(p.rtt), via: p.via, open: p.open }))) }; }
+  function roomState() { return { code: S.code, host: S.id, term: S.term, play: S.play || null, devices: [{ id: S.id, info: S.info, host: true, rtt: 0, via: 'local' }].concat([...peers.values()].filter(p => p.info).map(p => ({ id: p.id, info: p.info, rtt: Math.round(p.rtt), via: p.via, open: p.open }))) }; }
   function broadcastRoom() { if (!S.isHost) return; const room = roomState(); S.room = room; emit('room', room); for (const p of peers.values()) if (p.open) rawSend(p, { $: 'room', room }, true); }
-  let tick = 0, annN = 0, lastTick = 0;
+  let tick = 0, linkT = 0, annN = 0, lastTick = 0;
   function loop() {
-    clearInterval(tick);
+    clearInterval(tick); clearInterval(linkT);
     tick = setInterval(() => {
       if (!S.alive) return; const now = Date.now();
       // si ESTE aparato estuvo trabado (cargando un juego pesado, en segundo plano), lo que le llegó aún está en la fila:
@@ -240,19 +267,33 @@ const Net = (() => {
       else if (S.succ) { if (now - S.succ.t > 8000) { S.dead.add(S.succ.order.shift()); S.succ.t = now; } nextHost(); }
       else { const h = peers.get(S.hostId); if (!h || !h.open) signal({ t: 'hello', info: S.info, term: S.term }); else if (gone(h)) succeed(); } // callado mucho rato (con la conexión viva puede estar cargando un juego pesado: se espera más)
     }, 2000);
+    // conexiones: cada medio segundo (también por sondeo: en las pruebas la «desconexión» es simulada y no da evento)
+    linkT = setInterval(() => { if (S.alive) checkLinks(Date.now()); }, 500);
+  }
+  function checkLinks(now) {
+    for (const p of [...peers.values()]) {
+      if (p.via === 'relay') {
+        p.discT = 0;
+        if (directOk(p)) backToDirect(p);
+        else if (S.isHost && p.info && !SIM.relay && now >= (p.retryAt || 0)) { p.relayN = (p.relayN || 0) + 1; p.retryAt = now + Math.min(45000, 15000 * p.relayN); p.callT = now; makePC(p, true); } // conexión nueva por debajo
+        continue;
+      }
+      if (!p.pc) { p.discT = 0; continue; }
+      if (pcState(p) === 'disconnected') { if (!p.discT) p.discT = now; else if (now - p.discT >= 2500) toRelay(p); } else p.discT = 0;
+    }
   }
   async function start(code, info, host) {
-    leave(true); S.code = code; S.info = info; S.isHost = host; S.hostId = host ? S.id : null; S.alive = true; S.clockOff = 0; S.term = host ? 1 : 0; S.dead.clear(); S.succ = null; S.moved = false;
+    leave(true); if (SIM.cut) { cutA = performance.now() + SIM.cut[0] * 1000; cutB = cutA + SIM.cut[1] * 1000; } S.code = code; S.info = info; S.isHost = host; S.hostId = host ? S.id : null; S.alive = true; S.clockOff = 0; S.term = host ? 1 : 0; S.dead.clear(); S.succ = null; S.moved = false;
     await deriveKey(code); S.sig = Signal(); loop();
     if (host) { broadcastRoom(); announce(); } else { signal({ t: 'hello', info }); setTimeout(() => S.alive && !S.hostId && signal({ t: 'hello', info }), 1200); }
     return code;
   }
   function leave(quiet) {
     if (S.alive) { for (const p of peers.values()) { try { rawSend(p, { $: 'bye' }, true); } catch (e) { /* nada */ } } signal({ t: 'bye' }); }
-    S.alive = false; clearInterval(tick); S.succ = null;
+    S.alive = false; clearInterval(tick); clearInterval(linkT); S.succ = null;
     for (const p of peers.values()) { clearTimeout(p.relayT); clearTimeout(p.rqT); try { p.pc && p.pc.close(); } catch (e) { /* nada */ } }
     peers.clear(); const sg = S.sig; S.sig = null; if (sg) setTimeout(() => sg.close(), 300);
-    S.code = null; S.isHost = false; S.hostId = null; S.room = null; if (!quiet) emit('peers');
+    S.code = null; S.isHost = false; S.hostId = null; S.room = null; S.play = null; if (!quiet) emit('peers');
   }
   /* ---------- probar la red de este aparato (Ajustes) ---------- */
   // señales (los servidores MQTT), conexión directa (STUN: ¿se ve la IP pública?) y respaldo (TURN: ¿da un puerto de relevo?)
@@ -297,7 +338,7 @@ const Net = (() => {
     // datos enviados y recibidos (bytes) desde el último reinicio de la cuenta
     get stats() { return Object.assign({ secs: (Date.now() - ST.t0) / 1000 }, ST); }, resetStats() { ST.out = ST.in = ST.nOut = ST.nIn = 0; ST.t0 = Date.now(); }, get sim() { return SIM; },
     // a: id de un aparato o '*' (todos); confiable = true para lo que no se puede perder
-    send(a, data, rel = true) { if (a === '*') { for (const p of peers.values()) rawSend(p, data, rel); } else { const p = peers.get(a); if (p) rawSend(p, data, rel); } },
+    send(a, data, rel = true) { if (a === '*') { const s = typeof data === 'string' ? data : JSON.stringify(data); for (const p of peers.values()) rawSend(p, s, rel); } else { const p = peers.get(a); if (p) rawSend(p, data, rel); } }, // (a todos: se pasa a texto una sola vez)
     setInfo(info) { S.info = info; if (S.isHost) broadcastRoom(); else { const h = peers.get(S.hostId); if (h && h.open) rawSend(h, { $: 'info', info }, true); signal({ t: 'hello', info }); } },
     on(t, f) { (L[t] = L[t] || []).push(f); return () => { L[t] = L[t].filter(x => x !== f); }; },
     now: () => performance.now() + (S.isHost ? 0 : S.clockOff),
@@ -305,6 +346,14 @@ const Net = (() => {
     get room() { return S.room; }, get peers() { return peers; }, get signalReady() { return !!(S.sig && S.sig.ready); },
     _onInfo(id, info) { const p = peers.get(id); if (p) { p.info = info; broadcastRoom(); } },
     get term() { return S.term; }, get ownTurn() { return ownTurn(); },
+    // la partida que tiene abierta el anfitrión (viaja con la sala cada 2 s: si a alguien no le llegó el aviso de empezar o
+    // de terminar, se pone al día solo) · null = está en la sala
+    setPlay(p) { S.play = p || null; if (S.isHost) broadcastRoom(); },
+    // pruebas: corte de red simulado desde ya (los dos aparatos lo piden a la vez)
+    // (solo = 'directo': se cae la conexión directa pero internet sigue, como al cambiar de antena; si no, se cae todo)
+    // pruebas: lo que llega y cumple f(m) se pierde durante ms (para probar que nadie se queda atrás si se pierde un aviso)
+    simDrop(f, ms) { simDrop = typeof f === 'function' ? { f, until: performance.now() + ms } : null; },
+    simCut(ms, solo) { cutA = performance.now(); cutB = cutA + ms; cutDirect = solo === 'directo'; SIM.on = true; },
   };
   return api;
 })();

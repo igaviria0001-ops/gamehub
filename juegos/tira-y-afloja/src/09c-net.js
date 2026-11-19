@@ -101,9 +101,10 @@ const NetGame = (() => {
     if (B.pl) G.pellets = B.pl.map((o, i) => Object.assign({ t: (G.pellets[i] && G.pellets[i].t) || 0 }, o));
     if (B.gd !== undefined) G.golden = B.gd ? Object.assign({ t: (G.golden && G.golden.t) || 0 }, B.gd) : null;
     // escenario: lo que se mueve (muebles, ventiladores, el bus…) y su estado propio
-    const Ar = ARENA, D = B.a; if (D) { Ar.t = D.t; if (D.mv) D.mv.forEach((v, i) => { const R2 = Ar.movers[i]; if (R2) { R2.x = v[0]; R2.y = v[1]; R2.dx = v[2]; R2.dy = v[3]; } }); }
+    const Ar = ARENA, D = B.a, DA = A.a; if (D) { Ar.t = D.t; if (D.mv) D.mv.forEach((v, i) => { const R2 = Ar.movers[i], va = DA && DA.mv && DA.mv[i]; if (R2) { const nr = va && Math.abs(va[0] - v[0]) < 200 && Math.abs(va[1] - v[1]) < 200; R2.x = nr ? lerp(va[0], v[0], k) : v[0]; R2.y = nr ? lerp(va[1], v[1], k) : v[1]; R2.dx = v[2]; R2.dy = v[3]; } }); }
     const DS = B.as; if (DS) { if (DS.mods) deepSet(Ar.mods, DS.mods); if (DS.zn) DS.zn.forEach((v, i) => { if (Ar.zones[i]) Ar.zones[i].active = v; }); if (DS.x) deepSet(Ar, DS.x); }
     if (B.m) deepSet(Modes.M, B.m);
+    { const ba = A.m && A.m.ball, bb = B.m && B.m.ball, MB = Modes.M.ball; if (MB && ba && bb && Math.abs(ba.x - bb.x) < 300 && Math.abs(ba.y - bb.y) < 300) { MB.x = lerp(ba.x, bb.x, k); MB.y = lerp(ba.y, bb.y, k); if (typeof ba.rot === 'number' && typeof bb.rot === 'number' && Math.abs(bb.rot - ba.rot) < 3) MB.rot = lerp(ba.rot, bb.rot, k); } } // el balón, suave
     if (B.f) deepSet(Fiesta.state, B.f);
     G.cam.focus = B.cam ? Object.assign({}, B.cam) : null;
   }

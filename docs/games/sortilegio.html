@@ -1081,13 +1081,17 @@ const NetPlay = (() => {
   let on = false, role = null, seats = [], mine = [], sid = null, ev = null, hostT = 0, inT = 0, snapN = 0;
   const remote = {}, snaps = [], startSubs = [], msgSubs = [], evQ = [];
   const noPred = (() => { try { return /[?&]nopred\b/.test(location.search) || /[?&]nopred\b/.test(window.parent.location.search); } catch (e) { return false; } })();
-  let lagMs = 100, offset = null, lagFixed = false, rtt = 80;
+  let lagMs = 100, offset = null, lagFixed = false, rtt = 80, pt = null, ptAt = 0;
+  // medidas (pruebas): cuadros dibujados, cuadros sin instantánea nueva para ese momento («hambre»), la racha más larga
+  // de hambre, saltos del reloj de dibujo hacia atrás, instantáneas recibidas / desordenadas / perdidas, tamaño (anfitrión)
+  const PS = { fr: 0, hungry: 0, hRun: 0, hMax: 0, hEp: 0, back: 0, rx: 0, ooo: 0, miss: 0, maxN: 0, lastPT: 0, lastAt: 0, szN: 0, szSum: 0, szMax: 0 };
+  function psReset() { for (const k in PS) PS[k] = 0; }
   // colchón de interpolación que se ajusta solo: con red pareja, poquito (responde antes); con red a saltos, más (no tiembla)
   let lastArr = 0, lastTm = 0, jit = 8, gap = 33;
   function adapt(now, tm) {
     if (lastArr && tm > lastTm) { const g = tm - lastTm, j = Math.abs((now - lastArr) - g); gap = gap * 0.9 + g * 0.1; jit = j > jit ? jit * 0.7 + j * 0.3 : jit * 0.98 + j * 0.02; }
     lastArr = now; lastTm = tm;
-    if (!lagFixed) { const want = Math.min(250, Math.max(55, gap * 1.5 + jit * 3 + 8)); lagMs += (want - lagMs) * (want > lagMs ? 0.25 : 0.02); }
+    if (!lagFixed) { const want = Math.min(400, Math.max(55, gap * 1.5 + jit * 3 + 8)); lagMs += (want - lagMs) * (want > lagMs ? 0.25 : 0.02); }
   }
   // reloj del anfitrión: lo que tardó la instantánea MÁS rápida de los últimos 2 s (sin atascos), con paso suave;
   // así se reajusta solo si la red cambia (wifi ↔ datos) y no se queda pegado a un valor viejo
@@ -1100,36 +1104,72 @@ const NetPlay = (() => {
   const G = () => (typeof NetGame !== 'undefined' ? NetGame : null);
   function post(event, data) { if (!embedded) return; try { window.parent.postMessage(Object.assign({ hub: 'gamehub', source: GAME_META.id, event }, data || {}), '*'); } catch (e) { /* nada */ } }
   // ch 'u' = sin orden (entradas, instantáneas) · 'r' = confiable (eventos, fin)
-  function send(d, reliable, to) { post('net', { ch: reliable ? 'r' : 'u', to: to || (role === 'host' ? '*' : 'host'), d }); }
+  const STICKY = new Set(['cfg', 'res']), sticky = new Map();
+  function send(d, reliable, to) {
+    if (role === 'host' && reliable && (!to || to === '*') && d && STICKY.has(d.t)) { if (d.t !== 'cfg') d.c = gcfg ? gcfg.id : 0; sticky.set(d.t, { d, at: performance.now() }); }
+    post('net', { ch: reliable ? 'r' : 'u', to: to || (role === 'host' ? '*' : 'host'), d });
+  }
+  // ¿esto es de otra partida? (cada partida en línea tiene su número: cfg.id). Lo de una partida vieja que llega tarde se
+  // bota; si el anfitrión ya va en una nueva y aquí no llegó la cfg (se perdió en un bache), se pide otra vez
+  const otherMatch = c => role === 'client' && c != null && gateO && (!gcfg || c !== gcfg.id);
+  let cfgAskT = 0;
+  function needCfg() { const now = performance.now(); if (now - cfgAskT < 900) return; cfgAskT = now; send({ t: 'want', me: myInfo() }, true, 'host'); }
+  const gotOnce = new Set(); // mensajes que el anfitrión repite hasta que llegan (resultados): al juego, una sola vez
   function onNet(d, from) {
     if (!d) return;
-    if (d.t === 'in' && role === 'host') { remote[d.s] = { i: d.i, at: performance.now(), from }; return; }
-    if (d.t === 's' && role === 'client') { const now = performance.now(); adapt(now, d.tm); clock(now, d.tm - now); Lost.ok(); snaps.push({ tm: d.tm, n: d.n, d: d.d, arr: now }); while (snaps.length > 30) snaps.shift(); return; }
-    if (d.t === 'e' && role === 'client') { const g = G(); if (g && g.event) for (const e of d.l) { try { g.event(e); } catch (err) { /* nada */ } } return; }
+    if (d.t === 'in' && role === 'host') { takeInput(d, from); return; }
+    if (d.t === 's' && role === 'client') {
+      if (otherMatch(d.c)) { if (!gcfg || d.c > gcfg.id) needCfg(); return; }
+      const now = performance.now(); PS.rx++; if (d.n < PS.maxN) PS.ooo++; else { if (PS.maxN && d.n > PS.maxN + 1) PS.miss += d.n - PS.maxN - 1; PS.maxN = d.n; }
+      // por el canal sin orden pueden llegar desordenadas: van en su lugar (y la repetida se bota)
+      let i = snaps.length; while (i > 0 && snaps[i - 1].n > d.n) i--; if (i > 0 && snaps[i - 1].n === d.n) return;
+      if (i === snaps.length) { adapt(now, d.tm); clock(now, d.tm - now); }
+      Lost.ok(); snaps.splice(i, 0, { tm: d.tm, n: d.n, d: d.d, arr: now }); while (snaps.length > 40) snaps.shift(); return;
+    }
+    if (d.t === 'e' && role === 'client') { if (otherMatch(d.c)) return; const g = G(); if (g && g.event) for (const e of d.l) { try { g.event(e); } catch (err) { /* nada */ } } return; }
+    if (role === 'client' && d.t !== 'cfg' && STICKY.has(d.t)) { if (otherMatch(d.c)) return; const k = d.t + ':' + (d.c || 0); if (gotOnce.has(k)) return; gotOnce.add(k); }
     for (const f of msgSubs) { try { f(d, from); } catch (e) { /* nada */ } }
+  }
+  /* entradas que llegan al anfitrión: cada cambio trae su número y los 3 anteriores (si uno se pierde, lo trae el siguiente);
+     van en fila y cada estado se ve al menos un cuadro (16 ms), así un toque corto nunca se pierde aunque lleguen juntos */
+  function takeInput(d, from) {
+    const now = performance.now(), R = remote[d.s] || (remote[d.s] = { q: 0, fila: [], at: 0, shown: 0, from });
+    R.at = now; R.from = from;
+    if (typeof d.q !== 'number') { R.fila = [{ i: d.i }]; return; } // (por si llega de una versión sin número)
+    const list = (Array.isArray(d.p) ? d.p : []).concat([[d.q, d.i]]).filter(x => Array.isArray(x) && typeof x[0] === 'number').sort((a, b) => a[0] - b[0]);
+    if (d.q < R.q - 1000) R.q = 0; // el remoto empezó de nuevo
+    for (const [q, i] of list) if (q > R.q) { R.q = q; R.fila.push({ i }); }
+    while (R.fila.length > 8) R.fila.shift();
+  }
+  function inputOf(seat) {
+    const R = remote[seat]; if (!R || !R.fila.length) return null; const now = performance.now();
+    if (R.fila.length > 1 && now - R.shown >= 16) { R.fila.shift(); R.shown = now; } else if (!R.shown) R.shown = now;
+    return R.fila[0].i;
   }
   if (embedded) addEventListener('message', e => {
     const m = e.data; if (!m || m.hub !== 'gamehub' || e.source !== window.parent) return;
     if (m.cmd === 'net') begin(m);
     else if (m.cmd === 'netin') onNet(m.d, m.from);
     else if (m.cmd === 'netoff') end();
-    else if (m.cmd === 'netrtt' && m.rtt > 0 && m.rtt < 3000) rtt = m.rtt; // ida y vuelta hasta el anfitrión (lo mide GameHub)
+    else if (m.cmd === 'netrtt' && m.rtt > 0 && m.rtt < 3000) { rtt = m.rtt; Slow.set(m.via === 'relay', rtt); } // ida y vuelta hasta el anfitrión (lo mide GameHub) y por dónde va
   });
   function begin(m) {
-    end(); for (const k in slowLast) delete slowLast[k]; on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; offW.length = 0; snapN = 0;
+    end(); for (const k in slowLast) delete slowLast[k]; for (const k in lastIn) delete lastIn[k]; sticky.clear(); gotOnce.clear(); pt = null; on = true; role = m.role; seats = m.seats || []; mine = m.mine || []; sid = m.sid; ev = m.ev || null; snaps.length = 0; offset = null; offW.length = 0; snapN = 0;
     // cada juego puede pedir su ritmo (instantáneas por segundo) y su colchón de interpolación
     { const g = G(), hz = (g && g.rate) || 30; lagFixed = !!(g && g.lag); lagMs = (g && g.lag) || Math.max(100, Math.round(2.6 * 1000 / hz)); lastArr = 0; jit = 8; gap = 1000 / hz; if (role === 'host') { hostT = setInterval(hostTick, Math.round(1000 / hz)); post('netinfo', { slow: (g && g.slowKeys) || [] }); } else inT = setInterval(clientTick, 16); }
     for (const f of startSubs) { try { f({ role, seats, mine, sid, ev }); } catch (err) { post('error', { msg: String(err && err.message || err) }); } }
   }
   // solo números, textos y listas simples (sin objetos del juego, que no viajan)
   function clean(e) { const o = {}; for (const k in e) { const v = e[k]; const t = typeof v; if (t === 'number') o[k] = Math.round(v * 1000) / 1000; else if (t === 'string' || t === 'boolean') o[k] = v; else if (Array.isArray(v) && v.length < 40 && v.every(x => typeof x !== 'object' && typeof x !== 'function')) o[k] = v.slice(); } return o; }
-  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; Lost.ok(); if (typeof clearTimeout === 'function') { clearTimeout(wtick); clearTimeout(askT); } pend = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
+  function end() { clearInterval(hostT); clearInterval(inT); hostT = inT = 0; on = false; Lost.ok(); Slow.hide(); if (typeof clearTimeout === 'function') { clearTimeout(wtick); clearTimeout(askT); } pend = false; role = null; for (const k in remote) delete remote[k]; snaps.length = 0; evQ.length = 0; }
   // anfitrión: instantánea + eventos acumulados
   function hostTick() {
     const g = G(); if (!g || !g.snap) return;
     let d; try { d = g.snap(); } catch (e) { return; }
-    if (d) send({ t: 's', n: ++snapN, tm: performance.now(), d }, false, '*');
-    if (evQ.length) send({ t: 'e', l: evQ.splice(0, evQ.length) }, true, '*');
+    const c = gcfg ? gcfg.id : undefined, now = performance.now();
+    if (d) { const m = { t: 's', n: ++snapN, tm: now, c, d }; if (snapN % 10 === 1) { const z = JSON.stringify(m).length; PS.szN++; PS.szSum += z; PS.szMax = Math.max(PS.szMax, z); } send(m, false, '*'); }
+    if (evQ.length) send({ t: 'e', c, l: evQ.splice(0, evQ.length) }, true, '*');
+    for (const x of sticky.values()) if (now - x.at > 1500) { x.at = now; post('net', { ch: 'r', to: '*', d: x.d }); }
   }
   // remoto: las entradas de sus jugadores (cada 16 ms; si no cambian, cada 66 ms)
   const lastIn = {};
@@ -1138,9 +1178,10 @@ const NetPlay = (() => {
     if (gcfg && lastArr && now - lastArr > 1500) Lost.show();
     mine.forEach((seat, li) => {
       let i; try { i = g.readLocal(li); } catch (e) { return; }
-      const s = JSON.stringify(i), L = lastIn[seat];
-      if (L && L.s === s && now - L.t < 66) return;
-      lastIn[seat] = { s, t: now }; send({ t: 'in', s: seat, i }, false, 'host');
+      const s = JSON.stringify(i), L = lastIn[seat] || (lastIn[seat] = { s: null, t: 0, q: 0, h: [] });
+      if (L.s === s && now - L.t < 66) return;
+      if (L.s !== s) { if (L.s !== null) { L.h.push([L.q, L.i]); if (L.h.length > 3) L.h.shift(); } L.q++; L.s = s; L.i = i; }
+      L.t = now; send({ t: 'in', s: seat, q: L.q, i, p: L.h.slice() }, false, 'host');
     });
   }
   // remoto: al apretar o soltar algo, la entrada sale YA (no espera al próximo tick de 16 ms); después de que el juego la registró
@@ -1183,6 +1224,17 @@ const NetPlay = (() => {
       ok() { if (el) { el.remove(); el = null; } },
     };
   })();
+  // aviso chiquito si la conexión va lenta (por el relevo, o ping alto): para saber que el problema es la red
+  const Slow = (() => {
+    let el = null, bad = 0;
+    function set(relay, ms) {
+      bad = relay || ms > 350 ? bad + 1 : 0;
+      if (bad < 3 || !on || role !== 'client') { if (el) { el.remove(); el = null; } return; }
+      if (!el) { el = document.createElement('div'); el.id = 'netSlow'; el.innerHTML = '<style>#netSlow{position:fixed;right:max(8px,env(safe-area-inset-right,0px));top:max(8px,env(safe-area-inset-top,0px));z-index:8998;padding:4px 10px;border-radius:999px;background:rgba(6,10,22,.7);color:#ffd36b;font:800 12px Nunito,system-ui,sans-serif;pointer-events:none;opacity:.9}</style><span></span>'; document.body.appendChild(el); }
+      el.querySelector('span').textContent = (relay ? 'Red lenta · por relevo · ' : 'Red lenta · ') + Math.round(ms) + ' ms';
+    }
+    return { set, hide() { bad = 0; if (el) { el.remove(); el = null; } } };
+  })();
   const myInfo = () => mine.map((seat, li) => { let m = null; try { m = gateO.me(li); } catch (e) { m = null; } return { s: seat, m }; });
   function launch() {
     if (!pend || !gateO) return; pend = false; clearTimeout(wtick);
@@ -1205,14 +1257,14 @@ const NetPlay = (() => {
   });
   msgSubs.push(d => {
     if (!gateO || !d) return;
-    if (d.t === 'cfg' && role === 'client' && d.cfg && (!gcfg || gcfg.id !== d.cfg.id)) { gcfg = d.cfg; Wait.hide(); try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); } }
+    if (d.t === 'cfg' && role === 'client' && d.cfg && typeof d.cfg.id === 'number' && (!gcfg || d.cfg.id > gcfg.id)) { gcfg = d.cfg; snaps.length = 0; pt = null; Wait.hide(); try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); } }
     if (d.t === 'wait' && role === 'client' && !gcfg && Array.isArray(d.ready)) Wait.list(d.ready, 'Esperando a que todos carguen el juego…', false);
     if (d.t === 'want' && role === 'host') {
       if (Array.isArray(d.me)) for (const x of d.me) { const s = +x.s; if (s >= 0 && s < seats.length && !mine.includes(s) && !want[s]) want[s] = x.m && typeof x.m === 'object' ? x.m : {}; }
       if (gcfg) send({ t: 'cfg', cfg: gcfg }, true, '*');
     }
   });
-  function again(f) { if (role !== 'host' || !gcfg || !gateO) return; const c = f ? f(gcfg) : gcfg; gcfg = Object.assign({}, c, { id: gcfg.id + 1 }); send({ t: 'cfg', cfg: gcfg }, true, '*'); try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); } }
+  function again(f) { if (role !== 'host' || !gcfg || !gateO) return; const c = f ? f(gcfg) : gcfg; gcfg = Object.assign({}, c, { id: gcfg.id + 1 }); sticky.delete('res'); send({ t: 'cfg', cfg: gcfg }, true, '*'); try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); } }
   // textos e identificadores que llegan de otro aparato: solo lo simple
   const okId = v => (typeof v === 'string' && v.length < 40 && /^[\w.-]*$/.test(v) ? v : '');
   // partes «lentas» de la instantánea: solo viajan si cambiaron (y al menos una vez por segundo, por si se perdió una)
@@ -1225,7 +1277,7 @@ const NetPlay = (() => {
     // ¿este puesto se juega en este aparato? y con qué jugador local (0 o 1)
     local(seat) { const k = mine.indexOf(seat); return k; },
     // anfitrión: la entrada del puesto remoto (o neutra si dejó de llegar)
-    input(seat) { const r = remote[seat]; const g = G(); if (!r || performance.now() - r.at > 500) return g && g.neutral ? g.neutral() : null; return r.i; },
+    input(seat) { const r = remote[seat]; const g = G(); if (!r || performance.now() - r.at > 500) return g && g.neutral ? g.neutral() : null; return inputOf(seat); },
     // el juego avisa eventos (golpes, sonidos, efectos) para los remotos
     event(e) { if (on && role === 'host') { evQ.push(clean(e)); if (evQ.length > 200) evQ.splice(0, evQ.length - 200); } },
     // remoto: las dos instantáneas alrededor del momento a dibujar y cuánto avanzar entre ellas (0..1)
@@ -1233,11 +1285,21 @@ const NetPlay = (() => {
       if (!snaps.length) return null;
       // si el dibujo se salta instantáneas, lo «lento» que traían (solo viaja cuando cambia) pasa a la que sí se usa
       const sk = G() && G().slowKeys; if (sk && snaps.length > 1) { for (let i = 1; i < snaps.length; i++) { const p = snaps[i - 1], c = snaps[i]; if (p._used) continue; for (const k of sk) if (p.d[k] !== undefined && c.d[k] === undefined) c.d[k] = p.d[k]; } } if (snaps.length === 1 || offset == null) { const s = snaps[snaps.length - 1]; return { a: s.d, b: s.d, k: 1 }; }
-      const t = performance.now() + offset - lagMs;
+      // reloj de dibujo: avanza con el tiempo real y se acerca a «ahora − colchón» cambiando un poco la velocidad (entre
+      // 0,75× y 1,1×) en vez de saltar: los saltos (sobre todo hacia atrás, cuando el colchón crece) se ven como tirones.
+      // Si no hay instantánea para ese momento, se queda en la última y sigue desde ahí cuando llegue (no salta adelante).
+      const nowF = performance.now(), target = nowF + offset - lagMs, last = snaps[snaps.length - 1].tm;
+      if (pt == null || Math.abs(target - pt) > 600) pt = target;
+      else { const dt = Math.min(100, Math.max(0, nowF - ptAt)), err = target - pt; pt += dt + Math.max(-0.25 * dt, Math.min(0.1 * dt, err * 0.1)); }
+      ptAt = nowF;
+      PS.fr++; if (PS.lastPT && pt < PS.lastPT - 1) PS.back++;
+      if (pt > last) { PS.hungry++; if (!PS.hRun) { PS.hRun = nowF; PS.hEp++; } PS.hMax = Math.max(PS.hMax, nowF - PS.hRun); pt = last; } else PS.hRun = 0;
+      PS.lastPT = pt; const t = pt;
       for (let i = snaps.length - 1; i > 0; i--) { const a = snaps[i - 1], b = snaps[i]; if (a.tm <= t) { const k = b.tm > a.tm ? Math.min(1, Math.max(0, (t - a.tm) / (b.tm - a.tm))) : 1; return { a: a.d, b: b.d, k, dt: (b.tm - a.tm) / 1000 }; } }
       return { a: snaps[0].d, b: snaps[0].d, k: 1 };
     },
     set lag(ms) { lagMs = ms; lagFixed = true; }, get lag() { return lagMs; },
+    get stats() { return Object.assign({ lag: Math.round(lagMs), jit: Math.round(jit), sz: PS.szN ? Math.round(PS.szSum / PS.szN) : 0 }, PS); }, statsReset: psReset,
     // predicción del personaje propio (remoto): la instantánea más nueva (con su hora de llegada) y el ping al anfitrión
     latest() { return snaps.length ? snaps[snaps.length - 1] : null; }, get rtt() { return rtt; },
     // ¿predecir? (con ?nopred se apaga, para comparar)
@@ -7628,6 +7690,7 @@ const NetGame = (() => {
   const ST = ['count', 'play', 'roundEnd', 'matchEnd'];
   const r2 = v => Math.round((+v || 0) * 100) / 100;
   const _read = Input.read;
+  const r1 = v => Math.round((+v || 0) * 10) / 10, XY = new Map([['x', r1], ['y', r1], ['vx', Math.round], ['vy', Math.round]]);
   const on = () => NetPlay.on && Game.G.net;
 
   /* ---------- entradas ---------- */
@@ -7666,7 +7729,28 @@ const NetGame = (() => {
     if (d > 3) return undefined;
     if (Array.isArray(v) || ArrayBuffer.isView(v)) { if (v.length > 80) return undefined; return Array.from(v, x => enc(x, d + 1)); }
     if (v instanceof Set || v instanceof Map) return undefined;
-    const o = {}; for (const k in v) { if (k[0] === '_' && k !== '_nid') continue; const e = enc(v[k], d + 1); if (e !== undefined) o[k] = e; } return o;
+    const o = {}; for (const k in v) { if (k[0] === '_' && k !== '_nid') continue; const e = XY.has(k) && typeof v[k] === 'number' ? XY.get(k)(v[k]) : enc(v[k], d + 1); if (e !== undefined) o[k] = e; } return o;
+  }
+  // posiciones a 0,1 px y velocidades enteras (sobra para dibujar; la instantánea queda en un solo paquete)
+  // una criatura u objeto (el tejo, torretas, señuelos, espantos) viaja con sus campos; enc() de una unidad suelta solo
+  // daría su número (así se referencian desde otros lados), y así llegaban vacíos: el remoto no los veía
+  // Para que la instantánea quepa en un paquete, de cada unidad viaja la posición siempre y lo demás solo si cambió desde
+  // la anterior (en sus 4 primeras y una vez por segundo, todo: si se perdió una, se pone al día). El remoto deja lo que
+  // no llega como estaba.
+  const USKIP = new Set(['hist', 'path', 'D', 'G', 'isMage']);
+  let fullBudget = 0; // repasos completos por instantánea (uno o dos: si todas las unidades se repasan a la vez, la instantánea se infla)
+  function encUnit(u, now, keep) {
+    const o = {}, L = u._last || (u._last = {}); let full = (u._fullN = (u._fullN || 0) + 1) <= 4;
+    if (!full && now - (u._fullAt || 0) > 1000 && fullBudget > 0) { fullBudget--; full = true; }
+    if (full) u._fullAt = now;
+    for (const k in u) {
+      if ((k[0] === '_' && k !== '_nid') || USKIP.has(k)) continue;
+      if (keep && keep.has(k)) { const v = u[k]; const e = XY.has(k) && typeof v === 'number' ? XY.get(k)(v) : enc(v, 1); if (e !== undefined) o[k] = e; continue; }
+      const v = u[k], e = XY.has(k) && typeof v === 'number' ? XY.get(k)(v) : enc(v, 1); if (e === undefined) continue;
+      if (k === 'x' || k === 'y') { o[k] = e; continue; }
+      const j = typeof e === 'object' && e !== null ? JSON.stringify(e) : e; if (full || L[k] !== j) { o[k] = e; L[k] = j; }
+    }
+    return o;
   }
   function dec(v) {
     if (v == null || typeof v !== 'object') return v;
@@ -7731,8 +7815,10 @@ const NetGame = (() => {
 
   /* ---------- instantánea (anfitrión) ---------- */
   const GF = ['countT', 'introT', 'introMax', 'roundT', 'winsNeeded', 'wins', 'score', 'respawn', 'presage', 'mist', 'rain', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'ring', 'altar', 'goals', 'tejoWait', 'huntWait', 'huntN', 'runeT', 'runes', 'statues', 'banner', 'ev', 'mistWarned', 'roundWinner', 'roundWhy', 'granFx', 'koCam'];
-  const MF = ['x', 'y', 'vx', 'vy', 'face', 'hp', 'maxHp', 'alive', 'emb', 'embFlash', 'flash', 'walk', 'moving', 'castT', 'castHand', 'castEl', 'fuse', 'granCharge', 'granGlow', 'granEls', 'absorbing', 'racha', 'rachaT', 'iframes', 'hitT', 'impulse', 'lockOn', 'pin', 'hands', 'st', 'buff', 'dash', 'skin', 'stillT', 'invuln', 'lock', 'kt', 'dmgMul'];
-  let sentSeed = null;
+  // lo que casi nunca cambia viaja aparte y solo cuando cambia (y una vez por segundo): la instantánea cabe en un paquete
+  const GS = new Set(['introMax', 'winsNeeded', 'wins', 'score', 'presage', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'statues', 'mistWarned', 'roundWinner', 'roundWhy', 'goals', 'huntN']);
+  const MF = ['x', 'y', 'vx', 'vy', 'face', 'hp', 'maxHp', 'alive', 'emb', 'embFlash', 'flash', 'walk', 'moving', 'castT', 'castHand', 'castEl', 'fuse', 'granCharge', 'granGlow', 'granEls', 'absorbing', 'racha', 'rachaT', 'iframes', 'hitT', 'impulse', 'lockOn', 'pin', 'hands', 'st', 'buff', 'dash', 'stillT', 'invuln', 'lock', 'kt', 'dmgMul']; // (el atuendo viene en la cfg)
+  let sentSeed = null; const NZ = new Set(['st', 'buff', 'dash']), SKEEP = new Set(['id']);
   function snap() {
     const G = Game.G; if (!on() || !G.T || G.attract || !NetPlay.cfg) return null;
     if (G.seed !== sentSeed) { sentSeed = G.seed; keyframe(G); }
@@ -7740,12 +7826,16 @@ const NetGame = (() => {
     // efectos y letreros que armó la lógica (no un evento): viajan como eventos
     for (const f of G.fx) if (!f._s) { f._s = 1; NetPlay.event({ type: '$fx', j: JSON.stringify(enc(f)) }); }
     for (const p of G.pops) if (!p._s) { p._s = 1; NetPlay.event({ type: '$pop', j: JSON.stringify(enc(p)) }); }
-    const g = {}; for (const k of GF) { const v = enc(G[k]); if (v !== undefined && v !== null) g[k] = v; }
+    const now = performance.now(); fullBudget = 2;
+    const g = {}, gs = {}; for (const k of GF) { const v = enc(G[k]); if (v !== undefined && v !== null) (GS.has(k) ? gs : g)[k] = v; }
     return {
-      seed: G.seed, round: G.round, st: ST.indexOf(G.state), t: r2(G.time), g,
-      m: G.mages.map(m => { const o = {}; for (const k of MF) { const v = enc(m[k]); if (v !== undefined && v !== null && v !== 0 && v !== false) o[k] = v; } return o; }),
-      u: G.units.filter(u => !u.isMage).map(u => { const o = enc(u); o.$c = codeOf(u); if (u instanceof Creature) o.$k = u.kind; return o; }),
-      s: G.spells.map(s => enc(s)),
+      seed: G.seed, round: G.round, st: ST.indexOf(G.state), t: r2(G.time), g, gs: NetPlay.slow('gs', gs),
+      m: G.mages.map(m => { const o = {}; for (const k of MF) { let v = XY.has(k) && typeof m[k] === 'number' ? XY.get(k)(m[k]) : enc(m[k]);
+        if (k === 'hands' && Array.isArray(m.hands)) v = m.hands.map(h => { const q = {}; for (const kk in h) { if (kk === 'nat') continue; const e = enc(h[kk]); if (e !== 0 && e !== undefined) q[kk] = e; } return q; });
+        if (NZ.has(k) && v && typeof v === 'object' && !Array.isArray(v)) { const q = {}; for (const kk in v) if (v[kk] !== 0 && v[kk] !== null) q[kk] = v[kk]; v = q; } // los ceros (números) los pone el remoto
+        if (v !== undefined && v !== null && v !== 0 && v !== false) o[k] = v; } return o; }),
+      u: G.units.filter(u => !u.isMage).map(u => { const o = encUnit(u, now); o.$c = codeOf(u); if (u instanceof Creature) o.$k = u.kind; return o; }),
+      s: G.spells.map(s => encUnit(s, now, SKEEP)), // hechizos: igual (id y posición siempre; lo demás si cambió)
       so: G.sources.map(s => [r2(s.cd), r2(s.glow)]),
     };
   }
@@ -7758,7 +7848,7 @@ const NetGame = (() => {
   function apply(A, B, k) {
     const G = Game.G; if (!A || !B || B.seed !== kfSeed || G.seed !== B.seed) return;
     G.state = ST[B.st] || 'play';
-    const g = dec(B.g); for (const key of GF) G[key] = key in g ? g[key] : key === 'wins' || key === 'score' || key === 'respawn' ? G[key] : null;
+    if (B.gs) lastGs = B.gs; const g = Object.assign({}, lastGs ? dec(lastGs) : null, dec(B.g)); for (const key of GF) G[key] = key in g ? g[key] : key === 'wins' || key === 'score' || key === 'respawn' ? G[key] : null;
     if (!G.wins) G.wins = G.mages.map(() => 0); if (!G.score) G.score = G.mages.map(() => 0); if (!G.respawn) G.respawn = G.mages.map(() => 0);
     if (G.banner && typeof G.banner.t !== 'number') G.banner.t = 0;
     // criaturas y objetos (torretas, señuelos, el tejo): se crean la primera vez que llegan
@@ -7777,14 +7867,16 @@ const NetGame = (() => {
       const a = A.m[i], b = B.m[i]; if (!a || !b) return;
       const d = dec(b); for (const key in ZERO) if (!(key in d)) m[key] = ZERO[key];
       for (const key of ['st', 'buff', 'dash']) if (d[key] && m[key]) { for (const kk in m[key]) if (typeof m[key][kk] === 'number' && !(kk in d[key])) m[key][kk] = 0; }
-      if (d.hands) { d.hands.forEach((h, j) => { if (m.hands[j]) Object.assign(m.hands[j], h); }); delete d.hands; }
+      if (d.hands) { d.hands.forEach((h, j) => { const H = m.hands[j]; if (!H) return; for (const kk in H) if (typeof H[kk] === 'number' && !(kk in h)) H[kk] = 0; Object.assign(H, h); }); delete d.hands; } // (los ceros no viajan)
       setDeep(m, d);
       const near = Math.abs((a.x || 0) - (b.x || 0)) < 260 && Math.abs((a.y || 0) - (b.y || 0)) < 260;
       if (near) { m.x = lerp(a.x || 0, b.x || 0, k); m.y = lerp(a.y || 0, b.y || 0, k); m.face = lerpA(a.face || 0, b.face || 0, k); }
       if (!('alive' in b)) m.alive = false;
     });
     // hechizos: los de B; los que ya venían en A, a mitad de camino
-    G.spells = B.s.map(o => { const s = dec(o), a = A.s.find(x => x.id === o.id); if (a && typeof a.x === 'number' && typeof s.x === 'number' && Math.abs(a.x - s.x) < 400) { s.x = lerp(a.x, s.x, k); s.y = lerp(a.y, s.y, k); } return s; });
+    const seenS = new Set();
+    G.spells = B.s.map(o => { seenS.add(o.id); let c = sMap.get(o.id); if (!c) sMap.set(o.id, (c = {})); Object.assign(c, dec(o)); const s = Object.assign({}, c), a = A.s.find(x => x.id === o.id); if (a && typeof a.x === 'number' && typeof s.x === 'number' && Math.abs(a.x - s.x) < 400) { s.x = lerp(a.x, s.x, k); s.y = lerp(a.y, s.y, k); } return s; });
+    for (const id of [...sMap.keys()]) if (!seenS.has(id) && !A.s.some(x => x.id === id)) sMap.delete(id);
     B.so.forEach((v, i) => { if (G.sources[i]) { G.sources[i].cd = v[0]; G.sources[i].glow = v[1]; } });
   }
 
@@ -7895,10 +7987,11 @@ const NetGame = (() => {
     if (!NetPlay.isClient) return;
     if (d.t === 'kf') kfQ.push(d); else if (d.t === 'td') tdQ.push(d); else if (d.t === 'res' && d.r) resQ = d.r;
   });
-  function reset() { for (const k in ghosts) delete ghosts[k]; shadow = null; sentSeed = null; kfSeed = null; tdN = 0; tdLast = 0; kfMiss = 0; uMap.clear(); evQ = []; kfQ = []; tdQ = []; resQ = null; shownRes = false; pinMine = []; }
+  let lastGs = null; const sMap = new Map(); // remoto: lo que se sabe de cada hechizo (llega solo lo que cambia)
+  function reset() { lastGs = null; sMap.clear(); for (const k in ghosts) delete ghosts[k]; shadow = null; sentSeed = null; kfSeed = null; tdN = 0; tdLast = 0; kfMiss = 0; uMap.clear(); evQ = []; kfQ = []; tdQ = []; resQ = null; shownRes = false; pinMine = []; }
 
   return {
-    seatsMax: 4, again, snap, apply, clientStep, readLocal, pinFrom, get pst() { return PST; },
+    seatsMax: 4, again, snap, apply, clientStep, readLocal, pinFrom, get pst() { return PST; }, slowKeys: ['gs'],
     neutral: () => NEUTRAL,
     // anfitrión: cada evento viaja (la unidad como número)
     fwd(e) { const o = {}; for (const k in e) { const v = e[k], t = typeof v; if (t === 'number' || t === 'string' || t === 'boolean') o[k] = v; else if (k === 'unit' && v instanceof Unit) o.unit = codeOf(v); else if (Array.isArray(v) && v.length < 12 && v.every(x => typeof x !== 'object')) o[k] = v.slice(); } NetPlay.event(o); },

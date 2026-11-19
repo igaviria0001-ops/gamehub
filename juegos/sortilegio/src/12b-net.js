@@ -14,6 +14,7 @@ const NetGame = (() => {
   const ST = ['count', 'play', 'roundEnd', 'matchEnd'];
   const r2 = v => Math.round((+v || 0) * 100) / 100;
   const _read = Input.read;
+  const r1 = v => Math.round((+v || 0) * 10) / 10, XY = new Map([['x', r1], ['y', r1], ['vx', Math.round], ['vy', Math.round]]);
   const on = () => NetPlay.on && Game.G.net;
 
   /* ---------- entradas ---------- */
@@ -52,7 +53,28 @@ const NetGame = (() => {
     if (d > 3) return undefined;
     if (Array.isArray(v) || ArrayBuffer.isView(v)) { if (v.length > 80) return undefined; return Array.from(v, x => enc(x, d + 1)); }
     if (v instanceof Set || v instanceof Map) return undefined;
-    const o = {}; for (const k in v) { if (k[0] === '_' && k !== '_nid') continue; const e = enc(v[k], d + 1); if (e !== undefined) o[k] = e; } return o;
+    const o = {}; for (const k in v) { if (k[0] === '_' && k !== '_nid') continue; const e = XY.has(k) && typeof v[k] === 'number' ? XY.get(k)(v[k]) : enc(v[k], d + 1); if (e !== undefined) o[k] = e; } return o;
+  }
+  // posiciones a 0,1 px y velocidades enteras (sobra para dibujar; la instantánea queda en un solo paquete)
+  // una criatura u objeto (el tejo, torretas, señuelos, espantos) viaja con sus campos; enc() de una unidad suelta solo
+  // daría su número (así se referencian desde otros lados), y así llegaban vacíos: el remoto no los veía
+  // Para que la instantánea quepa en un paquete, de cada unidad viaja la posición siempre y lo demás solo si cambió desde
+  // la anterior (en sus 4 primeras y una vez por segundo, todo: si se perdió una, se pone al día). El remoto deja lo que
+  // no llega como estaba.
+  const USKIP = new Set(['hist', 'path', 'D', 'G', 'isMage']);
+  let fullBudget = 0; // repasos completos por instantánea (uno o dos: si todas las unidades se repasan a la vez, la instantánea se infla)
+  function encUnit(u, now, keep) {
+    const o = {}, L = u._last || (u._last = {}); let full = (u._fullN = (u._fullN || 0) + 1) <= 4;
+    if (!full && now - (u._fullAt || 0) > 1000 && fullBudget > 0) { fullBudget--; full = true; }
+    if (full) u._fullAt = now;
+    for (const k in u) {
+      if ((k[0] === '_' && k !== '_nid') || USKIP.has(k)) continue;
+      if (keep && keep.has(k)) { const v = u[k]; const e = XY.has(k) && typeof v === 'number' ? XY.get(k)(v) : enc(v, 1); if (e !== undefined) o[k] = e; continue; }
+      const v = u[k], e = XY.has(k) && typeof v === 'number' ? XY.get(k)(v) : enc(v, 1); if (e === undefined) continue;
+      if (k === 'x' || k === 'y') { o[k] = e; continue; }
+      const j = typeof e === 'object' && e !== null ? JSON.stringify(e) : e; if (full || L[k] !== j) { o[k] = e; L[k] = j; }
+    }
+    return o;
   }
   function dec(v) {
     if (v == null || typeof v !== 'object') return v;
@@ -117,8 +139,10 @@ const NetGame = (() => {
 
   /* ---------- instantánea (anfitrión) ---------- */
   const GF = ['countT', 'introT', 'introMax', 'roundT', 'winsNeeded', 'wins', 'score', 'respawn', 'presage', 'mist', 'rain', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'ring', 'altar', 'goals', 'tejoWait', 'huntWait', 'huntN', 'runeT', 'runes', 'statues', 'banner', 'ev', 'mistWarned', 'roundWinner', 'roundWhy', 'granFx', 'koCam'];
-  const MF = ['x', 'y', 'vx', 'vy', 'face', 'hp', 'maxHp', 'alive', 'emb', 'embFlash', 'flash', 'walk', 'moving', 'castT', 'castHand', 'castEl', 'fuse', 'granCharge', 'granGlow', 'granEls', 'absorbing', 'racha', 'rachaT', 'iframes', 'hitT', 'impulse', 'lockOn', 'pin', 'hands', 'st', 'buff', 'dash', 'skin', 'stillT', 'invuln', 'lock', 'kt', 'dmgMul'];
-  let sentSeed = null;
+  // lo que casi nunca cambia viaja aparte y solo cuando cambia (y una vez por segundo): la instantánea cabe en un paquete
+  const GS = new Set(['introMax', 'winsNeeded', 'wins', 'score', 'presage', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'statues', 'mistWarned', 'roundWinner', 'roundWhy', 'goals', 'huntN']);
+  const MF = ['x', 'y', 'vx', 'vy', 'face', 'hp', 'maxHp', 'alive', 'emb', 'embFlash', 'flash', 'walk', 'moving', 'castT', 'castHand', 'castEl', 'fuse', 'granCharge', 'granGlow', 'granEls', 'absorbing', 'racha', 'rachaT', 'iframes', 'hitT', 'impulse', 'lockOn', 'pin', 'hands', 'st', 'buff', 'dash', 'stillT', 'invuln', 'lock', 'kt', 'dmgMul']; // (el atuendo viene en la cfg)
+  let sentSeed = null; const NZ = new Set(['st', 'buff', 'dash']), SKEEP = new Set(['id']);
   function snap() {
     const G = Game.G; if (!on() || !G.T || G.attract || !NetPlay.cfg) return null;
     if (G.seed !== sentSeed) { sentSeed = G.seed; keyframe(G); }
@@ -126,12 +150,16 @@ const NetGame = (() => {
     // efectos y letreros que armó la lógica (no un evento): viajan como eventos
     for (const f of G.fx) if (!f._s) { f._s = 1; NetPlay.event({ type: '$fx', j: JSON.stringify(enc(f)) }); }
     for (const p of G.pops) if (!p._s) { p._s = 1; NetPlay.event({ type: '$pop', j: JSON.stringify(enc(p)) }); }
-    const g = {}; for (const k of GF) { const v = enc(G[k]); if (v !== undefined && v !== null) g[k] = v; }
+    const now = performance.now(); fullBudget = 2;
+    const g = {}, gs = {}; for (const k of GF) { const v = enc(G[k]); if (v !== undefined && v !== null) (GS.has(k) ? gs : g)[k] = v; }
     return {
-      seed: G.seed, round: G.round, st: ST.indexOf(G.state), t: r2(G.time), g,
-      m: G.mages.map(m => { const o = {}; for (const k of MF) { const v = enc(m[k]); if (v !== undefined && v !== null && v !== 0 && v !== false) o[k] = v; } return o; }),
-      u: G.units.filter(u => !u.isMage).map(u => { const o = enc(u); o.$c = codeOf(u); if (u instanceof Creature) o.$k = u.kind; return o; }),
-      s: G.spells.map(s => enc(s)),
+      seed: G.seed, round: G.round, st: ST.indexOf(G.state), t: r2(G.time), g, gs: NetPlay.slow('gs', gs),
+      m: G.mages.map(m => { const o = {}; for (const k of MF) { let v = XY.has(k) && typeof m[k] === 'number' ? XY.get(k)(m[k]) : enc(m[k]);
+        if (k === 'hands' && Array.isArray(m.hands)) v = m.hands.map(h => { const q = {}; for (const kk in h) { if (kk === 'nat') continue; const e = enc(h[kk]); if (e !== 0 && e !== undefined) q[kk] = e; } return q; });
+        if (NZ.has(k) && v && typeof v === 'object' && !Array.isArray(v)) { const q = {}; for (const kk in v) if (v[kk] !== 0 && v[kk] !== null) q[kk] = v[kk]; v = q; } // los ceros (números) los pone el remoto
+        if (v !== undefined && v !== null && v !== 0 && v !== false) o[k] = v; } return o; }),
+      u: G.units.filter(u => !u.isMage).map(u => { const o = encUnit(u, now); o.$c = codeOf(u); if (u instanceof Creature) o.$k = u.kind; return o; }),
+      s: G.spells.map(s => encUnit(s, now, SKEEP)), // hechizos: igual (id y posición siempre; lo demás si cambió)
       so: G.sources.map(s => [r2(s.cd), r2(s.glow)]),
     };
   }
@@ -144,7 +172,7 @@ const NetGame = (() => {
   function apply(A, B, k) {
     const G = Game.G; if (!A || !B || B.seed !== kfSeed || G.seed !== B.seed) return;
     G.state = ST[B.st] || 'play';
-    const g = dec(B.g); for (const key of GF) G[key] = key in g ? g[key] : key === 'wins' || key === 'score' || key === 'respawn' ? G[key] : null;
+    if (B.gs) lastGs = B.gs; const g = Object.assign({}, lastGs ? dec(lastGs) : null, dec(B.g)); for (const key of GF) G[key] = key in g ? g[key] : key === 'wins' || key === 'score' || key === 'respawn' ? G[key] : null;
     if (!G.wins) G.wins = G.mages.map(() => 0); if (!G.score) G.score = G.mages.map(() => 0); if (!G.respawn) G.respawn = G.mages.map(() => 0);
     if (G.banner && typeof G.banner.t !== 'number') G.banner.t = 0;
     // criaturas y objetos (torretas, señuelos, el tejo): se crean la primera vez que llegan
@@ -163,14 +191,16 @@ const NetGame = (() => {
       const a = A.m[i], b = B.m[i]; if (!a || !b) return;
       const d = dec(b); for (const key in ZERO) if (!(key in d)) m[key] = ZERO[key];
       for (const key of ['st', 'buff', 'dash']) if (d[key] && m[key]) { for (const kk in m[key]) if (typeof m[key][kk] === 'number' && !(kk in d[key])) m[key][kk] = 0; }
-      if (d.hands) { d.hands.forEach((h, j) => { if (m.hands[j]) Object.assign(m.hands[j], h); }); delete d.hands; }
+      if (d.hands) { d.hands.forEach((h, j) => { const H = m.hands[j]; if (!H) return; for (const kk in H) if (typeof H[kk] === 'number' && !(kk in h)) H[kk] = 0; Object.assign(H, h); }); delete d.hands; } // (los ceros no viajan)
       setDeep(m, d);
       const near = Math.abs((a.x || 0) - (b.x || 0)) < 260 && Math.abs((a.y || 0) - (b.y || 0)) < 260;
       if (near) { m.x = lerp(a.x || 0, b.x || 0, k); m.y = lerp(a.y || 0, b.y || 0, k); m.face = lerpA(a.face || 0, b.face || 0, k); }
       if (!('alive' in b)) m.alive = false;
     });
     // hechizos: los de B; los que ya venían en A, a mitad de camino
-    G.spells = B.s.map(o => { const s = dec(o), a = A.s.find(x => x.id === o.id); if (a && typeof a.x === 'number' && typeof s.x === 'number' && Math.abs(a.x - s.x) < 400) { s.x = lerp(a.x, s.x, k); s.y = lerp(a.y, s.y, k); } return s; });
+    const seenS = new Set();
+    G.spells = B.s.map(o => { seenS.add(o.id); let c = sMap.get(o.id); if (!c) sMap.set(o.id, (c = {})); Object.assign(c, dec(o)); const s = Object.assign({}, c), a = A.s.find(x => x.id === o.id); if (a && typeof a.x === 'number' && typeof s.x === 'number' && Math.abs(a.x - s.x) < 400) { s.x = lerp(a.x, s.x, k); s.y = lerp(a.y, s.y, k); } return s; });
+    for (const id of [...sMap.keys()]) if (!seenS.has(id) && !A.s.some(x => x.id === id)) sMap.delete(id);
     B.so.forEach((v, i) => { if (G.sources[i]) { G.sources[i].cd = v[0]; G.sources[i].glow = v[1]; } });
   }
 
@@ -281,10 +311,11 @@ const NetGame = (() => {
     if (!NetPlay.isClient) return;
     if (d.t === 'kf') kfQ.push(d); else if (d.t === 'td') tdQ.push(d); else if (d.t === 'res' && d.r) resQ = d.r;
   });
-  function reset() { for (const k in ghosts) delete ghosts[k]; shadow = null; sentSeed = null; kfSeed = null; tdN = 0; tdLast = 0; kfMiss = 0; uMap.clear(); evQ = []; kfQ = []; tdQ = []; resQ = null; shownRes = false; pinMine = []; }
+  let lastGs = null; const sMap = new Map(); // remoto: lo que se sabe de cada hechizo (llega solo lo que cambia)
+  function reset() { lastGs = null; sMap.clear(); for (const k in ghosts) delete ghosts[k]; shadow = null; sentSeed = null; kfSeed = null; tdN = 0; tdLast = 0; kfMiss = 0; uMap.clear(); evQ = []; kfQ = []; tdQ = []; resQ = null; shownRes = false; pinMine = []; }
 
   return {
-    seatsMax: 4, again, snap, apply, clientStep, readLocal, pinFrom, get pst() { return PST; },
+    seatsMax: 4, again, snap, apply, clientStep, readLocal, pinFrom, get pst() { return PST; }, slowKeys: ['gs'],
     neutral: () => NEUTRAL,
     // anfitrión: cada evento viaja (la unidad como número)
     fwd(e) { const o = {}; for (const k in e) { const v = e[k], t = typeof v; if (t === 'number' || t === 'string' || t === 'boolean') o[k] = v; else if (k === 'unit' && v instanceof Unit) o.unit = codeOf(v); else if (Array.isArray(v) && v.length < 12 && v.every(x => typeof x !== 'object')) o[k] = v.slice(); } NetPlay.event(o); },

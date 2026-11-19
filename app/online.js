@@ -169,6 +169,7 @@ const Online = (() => {
     ev = ev || { mode: g.net.mode || (g.modes[0] && g.modes[0].id), map: (g.maps[Math.floor(Math.random() * g.maps.length)] || [])[0], rounds: 3 };
     Net.send('*', { $: 'game', game: g.id, ev, seats, sid, tour: tour || null }, true);
     openNet(g.id, 'host', seats, ev, sid, tour);
+    Net.setPlay({ game: g.id, ev, seats, sid, tour: tour || null });
   }
   /* ---------- reacciones rápidas (emojis que salen flotando en todos los aparatos de la sala) ---------- */
   const REACT = ['👋', '😂', '🔥', '😱', '👏', '🏆', '😎', '🙏'];
@@ -238,7 +239,23 @@ const Online = (() => {
   // al entrar alguien nuevo, el anfitrión le cuenta qué está armando
   Net.on('peers', () => { if (Net.isHost && pick) sendPick(); });
   // los remotos: el anfitrión arrancó una partida → abrirla aquí también
-  Net.on('msg', (from, m) => { if (m && m.$ === 'game' && !Net.isHost && from === Net.hostId) openNet(m.game, 'client', m.seats, m.ev, m.sid, m.tour); });
+  Net.on('msg', (from, m) => { if (m && m.$ === 'game' && !Net.isHost && from === Net.hostId) joinPlay(m); });
+  // el remoto sigue lo que dice la sala: si el anfitrión está en una partida y aquí no (se perdió el aviso en un bache de
+  // la red), entra; si el anfitrión ya volvió a la sala y aquí sigue la partida vieja, sale. Lo que uno dejó a propósito
+  // (botón de volver) no se le vuelve a abrir.
+  let leftSid = null;
+  function joinPlay(m) {
+    if (!m || typeof m.sid !== 'string' || !Array.isArray(m.seats) || !GAMES().some(g => g.id === m.game)) return;
+    const L = GAMEHUB.Launcher, cur = L.net; if (cur && cur.sid === m.sid) return; // ya está en esa
+    if (L.open_ && !cur) return; // jugando otra cosa por su cuenta
+    leftSid = null; openNet(m.game, 'client', m.seats, m.ev, m.sid, m.tour);
+  }
+  Net.on('room', R => {
+    if (Net.isHost || !R) return; const L = GAMEHUB.Launcher, cur = L.net, P = R.play;
+    if (P && P.sid !== leftSid && (!cur || cur.sid !== P.sid) && Array.isArray(P.seats) && P.seats.some(x => x && x.dev === Net.id)) joinPlay(P); // (solo si juega aquí: quien llega tarde a mirar no entra a la fuerza)
+    else if (!P && cur && cur.role === 'client') { L.close(); hostAway = false; note = 'El anfitrión volvió a la sala.'; if (visible()) render(); }
+  });
+
   let hostT = 0;
   function waitHost() { clearTimeout(hostT); hostT = setTimeout(() => { if (Net.alive && !Net.isHost && !Net.room) { note = 'No aparece el anfitrión. Revisa el código, o que su GameHub siga abierto en la sala.'; render(); } }, 15000); }
   Net.on('room', () => { if (visible()) render(); });
@@ -274,5 +291,5 @@ const Online = (() => {
   Net.on('msg', (from, m) => { if (m && m.$ === 'away' && !Net.isHost && from === Net.hostId) { hostAway = !!m.on; if (visible()) render(); } });
   // refrescar el ping de vez en cuando (sin tocar lo que se está escribiendo)
   setInterval(() => { if (visible() && Net.alive && !el().contains(document.activeElement && document.activeElement.tagName === 'INPUT' ? document.activeElement : null)) render(); }, 3000);
-  return { render, get code0() { return code0; }, info, players: () => players(Net.room), playTour };
+  return { render, get code0() { return code0; }, info, players: () => players(Net.room), playTour, leftNet(sid) { if (!Net.isHost) leftSid = sid; } };
 })();

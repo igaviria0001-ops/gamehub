@@ -122,9 +122,12 @@ const NetGame = (() => {
     const seenF = new Set();
     G.flares = B.fl.map(f => { const [id, x0, y0, vx, vy, life, owner] = f; seenF.add(id); let tr = fTrail.get(id); if (!tr) fTrail.set(id, (tr = [])); return { x: x0 + vx * back, y: y0 + vy * back, vx, vy, life, owner, flare: true, trail: tr }; });
     for (const id of [...fTrail.keys()]) if (!seenF.has(id)) fTrail.delete(id);
-    G.crates = B.cr.map(c => Object.assign({}, c)); G.chutes = B.ch.map(c => Object.assign({}, c));
-    if (B.tg) G.targets = B.tg.map(t => Object.assign({}, t)); else if (G.mode !== 'targets') G.targets = [];
-    G.case = B.cs ? Object.assign({}, B.cs) : null;
+    // lo que flota o cae (cajas en paracaídas, blancos, drones, el maletín): entre las dos instantáneas si es lo mismo y está cerca
+    const near = (a, o) => a && typeof a.x === 'number' && typeof o.x === 'number' && Math.abs(a.x - o.x) < 160 && Math.abs(a.y - o.y) < 160 && a.type === o.type && a.kind === o.kind;
+    const mid = (a, o) => { const r = Object.assign({}, o); if (near(a, o)) { r.x = lerp(a.x, o.x, k); r.y = lerp(a.y, o.y, k); } return r; };
+    G.crates = B.cr.map((c, i) => mid(A.cr && A.cr[i], c)); G.chutes = B.ch.map((c, i) => mid(A.ch && A.ch[i], c));
+    if (B.tg) G.targets = B.tg.map((t, i) => mid(A.tg && A.tg[i], t)); else if (G.mode !== 'targets') G.targets = [];
+    G.case = B.cs ? mid(A.cs, B.cs) : null;
     if (B.gf && G.gates) B.gf.forEach((f, i) => { if (G.gates[i]) G.gates[i].flash = f.slice(); });
     if (B.bo && G.boss) { const O = G.boss, a = A.bo, s = B.bo.s, sa = a ? a.s : s; O.x = lerp(sa[0], s[0], k); O.y = lerp(sa[1], s[1], k); O.dir = s[2]; O.flip = s[3]; O.phase = s[4]; O.dead = !!s[5]; O.fallT = s[6]; O.hitT = s[7]; O.t = s[8]; O.lastHit = s[9];
       B.bo.p.forEach((q, i) => { const P = O.parts[i], qa = a && a.p[i]; if (!P) return; P.x = qa ? lerp(qa[0], q[0], k) : q[0]; P.y = qa ? lerp(qa[1], q[1], k) : q[1]; P.hp = q[2]; P.alive = !!q[3]; P.hitT = q[4]; P.fireT = q[5]; P.aim = q[6]; }); }

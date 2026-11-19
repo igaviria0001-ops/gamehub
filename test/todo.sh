@@ -25,6 +25,10 @@ run prediccion env VIEW=$V SIN=1 node test/netpred.js
 run datos env VIEW=$V SECS=10 node test/netdatos.js
 run relevo env VIEW=$V SECS=10 RELEVO=1 node test/netdatos.js
 run redMala env RED='netloss=0.15&netlag=120' node test/netsrt.js
+run movilCorte env PERFIL=corte CUT=9000 JUEGOS=sortilegio,ventolera,tira-y-afloja node test/netmovil.js
+run movilRelevo env PERFIL=relay JUEGOS=sortilegio,ventolera,tira-y-afloja node test/netmovil.js
+run sincronia node test/netsync.js
+run iguales env VIEW=$V node test/netver.js
 run ui node test/ui.js
 run flujo node test/flujo.js
 run app node test/app.js

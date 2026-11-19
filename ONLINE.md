@@ -357,3 +357,62 @@ mejores; (5) todo optimizado y comprobado.
   y tarjeta `assets/enlace.jpg` 1200×630 (lo importante en el cuadrado del centro, por si la app la recorta), `favicon.ico`
   (16/32/48) en docs/ y en la raíz, ícono de 192 en la cabecera. La página de la raíz también lleva la vista previa y ya no
   pierde `?sala` al redirigir. Herramienta `tools/enlace.js`; prueba `test/enlace.js` (en `todo.sh`).
+
+## Tercera tanda (19 nov) — datos móviles: fluidez y que nadie se quede atrás
+Pedido de Ignacio: con datos va muy trabado (probaron Sortilegio y Ventolera); a veces el anfitrión ya estaba en la
+siguiente partida y el otro seguía en la anterior sin nada; en Sortilegio (Tejo) el tejo solo se ve en el anfitrión.
+
+### Causas encontradas (leyendo el código y midiendo con red simulada)
+1. **Relevo para siempre.** Si la conexión directa se cortaba 5 s (cambio de antena, señal floja: normal en datos), se
+   pasaba al relevo por MQTT (~12/s, +200–300 ms por los servidores públicos) y **nunca volvía** a la conexión directa,
+   aunque esta reviviera. Desde ese bache, el resto de la sesión iba por el camino lento.
+2. **Avisos de una sola vez.** La cfg de la siguiente partida, los resultados, «empezó la partida» y «volvimos a la sala»
+   salían una vez. Por el relevo (o en el bache del cambio) se podían perder → uno se quedaba en la partida anterior.
+3. **Sortilegio: unidades vacías.** `enc()` convierte cualquier `Unit` en su número (así se referencian); las criaturas
+   y objetos (tejo, espantos de la Cacería, torretas, señuelos) viajaban como `{ $u }` sin posición ni tipo → el remoto
+   no los dibujaba.
+4. **Instantáneas desordenadas.** Por el canal sin orden llegan desordenadas (8–10 % con datos) y se guardaban en el
+   orden de llegada; el colchón crecía de golpe (el dibujo saltaba hacia atrás) y tenía tope de 250 ms.
+5. Menores: entradas sin repetición (un toque cuyo paquete se perdía, se perdía), objetos secundarios sin interpolar
+   (cohetes de VÉRTIGO, balón y muebles de Tira y Afloja, cajas/blancos/maletín de Ventolera: iban a saltos), la
+   instantánea de Sortilegio ~1,6–1,8 KB (dos paquetes: si se pierde uno, se pierde toda).
+
+### Plan
+- T1 medir: red simulada de datos móviles en `net.js` (`?netmob=1`, `?netjit`, `?netspike`, `?netcut`, `Net.simCut`) y
+  `test/netmovil.js` (PERFIL=mob|relay|corte): hambre del dibujo, rachas, saltos atrás, desorden, colchón, tamaño.
+- T2 transporte: al relevo a los 2,5 s de corte; de vuelta a directo apenas la conexión revive; el anfitrión prueba una
+  conexión nueva mientras va por el relevo (6 s, 15 s, 30 s, 45 s…).
+- T3 sincronía: instantáneas/eventos con el número de partida (lo viejo se bota; si el anfitrión va en otra, se pide la
+  cfg), cfg y resultados se repiten cada 1,5 s (al juego le llegan una vez), la sala lleva la partida abierta del
+  anfitrión (`play`): el remoto entra o sale solo.
+- T4 fluidez: instantáneas en orden, reloj de dibujo que cambia de velocidad (0,75–1,1×) en vez de saltar, colchón
+  hasta 400 ms, entradas numeradas con las 3 anteriores y en fila (cada estado se ve ≥16 ms), objetos secundarios
+  interpolados, instantánea de Sortilegio en un paquete, aviso discreto «Red lenta».
+- T5 Sortilegio: unidades con sus campos; `test/netver.js` revisa todos los modos de los 4 juegos.
+- T6 antes/después, suite completa, sin conexión idéntico, publicar.
+
+### Tercera tanda — bitácora
+- **Medido antes/después** (`test/netmovil.js`, mismo escenario, la versión de antes = c075b0c con solo las medidas;
+  «hambre» = cuadros en los que el remoto no tiene instantánea para ese momento y se congela):
+
+  | Perfil | Juego | Antes | Después |
+  |---|---|---|---|
+  | datos móviles, directo | Sortilegio | 0,7 % · 3 congeladas | 0 % |
+  | | Ventolera | 5,7 % · 9 congeladas (hasta 0,75 s) | 0 % |
+  | | Tira y Afloja | 0 % | 1,2 % · 3 (≤0,2 s) |
+  | por el relevo | Sortilegio | 11,8 % · 38 congeladas | 1,8 % · 5 |
+  | | Ventolera | 13,2 % · 29 | 3,1 % · 9 |
+  | | Tira y Afloja | (la prueba falló al elegir escenario) | 0 % |
+  | corte de 9 s de lo directo | Sortilegio | congelado 6,4 s y **quedó en el relevo** | 2,8 s y volvió a directo |
+  | | Ventolera | 6,6 s, quedó en el relevo | 3,4 s, volvió |
+  | | Tira y Afloja | 5,3 s, quedó en el relevo | 2,7 s, volvió |
+
+  El colchón ahora sube hasta 400 ms por el relevo (tu personaje se predice: responde igual de rápido; los demás se ven un
+  poco más atrás pero sin tirones). VÉRTIGO no se puede medir aquí (sin GPU dibuja a 2–3 cuadros por segundo).
+- Instantánea de Sortilegio (peleando, máquina contra máquina): duelo 2052 → 1174 B, tejo 2091 → 1297 B, altar → 1265 B
+  (posiciones a 0,1 px, ceros que no viajan, lo que casi no cambia aparte, unidades y hechizos: solo lo que cambió +
+  repaso completo escalonado). En la Cacería sigue ~1,8 KB (muchos espantos con relojes propios).
+- `test/netsync.js`: se borra a propósito en el remoto el aviso de empezar, la cfg de la siguiente partida y el de volver
+  a la sala → entra, pasa a la siguiente (3,2 s) y sale igual.
+- `test/netver.js`: Sortilegio en sus 4 modos, el remoto tiene lo mismo que el anfitrión (antes el tejo y los espantos
+  no estaban).

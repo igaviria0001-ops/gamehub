@@ -83,7 +83,11 @@ const NetGame = (() => {
       if (b[43] >= 0) c.hearts = b[43]; c.outT = b[44] || 0; if (c.stats) c.stats.hitsDone = b[45] || 0;
     });
     R.order = B.ord.map(i => R.cars[i]).filter(Boolean); if (B.ru && R.rules) Object.assign(R.rules, B.ru);
-    R.hz = B.hz.map(z => Object.assign({}, z));
+    // cohetes, avispas, aceite…: entre las dos instantáneas (el mismo índice si es la misma cosa y quedó cerca); antes saltaban
+    R.hz = B.hz.map((z, i) => { const o = Object.assign({}, z), a = A.hz && A.hz[i];
+      if (a && a.k === z.k && a.owner === z.owner && typeof a.s === 'number' && typeof z.s === 'number') { let ds = z.s - a.s; if (ds > L / 2) ds -= L; else if (ds < -L / 2) ds += L;
+        if (Math.abs(ds) < 120) { o.s = ((a.s + ds * k) % L + L) % L; if (typeof a.u === 'number' && typeof z.u === 'number') o.u = lerp(a.u, z.u, k); if (typeof a.h === 'number' && typeof z.h === 'number') o.h = lerp(a.h, z.h, k); } }
+      return o; });
     B.bx.forEach((g, i) => { if (R.boxes[i]) R.boxes[i].gone = g; });
     const gs = new Set(B.gm); R.track.gems.forEach((g, i) => { g.gone = gs.has(i) ? 1 : 0; });
   }

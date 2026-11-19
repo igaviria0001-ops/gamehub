@@ -265,7 +265,7 @@
     function close() {
       const wasNet = !!netCfg, wasTour = !!(netCfg && netCfg.tour); if (wasNet) post({ cmd: 'netoff' });
       // el anfitrión volvió a la sala: los demás también vuelven (si no, se quedarían mirando una partida quieta)
-      if (wasNet && netCfg.role === 'host' && typeof Net !== 'undefined' && Net.alive) Net.send('*', { $: 'endgame', sid: netCfg.sid }, true);
+      if (wasNet && netCfg.role === 'host' && typeof Net !== 'undefined' && Net.alive) { Net.send('*', { $: 'endgame', sid: netCfg.sid }, true); Net.setPlay(null); }
       netCfg = null;
       clearTimeout(readyT); cur = null; tourEv = null;
       stage.hidden = true; stage.classList.remove('ready'); frame.removeAttribute('srcdoc'); frame.src = 'about:blank'; hideToast();
@@ -312,7 +312,7 @@
         }
       } else if (m.event === 'netinfo' && netCfg && Array.isArray(m.slow)) {
         netCfg.slowKeys = m.slow.filter(k => typeof k === 'string' && k.length < 20).slice(0, 20);
-      } else if (m.event === 'exit') close();
+      } else if (m.event === 'exit') { leftOnPurpose(); close(); }
       else if (m.event === 'abort' && tourEv) { toast('La prueba quedó pendiente: pueden volver a jugarla', true); }
       else if (m.event === 'error') toast('El juego avisó un error: ' + esc(m.msg || ''), !!tourEv);
     });
@@ -320,10 +320,12 @@
     if (typeof Net !== 'undefined') Net.on('msg', (from, m) => { if (m && m.$ === 'endgame' && netCfg && netCfg.role === 'client' && m.sid === netCfg.sid && from === Net.hostId && cur) { toast('El anfitrión volvió a la sala', false); setTimeout(() => { if (netCfg && netCfg.sid === m.sid) close(); }, 1600); } });
     // por el relevo (sin WebRTC) solo sale la instantánea más nueva: lo «lento» de la saltada pasa a esa
     // el remoto le cuenta a su juego el ping al anfitrión (para predecir su propio personaje)
-    setInterval(() => { if (!cur || !netCfg || netCfg.role !== 'client' || typeof Net === 'undefined' || !Net.alive) return; const h = Net.peers.get(Net.hostId); if (h && h.rtt > 0) post({ cmd: 'netrtt', rtt: Math.round(h.rtt) }); }, 1000);
+    setInterval(() => { if (!cur || !netCfg || netCfg.role !== 'client' || typeof Net === 'undefined' || !Net.alive) return; const h = Net.peers.get(Net.hostId); if (h && h.rtt > 0) post({ cmd: 'netrtt', rtt: Math.round(h.rtt), via: h.via }); }, 1000);
     if (typeof Net !== 'undefined') Net.relayMerge = (a, b) => { if (!netCfg || !netCfg.slowKeys || a.$g !== netCfg.sid || b.$g !== netCfg.sid || !a.d || !b.d || a.d.t !== 's' || b.d.t !== 's' || !a.d.d || !b.d.d) return; for (const k of netCfg.slowKeys) if (a.d.d[k] !== undefined && b.d.d[k] === undefined) b.d.d[k] = a.d.d[k]; };
     $('#lretry').addEventListener('click', () => { const g = cur, ev = tourEv, nc = netCfg; if (g) { delete cache[g.id]; open(g.id, ev, nc); } });
-    $('#lback').addEventListener('click', () => close());
+    // salir a propósito de una partida en línea (remoto): la sala no se la vuelve a abrir
+    const leftOnPurpose = () => { if (netCfg && netCfg.role === 'client' && typeof Online !== 'undefined' && Online.leftNet) Online.leftNet(netCfg.sid); };
+    $('#lback').addEventListener('click', () => { leftOnPurpose(); close(); });
     return { open, close, get open_() { return !!cur; }, get net() { return netCfg; } };
   })();
 
