@@ -416,3 +416,11 @@ siguiente partida y el otro seguía en la anterior sin nada; en Sortilegio (Tejo
   a la sala → entra, pasa a la siguiente (3,2 s) y sale igual.
 - `test/netver.js`: Sortilegio en sus 4 modos, el remoto tiene lo mismo que el anfitrión (antes el tejo y los espantos
   no estaban).
+- `test/netver.js` en los 19 modos de los 4 juegos encontró otro error de antes: en **Tira y Afloja · Gol** la estela del
+  balón viajaba como `[null, null…]` (el codificador corta a 3 niveles) y el dibujo del remoto se caía al patear fuerte
+  → la estela ya no viaja y el remoto arma la suya. VÉRTIGO: en esta máquina el remoto va tan lento que tarda en alcanzar
+  al anfitrión (la prueba le da más tiempo); lo demás (autos, cajas, reglas, corazones) igual.
+- Suite completa (`bash test/todo.sh`, VIEW=400x225): todo OK. Sin conexión idéntico en los 4 juegos (en Tira y Afloja la
+  primera pasada marcó imágenes «distintas» por tiempos de animación de los botones con la máquina cargada; repetida con
+  la máquina libre: idéntica en todo).
+

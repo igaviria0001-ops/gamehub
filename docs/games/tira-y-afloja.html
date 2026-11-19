@@ -14349,6 +14349,8 @@ const NetGame = (() => {
     o.$s = { mods: enc(A.mods), zn: A.zones.map(Z => r2(Z.active)), x }; return o;
   }
   let arenaSlow = null;
+  // la estela del balón no viaja (llegaba como [null, null…] y el dibujo del remoto se caía): el remoto arma la suya
+  const noTrail = o => { if (o && o.ball) delete o.ball.trail; return o; };
   function snap() {
     if (!on() || G.state === 'attract' || !NetPlay.cfg || !G.rope) return null;
     const g = {}; for (const k of GF) { const v = enc(G[k]); if (v !== undefined) g[k] = v; }
@@ -14360,7 +14362,7 @@ const NetGame = (() => {
       p: G.players.map(p => PF.map(k => enc(p[k]))),
       rp: { pts, len: r1(R.len), strain: r2(R.strain), tension: r1(R.tension), vis: R.visible ? 1 : 0, dA: [r2(R.dirA.x), r2(R.dirA.y)], dB: [r2(R.dirB.x), r2(R.dirB.y)], temp: r2(R.temp), snapFx: r2(R.snapFx), jitter: r2(R.jitter) },
       pl: NetPlay.slow('pl', G.pellets.map(pl => { const o = enc(pl); delete o.t; return o; })), gd: NetPlay.slow('gd', G.golden ? (o => { delete o.t; return o; })(enc(G.golden)) : 0),
-      a: (() => { const o = arenaSnap(); arenaSlow = o.$s; delete o.$s; return o; })(), as: NetPlay.slow('as', arenaSlow), m: NetPlay.slow('m', enc(Modes.M)), f: NetPlay.slow('f', enc(Fiesta.state), 500),
+      a: (() => { const o = arenaSnap(); arenaSlow = o.$s; delete o.$s; return o; })(), as: NetPlay.slow('as', arenaSlow), m: NetPlay.slow('m', noTrail(enc(Modes.M))), f: NetPlay.slow('f', enc(Fiesta.state), 500),
       cam: G.cam.focus ? enc(G.cam.focus) : 0,
     };
   }
@@ -14388,7 +14390,9 @@ const NetGame = (() => {
     const Ar = ARENA, D = B.a, DA = A.a; if (D) { Ar.t = D.t; if (D.mv) D.mv.forEach((v, i) => { const R2 = Ar.movers[i], va = DA && DA.mv && DA.mv[i]; if (R2) { const nr = va && Math.abs(va[0] - v[0]) < 200 && Math.abs(va[1] - v[1]) < 200; R2.x = nr ? lerp(va[0], v[0], k) : v[0]; R2.y = nr ? lerp(va[1], v[1], k) : v[1]; R2.dx = v[2]; R2.dy = v[3]; } }); }
     const DS = B.as; if (DS) { if (DS.mods) deepSet(Ar.mods, DS.mods); if (DS.zn) DS.zn.forEach((v, i) => { if (Ar.zones[i]) Ar.zones[i].active = v; }); if (DS.x) deepSet(Ar, DS.x); }
     if (B.m) deepSet(Modes.M, B.m);
-    { const ba = A.m && A.m.ball, bb = B.m && B.m.ball, MB = Modes.M.ball; if (MB && ba && bb && Math.abs(ba.x - bb.x) < 300 && Math.abs(ba.y - bb.y) < 300) { MB.x = lerp(ba.x, bb.x, k); MB.y = lerp(ba.y, bb.y, k); if (typeof ba.rot === 'number' && typeof bb.rot === 'number' && Math.abs(bb.rot - ba.rot) < 3) MB.rot = lerp(ba.rot, bb.rot, k); } } // el balón, suave
+    { const ba = A.m && A.m.ball, bb = B.m && B.m.ball, MB = Modes.M.ball; if (MB && ba && bb && Math.abs(ba.x - bb.x) < 300 && Math.abs(ba.y - bb.y) < 300) { MB.x = lerp(ba.x, bb.x, k); MB.y = lerp(ba.y, bb.y, k); if (typeof ba.rot === 'number' && typeof bb.rot === 'number' && Math.abs(bb.rot - ba.rot) < 3) MB.rot = lerp(ba.rot, bb.rot, k); } // el balón, suave
+      // su estela, como la del anfitrión (rápido = deja rastro que se apaga en ~0,17 s)
+      if (MB) { const now = performance.now(), tr = MB._tr || (MB._tr = []); if (Math.hypot(MB.vx || 0, MB.vy || 0) > 900 && (!tr.length || now - tr[tr.length - 1].t > 16)) tr.push({ x: MB.x, y: MB.y, t: now }); while (tr.length && now - tr[0].t > 170) tr.shift(); MB.trail = tr.slice(-8).map(g => ({ x: g.x, y: g.y, a: 0.4 - (now - g.t) * 0.0024 })).filter(g => g.a > 0); } }
     if (B.f) deepSet(Fiesta.state, B.f);
     G.cam.focus = B.cam ? Object.assign({}, B.cam) : null;
   }

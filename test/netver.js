@@ -38,7 +38,8 @@ async function uno(b, gid, mode) {
   await wait(mode === 'hunt' ? 7000 : 3500);
   let h = null, c = null, igual = false;
   const sig = o => JSON.stringify(Object.fromEntries(Object.entries(o).filter(([k]) => !IGNORA[gid].includes(k))));
-  for (let i = 0; i < 10 && !igual; i++) { h = await fh.evaluate(CENSO[gid]); await wait(450); c = await fc.evaluate(CENSO[gid]); igual = sig(h) === sig(c); if (!igual) await wait(300); }
+  const tries = gid === 'vertigo' ? 40 : 10; // (VÉRTIGO en una máquina sin GPU va muy lento: el remoto tarda en alcanzar)
+  for (let i = 0; i < tries && !igual; i++) { h = await fh.evaluate(CENSO[gid]); await wait(450); c = await fc.evaluate(CENSO[gid]); igual = sig(h) === sig(c); if (!igual) await wait(300); }
   // el tejo: en el remoto existe y está donde lo tiene el anfitrión (con margen: el remoto ve un poco atrás)
   let tejoOk = true; if (gid === 'sortilegio' && mode === 'tejo') tejoOk = !!(c && c.tejo && h && h.tejo && Math.hypot(c.tejo[0] - h.tejo[0], c.tejo[1] - h.tejo[1]) < 220);
   await H.screenshot({ path: `${OUT}ver-${gid}-${mode}-anfitrion.png` }); await C.screenshot({ path: `${OUT}ver-${gid}-${mode}-remoto.png` });
