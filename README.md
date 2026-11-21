@@ -112,6 +112,10 @@ Cada juego incluye `src/00h-hub.js` (copia de `shared/hub-link.js`). Si el juego
 - al terminar, el juego responde `{ event: 'result', winner: 0 | 1 | -1 }` y muestra **Continuar torneo ▸**;
 - pantalla completa: el juego pide `{ event: 'fs', on }` y GameHub la pone en toda la ventana (y le avisa `{ cmd: 'fs', on }`).
 
+## Agregar un juego nuevo
+
+La guía está en [GUIA-JUEGO-NUEVO.md](GUIA-JUEGO-NUEVO.md): la base mínima obligatoria, que es igual para cualquier estilo, qué cambia según el tipo de juego y qué archivos de la portada se tocan. Las reglas generales para trabajar en el repositorio están en [CLAUDE.md](CLAUDE.md).
+
 ## Licencias
 
 Letras Bungee, Fredoka, Nunito, Comfortaa, Macondo y Russo One: SIL Open Font License. VÉRTIGO usa three.js r128 (licencia MIT). La galaxia de fondo es generada por `tools/galaxia.js`.
