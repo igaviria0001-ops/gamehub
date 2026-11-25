@@ -155,7 +155,7 @@ const Online = (() => {
     if ($('#on-back', root)) $('#on-back', root).onclick = () => { pick = null; pickEv = null; sendPick(); render(); };
   }
   // los demás ven lo que el anfitrión está armando
-  function sendPick() { Net.send('*', { $: 'pick', game: pick, ev: pickEv }, true); }
+  function sendPick() { Net.send('*', { $: 'pick', game: pick, ev: pickEv }, true); if (pick) GAMEHUB.Launcher.preload(pick); }
   // el anfitrión arranca una partida: puestos con los jugadores de la sala (en orden), y todos abren el juego
   function startGame(g, ev, only, tour) {
     const ps = (only || players(Net.room)).slice(0, g.net.seats), sid = Math.random().toString(36).slice(2, 10);
@@ -235,7 +235,7 @@ const Online = (() => {
     const g = lastPick && GAMES().find(x => x.id === lastPick.game);
     return g ? `<div class="on-next" style="--c1:${g.c1};--c2:${g.c2}"><span class="lbl">EL ANFITRIÓN PREPARA</span><b>${esc(evText(g, lastPick.ev).split(' · ')[0])}</b><small>${esc(evText(g, lastPick.ev).split(' · ').slice(1).join(' · '))}</small></div>` : '<p class="note">Esperando a que el anfitrión elija…</p>';
   }
-  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0, opts: m.ev.opts && typeof m.ev.opts === 'object' ? Object.fromEntries(Object.entries(m.ev.opts).filter(([k, v]) => /^\w{1,20}$/.test(k) && typeof v === 'boolean')) : {} } : {} } : null; if (visible()) render(); } });
+  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0, opts: m.ev.opts && typeof m.ev.opts === 'object' ? Object.fromEntries(Object.entries(m.ev.opts).filter(([k, v]) => /^\w{1,20}$/.test(k) && typeof v === 'boolean')) : {} } : {} } : null; if (lastPick && lastPick.game) GAMEHUB.Launcher.preload(lastPick.game); if (visible()) render(); } });
   // al entrar alguien nuevo, el anfitrión le cuenta qué está armando
   Net.on('peers', () => { if (Net.isHost && pick) sendPick(); });
   // los remotos: el anfitrión arrancó una partida → abrirla aquí también

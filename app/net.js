@@ -1,5 +1,8 @@
 /* =========================================================================
    RED DE GAMEHUB — salas en línea sin servidor propio.
+   · Servidor propio (Cloudflare, carpeta servidor/): señal y relevo rápidos
+     por WebSocket y credenciales TURN de Cloudflare (puntos en Colombia). Si
+     no está o no responde, todo sigue como antes (MQTT y Open Relay).
    · Señalización: brokers MQTT públicos por WebSocket (varios a la vez) con
      los mensajes cifrados (AES-GCM, clave sacada del código de la sala).
    · Conexión: WebRTC entre aparatos (estrella: el anfitrión con cada uno).
@@ -19,6 +22,9 @@
 const Net = (() => {
   const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   const BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
+  // servidor propio (Cloudflare Workers). ?server=… (pruebas) o gamehub_server (Ajustes) lo cambian; '' = sin servidor
+  const SERVER0 = '';
+  const SERVER = (() => { try { const q = new URLSearchParams(location.search).get('server'); const v = q != null ? q : localStorage.getItem('gamehub_server'); const u = v != null ? v : SERVER0; return /^https?:\/\/[\w.\-:]+$/.test(u || '') ? u.replace(/\/$/, '') : ''; } catch (e) { return SERVER0; } })();
   const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }, { urls: 'stun:stun1.l.google.com:19302' }];
   const enc = new TextEncoder(), dec = new TextDecoder();
   const rid = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => ALPHA[b % ALPHA.length]).join('');
@@ -42,7 +48,7 @@ const Net = (() => {
   function simDelay(p, now) {
     let d = SIM.lag + Math.abs(gauss()) * SIM.jit;
     if (SIM.spike) { const dt = Math.min(1000, now - (p.simChk || now)); p.simChk = now; if (now > (p.congUntil || 0) && Math.random() < SIM.spike * dt / 1000) { p.congUntil = now + 400 + Math.random() * 600; p.congAdd = 150 + Math.random() * 350; } if (now < (p.congUntil || 0)) d += p.congAdd; }
-    if (p.via === 'relay') d += SIM.rlag + Math.abs(gauss()) * SIM.rlag * 0.3;
+    if (p.via === 'relay') { const rl = S.sig && S.sig.srv ? SIM.rlag * 0.2 : SIM.rlag; d += rl + Math.abs(gauss()) * rl * 0.3; } // (por el servidor propio el relevo suma mucho menos)
     return d;
   }
   // estado de la conexión directa (en las pruebas, durante ?netcut se ve «desconectada»)
@@ -92,14 +98,36 @@ const Net = (() => {
     return { send, close() { dead = true; clearInterval(ping); try { ws && ws.close(); } catch (e) { /* nada */ } }, get ready() { return ready; } };
   }
   // señalización: varios brokers a la vez (o BroadcastChannel en pruebas); los repetidos se descartan
+  // servidor propio: un WebSocket a la sala (el servidor reparte; solo ve a quién va cada mensaje, lo demás va cifrado)
+  function Srv(onMsg) {
+    let ws = null, dead = false, tries = 0, ready = false, beat = 0, lastIn = 0;
+    const room = S.topic.split('/').pop(), queue = [], te = new TextEncoder();
+    function connect() {
+      if (dead || !SERVER) return; ready = false;
+      try { ws = new WebSocket(SERVER.replace(/^http/, 'ws') + '/s/' + room + '?id=' + S.id); } catch (e) { return retry(); }
+      ws.binaryType = 'arraybuffer';
+      ws.onopen = () => { tries = 0; ready = true; lastIn = Date.now(); while (queue.length) raw(queue.shift()); emit('status', { server: true, ok: true });
+        clearInterval(beat); beat = setInterval(() => { if (!ws) return; if (Date.now() - lastIn > 25000) { try { ws.close(); } catch (e) { /* nada */ } return; } try { ws.send('p'); } catch (e) { /* nada */ } }, 10000); };
+      ws.onmessage = e => { lastIn = Date.now(); if (typeof e.data !== 'string') onMsg(new Uint8Array(e.data)); };
+      ws.onclose = ws.onerror = () => { clearInterval(beat); const was = ready; ready = false; if (ws) { ws.onclose = ws.onerror = ws.onmessage = null; ws = null; } if (was) emit('status', { server: true, ok: false }); retry(); };
+    }
+    function retry() { if (dead) return; tries++; setTimeout(connect, Math.min(10000, 500 * tries)); }
+    function raw(b) { try { ws.send(b); } catch (e) { /* nada */ } }
+    function send(u8, to) { const h = te.encode(to && /^[A-Za-z0-9]{8}$/.test(to) ? to : '********'), b = new Uint8Array(8 + u8.length); b.set(h); b.set(u8, 8); if (!ws || !ready) { if (queue.length < 40) queue.push(b); return; } raw(b); }
+    connect();
+    return { send, close() { dead = true; clearInterval(beat); try { ws && ws.close(); } catch (e) { /* nada */ } }, get ready() { return ready; } };
+  }
   function Signal() {
     const useBC = new URLSearchParams(location.search).get('net') === 'bc' || Net.transport === 'bc';
     const onRaw = async u8 => { const m = await open(u8); if (!m || m.from === S.id || (m.to && m.to !== S.id)) return; if (S.seen.has(m.mid)) return; S.seen.set(m.mid, Date.now()); if (S.seen.size > 600) { const old = Date.now() - 60000; for (const [k, t] of S.seen) if (t < old) S.seen.delete(k); } onSignal(m); };
-    if (useBC) { const bc = new BroadcastChannel(S.topic); bc.onmessage = e => onRaw(new Uint8Array(e.data)); return { send: u8 => bc.postMessage(u8.buffer), close: () => bc.close(), get ready() { return true; } }; }
+    const srv = SERVER && (!useBC || /[?&]server=/.test(location.search)) ? Srv(onRaw) : null;
+    if (srv && new URLSearchParams(location.search).get('net') === 'srv') return { send: (u8, to) => srv.send(u8, to), close: () => srv.close(), get ready() { return srv.ready; }, get srv() { return srv.ready; } }; // pruebas: solo el servidor
+    if (useBC) { const bc = new BroadcastChannel(S.topic); bc.onmessage = e => onRaw(new Uint8Array(e.data)); return { send: (u8, to, fast) => { if (srv && srv.ready) { srv.send(u8, to); if (fast) return; } bc.postMessage(u8.buffer); }, close: () => { bc.close(); srv && srv.close(); }, get ready() { return true; }, get srv() { return !!(srv && srv.ready); } }; }
     const bs = BROKERS.map(u => Broker(u, onRaw));
-    return { send: u8 => bs.forEach(b => b.send(u8)), close: () => bs.forEach(b => b.close()), get ready() { return bs.some(b => b.ready); } };
+    // lo de la partida (relevo) va solo por el servidor si está; la señal (encontrarse) por todos los caminos a la vez
+    return { send: (u8, to, fast) => { if (srv && srv.ready) { srv.send(u8, to); if (fast) return; } bs.forEach(b => b.send(u8)); }, close: () => { bs.forEach(b => b.close()); srv && srv.close(); }, get ready() { return bs.some(b => b.ready) || !!(srv && srv.ready); }, get srv() { return !!(srv && srv.ready); } };
   }
-  async function signal(obj) { if (!S.sig) return; obj.from = S.id; obj.mid = rid(10); S.sig.send(await seal(obj)); }
+  async function signal(obj, fast) { if (!S.sig) return; obj.from = S.id; obj.mid = rid(10); S.sig.send(await seal(obj), obj.to, fast); }
 
   /* ---------- servidores de ICE ---------- */
   // TURN propio (Ajustes): [{ urls, username, credential }] — solo direcciones turn:/turns:/stun: y textos cortos
@@ -117,7 +145,25 @@ const Net = (() => {
     } catch (e) { return []; }
   }
   // el propio (si hay) + el que comparte el anfitrión + el gratuito de respaldo
-  async function iceServers(extra) { return STUN.concat(ownTurn() || [], cleanIce(extra) || [], await openRelay()); }
+  // TURN de Cloudflare: el servidor da credenciales de un día; se guardan 6 h para no pedirlas en cada conexión
+  let cfIceP = null;
+  function cfIce() {
+    if (!SERVER) return Promise.resolve([]);
+    try { const c = JSON.parse(localStorage.getItem('gamehub_ice') || 'null'); if (c && c.s === SERVER && Date.now() < c.exp && Array.isArray(c.ice)) return Promise.resolve(c.ice); } catch (e) { /* nada */ }
+    if (cfIceP) return cfIceP;
+    cfIceP = (async () => {
+      try {
+        const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, to = setTimeout(() => ctl && ctl.abort(), 4000);
+        const r = await fetch(SERVER + '/ice', { cache: 'no-store', signal: ctl ? ctl.signal : undefined }); clearTimeout(to);
+        const j = await r.json(), ice = (Array.isArray(j.iceServers) ? j.iceServers : []).map(x => ({ urls: (Array.isArray(x.urls) ? x.urls : [x.urls]).filter(u => typeof u === 'string' && /^(turns?|stun):/.test(u)).slice(0, 8), username: x.username, credential: x.credential })).filter(x => x.urls.length);
+        if (ice.length) try { localStorage.setItem('gamehub_ice', JSON.stringify({ s: SERVER, exp: Date.now() + 6 * 3600e3, ice })); } catch (e) { /* nada */ }
+        return ice;
+      } catch (e) { return []; } finally { setTimeout(() => { cfIceP = null; }, 30000); }
+    })();
+    return cfIceP;
+  }
+  // primero el TURN de Cloudflare (cerca, rápido), luego el propio de Ajustes, el que comparte el anfitrión y el gratuito
+  async function iceServers(extra) { const [cf, orl] = await Promise.all([cfIce(), openRelay()]); return STUN.concat(cf, ownTurn() || [], cleanIce(extra) || [], orl); }
 
   /* ---------- pares (WebRTC) ---------- */
   function newPeer(id, info) {
@@ -162,19 +208,20 @@ const Net = (() => {
   }
   // relevo (sin WebRTC): lo confiable sale ya; lo urgente (instantáneas, entradas) a lo más ~12 por segundo y siempre lo
   // más nuevo de cada tipo (lo saltado no hace falta: lo trae el siguiente; las partes «lentas» pasan al que sí sale)
-  const RELAY_MS = 66; // ~15 por segundo
+  const RELAY_MS = 66; // ~15 por segundo por los servidores públicos; por el servidor propio, ~30 (RELAY_FAST)
+  const RELAY_FAST = 33;
   const relayKey = o => (o && o.$g ? 'g' + (o.d && o.d.t) + (o.d && o.d.s != null ? ':' + o.d.s : '') : 'n' + (o && o.$));
   function relayOut(p, s) {
     let o; try { o = JSON.parse(s); } catch (e) { return; }
     const q = p.rq || (p.rq = new Map()), k = relayKey(o), old = q.get(k);
     if (old && api.relayMerge) { try { api.relayMerge(old, o); } catch (e) { /* nada */ } }
     q.set(k, o);
-    if (!p.rqT) p.rqT = setTimeout(() => relayFlush(p), Math.max(0, RELAY_MS - (Date.now() - (p.rqAt || 0))));
+    if (!p.rqT) p.rqT = setTimeout(() => relayFlush(p), Math.max(0, (S.sig && S.sig.srv ? RELAY_FAST : RELAY_MS) - (Date.now() - (p.rqAt || 0))));
   }
-  function relayFlush(p) { p.rqT = 0; if (peers.get(p.id) !== p || !p.rq || !p.rq.size) return; p.rqAt = Date.now(); for (const o of p.rq.values()) signal({ t: 'relay', to: p.id, d: JSON.stringify(o) }); p.rq.clear(); }
+  function relayFlush(p) { p.rqT = 0; if (peers.get(p.id) !== p || !p.rq || !p.rq.size) return; p.rqAt = Date.now(); for (const o of p.rq.values()) signal({ t: 'relay', to: p.id, d: JSON.stringify(o) }, true); p.rq.clear(); }
   function sendNow(p, s, rel) {
     ST.out += s.length; ST.nOut++;
-    if (p.via === 'relay') { if (rel) signal({ t: 'relay', to: p.id, d: s }); else relayOut(p, s); return; }
+    if (p.via === 'relay') { if (rel) signal({ t: 'relay', to: p.id, d: s }, true); else relayOut(p, s); return; }
     const ch = (!rel && p.u && p.u.readyState === 'open') ? p.u : p.r;
     if (!ch || ch.readyState !== 'open') { if (rel && p.pend.length < 200) p.pend.push([s, rel]); return; }
     if (!rel && ch.bufferedAmount > 64000) return; // la red va atrasada: se salta este (llega otro enseguida)
@@ -284,7 +331,7 @@ const Net = (() => {
   }
   async function start(code, info, host) {
     leave(true); if (SIM.cut) { cutA = performance.now() + SIM.cut[0] * 1000; cutB = cutA + SIM.cut[1] * 1000; } S.code = code; S.info = info; S.isHost = host; S.hostId = host ? S.id : null; S.alive = true; S.clockOff = 0; S.term = host ? 1 : 0; S.dead.clear(); S.succ = null; S.moved = false;
-    await deriveKey(code); S.sig = Signal(); loop();
+    cfIce(); await deriveKey(code); S.sig = Signal(); loop();
     if (host) { broadcastRoom(); announce(); } else { signal({ t: 'hello', info }); setTimeout(() => S.alive && !S.hostId && signal({ t: 'hello', info }), 1200); }
     return code;
   }
@@ -317,15 +364,21 @@ const Net = (() => {
       setTimeout(() => fin(false), ms);
     });
   }
+  // el servidor propio: ¿responde y en cuánto? (y desde qué ciudad de Cloudflare)
+  async function serverPing() {
+    if (!SERVER) return null;
+    try { let best = 1e9, colo = ''; for (let k = 0; k < 3; k++) { const t = performance.now(), r = await fetch(SERVER + '/ping', { cache: 'no-store' }); const j = await r.json(); best = Math.min(best, performance.now() - t); colo = j.colo || colo; } const ice = await cfIce(); return { ok: true, ms: Math.round(best), colo, turn: ice.some(x => x.urls.some(u => /^turns?:/.test(u))) }; } catch (e) { return { ok: false }; }
+  }
   async function probe(turn) {
     if (typeof RTCPeerConnection === 'undefined') return { webrtc: false, signal: 0, of: BROKERS.length, stun: false, turn: false, own: null };
     const own = turn === undefined ? ownTurn() : cleanIce(turn);
-    const [sig, all, mine] = await Promise.all([
+    const [sig, all, mine, srv] = await Promise.all([
       Promise.all(BROKERS.map(u => brokerOk(u))),
-      openRelay().then(r => iceTypes(STUN.concat(r), 'all')),
+      Promise.all([cfIce(), openRelay()]).then(([c, r]) => iceTypes(STUN.concat(c, r), 'all')),
       own ? iceTypes(own, 'relay') : Promise.resolve(null),
+      serverPing(),
     ]);
-    return { webrtc: true, signal: sig.filter(Boolean).length, of: BROKERS.length, stun: all.has('srflx') || all.has('prflx'), turn: all.has('relay'), own: mine ? mine.has('relay') : null };
+    return { webrtc: true, signal: sig.filter(Boolean).length, of: BROKERS.length, stun: all.has('srflx') || all.has('prflx'), turn: all.has('relay'), own: mine ? mine.has('relay') : null, server: srv };
   }
   addEventListener('pagehide', () => { if (S.alive) leave(true); });
   const api = {
@@ -344,6 +397,7 @@ const Net = (() => {
     now: () => performance.now() + (S.isHost ? 0 : S.clockOff),
     get id() { return S.id; }, get code() { return S.code; }, get isHost() { return S.isHost; }, get hostId() { return S.hostId; }, get alive() { return S.alive; },
     get room() { return S.room; }, get peers() { return peers; }, get signalReady() { return !!(S.sig && S.sig.ready); },
+    get server() { return SERVER; }, get serverReady() { return !!(S.sig && S.sig.srv); },
     _onInfo(id, info) { const p = peers.get(id); if (p) { p.info = info; broadcastRoom(); } },
     get term() { return S.term; }, get ownTurn() { return ownTurn(); },
     // la partida que tiene abierta el anfitrión (viaja con la sala cada 2 s: si a alguien no le llegó el aviso de empezar o

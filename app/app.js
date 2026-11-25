@@ -326,7 +326,9 @@
     // salir a propósito de una partida en línea (remoto): la sala no se la vuelve a abrir
     const leftOnPurpose = () => { if (netCfg && netCfg.role === 'client' && typeof Online !== 'undefined' && Online.leftNet) Online.leftNet(netCfg.sid); };
     $('#lback').addEventListener('click', () => { leftOnPurpose(); close(); });
-    return { open, close, get open_() { return !!cur; }, get net() { return netCfg; } };
+    // en línea: apenas se sabe qué juego viene (el anfitrión lo elige en la sala), se va bajando para que abra al instante
+    function preload(id) { const g = GAME[id]; if (g && !cache[g.id]) load(g).catch(() => {}); }
+    return { open, close, preload, get open_() { return !!cur; }, get net() { return netCfg; } };
   })();
 
   /* ---------- torneo: estado guardado y asistente ---------- */
@@ -738,8 +740,9 @@
     const R = probeRes; let res = '';
     if (probing) res = `<div class="nprobe"><div class="nprow mid"><i class="spin"></i><div><b>Probando…</b><span>Unos segundos: servidores de señales, conexión directa y respaldo.</span></div></div></div>`;
     else if (R) {
-      const verdict = !R.webrtc ? 'Este navegador no deja jugar en línea (falta WebRTC). Prueba con Chrome, Edge, Safari o Firefox al día.' : !R.signal ? 'No se llega a los servidores de señales: revisa que haya internet (o que esta red no los bloquee).' : R.stun || R.turn || R.own ? 'Listo para jugar en línea desde esta red' + (R.stun ? ' (con conexión directa).' : ' (por el respaldo: un poquito más lento).') : 'Esta red no deja conectar directo ni por el respaldo: igual se puede jugar por el relevo de señales, pero más lento. Con otra red (o un TURN propio) va mejor.';
-      res = `<div class="nprobe">${line(R.signal > 0, 'Señales', R.signal ? `${R.signal} de ${R.of} servidores responden` : 'ningún servidor responde')}${line(R.stun, 'Conexión directa', R.stun ? 'este aparato se puede conectar directo con los demás' : 'esta red no deja conexión directa')}${line(R.turn, 'Respaldo (TURN gratuito)', R.turn ? 'funciona: sirve cuando la red del otro no deja conexión directa' : 'no responde desde esta red')}${R.own !== null ? line(R.own, 'Tu TURN', R.own ? 'funciona' : 'no responde: revisa la dirección, el usuario y la clave') : ''}<p class="note npv">${esc(verdict)}</p></div>`;
+      const verdict = !R.webrtc ? 'Este navegador no deja jugar en línea (falta WebRTC). Prueba con Chrome, Edge, Safari o Firefox al día.' : !R.signal && !(R.server && R.server.ok) ? 'No se llega a los servidores de señales: revisa que haya internet (o que esta red no los bloquee).' : R.stun || R.turn || R.own ? 'Listo para jugar en línea desde esta red' + (R.stun ? ' (con conexión directa).' : ' (por el respaldo: un poquito más lento).') : 'Esta red no deja conectar directo ni por el respaldo: igual se puede jugar por el relevo de señales, pero más lento. Con otra red (o un TURN propio) va mejor.';
+      const SV = R.server, svLine = SV ? line(SV.ok, 'Servidor de GameHub', SV.ok ? `responde en ${SV.ms} ms${SV.colo ? ' (' + esc(SV.colo) + ')' : ''}${SV.turn ? ' · con TURN de Cloudflare' : ' · sin TURN todavía'}` : 'no responde desde esta red: se usan los servidores públicos') : '';
+      res = `<div class="nprobe">${svLine}${line(R.signal > 0, 'Señales', R.signal ? `${R.signal} de ${R.of} servidores responden` : 'ningún servidor responde')}${line(R.stun, 'Conexión directa', R.stun ? 'este aparato se puede conectar directo con los demás' : 'esta red no deja conexión directa')}${line(R.turn, 'Respaldo (TURN)', R.turn ? 'funciona: sirve cuando la red del otro no deja conexión directa' : 'no responde desde esta red')}${R.own !== null ? line(R.own, 'Tu TURN', R.own ? 'funciona' : 'no responde: revisa la dirección, el usuario y la clave') : ''}<p class="note npv">${esc(verdict)}</p></div>`;
     }
     return `<div class="panel"><div class="h2">EN LÍNEA</div>
       <div class="field"><div class="appline"><div class="grow"><div style="font-weight:900">Probar la conexión</div><div class="hint" style="margin:2px 0 0">Revisa si este aparato puede jugar en línea desde la red en la que está (wifi o datos móviles).</div></div><button class="btn small" data-net="probe" ${probing ? 'disabled' : ''}>Probar</button></div>${res}</div>
