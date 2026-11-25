@@ -401,7 +401,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
 
   <section class="screen" id="s-trav" hidden>
     <div class="panel">
-      <div class="phead"><h2>Travesía<span class="tpc"> por Colombia</span></h2><div class="seg tduo" role="group" aria-label="Jugadores" data-tduo><button data-v="0">1 jugador</button><button data-v="1">2 en equipo</button></div><span class="tstars" id="t-total"></span><button class="btn sol" data-act="back">Volver</button></div>
+      <div class="phead"><h2>Travesía<span class="tpc"> por Colombia</span></h2><div class="seg tduo" role="group" aria-label="Jugadores" data-tduo><button data-v="0">1 jugador</button><button data-v="1">2 en equipo</button></div><span class="tstars" id="t-total"></span><button class="btn sol" data-act="back" id="t-back">Volver</button></div>
       <p class="tintro">Diez etapas del Valle de Cocora a Cartagena. Solo, contra la máquina; o de a dos, en equipo: relevos, entregas con drones encima, oleadas y, al final, La Sombra reforzada. Cada etapa abre la siguiente y las estrellas dicen qué tan bien les fue.</p>
       <div class="tgrid" id="t-grid"></div>
       <p class="tdetail" id="t-detail"></p>
@@ -459,7 +459,7 @@ function noise1(x) { const i = Math.floor(x), f = x - i; return lerp(hash1(i), h
 function fbm1(x, oct = 4) { let v = 0, a = 0.5, f = 1, n = 0; for (let k = 0; k < oct; k++) { v += a * noise1(x * f + k * 17.3); n += a; a *= 0.5; f *= 2.03; } return v / n; }
 
 /* ---------- guardado (prefijo propio: no choca con Tira y Afloja) ---------- */
-const GAME_META = { id: 'ventolera', name: 'Ventolera', version: '3.5', storagePrefix: 'vto_', players: 2 };
+const GAME_META = { id: 'ventolera', name: 'Ventolera', version: '3.6', storagePrefix: 'vto_', players: 2 };
 const Store = {
   get(k, def) { try { const v = localStorage.getItem(GAME_META.storagePrefix + k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } },
   set(k, v) { try { localStorage.setItem(GAME_META.storagePrefix + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
@@ -1336,7 +1336,9 @@ const NetPlay = (() => {
       seats.forEach((s, i) => { const li = document.createElement('li'), ok = ready.includes(i); li.className = ok ? 'ok' : ''; li.innerHTML = '<i></i><span></span><b></b>'; li.querySelector('i').style.background = /^#[0-9a-f]{3,8}$/i.test(s.color || '') ? s.color : '#fff'; li.querySelector('span').textContent = s.name || 'J' + (i + 1); li.querySelector('b').textContent = ok ? 'listo ✓' : 'cargando…'; e.querySelector('ul').appendChild(li); });
       e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = !canGo;
     }
-    return { list, hide() { if (el) { el.remove(); el = null; } } };
+    // aviso sin lista: «El anfitrión elige el nivel…» (se quita solo cuando llega la partida)
+    function msg(title, note) { const e = show(); e.querySelector('h2').textContent = title || ''; e.querySelector('ul').innerHTML = ''; e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = true; }
+    return { list, msg, hide() { if (el) { el.remove(); el = null; } } };
   })();
   // aviso suave si el anfitrión deja de mandar (salió de la app, se le fue la señal): se quita solo al volver
   const Lost = (() => {
@@ -1396,6 +1398,7 @@ const NetPlay = (() => {
   function slow(k, v, ms = 1000) { if (v === undefined) return undefined; const j = JSON.stringify(v), now = performance.now(), L = slowLast[k]; if (L && L.j === j && now - L.t < ms) return undefined; slowLast[k] = { j, t: now }; return v; }
   return {
     gate(o) { gateO = o; }, again, get cfg() { return gcfg; }, okId, slow,
+    notice(title, note) { if (on) Wait.msg(title, note); }, noticeOff() { Wait.hide(); },
     get on() { return on; }, get role() { return role; }, get isHost() { return on && role === 'host'; }, get isClient() { return on && role === 'client'; },
     get seats() { return seats; }, get mine() { return mine; }, get sid() { return sid; }, get ev() { return ev; },
     // ¿este puesto se juega en este aparato? y con qué jugador local (0 o 1)
@@ -8540,6 +8543,7 @@ const Game = (() => {
 
   // en línea: todos los pilotos de la sala (2 a 4), sin máquina; el anfitrión simula, los remotos dibujan
   function startNet(o) {
+    if (o.mode === 'trav' && STAGES[o.stage]) return startNetTrav(o);
     lastOver = null; G.net = true; G.players = o.species.length; G.mode = o.mode; G.arena = o.arena;
     setup({ species: o.species, looks: o.looks, trails: o.trails, seed: o.seed || 1, arena: o.arena });
     G.trav = null; G.playT = 0; G.lvl = 1; G.copa = null; G.duo = false; G.coop = false; G.coopGoal = null; G.tm = null; G.boss = null;
@@ -8553,6 +8557,17 @@ const Game = (() => {
       G.boss.dmg = G.birds.map(() => 0);
     }
     else { startRound(); Modes.setup(G); G.cratesOn = o.mode === 'case'; snapCamera(); }
+  }
+  // en línea: una etapa de la Travesía para dos (el anfitrión la eligió; todos la arman igual y él manda cómo va)
+  function startNetTrav(o) {
+    const S = STAGES[o.stage], D = S.duo; lastOver = null; G.net = true; G.players = 2; G.mode = D.mode; G.arena = D.arena || S.arena;
+    setup({ species: o.species, looks: o.looks, trails: o.trails, seed: o.seed || 1, arena: G.arena });
+    G.trav = S.id; G.playT = 0; G.lvl = 1; G.copa = null; G.duo = true; G.coop = !!D.team; G.coopGoal = D.team || null; G.tm = null; G.boss = null;
+    G.adv = G.birds.map(() => 0); G.wins = G.birds.map(() => 0); G.round = 1; G.cratesOn = true; G.winsNeeded = 1; G.score = G.birds.map(() => 0); G.coopWin = false;
+    G.hintT = 8; G.paused = false; acc = 0;
+    if (D.mode === 'boss') { startRound(); Boss.setup(G, !!D.hard); G.roundT = 999; }
+    else if (Team.is(D.mode)) { startRound(); Team.setup(G, D); G.cratesOn = D.mode !== 'relay'; snapCamera(); }
+    else { startRound(); Modes.setup(G); G.cratesOn = D.mode === 'case'; snapCamera(); }
   }
   function netEnd() { G.net = false; }
   function advance(dt) { let n = Math.max(1, Math.round(dt / DT)); while (n--) { step(DT); updateRounds(DT); updateCamera(DT); } }
@@ -8628,6 +8643,9 @@ const UI = (() => {
   const PC = i => (i === 2 ? '#9dff9a' : PLAYER_COLORS[i].main);
   const who2 = w => (w === 2 ? 'Juntos' : `J${w + 1}`);
   function fillTrav() {
+    // en línea: el anfitrión elige la etapa de la Travesía para dos (las que él tiene abiertas); los demás esperan
+    const net = !!(netTrav && typeof NetPlay !== 'undefined' && NetPlay.isHost); if (net) duo = true;
+    $('#s-trav [data-tduo]').style.display = net ? 'none' : ''; $('#t-back').dataset.act = net ? 'hubhome' : 'back'; $('#t-back').textContent = net ? 'Volver a la sala' : 'Volver';
     $$('#s-trav [data-tduo] button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === (duo ? '1' : '0'))));
     const open = i => (duo ? Travesia.unlocked2(i) : Travesia.unlocked(i));
     if (duo) { const t = Travesia.tally2(); $('#t-total').innerHTML = `<span style="color:${PC(2)}">juntos ${t[2]} / 30 ★</span>`; }
@@ -8647,7 +8665,7 @@ const UI = (() => {
     $$('#t-grid .stage').forEach(btn => {
       const i = +btn.dataset.stage;
       btn.addEventListener('mouseenter', () => say(i)); btn.addEventListener('focus', () => say(i));
-      btn.addEventListener('click', () => { Sound.init(); if (!open(i)) { say(i); Sound.play('back'); return; } Sound.play('select'); startStage(i, duo); });
+      btn.addEventListener('click', () => { Sound.init(); if (!open(i)) { say(i); Sound.play('back'); return; } Sound.play('select'); if (net) NetGame.again(i); else startStage(i, duo); });
     });
     if (!Touch.enabled) setTimeout(() => { const f = $(`#t-grid [data-stage="${first}"]`); if (f) f.focus({ preventScroll: true }); }, 40);
   }
@@ -8660,9 +8678,39 @@ const UI = (() => {
   let nextStage = -1, nextDuo = false;
   // resultados del duelo
   // en línea: arranca (o vuelve a arrancar) la partida que mandó el anfitrión
-  function netStart(c) { stack = []; paused = false; Game.G.paused = false; Copa.end(); Game.startNet(c); show(null, false); }
+  function netStart(c) { stack = []; paused = false; Game.G.paused = false; Copa.end(); if (c.mode !== 'trav') netTrav = null; Game.startNet(c); show(null, false); }
+  // en línea: Travesía para dos — el anfitrión elige la etapa en su pantalla de la Travesía
+  let netTrav = null, netNext = -1;
+  function netTravPick(c) {
+    netTrav = c; stack = []; paused = false; Copa.end();
+    if (NetPlay.isHost) show('trav', false);
+    else { if (Game.G.state !== 'attract') Game.startAttract(); show(null, false); NetPlay.notice('El anfitrión elige la etapa…', 'Travesía para dos: lo que ganen queda guardado también en tu aparato.'); }
+  }
+  function netTravResults(r) {
+    const host = NetPlay.isHost, mine = NetPlay.mine, n = r.names, s = r.stats, esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const i = STAGES.findIndex(S => S.id === r.trav), S = STAGES[i], D = S.duo;
+    const t2 = mine.length ? Travesia.record2(r.trav, r, Game.G) : null; // cada aparato guarda lo que ganaron sus jugadores
+    const stars = t2 ? t2.stars : (r.tm ? r.tm.stars : 0) || 0;
+    const ok = r.tm ? r.tm.ok : r.coop ? !!r.coopWin : r.mode === 'boss' ? !!r.coopWin : stars > 0;
+    $('#r-title').textContent = ok ? '¡Lo lograron juntos!' : 'Esta vez no se pudo'; $('#r-title').style.color = ok ? '#9dff9a' : '#ff8f8f';
+    $('#r-score').textContent = r.tm ? r.tm.summary : r.coop ? `Entre los dos: ${r.score[0] + r.score[1]} puntos` : r.mode === 'boss' ? 'Daño al dirigible: ' + (r.bossDmg || []).map((v, k) => `${n[k].split(' · ')[0]} ${v || 0}`).join(' · ') : '';
+    const rs = $('#r-stars'); rs.hidden = false; rs.classList.remove('copa'); $('#s-results').classList.remove('copa');
+    rs.innerHTML = `<span style="color:${PC(2)}">${starStr(stars)}</span><small>Etapa ${i + 1} · ${D.name}${t2 && t2.newBest ? ' — ¡nuevo récord en este aparato!' : ''}${host ? '' : ' · el anfitrión elige qué sigue'}</small>`;
+    const pct = st => st.shots ? Math.round(100 * st.hits / st.shots) + ' %' : '—', rows = [['Derribos', st => st.kills], ['Daño hecho', st => Math.round(st.dmg)], ['Puntería de ráfaga', pct], ['Cajas', st => st.crates]];
+    const T = $('#r-table'); T.style.gridTemplateColumns = `1fr repeat(${n.length}, auto)`;
+    T.innerHTML = `<span class="h"></span>` + n.map((nm, k) => `<span class="h n" style="color:${PLAYER_COLORS[k].main}">${esc(nm.split(' · ')[0])}${mine.includes(k) ? ' ·tú' : ''}</span>`).join('') + rows.map(([lab, f]) => `<span>${lab}</span>` + s.map((st, k) => `<span class="n" style="color:${PLAYER_COLORS[k].main}">${f(st)}</span>`).join('')).join('');
+    ['#r-copa', '#r-birds', '#r-trav', '#s-results [data-act="toTitle"]'].forEach(q => { const e = $(q); if (e) e.hidden = true; });
+    netNext = ok && i + 1 < STAGES.length && Travesia.unlocked2(i + 1) ? i + 1 : -1;
+    $('#r-next').hidden = !host || netNext < 0; $('#r-next').dataset.act = 'netNext';
+    $('#r-rematch').hidden = !host; $('#r-rematch').textContent = 'Repetir etapa'; $('#r-rematch').dataset.act = 'netAgain';
+    $('#r-trav').hidden = !host; $('#r-trav').textContent = 'Elegir etapa'; $('#r-trav').dataset.act = 'netPick';
+    $('#r-hub').hidden = false; $('#r-hub').textContent = 'Volver a la sala'; $('#r-hub').dataset.act = 'hubhome'; $('#r-hub').style.gridColumn = host ? '' : '1 / -1';
+    stack = []; show('results', false);
+    if (VV()) VV().after();
+  }
   // en línea: resultados con los nombres de la sala; todos pueden volver a la sala, el anfitrión lanza la revancha
   function netResults(r) {
+    if (r.trav && r.duo) return netTravResults(r);
     const n = r.names, s = r.stats, N = n.length, host = NetPlay.isHost, esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const mine = NetPlay.mine, w = r.winner;
     $('#r-title').textContent = w < 0 ? '¡Empate!' : mine.includes(w) && mine.length === 1 ? '¡Ganaste!' : `¡Gana ${n[w].split(' · ')[0]}!`;
@@ -8689,7 +8737,7 @@ const UI = (() => {
     if (r.net && typeof NetPlay !== 'undefined' && NetPlay.on) return netResults(r);
     const n = r.names, s = r.stats;
     const hubEv = !!Hub.ev && !r.vsBot;
-    $('#r-rematch').dataset.act = 'rematch'; $('#r-hub').dataset.act = 'hubback'; $('#r-hub').textContent = 'Continuar torneo ▸'; $('#r-table').style.gridTemplateColumns = '';
+    $('#r-rematch').dataset.act = 'rematch'; $('#r-next').dataset.act = 'travNext'; $('#r-trav').dataset.act = 'trav'; $('#r-trav').textContent = 'Travesía'; $('#r-hub').dataset.act = 'hubback'; $('#r-hub').textContent = 'Continuar torneo ▸'; $('#r-table').style.gridTemplateColumns = '';
     if (hubEv) { Hub.result(r.winner === 0 || r.winner === 1 ? r.winner : -1, { score: r.mode === 'duel' ? r.wins.join(' – ') : r.score.join(' – ') }); Hub.release(); }
     $('#r-hub').hidden = !hubEv;
     if (r.tm) {
@@ -8909,6 +8957,7 @@ const UI = (() => {
     back, resume, toTitle, done: () => { if (hubPending) return hubStart(); back(); },
     // GameHub
     hubhome: () => Hub.exit(), hubback: () => Hub.exit(), netAgain: () => { if (typeof NetGame !== 'undefined') NetGame.again(); },
+    netNext: () => { if (typeof NetGame !== 'undefined' && netNext >= 0) NetGame.again(netNext); }, netPick: () => { if (typeof NetGame !== 'undefined') NetGame.again(-1); },
     fullscreen: () => FS.toggle(),
     'prev0': () => cycle(0, -1), 'next0': () => cycle(0, 1), 'prev1': () => cycle(1, -1), 'next1': () => cycle(1, 1),
     'look0': () => recolor(0), 'look1': () => recolor(1),
@@ -8961,7 +9010,7 @@ const UI = (() => {
       document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
     }
   }
-  return { init, show, pause, resume, results, netStart, hubPlay, vestBadge, refreshBirds, get current() { return current; } };
+  return { init, show, pause, resume, results, netStart, netTravPick, hubPlay, vestBadge, refreshBirds, get current() { return current; } };
 })();
 
 // para las pruebas automáticas
@@ -9103,7 +9152,7 @@ if (UI.refreshBirds) UI.refreshBirds();
    ========================================================================= */
 const NetGame = (() => {
   const NEUTRAL = { dx: 0, dy: 0, roll: false, rdx: 0, rdy: 0, fire: false, boost: false, missile: false };
-  const MODES_NET = ['duel', 'targets', 'case', 'race', 'boss'], ST = ['countdown', 'play', 'roundEnd', 'matchEnd'];
+  const MODES_NET = ['duel', 'targets', 'case', 'race', 'boss', 'trav'], ST = ['countdown', 'play', 'roundEnd', 'matchEnd'];
   const r1 = v => Math.round((+v || 0) * 10) / 10, r2 = v => Math.round((+v || 0) * 100) / 100, ri = v => Math.round(+v || 0);
   const _read = Input.read;
 
@@ -9138,11 +9187,12 @@ const NetGame = (() => {
       const S = NetPlay.seats, mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel';
       const arena = ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
       const species = S.map((s, i) => { const w = want[i] || {}; return SPECIES[w.sp] ? w.sp : ['guacamaya', 'condor', 'colibri', 'halcon'].find(k => SPECIES[k]) || Object.keys(SPECIES)[i % Object.keys(SPECIES).length]; });
-      return { mode, arena, species, looks: S.map((s, i) => okLook((want[i] || {}).look)), trails: S.map((s, i) => NetPlay.okId((want[i] || {}).trail) || 't.ninguna'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), seed: 1 + Math.floor(Math.random() * 60000) };
+      // Travesía para dos: primero el anfitrión elige la etapa (stage −1) entre las que él tiene abiertas
+      return { mode: mode === 'trav' && S.length !== 2 ? 'duel' : mode, arena, species, looks: S.map((s, i) => okLook((want[i] || {}).look)), trails: S.map((s, i) => NetPlay.okId((want[i] || {}).trail) || 't.ninguna'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), seed: 1 + Math.floor(Math.random() * 60000), stage: mode === 'trav' ? -1 : undefined };
     },
-    apply(c) { snaps0(); UI.netStart(c); },
+    apply(c) { snaps0(); if (c.mode === 'trav' && !STAGES[c.stage]) UI.netTravPick(c); else UI.netStart(c); },
   });
-  function again() { NetPlay.again(c => Object.assign({}, c, { seed: 1 + Math.floor(Math.random() * 60000) })); }
+  function again(stage) { NetPlay.again(c => Object.assign({}, c, { seed: 1 + Math.floor(Math.random() * 60000) }, stage !== undefined ? { stage } : {})); }
 
   /* ---------- instantánea (anfitrión) ---------- */
   // del piloto, lo que se ve: posición, rumbo, estado y barras (en el orden de BF)
@@ -9179,6 +9229,7 @@ const NetGame = (() => {
     if (G.case) sn.cs = prim(G.case);
     if (G.gates) sn.gf = G.gates.map(g => g.flash.map(r2));
     // Jefe en pareja: el dirigible (posición, fase, caída) y sus partes (dónde, vida, golpes, a punto de disparar); vidas del equipo
+    if (G.tm) { sn.tm = prim(G.tm); sn.lv = G.lives; }
     if (G.boss) { const B = G.boss; sn.bo = { s: [ri(B.x), ri(B.y), B.dir, r2(B.flip), B.phase, B.dead ? 1 : 0, r2(B.fallT), r2(B.hitT), r2(B.t), B.lastHit], p: B.parts.map(p => [ri(p.x), ri(p.y), r1(p.hp), p.alive ? 1 : 0, r2(p.hitT || 0), r2(p.fireT || 0), r2(p.aim || 0)]) }; sn.lv = G.lives; }
     return sn;
   }
@@ -9227,6 +9278,7 @@ const NetGame = (() => {
     if (B.bo && G.boss) { const O = G.boss, a = A.bo, s = B.bo.s, sa = a ? a.s : s; O.x = lerp(sa[0], s[0], k); O.y = lerp(sa[1], s[1], k); O.dir = s[2]; O.flip = s[3]; O.phase = s[4]; O.dead = !!s[5]; O.fallT = s[6]; O.hitT = s[7]; O.t = s[8]; O.lastHit = s[9];
       B.bo.p.forEach((q, i) => { const P = O.parts[i], qa = a && a.p[i]; if (!P) return; P.x = qa ? lerp(qa[0], q[0], k) : q[0]; P.y = qa ? lerp(qa[1], q[1], k) : q[1]; P.hp = q[2]; P.alive = !!q[3]; P.hitT = q[4]; P.fireT = q[5]; P.aim = q[6]; }); }
     if (B.lv != null) G.lives = B.lv;
+    if (B.tm) { if (!G.tm) G.tm = {}; deepSet(G.tm, B.tm); if (B.tm.zone && G.tm.zone) Object.assign(G.tm.zone, B.tm.zone); } else if (G.tm && !G.duo) G.tm = null;
     // escenario: solo cuando llega una instantánea nueva (entre medio se anima solo)
     if (B !== lastSN && B.wd) { lastSN = B; const W = G.world, D = B.wd; W.time = D.t; if (D.train && W.train) deepSet(W.train, D.train); if (D.ship && W.ship) deepSet(W.ship, D.ship); if (D.hot && W.hotair) D.hot.forEach((h, i) => { if (W.hotair[i]) deepSet(W.hotair[i], h); }); if (D.storm && W.storm) deepSet(W.storm, D.storm); if (D.coast && W.coast) deepSet(W.coast, D.coast); }
   }

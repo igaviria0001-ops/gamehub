@@ -470,6 +470,8 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-di { font-size: 18px; }
 .on-tag { font-size: 11px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--mute); }
 .on-tag.gold { background: rgba(255,211,107,.16); color: var(--gold); }
+.on-tag.warn { background: rgba(255,140,60,.18); color: #ffb06b; }
+.on-warn { margin: 4px 0 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255,140,60,.12); border: 1px solid rgba(255,160,90,.4); color: #ffd2a8; font-size: 13.5px; font-weight: 700; line-height: 1.35; }
 .on-via { margin-left: auto; font-size: 12.5px; font-weight: 900; }
 .on-ps { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .on-p { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px; background: rgba(255,255,255,.07); font-weight: 900; font-size: 13.5px; }
@@ -570,7 +572,9 @@ main { position: relative; flex: 1; min-height: 0; }
 const GAMES = [
   {
     id: 'tira-y-afloja', file: 'games/tira-y-afloja.html', name: 'Tira y Afloja', short: 'Tira y Afloja', num: '01',
-    net: { seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], opts: ['fiesta'], watch: true, desc: { caneca: 'Echa al otro a la caneca. Juegan dos; los demás miran en vivo.' } },
+    net: { seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], opts: ['fiesta'], watch: true,
+      extra: [{ id: 'campana', name: 'Campaña', seats: 2, watch: true, maps: [], noOpts: true, desc: 'Las 30 salas y los 6 jefes de la campaña, juntos: el anfitrión elige en su mapa la sala o el jefe (de lo que tiene abierto) y lo que ganen queda guardado en el aparato de cada uno.' }],
+      desc: { caneca: 'Echa al otro a la caneca. Juegan dos; los demás miran en vivo.' } },
     tag: 'Duelo de chicle', kind: 'Física y empujones',
     desc: 'Dos chicles unidos por un hilo pelean en el colegio: tirar te hace pesado, aflojar te vuelve ágil. Empuja, embiste, salta en tirachinas y echa al otro a la caneca.',
     c1: '#ff5d8f', c2: '#45d6b0', c3: '#ffd84d', ink: '#2a1710', font: 'tya',
@@ -588,11 +592,11 @@ const GAMES = [
     chars: false,
     keys: [['J1', 'A D moverse · W saltar · S pegarse · E tirar · Q aflojar'], ['J2', 'J L moverse · I saltar · K pegarse · O tirar · U aflojar']],
     touch: 'En el celular: cada uno en su mitad de la pantalla, con flechas y botones.',
-    extras: ['Campaña de 30 salas con 6 jefes', 'Fuga del colegio para dos', 'Retos de técnica y entrenamiento', 'Reto del día'],
+    extras: ['Campaña de 30 salas y 6 jefes (también en línea)', 'Fuga del colegio para dos', 'Retos de técnica y entrenamiento', 'Reto del día'],
   },
   {
     id: 'ventolera', file: 'games/ventolera.html', name: 'Ventolera', short: 'Ventolera', num: '02',
-    net: { seats: 4, mode: 'duel', modes: ['duel', 'targets', 'case', 'race'], extra: [{ id: 'boss', name: 'Jefe en pareja', desc: 'Todos juntos contra La Sombra, un dirigible armado con torretas y drones: vidas compartidas, sin fuego amigo.' }], desc: { duel: 'Todos contra todos: la ronda es del último que quede en el aire.', targets: 'Revienta más globos y drones que los demás en 90 segundos.', case: 'Quien lleva el maletín suma; embestirlo se lo roba.', race: 'Aros en orden a 3 vueltas, con armas: gana quien cruce primero.' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
+    net: { seats: 4, mode: 'duel', modes: ['duel', 'targets', 'case', 'race'], extra: [{ id: 'boss', name: 'Jefe en pareja', desc: 'Todos juntos contra La Sombra, un dirigible armado con torretas y drones: vidas compartidas, sin fuego amigo.' }, { id: 'trav', name: 'Travesía para dos', seats: 2, watch: true, maps: [], desc: 'Los diez desafíos en equipo de la Travesía (relevos, entregas, oleadas y La Sombra reforzada): el anfitrión elige la etapa entre las que tiene abiertas y lo que ganen queda guardado en el aparato de cada uno.' }], desc: { duel: 'Todos contra todos: la ronda es del último que quede en el aire.', targets: 'Revienta más globos y drones que los demás en 90 segundos.', case: 'Quien lleva el maletín suma; embestirlo se lo roba.', race: 'Aros en orden a 3 vueltas, con armas: gana quien cruce primero.' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
     tag: 'Duelo de alas de chorro', kind: 'Combate aéreo',
     desc: 'Pilotos con alas de chorro se persiguen entre palmas de cera, rascacielos, galeones y globos. Ráfagas, misiles que se esquivan con un tonel, bengalas y maniobras de película.',
     c1: '#ffb36b', c2: '#6fc3ff', c3: '#ff7a8a', ink: '#141a3a', font: 'vento',
@@ -608,11 +612,14 @@ const GAMES = [
     chars: true, charsName: 'pilotos',
     keys: [['J1', 'WASD apuntar · Espacio/F ráfaga · Shift/Q turbo · E/R misil · C/V tonel'], ['J2', 'IJKL o flechas · Ñ/Ctrl der. ráfaga · O/Alt Gr turbo · U/Enter misil · H/N tonel']],
     touch: 'En el celular: palanca flotante y botones de ráfaga, turbo y misil para cada uno.',
-    extras: ['Travesía de 10 etapas (de uno o de dos)', 'Jefe en pareja contra La Sombra', 'Copa de 5 pruebas', 'Escuela de vuelo'],
+    extras: ['Travesía de 10 etapas (de uno, de dos o en línea)', 'Jefe en pareja contra La Sombra', 'Copa de 5 pruebas', 'Escuela de vuelo'],
   },
   {
     id: 'sortilegio', file: 'games/sortilegio.html', name: 'Sortilegio', short: 'Sortilegio', num: '03',
-    net: { seats: 4, mode: 'duel', modes: ['duel', 'altar', 'hunt', 'tejo'], max: { tejo: 2 }, desc: { duel: 'Todos contra todos: la ronda es del último mago en pie.', altar: 'Suma quien esté solo dentro del círculo sagrado.', hunt: 'Cada espanto cae solo con su contrario: el que más cace gana.', tejo: 'Mete el tejo en el bocín del otro (solo para dos).' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
+    net: { seats: 4, mode: 'duel', modes: ['duel', 'altar', 'hunt', 'tejo'], max: { tejo: 2 },
+      // campaña en equipo en línea: juegan dos (los demás miran); el anfitrión elige el nivel dentro del juego
+      extra: [{ id: 'camp', name: 'Campaña en equipo', seats: 2, watch: true, maps: [], desc: 'La Travesía de los Tunjos para dos: el anfitrión elige el nivel entre los que tiene abiertos y lo que ganen queda guardado en el aparato de cada uno.' }],
+      desc: { duel: 'Todos contra todos: la ronda es del último mago en pie.', altar: 'Suma quien esté solo dentro del círculo sagrado.', hunt: 'Cada espanto cae solo con su contrario: el que más cace gana.', tejo: 'Mete el tejo en el bocín del otro (solo para dos).' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
     tag: 'Duelo de magos', kind: 'Hechizos y fusiones',
     desc: 'Magos con un elemento en cada mano: toca, carga o funde las dos para crear 28 hechizos. Reacciones con el terreno, combinaciones y el Gran Sortilegio.',
     c1: '#ffd36b', c2: '#9a5cff', c3: '#ff7a3d', ink: '#120a22', font: 'sorti',
@@ -628,12 +635,13 @@ const GAMES = [
     chars: true, charsName: 'magos',
     keys: [['J1', 'WASD moverse · F/C mano izq. · G/V mano der. · H/Espacio esquivar'], ['J2', 'Flechas moverse · K mano izq. · L mano der. · Ñ esquivar']],
     touch: 'En el celular: palanca, dos manos y el rombo de fusión en el medio.',
-    extras: ['Campaña en equipo de 18 niveles (cielo e infierno)', '13 magos con atuendos', 'Grimorio de 28 fusiones', 'Escuela de magia'],
+    extras: ['Campaña en equipo de 18 niveles (también en línea)', '13 magos con atuendos', 'Grimorio de 28 fusiones', 'Escuela de magia'],
   },
   {
     id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick', modes: ['quick', 'duel', 'elim', 'battle'],
       // modos que solo están adentro del juego (no en el torneo) y también van en línea
-      extra: [{ id: 'gp', name: 'Gran Premio', desc: 'Varias pistas seguidas con puntos por puesto (10, 8, 6…): gana la copa quien sume más.', maps: [['0', 'Copa Esmeralda · 5 pistas'], ['1', 'Copa Dorada · 5 pistas'], ['2', 'Gran Copa · 10 pistas']] }],
+      extra: [{ id: 'gp', name: 'Gran Premio', desc: 'Varias pistas seguidas con puntos por puesto (10, 8, 6…): gana la copa quien sume más.', maps: [['0', 'Copa Esmeralda · 5 pistas'], ['1', 'Copa Dorada · 5 pistas'], ['2', 'Gran Copa · 10 pistas']] },
+        { id: 'world', name: 'Vuelta al mundo', seats: 2, watch: true, maps: [], noOpts: true, desc: 'La campaña de a dos: 24 retos y 6 jefes por 13 lugares del mundo. El anfitrión elige en su mapa el reto (de lo que tiene abierto) y las estrellas quedan guardadas en el aparato de cada uno.' }],
       desc: { quick: 'Todos a la misma carrera; la máquina completa la parrilla hasta 6 autos. Gana quien llegue primero.', duel: 'Solo ustedes, sin máquina: carreras seguidas hasta que alguien gane 2.', elim: 'Cada 15 segundos sale el último (máquina incluida). Gana quien dure más.', battle: 'Arena con 3 corazones: embiste con turbo y usa objetos. Último en pie.' } },
     tag: 'La Copa Esmeralda', kind: 'Carreras en 3D',
     desc: 'Bólidos que derrapan, saltan, flotan en lancha y planean con alas por 10 pistas del mundo. Objetos, turbos esmeralda, batallas y pantalla dividida para dos.',
@@ -651,7 +659,7 @@ const GAMES = [
     chars: true, charsName: 'pilotos',
     keys: [['J1', 'WASD manejar · F/C derrape · G/V objeto · H/Espacio turbo'], ['J2', 'Flechas manejar · K derrape · L objeto · Ñ turbo']],
     touch: 'En el celular: pantalla dividida con botones para cada uno.',
-    extras: ['Vuelta al mundo (campaña)', 'Gran Premio de 3 copas', 'Persecución de jefes', 'Escuela y 24 desafíos'],
+    extras: ['Vuelta al mundo (campaña, también en línea)', 'Gran Premio de 3 copas', 'Persecución de jefes', 'Escuela y 24 desafíos'],
   },
 ];
 const GAME = Object.fromEntries(GAMES.map(g => [g.id, g]));
@@ -895,6 +903,9 @@ const Torneo = (() => {
 /* ===== net.js ===== */
 /* =========================================================================
    RED DE GAMEHUB — salas en línea sin servidor propio.
+   · Servidor propio (Cloudflare, carpeta servidor/): señal y relevo rápidos
+     por WebSocket y credenciales TURN de Cloudflare (puntos en Colombia). Si
+     no está o no responde, todo sigue como antes (MQTT y Open Relay).
    · Señalización: brokers MQTT públicos por WebSocket (varios a la vez) con
      los mensajes cifrados (AES-GCM, clave sacada del código de la sala).
    · Conexión: WebRTC entre aparatos (estrella: el anfitrión con cada uno).
@@ -914,6 +925,9 @@ const Torneo = (() => {
 const Net = (() => {
   const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   const BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
+  // servidor propio (Cloudflare Workers). ?server=… (pruebas) o gamehub_server (Ajustes) lo cambian; '' = sin servidor
+  const SERVER0 = '';
+  const SERVER = (() => { try { const q = new URLSearchParams(location.search).get('server'); const v = q != null ? q : localStorage.getItem('gamehub_server'); const u = v != null ? v : SERVER0; return /^https?:\/\/[\w.\-:]+$/.test(u || '') ? u.replace(/\/$/, '') : ''; } catch (e) { return SERVER0; } })();
   const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }, { urls: 'stun:stun1.l.google.com:19302' }];
   const enc = new TextEncoder(), dec = new TextDecoder();
   const rid = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => ALPHA[b % ALPHA.length]).join('');
@@ -937,7 +951,7 @@ const Net = (() => {
   function simDelay(p, now) {
     let d = SIM.lag + Math.abs(gauss()) * SIM.jit;
     if (SIM.spike) { const dt = Math.min(1000, now - (p.simChk || now)); p.simChk = now; if (now > (p.congUntil || 0) && Math.random() < SIM.spike * dt / 1000) { p.congUntil = now + 400 + Math.random() * 600; p.congAdd = 150 + Math.random() * 350; } if (now < (p.congUntil || 0)) d += p.congAdd; }
-    if (p.via === 'relay') d += SIM.rlag + Math.abs(gauss()) * SIM.rlag * 0.3;
+    if (p.via === 'relay') { const rl = S.sig && S.sig.srv ? SIM.rlag * 0.2 : SIM.rlag; d += rl + Math.abs(gauss()) * rl * 0.3; } // (por el servidor propio el relevo suma mucho menos)
     return d;
   }
   // estado de la conexión directa (en las pruebas, durante ?netcut se ve «desconectada»)
@@ -987,14 +1001,36 @@ const Net = (() => {
     return { send, close() { dead = true; clearInterval(ping); try { ws && ws.close(); } catch (e) { /* nada */ } }, get ready() { return ready; } };
   }
   // señalización: varios brokers a la vez (o BroadcastChannel en pruebas); los repetidos se descartan
+  // servidor propio: un WebSocket a la sala (el servidor reparte; solo ve a quién va cada mensaje, lo demás va cifrado)
+  function Srv(onMsg) {
+    let ws = null, dead = false, tries = 0, ready = false, beat = 0, lastIn = 0;
+    const room = S.topic.split('/').pop(), queue = [], te = new TextEncoder();
+    function connect() {
+      if (dead || !SERVER) return; ready = false;
+      try { ws = new WebSocket(SERVER.replace(/^http/, 'ws') + '/s/' + room + '?id=' + S.id); } catch (e) { return retry(); }
+      ws.binaryType = 'arraybuffer';
+      ws.onopen = () => { tries = 0; ready = true; lastIn = Date.now(); while (queue.length) raw(queue.shift()); emit('status', { server: true, ok: true });
+        clearInterval(beat); beat = setInterval(() => { if (!ws) return; if (Date.now() - lastIn > 25000) { try { ws.close(); } catch (e) { /* nada */ } return; } try { ws.send('p'); } catch (e) { /* nada */ } }, 10000); };
+      ws.onmessage = e => { lastIn = Date.now(); if (typeof e.data !== 'string') onMsg(new Uint8Array(e.data)); };
+      ws.onclose = ws.onerror = () => { clearInterval(beat); const was = ready; ready = false; if (ws) { ws.onclose = ws.onerror = ws.onmessage = null; ws = null; } if (was) emit('status', { server: true, ok: false }); retry(); };
+    }
+    function retry() { if (dead) return; tries++; setTimeout(connect, Math.min(10000, 500 * tries)); }
+    function raw(b) { try { ws.send(b); } catch (e) { /* nada */ } }
+    function send(u8, to) { const h = te.encode(to && /^[A-Za-z0-9]{8}$/.test(to) ? to : '********'), b = new Uint8Array(8 + u8.length); b.set(h); b.set(u8, 8); if (!ws || !ready) { if (queue.length < 40) queue.push(b); return; } raw(b); }
+    connect();
+    return { send, close() { dead = true; clearInterval(beat); try { ws && ws.close(); } catch (e) { /* nada */ } }, get ready() { return ready; } };
+  }
   function Signal() {
     const useBC = new URLSearchParams(location.search).get('net') === 'bc' || Net.transport === 'bc';
     const onRaw = async u8 => { const m = await open(u8); if (!m || m.from === S.id || (m.to && m.to !== S.id)) return; if (S.seen.has(m.mid)) return; S.seen.set(m.mid, Date.now()); if (S.seen.size > 600) { const old = Date.now() - 60000; for (const [k, t] of S.seen) if (t < old) S.seen.delete(k); } onSignal(m); };
-    if (useBC) { const bc = new BroadcastChannel(S.topic); bc.onmessage = e => onRaw(new Uint8Array(e.data)); return { send: u8 => bc.postMessage(u8.buffer), close: () => bc.close(), get ready() { return true; } }; }
+    const srv = SERVER && (!useBC || /[?&]server=/.test(location.search)) ? Srv(onRaw) : null;
+    if (srv && new URLSearchParams(location.search).get('net') === 'srv') return { send: (u8, to) => srv.send(u8, to), close: () => srv.close(), get ready() { return srv.ready; }, get srv() { return srv.ready; } }; // pruebas: solo el servidor
+    if (useBC) { const bc = new BroadcastChannel(S.topic); bc.onmessage = e => onRaw(new Uint8Array(e.data)); return { send: (u8, to, fast) => { if (srv && srv.ready) { srv.send(u8, to); if (fast) return; } bc.postMessage(u8.buffer); }, close: () => { bc.close(); srv && srv.close(); }, get ready() { return true; }, get srv() { return !!(srv && srv.ready); } }; }
     const bs = BROKERS.map(u => Broker(u, onRaw));
-    return { send: u8 => bs.forEach(b => b.send(u8)), close: () => bs.forEach(b => b.close()), get ready() { return bs.some(b => b.ready); } };
+    // lo de la partida (relevo) va solo por el servidor si está; la señal (encontrarse) por todos los caminos a la vez
+    return { send: (u8, to, fast) => { if (srv && srv.ready) { srv.send(u8, to); if (fast) return; } bs.forEach(b => b.send(u8)); }, close: () => { bs.forEach(b => b.close()); srv && srv.close(); }, get ready() { return bs.some(b => b.ready) || !!(srv && srv.ready); }, get srv() { return !!(srv && srv.ready); } };
   }
-  async function signal(obj) { if (!S.sig) return; obj.from = S.id; obj.mid = rid(10); S.sig.send(await seal(obj)); }
+  async function signal(obj, fast) { if (!S.sig) return; obj.from = S.id; obj.mid = rid(10); S.sig.send(await seal(obj), obj.to, fast); }
 
   /* ---------- servidores de ICE ---------- */
   // TURN propio (Ajustes): [{ urls, username, credential }] — solo direcciones turn:/turns:/stun: y textos cortos
@@ -1012,7 +1048,25 @@ const Net = (() => {
     } catch (e) { return []; }
   }
   // el propio (si hay) + el que comparte el anfitrión + el gratuito de respaldo
-  async function iceServers(extra) { return STUN.concat(ownTurn() || [], cleanIce(extra) || [], await openRelay()); }
+  // TURN de Cloudflare: el servidor da credenciales de un día; se guardan 6 h para no pedirlas en cada conexión
+  let cfIceP = null;
+  function cfIce() {
+    if (!SERVER) return Promise.resolve([]);
+    try { const c = JSON.parse(localStorage.getItem('gamehub_ice') || 'null'); if (c && c.s === SERVER && Date.now() < c.exp && Array.isArray(c.ice)) return Promise.resolve(c.ice); } catch (e) { /* nada */ }
+    if (cfIceP) return cfIceP;
+    cfIceP = (async () => {
+      try {
+        const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, to = setTimeout(() => ctl && ctl.abort(), 4000);
+        const r = await fetch(SERVER + '/ice', { cache: 'no-store', signal: ctl ? ctl.signal : undefined }); clearTimeout(to);
+        const j = await r.json(), ice = (Array.isArray(j.iceServers) ? j.iceServers : []).map(x => ({ urls: (Array.isArray(x.urls) ? x.urls : [x.urls]).filter(u => typeof u === 'string' && /^(turns?|stun):/.test(u)).slice(0, 8), username: x.username, credential: x.credential })).filter(x => x.urls.length);
+        if (ice.length) try { localStorage.setItem('gamehub_ice', JSON.stringify({ s: SERVER, exp: Date.now() + 6 * 3600e3, ice })); } catch (e) { /* nada */ }
+        return ice;
+      } catch (e) { return []; } finally { setTimeout(() => { cfIceP = null; }, 30000); }
+    })();
+    return cfIceP;
+  }
+  // primero el TURN de Cloudflare (cerca, rápido), luego el propio de Ajustes, el que comparte el anfitrión y el gratuito
+  async function iceServers(extra) { const [cf, orl] = await Promise.all([cfIce(), openRelay()]); return STUN.concat(cf, ownTurn() || [], cleanIce(extra) || [], orl); }
 
   /* ---------- pares (WebRTC) ---------- */
   function newPeer(id, info) {
@@ -1057,19 +1111,20 @@ const Net = (() => {
   }
   // relevo (sin WebRTC): lo confiable sale ya; lo urgente (instantáneas, entradas) a lo más ~12 por segundo y siempre lo
   // más nuevo de cada tipo (lo saltado no hace falta: lo trae el siguiente; las partes «lentas» pasan al que sí sale)
-  const RELAY_MS = 66; // ~15 por segundo
+  const RELAY_MS = 66; // ~15 por segundo por los servidores públicos; por el servidor propio, ~30 (RELAY_FAST)
+  const RELAY_FAST = 33;
   const relayKey = o => (o && o.$g ? 'g' + (o.d && o.d.t) + (o.d && o.d.s != null ? ':' + o.d.s : '') : 'n' + (o && o.$));
   function relayOut(p, s) {
     let o; try { o = JSON.parse(s); } catch (e) { return; }
     const q = p.rq || (p.rq = new Map()), k = relayKey(o), old = q.get(k);
     if (old && api.relayMerge) { try { api.relayMerge(old, o); } catch (e) { /* nada */ } }
     q.set(k, o);
-    if (!p.rqT) p.rqT = setTimeout(() => relayFlush(p), Math.max(0, RELAY_MS - (Date.now() - (p.rqAt || 0))));
+    if (!p.rqT) p.rqT = setTimeout(() => relayFlush(p), Math.max(0, (S.sig && S.sig.srv ? RELAY_FAST : RELAY_MS) - (Date.now() - (p.rqAt || 0))));
   }
-  function relayFlush(p) { p.rqT = 0; if (peers.get(p.id) !== p || !p.rq || !p.rq.size) return; p.rqAt = Date.now(); for (const o of p.rq.values()) signal({ t: 'relay', to: p.id, d: JSON.stringify(o) }); p.rq.clear(); }
+  function relayFlush(p) { p.rqT = 0; if (peers.get(p.id) !== p || !p.rq || !p.rq.size) return; p.rqAt = Date.now(); for (const o of p.rq.values()) signal({ t: 'relay', to: p.id, d: JSON.stringify(o) }, true); p.rq.clear(); }
   function sendNow(p, s, rel) {
     ST.out += s.length; ST.nOut++;
-    if (p.via === 'relay') { if (rel) signal({ t: 'relay', to: p.id, d: s }); else relayOut(p, s); return; }
+    if (p.via === 'relay') { if (rel) signal({ t: 'relay', to: p.id, d: s }, true); else relayOut(p, s); return; }
     const ch = (!rel && p.u && p.u.readyState === 'open') ? p.u : p.r;
     if (!ch || ch.readyState !== 'open') { if (rel && p.pend.length < 200) p.pend.push([s, rel]); return; }
     if (!rel && ch.bufferedAmount > 64000) return; // la red va atrasada: se salta este (llega otro enseguida)
@@ -1179,7 +1234,7 @@ const Net = (() => {
   }
   async function start(code, info, host) {
     leave(true); if (SIM.cut) { cutA = performance.now() + SIM.cut[0] * 1000; cutB = cutA + SIM.cut[1] * 1000; } S.code = code; S.info = info; S.isHost = host; S.hostId = host ? S.id : null; S.alive = true; S.clockOff = 0; S.term = host ? 1 : 0; S.dead.clear(); S.succ = null; S.moved = false;
-    await deriveKey(code); S.sig = Signal(); loop();
+    cfIce(); await deriveKey(code); S.sig = Signal(); loop();
     if (host) { broadcastRoom(); announce(); } else { signal({ t: 'hello', info }); setTimeout(() => S.alive && !S.hostId && signal({ t: 'hello', info }), 1200); }
     return code;
   }
@@ -1212,15 +1267,21 @@ const Net = (() => {
       setTimeout(() => fin(false), ms);
     });
   }
+  // el servidor propio: ¿responde y en cuánto? (y desde qué ciudad de Cloudflare)
+  async function serverPing() {
+    if (!SERVER) return null;
+    try { let best = 1e9, colo = ''; for (let k = 0; k < 3; k++) { const t = performance.now(), r = await fetch(SERVER + '/ping', { cache: 'no-store' }); const j = await r.json(); best = Math.min(best, performance.now() - t); colo = j.colo || colo; } const ice = await cfIce(); return { ok: true, ms: Math.round(best), colo, turn: ice.some(x => x.urls.some(u => /^turns?:/.test(u))) }; } catch (e) { return { ok: false }; }
+  }
   async function probe(turn) {
     if (typeof RTCPeerConnection === 'undefined') return { webrtc: false, signal: 0, of: BROKERS.length, stun: false, turn: false, own: null };
     const own = turn === undefined ? ownTurn() : cleanIce(turn);
-    const [sig, all, mine] = await Promise.all([
+    const [sig, all, mine, srv] = await Promise.all([
       Promise.all(BROKERS.map(u => brokerOk(u))),
-      openRelay().then(r => iceTypes(STUN.concat(r), 'all')),
+      Promise.all([cfIce(), openRelay()]).then(([c, r]) => iceTypes(STUN.concat(c, r), 'all')),
       own ? iceTypes(own, 'relay') : Promise.resolve(null),
+      serverPing(),
     ]);
-    return { webrtc: true, signal: sig.filter(Boolean).length, of: BROKERS.length, stun: all.has('srflx') || all.has('prflx'), turn: all.has('relay'), own: mine ? mine.has('relay') : null };
+    return { webrtc: true, signal: sig.filter(Boolean).length, of: BROKERS.length, stun: all.has('srflx') || all.has('prflx'), turn: all.has('relay'), own: mine ? mine.has('relay') : null, server: srv };
   }
   addEventListener('pagehide', () => { if (S.alive) leave(true); });
   const api = {
@@ -1239,6 +1300,7 @@ const Net = (() => {
     now: () => performance.now() + (S.isHost ? 0 : S.clockOff),
     get id() { return S.id; }, get code() { return S.code; }, get isHost() { return S.isHost; }, get hostId() { return S.hostId; }, get alive() { return S.alive; },
     get room() { return S.room; }, get peers() { return peers; }, get signalReady() { return !!(S.sig && S.sig.ready); },
+    get server() { return SERVER; }, get serverReady() { return !!(S.sig && S.sig.srv); },
     _onInfo(id, info) { const p = peers.get(id); if (p) { p.info = info; broadcastRoom(); } },
     get term() { return S.term; }, get ownTurn() { return ownTurn(); },
     // la partida que tiene abierta el anfitrión (viaja con la sala cada 2 s: si a alguien no le llegó el aviso de empezar o
@@ -1279,7 +1341,14 @@ const Online = (() => {
   const el = () => $('#v-online');
   const visible = () => el() && !el().hidden;
   const myPlayers = () => st.players.slice(0, st.n).map((p, i) => ({ name: (p.name || '').trim() || (st.n === 1 ? 'Jugador' : 'Jugador ' + (i + 1)), color: p.color || COLORS[i] }));
-  const info = () => ({ name: myPlayers().map(p => p.name).join(' y '), players: myPlayers(), dev: touch ? 'cel' : 'pc' });
+  const myBuild = () => window.__ghBuild || {};
+  const info = () => ({ name: myPlayers().map(p => p.name).join(' y '), players: myPlayers(), dev: touch ? 'cel' : 'pc', v: myBuild().v, vd: myBuild().date });
+  // ¿algún aparato tiene otra versión de GameHub? (los modos nuevos necesitan la misma en todos)
+  const oldDev = d => { const mv = myBuild().v; return !!(d && d.info && d.info.v && mv && mv !== 'dev' && d.info.v !== 'dev' && d.info.v !== mv); };
+  function verNote(devs) { const bad = (devs || []).filter(oldDev); if (!bad.length) return '';
+    const mine = myBuild().date || '', older = bad.filter(d => (d.info.vd || '') < mine).map(d => esc(d.info.name || 'un aparato')), newer = bad.some(d => (d.info.vd || '') > mine);
+    const what = older.length || newer ? (older.length ? older.join(' y ') + (older.length > 1 ? ' tienen' : ' tiene') + ' una versión vieja de GameHub' : '') + (older.length && newer ? '; y ' : '') + (newer ? 'este aparato tiene una versión más vieja que la de otro' : '') : 'Hay aparatos con versiones distintas de GameHub';
+    return `<div class="on-warn">⚠ ${what}. Abran GameHub con internet y toquen «Actualizar» (o ciérrenlo y vuelvan a abrirlo) antes de jugar, para que todo salga igual en todos.</div>`; }
   const VIA = { local: ['este aparato', 'ok'], p2p: ['directo', 'ok'], turn: ['por TURN', 'mid'], relay: ['por relevo · lento', 'bad'], conectando: ['conectando…', 'mid'] };
   const DEV = { cel: '📱', pc: '💻' };
   const sig = ms => ms <= 0 ? '' : ms < 60 ? 'ok' : ms < 140 ? 'mid' : 'bad';
@@ -1355,13 +1424,13 @@ const Online = (() => {
         <div class="on-react" role="group" aria-label="Reacciones rápidas">${REACT.map(e => `<button class="on-rx" data-rx="${e}" aria-label="Enviar ${e}">${e}</button>`).join('')}</div>
         <div class="panel"><div class="h2">APARATOS Y JUGADORES</div>
           <div class="on-devs">${devs.map(d => { const hp = d.host && !host ? hostPeer : null; if (hp) d = Object.assign({}, d, { via: hp.via, rtt: Math.round(hp.rtt) }); const v = VIA[d.id === me ? 'local' : d.via] || VIA.conectando; return `<div class="on-dev${d.id === me ? ' me' : ''}">
-            <div class="on-dh"><span class="on-di">${DEV[d.info && d.info.dev] || '🎮'}</span><b>${esc(d.info ? d.info.name : '…')}</b>${d.host ? '<span class="on-tag gold">anfitrión</span>' : ''}${d.id === me ? '<span class="on-tag">tú</span>' : ''}
+            <div class="on-dh"><span class="on-di">${DEV[d.info && d.info.dev] || '🎮'}</span><b>${esc(d.info ? d.info.name : '…')}</b>${d.host ? '<span class="on-tag gold">anfitrión</span>' : ''}${d.id === me ? '<span class="on-tag">tú</span>' : ''}${d.id !== me && oldDev(d) ? '<span class="on-tag warn">otra versión</span>' : ''}
               <span class="on-via ${v[1]}">${v[0]}${d.id !== me && d.rtt ? ` · ${d.rtt} ms` : ''}</span></div>
             <div class="on-ps">${ps.filter(p => p.dev === d.id).map(p => `<span class="on-p" style="--c:${esc(p.color)}"><i></i>${esc(p.name)}</span>`).join('')}</div></div>`; }).join('')}</div>
           <details class="on-me"><summary>Cambiar quién juega en este aparato</summary>${whoHTML()}</details>
         </div>
         ${tourPanel(host)}
-        <div class="panel" id="on-play"><div class="h2">${host ? '¿QUÉ JUGAMOS?' : 'LO QUE VIENE'}</div>${host ? hostPlayHTML(ps) : clientPlayHTML(connected)}</div>
+        <div class="panel" id="on-play"><div class="h2">${host ? '¿QUÉ JUGAMOS?' : 'LO QUE VIENE'}</div>${verNote(devs)}${host ? hostPlayHTML(ps) : clientPlayHTML(connected)}</div>
         ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
       </div></div>`;
     bindWho(root);
@@ -1383,7 +1452,7 @@ const Online = (() => {
   const lenTxt = (g, m, n) => (g.net && g.net.lenTxt && g.net.lenTxt[m.id] ? g.net.lenTxt[m.id](n) : m.lenTxt(n));
   function evText(g, ev) {
     if (!g || !ev) return ''; const m = allModes(g).find(x => x.id === ev.mode), mp = (Array.isArray(m && m.maps) ? m.maps : g.maps.concat(g.arenas || [])).find(x => x[0] === ev.map);
-    return [g.name, m && m.name, mp ? mp[1] : 'escenario al azar', m && m.len && ev.len ? lenTxt(g, m, ev.len) : '', ...netOpts(g).filter(o => ev.opts && ev.opts[o.id]).map(o => o.name)].filter(Boolean).join(' · ');
+    return [g.name, m && m.name, mp ? mp[1] : m && Array.isArray(m.maps) && !m.maps.length ? '' : 'escenario al azar', m && m.len && ev.len ? lenTxt(g, m, ev.len) : '', ...netOpts(g).filter(o => ev.opts && ev.opts[o.id]).map(o => o.name)].filter(Boolean).join(' · ');
   }
   function hostPlayHTML(ps) {
     const gs = GAMES(), g = pick && gs.find(x => x.id === pick);
@@ -1391,13 +1460,14 @@ const Online = (() => {
     const tourBtn = ps.length >= 2 ? `<div class="row" style="margin-top:12px"><button class="btn gold" id="on-tour">🏆 ${GAMEHUB.Tour.T && GAMEHUB.Tour.T.online && !GAMEHUB.Tour.T.done ? 'Seguir el torneo' : 'Torneo con todos'}</button><span class="note" style="margin:0">liga, eliminatoria, rey de la pista… con los ${ps.length} de la sala</span></div>` : '';
     if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: elige un juego.`}</p>${cards}${tourBtn}`;
     const ms = netModes(g), m = ms.find(x => x.id === pickEv.mode) || ms[0], maps = mapsFor(g, m), seg = (k, items, v) => `<div class="seg" data-onseg="${k}">${items.map(([id, t]) => `<button data-v="${esc(id)}" aria-pressed="${String(id) === String(v)}">${esc(t)}</button>`).join('')}</div>`;
-    const over = ps.length > g.net.seats ? `<p class="note warn">Este juego es de ${g.net.watch ? '' : 'hasta '}${g.net.seats}: juegan ${ps.slice(0, g.net.seats).map(p => esc(p.name)).join(' y ')}; ${g.net.watch ? 'los demás miran en vivo' : 'los demás esperan'}.</p>` : '';
+    const nS = m.seats || g.net.seats, watch = m.watch || g.net.watch;
+    const over = ps.length > nS ? `<p class="note warn">${m.seats ? 'Este modo' : 'Este juego'} es de ${watch ? '' : 'hasta '}${nS}: juegan ${ps.slice(0, nS).map(p => esc(p.name)).join(' y ')}; ${watch ? 'los demás miran en vivo' : 'los demás esperan'}.</p>` : '';
     return `<p class="note">Con ${ps.length} jugadores.</p>${cards}
       <div class="on-cfg" style="--c1:${g.c1};--c2:${g.c2}">
         <div class="lbl">Modo</div>${seg('mode', ms.map(x => [x.id, x.name]), m.id)}<p class="on-desc">${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</p>
         ${maps.length > 1 ? `<div class="lbl">Escenario</div>${seg('map', [['', '🎲 Al azar']].concat(maps), pickEv.map || '')}` : ''}
         ${m.len ? `<div class="lbl">Largo</div>${seg('len', m.len.map(n => [n, lenTxt(g, m, n)]), pickEv.len || m.len[1] || m.len[0])}` : ''}
-        ${netOpts(g).map(o => `<div class="lbl">${esc(o.name)}</div>${seg('opt:' + o.id, [['0', 'No'], ['1', 'Sí']], pickEv.opts && pickEv.opts[o.id] ? '1' : '0')}<p class="on-desc">${esc(o.desc[0].toUpperCase() + o.desc.slice(1))}.</p>`).join('')}
+        ${(m.noOpts ? [] : netOpts(g)).map(o => `<div class="lbl">${esc(o.name)}</div>${seg('opt:' + o.id, [['0', 'No'], ['1', 'Sí']], pickEv.opts && pickEv.opts[o.id] ? '1' : '0')}<p class="on-desc">${esc(o.desc[0].toUpperCase() + o.desc.slice(1))}.</p>`).join('')}
         ${over}<div class="row"><button class="btn gold big" id="on-go">¡A jugar!</button><button class="btn ghost" id="on-back">Otro juego</button></div>
       </div>`;
   }
@@ -1413,10 +1483,10 @@ const Online = (() => {
     if ($('#on-back', root)) $('#on-back', root).onclick = () => { pick = null; pickEv = null; sendPick(); render(); };
   }
   // los demás ven lo que el anfitrión está armando
-  function sendPick() { Net.send('*', { $: 'pick', game: pick, ev: pickEv }, true); }
+  function sendPick() { Net.send('*', { $: 'pick', game: pick, ev: pickEv }, true); if (pick) GAMEHUB.Launcher.preload(pick); }
   // el anfitrión arranca una partida: puestos con los jugadores de la sala (en orden), y todos abren el juego
   function startGame(g, ev, only, tour) {
-    const ps = (only || players(Net.room)).slice(0, g.net.seats), sid = Math.random().toString(36).slice(2, 10);
+    const M = allModes(g).find(m => ev && m.id === ev.mode), ps = (only || players(Net.room)).slice(0, (M && M.seats) || g.net.seats), sid = Math.random().toString(36).slice(2, 10);
     const seats = ps.map(p => ({ dev: p.dev, local: devLocal(p), name: p.name, color: p.color }));
     // que nadie se repita: colores (el siguiente libre de la paleta) y nombres (con número)
     const usedC = new Set(), usedN = {};
@@ -1493,7 +1563,7 @@ const Online = (() => {
     const g = lastPick && GAMES().find(x => x.id === lastPick.game);
     return g ? `<div class="on-next" style="--c1:${g.c1};--c2:${g.c2}"><span class="lbl">EL ANFITRIÓN PREPARA</span><b>${esc(evText(g, lastPick.ev).split(' · ')[0])}</b><small>${esc(evText(g, lastPick.ev).split(' · ').slice(1).join(' · '))}</small></div>` : '<p class="note">Esperando a que el anfitrión elija…</p>';
   }
-  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0, opts: m.ev.opts && typeof m.ev.opts === 'object' ? Object.fromEntries(Object.entries(m.ev.opts).filter(([k, v]) => /^\w{1,20}$/.test(k) && typeof v === 'boolean')) : {} } : {} } : null; if (visible()) render(); } });
+  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0, opts: m.ev.opts && typeof m.ev.opts === 'object' ? Object.fromEntries(Object.entries(m.ev.opts).filter(([k, v]) => /^\w{1,20}$/.test(k) && typeof v === 'boolean')) : {} } : {} } : null; if (lastPick && lastPick.game) GAMEHUB.Launcher.preload(lastPick.game); if (visible()) render(); } });
   // al entrar alguien nuevo, el anfitrión le cuenta qué está armando
   Net.on('peers', () => { if (Net.isHost && pick) sendPick(); });
   // los remotos: el anfitrión arrancó una partida → abrirla aquí también
@@ -1573,7 +1643,8 @@ const Online = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"f2e9c366e5","date":"2026-11-19"};
+  const BUILD = {"v":"4002098718","date":"2026-11-25"};
+  try { window.__ghBuild = BUILD; } catch (e) { /* nada */ } // la sala en línea compara versiones entre aparatos
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
   const COLORS = ['#ff5d8f', '#45d6b0', '#ffb36b', '#6fc3ff', '#ffd36b', '#b07bff', '#3dffa8', '#ff7a3d'];
@@ -1881,7 +1952,9 @@ const Online = (() => {
     // salir a propósito de una partida en línea (remoto): la sala no se la vuelve a abrir
     const leftOnPurpose = () => { if (netCfg && netCfg.role === 'client' && typeof Online !== 'undefined' && Online.leftNet) Online.leftNet(netCfg.sid); };
     $('#lback').addEventListener('click', () => { leftOnPurpose(); close(); });
-    return { open, close, get open_() { return !!cur; }, get net() { return netCfg; } };
+    // en línea: apenas se sabe qué juego viene (el anfitrión lo elige en la sala), se va bajando para que abra al instante
+    function preload(id) { const g = GAME[id]; if (g && !cache[g.id]) load(g).catch(() => {}); }
+    return { open, close, preload, get open_() { return !!cur; }, get net() { return netCfg; } };
   })();
 
   /* ---------- torneo: estado guardado y asistente ---------- */
@@ -2293,8 +2366,9 @@ const Online = (() => {
     const R = probeRes; let res = '';
     if (probing) res = `<div class="nprobe"><div class="nprow mid"><i class="spin"></i><div><b>Probando…</b><span>Unos segundos: servidores de señales, conexión directa y respaldo.</span></div></div></div>`;
     else if (R) {
-      const verdict = !R.webrtc ? 'Este navegador no deja jugar en línea (falta WebRTC). Prueba con Chrome, Edge, Safari o Firefox al día.' : !R.signal ? 'No se llega a los servidores de señales: revisa que haya internet (o que esta red no los bloquee).' : R.stun || R.turn || R.own ? 'Listo para jugar en línea desde esta red' + (R.stun ? ' (con conexión directa).' : ' (por el respaldo: un poquito más lento).') : 'Esta red no deja conectar directo ni por el respaldo: igual se puede jugar por el relevo de señales, pero más lento. Con otra red (o un TURN propio) va mejor.';
-      res = `<div class="nprobe">${line(R.signal > 0, 'Señales', R.signal ? `${R.signal} de ${R.of} servidores responden` : 'ningún servidor responde')}${line(R.stun, 'Conexión directa', R.stun ? 'este aparato se puede conectar directo con los demás' : 'esta red no deja conexión directa')}${line(R.turn, 'Respaldo (TURN gratuito)', R.turn ? 'funciona: sirve cuando la red del otro no deja conexión directa' : 'no responde desde esta red')}${R.own !== null ? line(R.own, 'Tu TURN', R.own ? 'funciona' : 'no responde: revisa la dirección, el usuario y la clave') : ''}<p class="note npv">${esc(verdict)}</p></div>`;
+      const verdict = !R.webrtc ? 'Este navegador no deja jugar en línea (falta WebRTC). Prueba con Chrome, Edge, Safari o Firefox al día.' : !R.signal && !(R.server && R.server.ok) ? 'No se llega a los servidores de señales: revisa que haya internet (o que esta red no los bloquee).' : R.stun || R.turn || R.own ? 'Listo para jugar en línea desde esta red' + (R.stun ? ' (con conexión directa).' : ' (por el respaldo: un poquito más lento).') : 'Esta red no deja conectar directo ni por el respaldo: igual se puede jugar por el relevo de señales, pero más lento. Con otra red (o un TURN propio) va mejor.';
+      const SV = R.server, svLine = SV ? line(SV.ok, 'Servidor de GameHub', SV.ok ? `responde en ${SV.ms} ms${SV.colo ? ' (' + esc(SV.colo) + ')' : ''}${SV.turn ? ' · con TURN de Cloudflare' : ' · sin TURN todavía'}` : 'no responde desde esta red: se usan los servidores públicos') : '';
+      res = `<div class="nprobe">${svLine}${line(R.signal > 0, 'Señales', R.signal ? `${R.signal} de ${R.of} servidores responden` : 'ningún servidor responde')}${line(R.stun, 'Conexión directa', R.stun ? 'este aparato se puede conectar directo con los demás' : 'esta red no deja conexión directa')}${line(R.turn, 'Respaldo (TURN)', R.turn ? 'funciona: sirve cuando la red del otro no deja conexión directa' : 'no responde desde esta red')}${R.own !== null ? line(R.own, 'Tu TURN', R.own ? 'funciona' : 'no responde: revisa la dirección, el usuario y la clave') : ''}<p class="note npv">${esc(verdict)}</p></div>`;
     }
     return `<div class="panel"><div class="h2">EN LÍNEA</div>
       <div class="field"><div class="appline"><div class="grow"><div style="font-weight:900">Probar la conexión</div><div class="hint" style="margin:2px 0 0">Revisa si este aparato puede jugar en línea desde la red en la que está (wifi o datos móviles).</div></div><button class="btn small" data-net="probe" ${probing ? 'disabled' : ''}>Probar</button></div>${res}</div>

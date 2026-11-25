@@ -521,7 +521,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
         <div class="camp-head"><span id="camp-stars">★ 0</span><span id="camp-note">Cada zona termina con un jefe: hay que vencerlo para seguir.</span></div>
         <div id="camp-rows" class="camp"></div>
       </div>
-      <div class="row"><button class="btn" data-act="back">Atrás</button></div>
+      <div class="row"><button class="btn" data-act="back" id="camp-back">Atrás</button></div>
     </section>
 
     <!-- JEFES -->
@@ -590,6 +590,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
           <button class="btn big menta" data-act="nextlevel" id="btn-next" hidden>Siguiente nivel</button>
           <button class="btn big sol" data-act="hubback" id="btn-hub" hidden>Continuar torneo ▸</button>
           <button class="btn big fresa" data-act="rematch" id="btn-rematch">Revancha</button>
+          <button class="btn big" data-act="netPick" id="btn-netpick" hidden>Mapa</button>
           <button class="btn big" data-act="changemode">Cambiar modo</button>
           <button class="btn big" data-act="menu">Menú</button>
         </div>
@@ -1349,7 +1350,9 @@ const NetPlay = (() => {
       seats.forEach((s, i) => { const li = document.createElement('li'), ok = ready.includes(i); li.className = ok ? 'ok' : ''; li.innerHTML = '<i></i><span></span><b></b>'; li.querySelector('i').style.background = /^#[0-9a-f]{3,8}$/i.test(s.color || '') ? s.color : '#fff'; li.querySelector('span').textContent = s.name || 'J' + (i + 1); li.querySelector('b').textContent = ok ? 'listo ✓' : 'cargando…'; e.querySelector('ul').appendChild(li); });
       e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = !canGo;
     }
-    return { list, hide() { if (el) { el.remove(); el = null; } } };
+    // aviso sin lista: «El anfitrión elige el nivel…» (se quita solo cuando llega la partida)
+    function msg(title, note) { const e = show(); e.querySelector('h2').textContent = title || ''; e.querySelector('ul').innerHTML = ''; e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = true; }
+    return { list, msg, hide() { if (el) { el.remove(); el = null; } } };
   })();
   // aviso suave si el anfitrión deja de mandar (salió de la app, se le fue la señal): se quita solo al volver
   const Lost = (() => {
@@ -1409,6 +1412,7 @@ const NetPlay = (() => {
   function slow(k, v, ms = 1000) { if (v === undefined) return undefined; const j = JSON.stringify(v), now = performance.now(), L = slowLast[k]; if (L && L.j === j && now - L.t < ms) return undefined; slowLast[k] = { j, t: now }; return v; }
   return {
     gate(o) { gateO = o; }, again, get cfg() { return gcfg; }, okId, slow,
+    notice(title, note) { if (on) Wait.msg(title, note); }, noticeOff() { Wait.hide(); },
     get on() { return on; }, get role() { return role; }, get isHost() { return on && role === 'host'; }, get isClient() { return on && role === 'client'; },
     get seats() { return seats; }, get mine() { return mine; }, get sid() { return sid; }, get ev() { return ev; },
     // ¿este puesto se juega en este aparato? y con qué jugador local (0 o 1)
@@ -1628,7 +1632,7 @@ function emptyInput() { return { left: false, right: false, jump: false, stick: 
 /* ---------- identidad del juego (para cuando haga parte de una colección) ----------
    Todo lo guardado usa el prefijo «tya_». Si el juego corre dentro de otra página
    (un lanzador con varios juegos), avisa de lo importante con postMessage. */
-const GAME_META = { id: 'tira-y-afloja', name: 'Tira y Afloja', version: '0.28', storagePrefix: 'tya_', players: 2 };
+const GAME_META = { id: 'tira-y-afloja', name: 'Tira y Afloja', version: '0.29', storagePrefix: 'tya_', players: 2 };
 const Platform = {
   embedded: (() => { try { return window.parent && window.parent !== window; } catch (e) { return true; } })(),
   emit(event, data = {}) {
@@ -6744,7 +6748,11 @@ const Game = (() => {
   function startNet(c) {
     G.net = true; G.daily = null; G.campBoss = null; Fiesta.force(null);
     G.flavors = c.flavors.slice(); G.winsNeeded = c.wins || 3;
-    startMatch(c.mode, false, c.arena || 'random', !!c.fiesta); // Modo Fiesta: una sorpresa por ronda (la sortea el anfitrión)
+    // campaña en línea: una sala (G.campStage) o el jefe de una zona
+    const st = c.mode === 'campana' && c.stage ? Campaign.stages().find(s => s.id === c.stage) : null;
+    if (st && st.type === 'boss') { G.campStage = st.id; G.jefeId = st.jefe; G.campBoss = st.zone; startMatch('jefe', false, (Jefes.BY[st.jefe] || Jefes.LIST[0]).arena, false); }
+    else if (st) { G.campStage = st.id; startMatch('campana', false, 'campana', false); }
+    else startMatch(c.mode, false, c.arena || 'random', !!c.fiesta); // Modo Fiesta: una sorpresa por ronda (la sortea el anfitrión)
     const S = typeof NetPlay !== 'undefined' ? NetPlay.seats : [];
     G.players.forEach((p, i) => { if (S[i] && S[i].name) p.name = String(S[i].name).slice(0, 14); if (c.accs && c.accs[i]) p.acc = c.accs[i]; });
     G.handicap = [0, 0];
@@ -6954,6 +6962,9 @@ const Game = (() => {
     return {
       mode: G.mode, winner: G.lastWinner, wins: G.wins.slice(), points: G.points.slice(),
       stats: G.players.map(p => Object.assign({}, p.stats)), names: G.players.map(p => p.name), vsBot: G.vsBot,
+      // en línea: sala de la campaña (tiempo y envolturas de esta vez) y pelea con el jefe
+      cr: G.net && G.mode === 'campana' && Campaign.result ? { id: Campaign.result.id, t: Campaign.result.t, wrGot: (Campaign.state && Campaign.state.wr || []).map(w => !!w.got) } : undefined,
+      jr: G.net && G.mode === 'jefe' && Jefes.result ? Object.assign({}, Jefes.result) : undefined, stage: G.net ? G.campStage || undefined : undefined,
     };
   }
 
@@ -10607,6 +10618,7 @@ const Jefes = (() => {
   return {
     LIST, BY, data, setup, clear, update, post, onDunk, status, drawWorld, drawHUD, heart, centerLabel,
     get result() { return J && J.result; }, get state() { return J; },
+    netResult(r) { if (J && r && typeof r === 'object') J.result = Object.assign({}, r); },
     point() { return J && J.body ? J.impl.point() : null; },
     get def() { return J ? J.def : null; },
     unlocked: id => { const i = LIST.findIndex(d => d.id === id); return i <= 0 || !!data.wins[LIST[i - 1].id]; },
@@ -11510,6 +11522,19 @@ const Campaign = (() => {
     return undefined;
   }
 
+  // en línea: el aparato que no corre la partida guarda la sala con lo que mandó el anfitrión (tiempo y envolturas
+  // de esta vez) más sus propias envolturas de antes; queda como resultado para la pantalla
+  function netRecord(R) {
+    const room = BYID[R && R.id]; if (!room) return null;
+    const prevW = data.wr[room.id] || [], got = Array.isArray(R.wrGot) ? R.wrGot : [], n = Math.max(prevW.length, got.length, (room.wrappers || []).length || 0);
+    const wr = Array.from({ length: n }, (_, i) => !!(got[i] || prevW[i])); data.wr[room.id] = wr;
+    const t = +R.t || 0, par = room.par, stars = 1 + (t <= par ? 1 : 0) + (wr.length && wr.every(Boolean) ? 1 : 0), prevStars = data.stars[room.id] || 0;
+    data.stars[room.id] = Math.max(prevStars, stars); const newBest = !(data.best[room.id] <= t); if (newBest) data.best[room.id] = +t.toFixed(1); save();
+    const res = { id: room.id, type: 'room', t, par, stars, wrNow: got.filter(Boolean).length, wrTotal: wr.filter(Boolean).length, newBest, first: !prevStars };
+    if (S && S.room === room) S.result = res; else S = { room, t, fail: 0, win: t, wr: [], result: res };
+    Progress.on('campana', { stars: totalStars() });
+    return res;
+  }
   /* jefes de la campaña */
   function bossResult(zone, win, hearts) {
     const id = `jefe-${zone + 1}`;
@@ -11576,7 +11601,7 @@ const Campaign = (() => {
 
   return {
     ZONES, ROOMS, BYID, data, define, stages, stageIndex, unlocked, totalStars, tickHazards,
-    setup, update, post, onFall, status, bossResult, drawHUD, centerLabel,
+    setup, update, post, onFall, status, bossResult, netRecord, drawHUD, centerLabel,
     get state() { return S; }, get result() { return S && S.result; },
     roomOf: id => BYID[id],
   };
@@ -13589,6 +13614,7 @@ const UI = (() => {
     hubhome() { Hub.exit(); },
     hubback() { Hub.exit(); },
     netAgain() { if (typeof NetGame !== 'undefined') NetGame.again(); },
+    netNext() { if (typeof NetGame !== 'undefined' && netNext) NetGame.again(netNext); }, netPick() { if (typeof NetGame !== 'undefined') NetGame.again(null); },
     rematch() { stack = []; show(null, false); Game.restart(); },
     changemode() { if (Game.G.mode === 'campana' || Game.G.campBoss != null) { stack = ['title', 'modes']; fillCampaign(); show('campana', false); return; } vsBot = lastRes ? lastRes.vsBot : vsBot; Game.G.daily = null; Fiesta.force(null); stack = []; show('modes', false); stack = ['title']; },
     fullscreen() { FS.toggle(); },
@@ -13661,6 +13687,9 @@ const UI = (() => {
     else { Game.G.campBoss = null; startGame('campana', 'campana'); }
   }
   function fillCampaign() {
+    // en línea: el anfitrión elige la sala o el jefe para los dos; los demás esperan
+    const net = !!(netCamp && typeof NetPlay !== 'undefined' && NetPlay.isHost);
+    $('#camp-back').dataset.act = net ? 'hubhome' : 'back'; $('#camp-back').textContent = net ? 'Volver a la sala' : 'Atrás';
     const box = $('#camp-rows'); box.innerHTML = '';
     const st = Campaign.stages(), d = Campaign.data;
     let focusEl = null;
@@ -13681,7 +13710,7 @@ const UI = (() => {
         if (s.type === 'boss') { const J = Jefes.BY[s.jefe]; b.innerHTML = `<b>JEFE</b><span>${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</span><small>${J ? J.name.replace(/^(La|El) /, '') : s.jefe}</small>`; }
         else b.innerHTML = `<b>${s.id}</b><span>${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</span><small>${open ? (best ? best.toFixed(1).replace('.', ',') + ' s' : s.room.name) : '🔒'}</small>`;
         b.setAttribute('aria-label', s.type === 'boss' ? `Jefe de la zona ${zi + 1}` : `Sala ${s.id}: ${s.room.name}`);
-        b.addEventListener('click', () => { Sound.init(); Sound.play('select'); playStage(s); });
+        b.addEventListener('click', () => { Sound.init(); Sound.play('select'); if (net) NetGame.again(s.id); else playStage(s); });
         b.addEventListener('pointerenter', () => { if (!b.disabled && document.activeElement !== b) { b.focus({ preventScroll: true }); Sound.play('hover'); } });
         if (open && !stars && !focusEl) focusEl = b;
         row.append(b);
@@ -13779,6 +13808,10 @@ const UI = (() => {
 
   function showResults(res) {
     lastRes = res;
+    // en línea, en el aparato que no corre la partida: guardar la sala o el jefe con lo que mandó el anfitrión
+    const netC = Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on, mineN = netC ? NetPlay.mine.length : 0;
+    if (netC && NetPlay.isClient && res.cr && !res._rec) { res._rec = 1; if (mineN) Campaign.netRecord(res.cr); }
+    if (netC && NetPlay.isClient && res.jr && !res._rec) { res._rec = 1; Jefes.netResult(Object.assign({}, res.jr, mineN ? {} : { campDone: true })); }
     const fuga = res.mode === 'fuga', jefe = res.mode === 'jefe', jr = jefe ? (Jefes.result || {}) : null;
     const camp = res.mode === 'campana', cr = camp ? (Campaign.result || {}) : null, campBoss = jefe && Game.G.campBoss != null;
     let bossCamp = null;
@@ -13810,8 +13843,15 @@ const UI = (() => {
       $('#btn-next').hidden = true; $('#s-results [data-act="changemode"]').hidden = true; $('#s-results [data-act="menu"]').hidden = true;
       const tourM = !!(NetPlay.ev && NetPlay.ev.tour); if (tourM) $('#btn-hub').textContent = 'Volver al torneo';
       $('#btn-rematch').hidden = !NetPlay.isHost || tourM; $('#btn-rematch').textContent = 'Revancha (todos)'; $('#btn-rematch').dataset.act = 'netAgain';
-      if (!NetPlay.isHost && !tourM) { ra.hidden = false; ra.textContent = (ra.textContent && parts.length ? ra.textContent + ' · ' : '') + 'El anfitrión puede lanzar la revancha.'; }
-    }
+      // campaña en línea: el anfitrión sigue con la siguiente sala, repite o vuelve al mapa
+      if ((camp || campBoss) && !tourM) {
+        netNext = stNext && ((camp && cr.stars) || (campBoss && jr.win)) ? stNext.id : null;
+        $('#btn-next').hidden = !NetPlay.isHost || !netNext; $('#btn-next').dataset.act = 'netNext'; $('#btn-rematch').textContent = camp ? 'Repetir sala' : jr.win ? 'Pelear otra vez' : 'Reintentar';
+        $('#btn-netpick').hidden = !NetPlay.isHost;
+        if (!NetPlay.isHost) { ra.hidden = false; ra.textContent = 'El anfitrión elige qué sigue: la siguiente sala, repetir o volver al mapa.'; }
+      }
+      if (!NetPlay.isHost && !tourM && !(camp || campBoss)) { ra.hidden = false; ra.textContent = (ra.textContent && parts.length ? ra.textContent + ' · ' : '') + 'El anfitrión puede lanzar la revancha.'; }
+    } else { $('#btn-netpick').hidden = true; $('#btn-next').dataset.act = 'nextlevel'; }
     const P = Game.G.players;
     const t = $('#r-title');
     if (camp) {
@@ -14123,8 +14163,15 @@ const UI = (() => {
     Game.startMatch(ev.mode, false, ev.map && ev.map !== 'random' ? ev.map : 'random', !!(ev.opts && ev.opts.fiesta));
   }
   // en línea: arranca (o repite) la partida que mandó el anfitrión
-  function netStart(c) { vsBot = false; paused = false; stack = []; Game.G.net = true; Game.startNet(c); show(null, false); }
-  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge, netStart, showResults: r => showResults(r) };
+  function netStart(c) { vsBot = false; paused = false; stack = []; if (c.mode !== 'campana') netCamp = null; Game.G.net = true; Game.startNet(c); show(null, false); }
+  // en línea: campaña — el anfitrión elige en su mapa de la campaña (lo que él tiene abierto)
+  let netCamp = null, netNext = null;
+  function netCampPick(c) {
+    netCamp = c; paused = false; stack = [];
+    if (NetPlay.isHost) { fillCampaign(); show('campana', false); }
+    else { if (Game.G.state !== 'attract') Game.startAttract(); show(null, false); NetPlay.notice('El anfitrión elige la sala…', 'Campaña en línea: lo que ganen queda guardado también en tu aparato.'); }
+  }
+  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge, netStart, netCampPick, showResults: r => showResults(r) };
 })();
 
 /* =========================================================================
@@ -14318,15 +14365,16 @@ const NetGame = (() => {
   NetPlay.gate({
     me(li) { return { flavor: G.flavors[li], acc: typeof Progress !== 'undefined' ? Progress.accOf(li) : 'ninguno' }; },
     make(want, ev) {
-      const mode = ['caneca', 'chicles', 'rey', 'gol', 'escalada'].includes(ev.mode) ? ev.mode : 'caneca';
+      const mode = ['caneca', 'chicles', 'rey', 'gol', 'escalada', 'campana'].includes(ev.mode) ? ev.mode : 'caneca';
       const fl = [0, 1].map(i => { const w = want[i] || {}; return FLAVORS[w.flavor] ? w.flavor : ['fresa', 'menta'][i]; });
       if (fl[0] === fl[1]) fl[1] = Object.keys(FLAVORS).find(k => k !== fl[0] && !FLAVORS[k].locked) || 'menta';
       const arena = ARENA_DEFS[ev.map] ? ev.map : 'random';
-      return { mode, arena, flavors: fl, accs: [0, 1].map(i => NetPlay.okId((want[i] || {}).acc) || 'ninguno'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), fiesta: !!(ev.opts && ev.opts.fiesta) };
+      // campaña en línea: primero el anfitrión elige la sala o el jefe (stage null) entre los que él tiene abiertos
+      return { mode, arena, flavors: fl, accs: [0, 1].map(i => NetPlay.okId((want[i] || {}).acc) || 'ninguno'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), fiesta: mode !== 'campana' && !!(ev.opts && ev.opts.fiesta), stage: mode === 'campana' ? null : undefined };
     },
-    apply(c) { reset(); UI.netStart(c); },
+    apply(c) { reset(); if (c.mode === 'campana' && !Campaign.stages().some(s => s.id === c.stage)) UI.netCampPick(c); else UI.netStart(c); },
   });
-  function again() { NetPlay.again(c => Object.assign({}, c)); }
+  function again(stage) { NetPlay.again(c => Object.assign({}, c, stage !== undefined ? { stage } : {})); }
 
   /* ---------- efectos y sonidos: cada llamada del anfitrión se repite en los remotos ---------- */
   const enc = (v, d = 0) => { if (v == null) return v; const t = typeof v; if (t === 'number') return r2(v); if (t === 'string' || t === 'boolean') return v; if (t === 'function' || d > 2) return undefined; if (Array.isArray(v)) return v.length > 40 ? undefined : v.map(x => enc(x, d + 1)); const o = {}; for (const k in v) { const e = enc(v[k], d + 1); if (e !== undefined) o[k] = e; } return o; };
@@ -14364,8 +14412,21 @@ const NetGame = (() => {
       pl: NetPlay.slow('pl', G.pellets.map(pl => { const o = enc(pl); delete o.t; return o; })), gd: NetPlay.slow('gd', G.golden ? (o => { delete o.t; return o; })(enc(G.golden)) : 0),
       a: (() => { const o = arenaSnap(); arenaSlow = o.$s; delete o.$s; return o; })(), as: NetPlay.slow('as', arenaSlow), m: NetPlay.slow('m', noTrail(enc(Modes.M))), f: NetPlay.slow('f', enc(Fiesta.state), 500),
       cam: G.cam.focus ? enc(G.cam.focus) : 0,
+      cp: G.mode === 'campana' ? campSnap() : undefined, jf: G.mode === 'jefe' ? jefeSnap() : undefined,
     };
   }
+  // campaña: lo que cambia de cada mecanismo (rejas, placas, palancas, poleas, ventiladores, carritos…) y el reloj de la sala
+  const OSKIP = new Set(['kind', 'id', 'link', 'dir', 'w', 'h', 'x0', 'y0', 'ay', 'by', 'cycle', 'latch', 'hold', 'color', 'label', 'r', 'len', 'amp', 'period', 'power']);
+  function objDyn(o) { const q = {}; for (const k in o) { if (OSKIP.has(k)) continue; const v = o[k], t = typeof v; if (t === 'number') q[k] = r1(v); else if (t === 'boolean') q[k] = v ? 1 : 0; else if (v && t === 'object' && !Array.isArray(v) && (k === 'a' || k === 'b')) q[k] = { x: r1(v.x), y: r1(v.y) }; } return q; }
+  const objLast = []; let objFullAt = 0;
+  function campSnap() {
+    const L = ARENA.L, S = Campaign.state, now = performance.now(), full = now - objFullAt > 1000; if (full) objFullAt = now;
+    const ob = []; if (L && L.objs) L.objs.forEach((o, i) => { const q = objDyn(o), j = JSON.stringify(q); if (full || objLast[i] !== j) { objLast[i] = j; ob.push([i, q]); } });
+    return { ob, s: S ? { t: r1(S.t), fail: r2(S.fail), win: r1(S.win), inDoor: S.inDoor | 0, cutT: r2(S.cutT || 0), tipT: r2(S.tipT || 0), falls: S.falls | 0, wr: (S.wr || []).map(w => (w.got ? 1 : 0)) } : null };
+  }
+  // jefe: su estado entero (sin la definición ni las funciones), cuerpo incluido
+  const JSKIP = new Set(['def', 'impl', 'result', 'lossBy']);
+  function jefeSnap() { const J = Jefes.state; if (!J) return null; const o = {}; for (const k in J) { if (JSKIP.has(k)) continue; const e = enc(J[k]); if (e !== undefined) o[k] = e; } return o; }
 
   /* ---------- aplicar (remoto) ---------- */
   const lerp = (a, b, k) => a + (b - a) * k;
@@ -14394,6 +14455,9 @@ const NetGame = (() => {
       // su estela, como la del anfitrión (rápido = deja rastro que se apaga en ~0,17 s)
       if (MB) { const now = performance.now(), tr = MB._tr || (MB._tr = []); if (Math.hypot(MB.vx || 0, MB.vy || 0) > 900 && (!tr.length || now - tr[tr.length - 1].t > 16)) tr.push({ x: MB.x, y: MB.y, t: now }); while (tr.length && now - tr[0].t > 170) tr.shift(); MB.trail = tr.slice(-8).map(g => ({ x: g.x, y: g.y, a: 0.4 - (now - g.t) * 0.0024 })).filter(g => g.a > 0); } }
     if (B.f) deepSet(Fiesta.state, B.f);
+    if (B.cp) { const L = ARENA.L, S = Campaign.state; if (L && L.objs) for (const [i, q] of B.cp.ob) if (L.objs[i]) { for (const k in q) { const v = q[k]; if (v && typeof v === 'object') { if (L.objs[i][k]) Object.assign(L.objs[i][k], v); } else L.objs[i][k] = typeof L.objs[i][k] === 'boolean' ? !!v : v; } }
+      if (B.cp.s && S) { const s = B.cp.s; S.t = s.t; S.fail = s.fail; S.win = s.win; S.inDoor = s.inDoor; S.cutT = s.cutT; S.tipT = s.tipT; S.falls = s.falls; (S.wr || []).forEach((w, i) => { w.got = !!s.wr[i]; }); } }
+    if (B.jf && Jefes.state) deepSet(Jefes.state, B.jf);
     G.cam.focus = B.cam ? Object.assign({}, B.cam) : null;
   }
 
