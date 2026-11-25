@@ -1,4 +1,7 @@
 node_modules/
+package-lock.json
 test/shots/
+juegos/*/dist/
+juegos/*/test/shots/
 *.log
 .DS_Store

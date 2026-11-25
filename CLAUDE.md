@@ -6,6 +6,12 @@ Este archivo es para Claude (y para quien trabaje en este repositorio). Se lee a
 
 - **Aplica solo a GameHub**: a este repositorio y a los juegos que viven aquí o que se van a agregar aquí.
 - **Un juego que no va a GameHub no sigue nada de esto.** Se diseña y se construye libre, con sus propias reglas y su propio repositorio.
+- **¿Editar algo que ya existe** (un juego, la portada, el torneo, el modo en línea)? Leer primero [GUIA-EDITAR.md](GUIA-EDITAR.md). Ahí está:
+  - Lo que nunca se rompe.
+  - Qué tocar y qué probar según el tipo de cambio.
+  - El mapa de archivos de cada juego.
+  - Cómo comprobar que no se dañó nada.
+  - Los enlaces para publicar y anotar en la bitácora.
 - **¿Juego nuevo para GameHub?** Leer primero [GUIA-JUEGO-NUEVO.md](GUIA-JUEGO-NUEVO.md). Ahí está la base mínima obligatoria (igual para cualquier estilo) y qué cambia según el tipo de juego. Un juego nuevo **no tiene que parecerse** a los cuatro actuales.
 
 ## Quién y cómo
@@ -46,7 +52,7 @@ bash test/todo.sh          # todas las pruebas (levanta su propio servidor en :8
 ```
 
 - Pruebas sueltas: levantar `cd docs && python3 -m http.server 8765` y correr `node test/<prueba>.js`. La tabla de qué prueba qué está en el README.
-- Si falta Playwright: `npm i -D playwright`.
+- Si falta Playwright: `npm i -D playwright`. Si dice «Executable doesn't exist», instalar la versión que corresponde a los navegadores de `/opt/pw-browsers` (en la nube de Claude, hoy `npm i -D playwright@1.63`). Ese cambio en `package.json` no se sube.
 - **Sin tarjeta gráfica** (como en la nube de Claude), VÉRTIGO va muy lento: usar `VIEW=400x225` (todo.sh ya lo hace) y `VTG_GQ=0`. Con eso no se puede juzgar cómo se ve de verdad; si importa, decirlo.
 - Pruebas propias de cada juego: `node juegos/<juego>/build.js` (escribe `juegos/<juego>/test/index.html`) y luego, por ejemplo, `node juegos/sortilegio/test/modes.js`.
 - **Sin conexión debe quedar idéntico**: si se toca algo del modo en línea o de la base común, correr `node test/offline-eq.js`.

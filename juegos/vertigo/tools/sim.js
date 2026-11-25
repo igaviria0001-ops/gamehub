@@ -5,7 +5,8 @@ const ctx = { console, Math, Date, JSON, Float32Array, Float64Array, Uint8Array,
   addEventListener() {}, matchMedia: () => ({ matches: false }), localStorage: { getItem: () => null, setItem() {} }, devicePixelRatio: 1 };
 ctx.window = ctx; ctx.self = ctx; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(root, 'vendor/three.r128.min.js'), 'utf8'), ctx);
-const files = fs.readdirSync(path.join(root, 'src')).filter(f => /^0[0-4][a-z]?-.*\.js$/.test(f)).sort();
+// sin las copias de shared/ (00h enlace, 00i pantalla completa, 00j vestidor, 00k en línea): necesitan navegador
+const files = fs.readdirSync(path.join(root, 'src')).filter(f => /^0[0-4][a-z]?-.*\.js$/.test(f) && !/^00[h-k]-/.test(f)).sort();
 vm.runInContext(files.map(f => fs.readFileSync(path.join(root, 'src', f), 'utf8')).join('\n') + '\n;this.Race=Race;this.getTrack=getTrack;this.PILOT_ORDER=PILOT_ORDER;this.racingLine=racingLine;this.Boss=Boss;this.BOSSES=BOSSES;this.Rules=Rules;this.CAMPAIGN=CAMPAIGN;this.World=World;this.Challenge=Challenge;', ctx);
 module.exports = ctx;
 if (require.main === module) {

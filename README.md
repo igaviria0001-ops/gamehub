@@ -112,9 +112,11 @@ Cada juego incluye `src/00h-hub.js` (copia de `shared/hub-link.js`). Si el juego
 - al terminar, el juego responde `{ event: 'result', winner: 0 | 1 | -1 }` y muestra **Continuar torneo ▸**;
 - pantalla completa: el juego pide `{ event: 'fs', on }` y GameHub la pone en toda la ventana (y le avisa `{ cmd: 'fs', on }`).
 
-## Agregar un juego nuevo
+## Editar o agregar juegos
 
-La guía está en [GUIA-JUEGO-NUEVO.md](GUIA-JUEGO-NUEVO.md): la base mínima obligatoria, que es igual para cualquier estilo, qué cambia según el tipo de juego y qué archivos de la portada se tocan. Las reglas generales para trabajar en el repositorio están en [CLAUDE.md](CLAUDE.md).
+- **Editar lo que ya existe** sin dañar nada: [GUIA-EDITAR.md](GUIA-EDITAR.md). Explica qué no se puede romper, qué tocar y qué probar según el cambio, y trae el mapa de archivos de cada juego.
+- **Agregar un juego nuevo**: [GUIA-JUEGO-NUEVO.md](GUIA-JUEGO-NUEVO.md). Trae la base mínima obligatoria, que es igual para cualquier estilo, qué cambia según el tipo de juego y qué archivos de la portada se tocan.
+- Las reglas generales para trabajar en el repositorio están en [CLAUDE.md](CLAUDE.md).
 
 ## Licencias
 
