@@ -424,3 +424,18 @@ siguiente partida y el otro seguía en la anterior sin nada; en Sortilegio (Tejo
   primera pasada marcó imágenes «distintas» por tiempos de animación de los botones con la máquina cargada; repetida con
   la máquina libre: idéntica en todo).
 
+## Cuarta tanda (24–25 nov) — campañas en línea y servidor propio
+
+Plan, detalle y cómo retomar en [TANDA4.md](TANDA4.md). Resumen:
+- **Campañas en línea en los 4 juegos**: Sortilegio (campaña en equipo de 18 niveles), Ventolera (Travesía para dos),
+  Tira y Afloja (30 salas y 6 jefes), VÉRTIGO (Vuelta al mundo: 24 retos y 6 jefes). El anfitrión elige en su mapa; cada
+  aparato guarda lo suyo. VÉRTIGO siembra las piezas del reto con la misma semilla en todos, sincroniza jefe, troncos,
+  tormenta, tunjos y lo que suelta el jefe por número, y dibuja el jefe «ahora» (adelantado) y sólido para el bólido propio.
+- **Arreglos de paso**: en el remoto de VÉRTIGO los géiseres no se movían (faltaba el reloj de la pista) y los cohetes y
+  aceites se rehacían en cada cuadro (ahora se conservan).
+- **Servidor propio** (`servidor/`, Cloudflare Worker + Durable Object por sala + TURN de Cloudflare): escrito y probado en
+  local; el juego ya lo usa si existe (`SERVER0` en `app/net.js`). **Falta que Ignacio cree la cuenta** (no lo dejaba
+  registrarse: ya tenía una cuenta con ese correo; pasos para recuperarla en `servidor/GUIA-CLOUDFLARE.md`). Mientras
+  tanto todo sigue como antes (señal por MQTT, TURN público, relevo por MQTT).
+- La sala avisa cuando un aparato tiene otra versión de GameHub.
+

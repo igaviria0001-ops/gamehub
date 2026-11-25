@@ -21,7 +21,14 @@ const Online = (() => {
   const el = () => $('#v-online');
   const visible = () => el() && !el().hidden;
   const myPlayers = () => st.players.slice(0, st.n).map((p, i) => ({ name: (p.name || '').trim() || (st.n === 1 ? 'Jugador' : 'Jugador ' + (i + 1)), color: p.color || COLORS[i] }));
-  const info = () => ({ name: myPlayers().map(p => p.name).join(' y '), players: myPlayers(), dev: touch ? 'cel' : 'pc' });
+  const myBuild = () => window.__ghBuild || {};
+  const info = () => ({ name: myPlayers().map(p => p.name).join(' y '), players: myPlayers(), dev: touch ? 'cel' : 'pc', v: myBuild().v, vd: myBuild().date });
+  // ¿algún aparato tiene otra versión de GameHub? (los modos nuevos necesitan la misma en todos)
+  const oldDev = d => { const mv = myBuild().v; return !!(d && d.info && d.info.v && mv && mv !== 'dev' && d.info.v !== 'dev' && d.info.v !== mv); };
+  function verNote(devs) { const bad = (devs || []).filter(oldDev); if (!bad.length) return '';
+    const mine = myBuild().date || '', older = bad.filter(d => (d.info.vd || '') < mine).map(d => esc(d.info.name || 'un aparato')), newer = bad.some(d => (d.info.vd || '') > mine);
+    const what = older.length || newer ? (older.length ? older.join(' y ') + (older.length > 1 ? ' tienen' : ' tiene') + ' una versión vieja de GameHub' : '') + (older.length && newer ? '; y ' : '') + (newer ? 'este aparato tiene una versión más vieja que la de otro' : '') : 'Hay aparatos con versiones distintas de GameHub';
+    return `<div class="on-warn">⚠ ${what}. Abran GameHub con internet y toquen «Actualizar» (o ciérrenlo y vuelvan a abrirlo) antes de jugar, para que todo salga igual en todos.</div>`; }
   const VIA = { local: ['este aparato', 'ok'], p2p: ['directo', 'ok'], turn: ['por TURN', 'mid'], relay: ['por relevo · lento', 'bad'], conectando: ['conectando…', 'mid'] };
   const DEV = { cel: '📱', pc: '💻' };
   const sig = ms => ms <= 0 ? '' : ms < 60 ? 'ok' : ms < 140 ? 'mid' : 'bad';
@@ -97,13 +104,13 @@ const Online = (() => {
         <div class="on-react" role="group" aria-label="Reacciones rápidas">${REACT.map(e => `<button class="on-rx" data-rx="${e}" aria-label="Enviar ${e}">${e}</button>`).join('')}</div>
         <div class="panel"><div class="h2">APARATOS Y JUGADORES</div>
           <div class="on-devs">${devs.map(d => { const hp = d.host && !host ? hostPeer : null; if (hp) d = Object.assign({}, d, { via: hp.via, rtt: Math.round(hp.rtt) }); const v = VIA[d.id === me ? 'local' : d.via] || VIA.conectando; return `<div class="on-dev${d.id === me ? ' me' : ''}">
-            <div class="on-dh"><span class="on-di">${DEV[d.info && d.info.dev] || '🎮'}</span><b>${esc(d.info ? d.info.name : '…')}</b>${d.host ? '<span class="on-tag gold">anfitrión</span>' : ''}${d.id === me ? '<span class="on-tag">tú</span>' : ''}
+            <div class="on-dh"><span class="on-di">${DEV[d.info && d.info.dev] || '🎮'}</span><b>${esc(d.info ? d.info.name : '…')}</b>${d.host ? '<span class="on-tag gold">anfitrión</span>' : ''}${d.id === me ? '<span class="on-tag">tú</span>' : ''}${d.id !== me && oldDev(d) ? '<span class="on-tag warn">otra versión</span>' : ''}
               <span class="on-via ${v[1]}">${v[0]}${d.id !== me && d.rtt ? ` · ${d.rtt} ms` : ''}</span></div>
             <div class="on-ps">${ps.filter(p => p.dev === d.id).map(p => `<span class="on-p" style="--c:${esc(p.color)}"><i></i>${esc(p.name)}</span>`).join('')}</div></div>`; }).join('')}</div>
           <details class="on-me"><summary>Cambiar quién juega en este aparato</summary>${whoHTML()}</details>
         </div>
         ${tourPanel(host)}
-        <div class="panel" id="on-play"><div class="h2">${host ? '¿QUÉ JUGAMOS?' : 'LO QUE VIENE'}</div>${host ? hostPlayHTML(ps) : clientPlayHTML(connected)}</div>
+        <div class="panel" id="on-play"><div class="h2">${host ? '¿QUÉ JUGAMOS?' : 'LO QUE VIENE'}</div>${verNote(devs)}${host ? hostPlayHTML(ps) : clientPlayHTML(connected)}</div>
         ${note ? `<div class="panel on-note">${esc(note)}</div>` : ''}
       </div></div>`;
     bindWho(root);

@@ -127,6 +127,15 @@ En cada caso: **qué hacer**, **qué más hay que tocar** y **cómo probarlo**. 
   - `test/netver.js` (lo que ve el anfitrión lo ve el remoto).
   - `test/netmovil.js` (datos móviles).
   - `test/offline-eq.js` (sin conexión idéntico).
+- **Campañas en línea** (desde la cuarta tanda, ver [TANDA4.md](TANDA4.md)): todas siguen el mismo patrón. En el
+  catálogo son un `extra` con `seats: 2`, `watch: true`, `maps: []`. La cfg llega sin nivel (−1 o `null`): el anfitrión
+  ve su propio mapa de campaña en modo en línea («Volver a la sala») y los demás un aviso (`NetPlay.notice`). Al elegir,
+  `NetGame.again(nivel)` (VÉRTIGO: `NetGame.pick(ch)`). Al terminar, **cada aparato con jugadores guarda lo ganado en su
+  propio progreso**; solo el anfitrión ve «Siguiente / Repetir / Elegir». Pruebas: `test/netcamp-srt.js`,
+  `nettrav-vto.js`, `netcamp-tya.js`, `netcamp-vtg.js` (usan el servidor local de `servidor/` en el puerto 8799 para que
+  cada aparato tenga su propio almacenamiento).
+- La sala avisa si un aparato tiene **otra versión** de GameHub (`info.v` en `app/online.js`): los modos nuevos necesitan
+  la misma en todos.
 
 ### Archivos de `shared/` (los usan los cuatro)
 - Cualquier cambio aquí llega a los cuatro juegos: se prueba en los cuatro.

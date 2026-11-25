@@ -34,6 +34,15 @@ run flujo node test/flujo.js
 run app node test/app.js
 run tablero node test/tablero.js
 run motor node test/motor.js
+# campañas en línea y servidor propio: necesitan el servidor local de la sala (servidor/, con wrangler) en 8799
+if ! curl -s -m 2 http://127.0.0.1:8799/ping >/dev/null; then (cd servidor && exec npx --yes wrangler dev --port 8799 --ip 127.0.0.1 >/tmp/wrangler-todo.log 2>&1) & WR=$!; trap "kill $SRV $WR 2>/dev/null" EXIT; for i in $(seq 1 40); do curl -s -m 2 http://127.0.0.1:8799/ping >/dev/null && break; sleep 1; done; fi
+if curl -s -m 2 http://127.0.0.1:8799/ping >/dev/null; then
+  run servidor node test/netsrv.js
+  run campSrt node test/netcamp-srt.js
+  run travVto node test/nettrav-vto.js
+  run campTyA node test/netcamp-tya.js
+  run mundoVtg env VIEW=$V node test/netcamp-vtg.js
+else echo "campañas en línea: saltadas (no arrancó el servidor local en 8799)"; fi
 run sinConexion env FAST=1 VIEW=480x270 node test/offline-eq.js
 # pruebas propias de cada juego (sus carpetas de trabajo; la de VÉRTIGO está en el bloc de notas de la sesión)
 for g in tya vento sorti; do [ -f /home/claude/$g/test/modes.js ] && run propias-$g node /home/claude/$g/test/modes.js; done

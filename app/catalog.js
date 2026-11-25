@@ -26,7 +26,7 @@ const GAMES = [
     chars: false,
     keys: [['J1', 'A D moverse · W saltar · S pegarse · E tirar · Q aflojar'], ['J2', 'J L moverse · I saltar · K pegarse · O tirar · U aflojar']],
     touch: 'En el celular: cada uno en su mitad de la pantalla, con flechas y botones.',
-    extras: ['Campaña de 30 salas con 6 jefes', 'Fuga del colegio para dos', 'Retos de técnica y entrenamiento', 'Reto del día'],
+    extras: ['Campaña de 30 salas y 6 jefes (también en línea)', 'Fuga del colegio para dos', 'Retos de técnica y entrenamiento', 'Reto del día'],
   },
   {
     id: 'ventolera', file: 'games/ventolera.html', name: 'Ventolera', short: 'Ventolera', num: '02',
@@ -46,7 +46,7 @@ const GAMES = [
     chars: true, charsName: 'pilotos',
     keys: [['J1', 'WASD apuntar · Espacio/F ráfaga · Shift/Q turbo · E/R misil · C/V tonel'], ['J2', 'IJKL o flechas · Ñ/Ctrl der. ráfaga · O/Alt Gr turbo · U/Enter misil · H/N tonel']],
     touch: 'En el celular: palanca flotante y botones de ráfaga, turbo y misil para cada uno.',
-    extras: ['Travesía de 10 etapas (de uno o de dos)', 'Jefe en pareja contra La Sombra', 'Copa de 5 pruebas', 'Escuela de vuelo'],
+    extras: ['Travesía de 10 etapas (de uno, de dos o en línea)', 'Jefe en pareja contra La Sombra', 'Copa de 5 pruebas', 'Escuela de vuelo'],
   },
   {
     id: 'sortilegio', file: 'games/sortilegio.html', name: 'Sortilegio', short: 'Sortilegio', num: '03',
@@ -69,7 +69,7 @@ const GAMES = [
     chars: true, charsName: 'magos',
     keys: [['J1', 'WASD moverse · F/C mano izq. · G/V mano der. · H/Espacio esquivar'], ['J2', 'Flechas moverse · K mano izq. · L mano der. · Ñ esquivar']],
     touch: 'En el celular: palanca, dos manos y el rombo de fusión en el medio.',
-    extras: ['Campaña en equipo de 18 niveles (cielo e infierno)', '13 magos con atuendos', 'Grimorio de 28 fusiones', 'Escuela de magia'],
+    extras: ['Campaña en equipo de 18 niveles (también en línea)', '13 magos con atuendos', 'Grimorio de 28 fusiones', 'Escuela de magia'],
   },
   {
     id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick', modes: ['quick', 'duel', 'elim', 'battle'],
@@ -93,7 +93,7 @@ const GAMES = [
     chars: true, charsName: 'pilotos',
     keys: [['J1', 'WASD manejar · F/C derrape · G/V objeto · H/Espacio turbo'], ['J2', 'Flechas manejar · K derrape · L objeto · Ñ turbo']],
     touch: 'En el celular: pantalla dividida con botones para cada uno.',
-    extras: ['Vuelta al mundo (campaña)', 'Gran Premio de 3 copas', 'Persecución de jefes', 'Escuela y 24 desafíos'],
+    extras: ['Vuelta al mundo (campaña, también en línea)', 'Gran Premio de 3 copas', 'Persecución de jefes', 'Escuela y 24 desafíos'],
   },
 ];
 const GAME = Object.fromEntries(GAMES.map(g => [g.id, g]));

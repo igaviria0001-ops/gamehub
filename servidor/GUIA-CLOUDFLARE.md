@@ -16,6 +16,24 @@ Esto se hace **una sola vez** (unos 15 minutos). Después, cada vez que Claude m
 3. Confirma el correo que te llega.
 4. Si te pregunta qué quieres hacer o te ofrece planes, elige lo gratis (**Free**) o sáltalo.
 
+### Si no te deja crear la cuenta o entrar (lo que te pasó)
+
+Lo que te salió dice que **ya tienes una cuenta de Cloudflare** con ese correo, creada por otro camino (con Google,
+con GitHub o con una contraseña de hace tiempo). Por eso «ya está usado» al registrarte y «se usó otro método» al
+entrar con GitHub. No hace falta crear nada: solo recuperar la entrada.
+
+1. Entra a **https://dash.cloudflare.com/login** y toca **Forgot your password?** (¿Olvidaste tu contraseña?).
+2. Escribe el correo que te decía **«ya está usado»** → **Send** (Enviar).
+3. Abre ese correo (mira también **Spam** y **Promociones**). Toca el enlace y pon una contraseña nueva.
+4. Vuelve a **dash.cloudflare.com/login** y entra con **ese correo y la contraseña nueva** (no con el botón de GitHub).
+   Si te pide un código, es el que te llega al correo.
+5. Si en 10 minutos no te llega nada, haz lo mismo con tu otro correo.
+6. Si con ninguno llega: crea un Gmail nuevo (gratis) y regístrate en **dash.cloudflare.com/sign-up** con ese correo y
+   una contraseña. Da igual qué correo sea: el servidor solo necesita una cuenta.
+
+Mientras tanto el en línea sigue funcionando como siempre (con los servidores públicos); con Cloudflare solo se vuelve
+más rápido y estable con datos móviles.
+
 ## 2. Crear la llave de conexión (TURN)
 
 1. En el menú de la izquierda busca **Realtime** (en algunas cuentas sale como **Calls**). Si no lo ves, usa el buscador de arriba y escribe `TURN`.

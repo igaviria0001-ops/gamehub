@@ -178,7 +178,7 @@ function emptyInput() { return { left: false, right: false, jump: false, stick: 
 /* ---------- identidad del juego (para cuando haga parte de una colección) ----------
    Todo lo guardado usa el prefijo «tya_». Si el juego corre dentro de otra página
    (un lanzador con varios juegos), avisa de lo importante con postMessage. */
-const GAME_META = { id: 'tira-y-afloja', name: 'Tira y Afloja', version: '0.28', storagePrefix: 'tya_', players: 2 };
+const GAME_META = { id: 'tira-y-afloja', name: 'Tira y Afloja', version: '0.29', storagePrefix: 'tya_', players: 2 };
 const Platform = {
   embedded: (() => { try { return window.parent && window.parent !== window; } catch (e) { return true; } })(),
   emit(event, data = {}) {

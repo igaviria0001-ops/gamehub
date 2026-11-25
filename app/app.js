@@ -19,6 +19,7 @@
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
   const BUILD = /*__BUILD__*/ { v: 'dev', date: '' };
+  try { window.__ghBuild = BUILD; } catch (e) { /* nada */ } // la sala en línea compara versiones entre aparatos
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
   const COLORS = ['#ff5d8f', '#45d6b0', '#ffb36b', '#6fc3ff', '#ffd36b', '#b07bff', '#3dffa8', '#ff7a3d'];

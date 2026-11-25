@@ -58,27 +58,21 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
   velocidad) y sólido para el bólido propio (`Boss.solid`), reloj de la pista `tt` (antes los géiseres no se movían en
   el remoto), los objetos de `R.hz` ya no se rehacen cada cuadro. `11-ui.js` `netWorld`, resultados con estrellas del
   anfitrión y botones Siguiente/Repetir (`resRep`)/Elegir reto. Arreglo aparte: el reto «sin chocar» no contaba choques.
-- **Siguiente: E2 Sortilegio épico (plan concreto)**, mirar `ALTA=1 CHARS=… ARENA=… node juegos/sortilegio/test/film.js`
-  (hoja de fotos en `juegos/sortilegio/test/shots/film.png`; `ALTA=1` fuerza calidad alta):
-  1. **Cámara de cine**: ya existe un encuadre que sigue a los dos (`camTarget` en `08-game.js`: zoom entre «toda la
-     arena» y `zMax` ≈ 1,05 en PC / 1,25 táctil, cámara del KO, sacudidas). Mejorar sin quitar visibilidad: empuje
-     suave hacia quien lanza el Gran Sortilegio, un poco más de acercamiento cuando están cerca, y la toma del golpe
-     final más cinematográfica. Probar en PC y celular; que no maree ni esconda hechizos que vienen de fuera.
-  2. **Golpe que se siente**: ya hay `G.hitStop` en el Gran Sortilegio; sumar pausa corta (40–70 ms) a golpes muy
-     grandes y al contraconjuro, y anillo de onda en el suelo.
-  3. **Textos**: ya se apilan (`10d-art.js`), pero en una misma jugada salen 3 seguidos («¡Doble golpe! ¡Rebote!
-     ¡CONTRACONJURO!») muy pegados: unirlos en un solo cartel de combo con más aire.
-  4. **Lava del volcán**: el río y el pozo se ven en escalera (cuadros de 40 px) con un borde punteado. Diagnóstico
-     (`cd juegos/sortilegio && node test/lava0.js` → `/tmp/lava0.png` al empezar en `volcan`, calidad alta): el campo base de `prerender` (`10-art-ground.js`)
-     ya tuerce los bordes (±23 px), pero encima se dibujan por celda los ladrillos de piedra y el brillo vivo de
-     `lavaCell` (centrado en cada celda), y eso deja la escalera. Arreglo propuesto: bordes de lava por «mayoría en un
-     radio» + torcido de ruido (cortar las esquinas de la escalera), ladrillos recortados con la misma máscara, y el
-     brillo vivo dibujado con la máscara suave en vez de por celda; costra oscura que deriva, grietas que laten, humo
-     en la orilla. Ojo: el daño sigue por celda (diferencia ≤ 12 px en las esquinas, aceptable).
-  5. **Entrada de ronda de película**: cartel con los dos magos frente a frente, nombre de la arena, barras de cine.
-  6. Clima propio de cada arena (ceniza, nieve, pétalos, brisa) solo donde luce. Todo con versión ligera en celular.
-  Después medir que no cambie el equilibrio (`LV=4 node juegos/sortilegio/test/balance.js`) y revisar Candela con
-  bots Normal (22 %).
-- **Después**: volver a Sortilegio (más épica/cine; revisar Candela en bots Normal 22 %), luego P (todo.sh,
-  offline-eq en TyA/Ventolera/VÉRTIGO, versiones, docs, merge a main, artefactos, bitácoras, README, memoria) y al
-  final R/en línea + Cloudflare.
+- **25 nov 00:45–02:30 (continuación programada)** — E2 Sortilegio:
+  - Lo que ya existía (no rehacer): encuadre que sigue a los dos, cámara del KO y del Gran Sortilegio, pausa de impacto,
+    presentación cara a cara con barras de cine, textos apilados.
+  - **Lava viva**: las orillas de agua y lava se redondean (mayoría alrededor + ruido) en `prerender` (`10-art-ground.js`);
+    máscara `lavaMask` (y `waterMask`) suavizada; capa `Post.lava` (`10f-post.js`): placas de costra que derivan, grietas
+    que laten, sin costra donde la lava se enfrió. Se acabó la escalera de cuadros (`test/lava0.js`, `ARENA=`).
+  - **Tormenta de arena épica**: embudo de anillos que giran (cara de atrás oscura, adelante clara), cortina de polvo y
+    luz cálida (`10c3-art-earth.js`).
+  - **Clima por lugar** (`09-fx.js`): brasas que suben de la lava, ceniza en volcán/infierno, hojas en la selva
+    (ciudad, caño). Suelo mojado y hielo sin cuadrícula. Combos seguidos en un solo cartel «×N» (también en línea).
+  - Tierra revisada (`FILTRO=earth R=30 node test/fusionstat.js`): todas sirven (daño/vez 6–32, control 1,7–4,2 s).
+  - Equilibrio con R=8: Maestro 40–60 %, Normal 43–60 % (Candela 47–48 %, ya no 22 %).
+- **25 nov** — En línea: la sala avisa si un aparato tiene otra versión de GameHub. Guía de Cloudflare con los pasos
+  para recuperar la cuenta (`servidor/GUIA-CLOUDFLARE.md`). `test/todo.sh` corre también las campañas en línea
+  (arranca el servidor local). Versiones: Sortilegio 2.4, Ventolera 3.6, Tira y Afloja 0.29, VÉRTIGO 1.2.
+- **Siguiente**: suite completa → merge a `main` → artefacto → contarle a Ignacio. Lo que queda para cuando Ignacio
+  tenga la cuenta de Cloudflare: poner la dirección del Worker en `SERVER0` (`app/net.js`), medir con
+  `test/netmovil.js` y publicar.

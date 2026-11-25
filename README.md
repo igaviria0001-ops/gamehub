@@ -90,6 +90,8 @@ Pruebas (con el servidor andando; usan Playwright, `npm i -D playwright`):
 | `node test/netpred.js` | el personaje propio responde al instante en el remoto (con y sin predicción, `SIN=1`), con red mala simulada |
 | `node test/netsucc.js` | si el anfitrión se va, la sala sigue con el siguiente aparato; el torneo sigue |
 | `node test/netvtgmodos.js` | VÉRTIGO en línea: mano a mano, eliminación, batalla y Gran Premio |
+| `node test/netsrv.js` | el servidor propio (`servidor/`, en local con `cd servidor && npx wrangler dev --port 8799`): sala, mensajes, latido |
+| `node test/netcamp-srt.js` · `nettrav-vto.js` · `netcamp-tya.js` · `netcamp-vtg.js` | campañas en línea (Sortilegio, Ventolera, Tira y Afloja, VÉRTIGO): el anfitrión elige en su mapa, el remoto ve lo mismo y cada aparato guarda lo suyo. Usan el servidor local (un almacenamiento por aparato) |
 
 En un computador sin tarjeta gráfica, VÉRTIGO va muy lento en las pruebas: usar `VTG_GQ=0` (gráficos ligeros) y, en `fluidez.js` y `pantalla.js`, `VIEW=640x360`.
 

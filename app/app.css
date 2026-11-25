@@ -424,6 +424,8 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-di { font-size: 18px; }
 .on-tag { font-size: 11px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--mute); }
 .on-tag.gold { background: rgba(255,211,107,.16); color: var(--gold); }
+.on-tag.warn { background: rgba(255,140,60,.18); color: #ffb06b; }
+.on-warn { margin: 4px 0 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255,140,60,.12); border: 1px solid rgba(255,160,90,.4); color: #ffd2a8; font-size: 13.5px; font-weight: 700; line-height: 1.35; }
 .on-via { margin-left: auto; font-size: 12.5px; font-weight: 900; }
 .on-ps { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .on-p { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px; background: rgba(255,255,255,.07); font-weight: 900; font-size: 13.5px; }

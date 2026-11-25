@@ -27,7 +27,7 @@ function noise1(x) { const i = Math.floor(x), f = x - i; return lerp(hash1(i), h
 function fbm1(x, oct = 4) { let v = 0, a = 0.5, f = 1, n = 0; for (let k = 0; k < oct; k++) { v += a * noise1(x * f + k * 17.3); n += a; a *= 0.5; f *= 2.03; } return v / n; }
 
 /* ---------- guardado (prefijo propio: no choca con Tira y Afloja) ---------- */
-const GAME_META = { id: 'ventolera', name: 'Ventolera', version: '3.5', storagePrefix: 'vto_', players: 2 };
+const GAME_META = { id: 'ventolera', name: 'Ventolera', version: '3.6', storagePrefix: 'vto_', players: 2 };
 const Store = {
   get(k, def) { try { const v = localStorage.getItem(GAME_META.storagePrefix + k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } },
   set(k, v) { try { localStorage.setItem(GAME_META.storagePrefix + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
