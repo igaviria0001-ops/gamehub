@@ -60,13 +60,14 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
   anfitrión y botones Siguiente/Repetir (`resRep`)/Elegir reto. Arreglo aparte: el reto «sin chocar» no contaba choques.
 - **Siguiente: E2 Sortilegio épico (plan concreto)**, mirar `ALTA=1 CHARS=… ARENA=… node juegos/sortilegio/test/film.js`
   (hoja de fotos en `juegos/sortilegio/test/shots/film.png`; `ALTA=1` fuerza calidad alta):
-  1. **Cámara de cine**: hoy toda la arena se ve fija y los magos se ven chiquitos. Encuadre que sigue a los dos magos
-     con zoom suave (nunca corta a nadie, límites de la arena, más cerca cuando están cerca), un leve empuje hacia el
-     que lanza un Gran Sortilegio y hacia el golpe final. Probar en PC y celular (táctil), y que no maree.
-  2. **Golpe que se siente**: pausa de impacto (40–70 ms) en golpes grandes y en el contraconjuro; destellos de
-     recarga en el sello; anillo de onda en el suelo.
-  3. **Textos que no se tapen**: «¡Doble golpe! ¡Rebote! ¡CONTRACONJURO!» salen uno encima del otro; apilarlos con
-     espacio, un solo cartel grande por combo, y que no tapen a los magos.
+  1. **Cámara de cine**: ya existe un encuadre que sigue a los dos (`camTarget` en `08-game.js`: zoom entre «toda la
+     arena» y `zMax` ≈ 1,05 en PC / 1,25 táctil, cámara del KO, sacudidas). Mejorar sin quitar visibilidad: empuje
+     suave hacia quien lanza el Gran Sortilegio, un poco más de acercamiento cuando están cerca, y la toma del golpe
+     final más cinematográfica. Probar en PC y celular; que no maree ni esconda hechizos que vienen de fuera.
+  2. **Golpe que se siente**: ya hay `G.hitStop` en el Gran Sortilegio; sumar pausa corta (40–70 ms) a golpes muy
+     grandes y al contraconjuro, y anillo de onda en el suelo.
+  3. **Textos**: ya se apilan (`10d-art.js`), pero en una misma jugada salen 3 seguidos («¡Doble golpe! ¡Rebote!
+     ¡CONTRACONJURO!») muy pegados: unirlos en un solo cartel de combo con más aire.
   4. **Lava del volcán** se ve como mancha amarilla plana (sobre todo en calidad media): costra oscura, grietas que
      laten, borde que humea.
   5. **Entrada de ronda de película**: cartel con los dos magos frente a frente, nombre de la arena, barras de cine.
