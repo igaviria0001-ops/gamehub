@@ -77,9 +77,16 @@ const FX = (() => {
       case 'rune': S({ type: 'ring', x: e.x, y: e.y, r0: 10, r1: 110, el: 'fire', life: 0.45, w: 6, gold: true }); burst(e.x, e.y - 20, 'fire', 18, 200, { extra: { color: '#fff3c4' } }); break;
     }
   }
-  // ambiente: luciérnagas y brasas del fuego del suelo
+  // ambiente: luciérnagas y brasas del fuego del suelo; y el clima de cada lugar (solo donde luce):
+  // brasas que suben de la lava y ceniza que cae en el volcán y el infierno, hojas que caen en la selva
   function ambient(G, dt) {
     const T = G.T; if (!T) return;
+    const th = G.A && G.A.theme, k = LOWFX ? 0.35 : MIDFX ? 0.7 : 1;
+    if (!T._lavaCells) { T._lavaCells = []; for (let i = 0; i < T.n; i++) if (T.base[i] === TT.LAVA) T._lavaCells.push(i); }
+    const LC = T._lavaCells;
+    if (LC.length && Math.random() < dt * Math.min(11, LC.length * 0.25) * k) { const i = LC[(Math.random() * LC.length) | 0]; if (!(T.cool[i] > 0)) P({ x: Terrain.cx(T, i) + vr(-18, 18), y: Terrain.cy(T, i) + vr(-14, 14), z: vr(2, 8), vz: vr(40, 105), vx: vr(-8, 14), vy: vr(-4, 4), g: -22, drag: 0.45, life: vr(1.1, 2.3), size: vr(1.2, 2.5), color: Math.random() < 0.6 ? '#ffb24a' : '#ff6a2a', kind: 'ember' }); }
+    if ((th === 'volcan' || th === 'infierno') && Math.random() < dt * 5 * k * Math.min(2, T.W * T.H / 1.6e6)) { const z = vr(150, 260), vz = vr(-24, -14); P({ x: vr(0, T.W), y: vr(0, T.H), z, vz, vx: vr(6, 18), vy: vr(-3, 3), g: 0, drag: 0.05, life: z / -vz * 0.96, size: vr(1.4, 2.6), color: Math.random() < 0.7 ? '#8d8584' : '#b9aea8', kind: 'ash', add: false, rot: vr(0, 6) }); }
+    if ((th === 'ciudad' || th === 'cano') && Math.random() < dt * 1.6 * k * Math.min(2, T.W * T.H / 1.6e6)) { const z = vr(170, 260), vz = vr(-32, -22); P({ x: vr(0, T.W), y: vr(0, T.H), z, vz, vx: vr(4, 16), vy: vr(-3, 3), g: 0, drag: 0.05, life: z / -vz * 0.96, size: vr(3, 4.6), color: ['#6fae4a', '#8cc24f', '#c9b44a', '#4f8a3c'][(Math.random() * 4) | 0], kind: 'fall', add: false, rot: vr(0, 6) }); }
     if (T.burning && Math.random() < dt * Math.min(40, T.burning * 1.4)) {
       for (let tries = 0; tries < 8; tries++) { const i = (Math.random() * T.n) | 0; if (T.fire[i] > 0) { P({ x: Terrain.cx(T, i) + vr(-16, 16), y: Terrain.cy(T, i) + vr(-12, 12), z: vr(6, 20), vz: vr(60, 140), vx: vr(-15, 15), g: -40, drag: 0.6, life: vr(0.6, 1.3), size: vr(1.5, 3), color: Math.random() < 0.5 ? '#ffd27a' : '#ff7a2a', kind: 'ember' }); break; } }
     }

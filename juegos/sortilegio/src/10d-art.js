@@ -63,6 +63,7 @@ const Art = (() => {
     const img = ArtGround.prerender(G); ctx.imageSmoothingEnabled = true; ctx.drawImage(img, 0, 0, G.T.W, G.T.H);
     Post.water(ctx, G, cam, sw, sh, dpr, img); wt();
     ArtGround.overlays(ctx, G, view, G.time);
+    Post.lava(ctx, G, cam, sw, sh, dpr, img); wt();
     Modes.drawUnder(ctx, G);
     Cine.under(ctx, G);
     ArtSpells.under(ctx, G); ArtSpells2.under(ctx, G); ArtEarth.under(ctx, G);

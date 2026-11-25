@@ -182,8 +182,23 @@ const ArtEarth = (() => {
     const t = G.time;
     for (const s of G.spells) {
       if (s.t === 'sandstorm') {
-        const fade = Math.min(1, s.life / 0.5, s.grow * 1.5), R = s.r, n = LOWFX ? 24 : 54;
+        const fade = Math.min(1, s.life / 0.5, s.grow * 1.5), R = s.r, n = LOWFX ? 24 : 54, g = s.grow, lay = LOWFX ? 5 : 9, per = LOWFX ? 4 : 7;
         x.save(); x.globalAlpha = fade;
+        // remolino de arena de verdad: un embudo de anillos que giran (más ancho arriba), con la cara de atrás oscura y la
+        // de adelante clara, vetas que corren por los anillos y una cortina de polvo a ras del suelo que tapa lo de adentro
+        const SC = ['rgba(214,170,110,0.9)', 'rgba(150,108,66,0.9)', 'rgba(238,206,150,0.9)'], ring = [];
+        for (let L = 0; L < lay; L++) { const hf = L / (lay - 1), h = (10 + hf * 170) * (0.35 + 0.65 * g), rr = R * (0.18 + 0.5 * hf * hf + 0.08 * hf) * (0.55 + 0.45 * g) + Math.sin(s.rot * 1.7 + L) * 5; ring.push({ hf, L, cx: s.x + Math.sin(s.rot * 0.9 + hf * 2.2) * 18 * hf, cy: s.y - h, rr, spin: s.rot * (3.2 - hf * 1.4) + L * 0.9, dv: 0.55 + 0.9 * hash2(L, 1) }); }
+        const band = (o, back) => { const { hf, cx, cy, rr, spin, dv } = o, a0 = back ? Math.PI : 0, a1 = back ? TAU : Math.PI;
+          x.lineCap = 'round'; x.setLineDash([rr * 0.55 * dv, rr * 0.22 / dv]); x.lineDashOffset = -spin * rr * 0.9;
+          x.strokeStyle = back ? `rgba(120,84,50,${0.32 * fade})` : `rgba(226,186,124,${(0.62 - hf * 0.18) * fade})`; x.lineWidth = ((back ? 6 : 9) + hf * 6) * (0.75 + 0.5 * hash2(o.L, 2));
+          x.beginPath(); x.ellipse(cx, cy, rr, rr * 0.3, 0, a0, a1); x.stroke();
+          if (!back) { x.strokeStyle = `rgba(255,236,190,${0.5 * fade})`; x.lineWidth = 2; x.setLineDash([rr * 0.25, rr * 0.5]); x.lineDashOffset = -spin * rr * 1.2; x.beginPath(); x.ellipse(cx, cy - 2, rr * 0.98, rr * 0.29, 0, a0 + 0.2, a1 - 0.2); x.stroke(); }
+          x.setLineDash([]); };
+        x.globalAlpha = 1; for (let L = lay - 1; L >= 0; L--) band(ring[L], true);
+        for (let k = 0; k < (LOWFX ? 8 : 16); k++) { const a = s.rot * 0.8 + k / 16 * TAU, rr = R * (0.5 + 0.45 * hash2(k, 9)) * (0.5 + 0.5 * g), px = s.x + Math.cos(a) * rr, py = s.y + Math.sin(a) * rr * 0.55, sz = (70 + 46 * hash2(k, 4)) * (0.6 + 0.4 * g); x.globalAlpha = fade * 0.45; x.drawImage(soft(SC[k % 3]), px - sz / 2, py - sz * 0.32, sz, sz * 0.62); }
+        for (let L = 0; L < lay; L++) { const o = ring[L]; for (let k = 0; k < (LOWFX ? 2 : 4); k++) { const a = o.spin + k / 4 * TAU, px = o.cx + Math.cos(a) * o.rr, py = o.cy + Math.sin(a) * o.rr * 0.3, sz = 26 + o.hf * 36; x.globalAlpha = fade * (Math.sin(a) > 0 ? 0.42 : 0.22); x.drawImage(soft(SC[Math.sin(a) > 0 ? 2 : 1]), px - sz / 2, py - sz * 0.4, sz, sz * 0.8); } }
+        x.globalAlpha = 1; for (let L = 0; L < lay; L++) band(ring[L], false);
+        x.globalAlpha = fade;
         x.fillStyle = 'rgba(120,86,48,0.12)'; x.beginPath(); x.arc(s.x, s.y - 26, R, 0, TAU); x.fill();
         x.lineCap = 'round'; x.lineWidth = 1.6;
         for (let k = 0; k < n; k++) { const a = s.rot * (1.6 + (k % 3) * 0.4) + k * 0.73, d = R * (0.25 + 0.75 * hash2(k, 3)), px = s.x + Math.cos(a) * d, py = s.y - 10 - (k % 6) * 11 + Math.sin(a) * d, tx = -Math.sin(a) * 12, ty = Math.cos(a) * 12; x.strokeStyle = SAND[k % 3] + '0.75)'; x.beginPath(); x.moveTo(px, py); x.lineTo(px + tx, py + ty); x.stroke(); }
@@ -285,7 +300,7 @@ const ArtEarth = (() => {
   /* ---------- luces ---------- */
   function lights(G, add) {
     for (const s of G.spells) {
-      if (s.t === 'sandstorm') add(s.x, s.y - 30, s.r * 0.9, [230, 180, 110], 0.25, 0.04);
+      if (s.t === 'sandstorm') add(s.x, s.y - 70, s.r * 1.1, [240, 196, 130], 0.5, 0.1);
       else if (s.t === 'tesla' && s.rise <= 0) { for (let k = 0; k <= 2; k++) add(lerp(s.x0, s.x1, k / 2), lerp(s.y0, s.y1, k / 2) - 50, 110, [200, 170, 255], 0.75, 0.2); }
       else if (s.t === 'crystal') add(s.x, s.y - 20, s.phase ? 130 : 100, [255, 236, 170], s.phase ? 0.8 : 0.5, 0.18);
       else if (s.t === 'maw') add(s.x, s.y, s.r * 1.4, [210, 70, 175], 0.3, 0.12);

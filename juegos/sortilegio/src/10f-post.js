@@ -104,6 +104,39 @@ const Post = (() => {
     x.setTransform(k * z, 0, 0, k * z, k * (sw / 2 - cam.x * z + cam.sx), k * (sh / 2 - cam.y * z + cam.sy)); x.imageSmoothingEnabled = true; x.drawImage(mask, 0, 0, T.W, T.H);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.2; ctx.drawImage(wc, 0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore();
   }
+  /* ---------- lava viva: placas de costra que derivan sobre el río y el lago de lava, con grietas que laten ----------
+     Una textura de placas (Voronoi) que se repite, recortada con la orilla orgánica de la lava (la misma del suelo);
+     donde la lava se enfrió (agua o hielo encima) se borra. Calidad ligera: no se dibuja. */
+  let crust = null; const lc2 = mk();
+  function makeCrust() {
+    const N = 256, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), id = x.createImageData(N, N), P = [];
+    for (let k = 0; k < 30; k++) P.push([hash2(k, 71) * N, hash2(k, 72) * N, hash2(k, 73)]);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      let d1 = 1e9, d2 = 1e9, n1 = 0; for (let q = 0; q < P.length; q++) { const [px, py] = P[q]; let dx = Math.abs(i - px), dy = Math.abs(j - py); if (dx > N / 2) dx = N - dx; if (dy > N / 2) dy = N - dy; const d = dx * dx + dy * dy; if (d < d1) { d2 = d1; d1 = d; n1 = q; } else if (d < d2) d2 = d; }
+      const e = Math.sqrt(d2) - Math.sqrt(d1), o = (j * N + i) * 4, v = P[n1][2], grain = hash2(i * 0.7, j * 1.3);
+      // borde de la placa: rojo vivo que se apaga hacia adentro; centro: roca oscura con granitos
+      const rim = Math.max(0, Math.min(1, (e - 2.2) / 5)), a = Math.max(0, Math.min(1, (e - 1.6) / 2.4));
+      const dr = 46 + v * 26 + grain * 10, dg = 18 + v * 10 + grain * 5, db = 14 + v * 6;
+      id.data[o] = Math.round(dr + (210 - dr) * (1 - rim)); id.data[o + 1] = Math.round(dg + (70 - dg) * (1 - rim)); id.data[o + 2] = Math.round(db + (24 - db) * (1 - rim)); id.data[o + 3] = Math.round(a * (0.55 + v * 0.35) * 255);
+    }
+    x.putImageData(id, 0, 0); return c;
+  }
+  function lava(ctx, G, cam, sw, sh, dpr, img) {
+    const mask = img && img.lavaMask; if (!mask || LOWFX) return; if (!crust) crust = makeCrust();
+    const z = cam.z, k = MIDFX ? dpr / 2 : dpr * 0.75, x = fit(lc2, sw * k, sh * k), t = G.time, T = G.T, wtx = () => x.setTransform(k * z, 0, 0, k * z, k * (sw / 2 - cam.x * z + cam.sx), k * (sh / 2 - cam.y * z + cam.sy));
+    x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, lc2.width, lc2.height);
+    const pat = x.createPattern(crust, 'repeat'), sc = 0.62, vx = 5.5, vy = 2.2;
+    x.setTransform(k * z * sc, 0, 0, k * z * sc * 0.62, k * (sw / 2 - cam.x * z + cam.sx) + t * vx * k * z, k * (sh / 2 - cam.y * z + cam.sy) + t * vy * k * z);
+    x.fillStyle = pat; const x0 = (cam.x - sw / z - t * vx) / sc - 300, y0 = (cam.y - sh / z - t * vy) / sc / 0.62 - 300; x.fillRect(x0, y0, sw * 2 / z / sc + 600, sh * 2 / z / sc / 0.62 + 600);
+    x.globalCompositeOperation = 'destination-in'; wtx(); x.imageSmoothingEnabled = true; x.drawImage(mask, 0, 0, T.W, T.H);
+    // donde la lava se enfrió no hay costra viva
+    x.globalCompositeOperation = 'destination-out';
+    const c0 = Math.max(0, Math.floor((cam.x - sw / 2 / z) / CELL) - 1), c1 = Math.min(T.cols - 1, Math.ceil((cam.x + sw / 2 / z) / CELL) + 1), r0 = Math.max(0, Math.floor((cam.y - sh / 2 / z) / CELL) - 1), r1 = Math.min(T.rows - 1, Math.ceil((cam.y + sh / 2 / z) / CELL) + 1);
+    x.fillStyle = '#000'; for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const i = r * T.cols + c; if (T.cool[i] > 0) { x.beginPath(); x.arc(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.85, 0, TAU); x.fill(); } }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 0.9; ctx.drawImage(lc2, 0, 0, ctx.canvas.width, ctx.canvas.height);
+    // las grietas laten: un brillo que respira encima de todo el lago (no tapa las placas)
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.05 + 0.04 * Math.sin(t * 2.1); ctx.drawImage(lc2, 0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore();
+  }
   /* ---------- fondos del Mundo 2 (se ven por los huecos del suelo) ----------
      Cielo: muy abajo un mar de nubes, islotes lejanos entre la bruma, nubes medias con su sombra, bandadas y jirones cercanos.
      Infierno: corteza de lava agrietada que late, ríos de magma, peñascos que flotan alumbrados desde abajo, humo y brasas. */
@@ -199,5 +232,5 @@ const Post = (() => {
       ctx.restore(); const vg = ctx.createRadialGradient(sw / 2, sh / 2, sh * 0.25, sw / 2, sh / 2, sw * 0.72); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, sw, sh);
     }
   }
-  return { bloom, grade, rays, bokeh, shadows, water, backdrop };
+  return { bloom, grade, rays, bokeh, shadows, water, lava, backdrop };
 })();

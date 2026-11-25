@@ -92,10 +92,15 @@ const ArtGround = (() => {
     const PAL = {}; PAL[TT.GRASS] = th.grass.map(hex); PAL[TT.FERTILE] = [hex(th.fertile)]; PAL[TT.DIRT] = th.dirt.map(hex); PAL[TT.STONE] = th.stone.map(hex);
     PAL[TT.DEEP] = th.deep.map(hex); PAL[TT.SHALLOW] = th.shallow.map(hex); PAL[TT.LAVA] = th.lava.map(hex); PAL[TT.CHASM] = [hex(th.chasm)]; PAL[TT.ROCK] = [hex(th.rock.face)];
     const shore = hex(th.shore), KIND = new Uint8Array(lw * lh); let EDGE = false;
+    const LIQ = t => t === TT.LAVA ? 3 : t === TT.SHALLOW || t === TT.DEEP ? 1 : 0, RING = [[16, 0], [-16, 0], [0, 16], [0, -16], [11, 11], [-11, 11], [11, -11], [-11, -11], [8, 0], [-8, 0], [0, 8], [0, -8]];
     for (let j = 0; j < lh; j++) for (let i = 0; i < lw; i++) {
       const wx = i * R + R / 2, wy = j * R + R / 2;
-      const ox = (fbm2(wx / 80, wy / 80, 3) - 0.5) * 46, oy = (fbm2(wx / 80 + 31, wy / 80 + 17, 3) - 0.5) * 46;
+      const ox = (fbm2(wx / 80, wy / 80, 3) - 0.5) * 46 + (noise2(wx / 26 + 5.3, wy / 26) - 0.5) * 12, oy = (fbm2(wx / 80 + 31, wy / 80 + 17, 3) - 0.5) * 46 + (noise2(wx / 26, wy / 26 + 9.1) - 0.5) * 12;
       const ci = Terrain.idx(T, clamp(wx + ox, 0, T.W - 1), clamp(wy + oy, 0, T.H - 1)); let ty = ci < 0 ? TT.ROCK : type(ci);
+      // orillas de agua y lava sin escalones: lo que más hay alrededor decide (redondea las esquinas de las celdas)
+      { const k0 = LIQ(ty), n = [0, 0, 0, 0], first = [null, null, null, null]; n[k0] += 2; first[k0] = ty;
+        for (const [dx, dy] of RING) { const cj = Terrain.idx(T, clamp(wx + ox + dx, 0, T.W - 1), clamp(wy + oy + dy, 0, T.H - 1)), t2 = cj < 0 ? TT.ROCK : type(cj), k2 = LIQ(t2); n[k2]++; if (first[k2] == null) first[k2] = t2; }
+        let km = k0; for (const k of [0, 1, 3]) if (n[k] > n[km]) km = k; if (km !== k0 && first[km] != null) ty = first[km]; }
       const pal = PAL[ty] || PAL[TT.GRASS], n = fbm2(wx / 140, wy / 140, 3), n2 = noise2(wx / 33, wy / 33);
       const k = Math.min(pal.length - 1, Math.floor(n * pal.length * 1.2)), c = pal[k], c2 = pal[(k + 1) % pal.length], f = (n2 - 0.5) * 0.6 + 0.5;
       let r = lerp(c[0], c2[0], f * 0.5), g = lerp(c[1], c2[1], f * 0.5), bb = lerp(c[2], c2[2], f * 0.5);
@@ -108,7 +113,10 @@ const ArtGround = (() => {
     for (let pass = 0; pass < 2; pass++) { const src = new Uint8ClampedArray(D); for (let j = 1; j < lh - 1; j++) for (let i = 1; i < lw - 1; i++) for (let ch = 0; ch < 3; ch++) { let sum = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) sum += src[((j + dj) * lw + i + di) * 4 + ch]; D[(j * lw + i) * 4 + ch] = sum / 9; } }
     lx.putImageData(id, 0, 0);
     // máscara del agua (para las cáusticas vivas) con la misma orilla orgánica
-    { const mc = document.createElement('canvas'); mc.width = lw; mc.height = lh; const mx = mc.getContext('2d'), md = mx.createImageData(lw, lh); let any = false; for (let q = 0; q < lw * lh; q++) if (KIND[q] === 1) { md.data[q * 4] = md.data[q * 4 + 1] = md.data[q * 4 + 2] = 255; md.data[q * 4 + 3] = 255; any = true; } mx.putImageData(md, 0, 0); if (any) c.waterMask = mc; }
+    for (const [kd, key] of [[1, 'waterMask'], [3, 'lavaMask']]) { const mc = document.createElement('canvas'); mc.width = lw; mc.height = lh; const mx = mc.getContext('2d'), md = mx.createImageData(lw, lh); let any = false; for (let q = 0; q < lw * lh; q++) if (KIND[q] === kd) { md.data[q * 4] = md.data[q * 4 + 1] = md.data[q * 4 + 2] = 255; md.data[q * 4 + 3] = 255; any = true; }
+      // la orilla de la máscara, suave (sin escaloncitos al agrandarla)
+      for (let pass = 0; pass < 2; pass++) { const src = new Uint8ClampedArray(md.data); for (let j = 1; j < lh - 1; j++) for (let i = 1; i < lw - 1; i++) { let sum = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) sum += src[((j + dj) * lw + i + di) * 4 + 3]; const o = (j * lw + i) * 4; md.data[o + 3] = sum / 9; md.data[o] = md.data[o + 1] = md.data[o + 2] = 255; } }
+      mx.putImageData(md, 0, 0); if (any) c[key] = mc; }
     // islas flotantes / borde del abismo (Mundo 2): pared de roca que cuelga bajo cada orilla, con estratos y puntas
     if (th.sky) {
       const cf = hx3(th.cliff[0]), cd = hx3(th.cliff[1]);
@@ -139,7 +147,7 @@ const ArtGround = (() => {
       const edge = KIND[q - 1] !== kd || KIND[q + 1] !== kd || KIND[q - lw] !== kd || KIND[q + lw] !== kd; if (!edge) continue;
       const wx = i * R + R / 2, wy = j * R + R / 2, h1 = rnd(q, 311), h2 = rnd(q, 312);
       if (kd === 1) { x.globalAlpha = 0.5; x.drawImage(blob('30,26,20', 0.8), wx - 13, wy - 10, 26, 20); x.globalAlpha = 0.5 + h1 * 0.4; x.fillStyle = '#eaf6ff'; x.beginPath(); x.ellipse(wx + (h1 - 0.5) * 5, wy + (h2 - 0.5) * 5, 2.2 + h2 * 2.6, 1.6 + h1 * 1.6, h1 * 3, 0, TAU); x.fill(); }
-      else { x.globalAlpha = 0.6; x.drawImage(blob('20,8,6', 0.9), wx - 14, wy - 11, 28, 22); x.globalAlpha = 0.5; x.drawImage(blob('255,170,60', 0.8), wx - 7, wy - 5, 14, 10); }
+      else { x.globalAlpha = 0.62; x.drawImage(blob('24,9,6', 0.9), wx - 15, wy - 12, 30, 24); x.globalAlpha = 0.2; x.drawImage(blob('255,170,60', 0.8), wx - 11, wy - 8, 22, 16); }
     }
     x.globalAlpha = 1;
     // 2. textura de pincel
@@ -315,11 +323,15 @@ const ArtGround = (() => {
         x.fillStyle = `rgba(150,110,70,${a * 0.7})`; const bb = (time * 0.8 + rnd(i, 6) * 5) % 1; if (rnd(i, 9) < 0.5) { x.beginPath(); x.arc(px + (rnd(i, 7) - 0.5) * 20, py + (rnd(i, 8) - 0.5) * 20, 1.5 + bb * 3, 0, TAU); x.fill(); }
       }
       if (T.wet[i] > 0 && b !== TT.DEEP && b !== TT.SHALLOW) {
-        const a = Math.min(0.85, T.wet[i] / 4); x.globalAlpha = a; x.drawImage(blob('60,130,200', 0.75), px - CELL * 0.95, py - CELL * 0.75, CELL * 1.9, CELL * 1.5); x.globalAlpha = 1;
+        // suelo mojado: primero oscurece (tierra empapada) y encima un brillo azul de charco; cada mancha corrida un poco (sin cuadrícula)
+        const a = Math.min(0.85, T.wet[i] / 4), jx = (rnd(i, 41) - 0.5) * 14, jy = (rnd(i, 42) - 0.5) * 10, ws = 1 + rnd(i, 43) * 0.3;
+        x.globalAlpha = a * 0.55; x.drawImage(blob('16,30,52', 0.8), px - CELL * 1.05 * ws + jx, py - CELL * 0.8 * ws + jy, CELL * 2.1 * ws, CELL * 1.6 * ws);
+        x.globalAlpha = a * 0.5; x.drawImage(blob('70,140,210', 0.7), px - CELL * 0.85 * ws + jx, py - CELL * 0.62 * ws + jy, CELL * 1.7 * ws, CELL * 1.24 * ws); x.globalAlpha = 1;
         if (rnd(i, 9) < 0.35) { const sh = 0.5 + 0.5 * Math.sin(time * 1.5 + i); x.strokeStyle = `rgba(220,240,255,${a * 0.5 * sh})`; x.lineWidth = 1.4; x.beginPath(); x.moveTo(px - 8, py - 3); x.lineTo(px + 6, py - 5); x.stroke(); }
       }
       if (T.ice[i] > 0) {
-        const a = Math.min(0.95, T.ice[i] / 1.5); x.globalAlpha = a; x.drawImage(blob('205,240,255', 0.9), px - CELL, py - CELL * 0.9, CELL * 2, CELL * 1.8); x.globalAlpha = 1;
+        const a = Math.min(0.95, T.ice[i] / 1.5), jx = (rnd(i, 44) - 0.5) * 12, jy = (rnd(i, 45) - 0.5) * 9, ws = 1 + rnd(i, 46) * 0.25;
+        x.globalAlpha = a * 0.85; x.drawImage(blob('205,240,255', 0.9), px - CELL * ws + jx, py - CELL * 0.9 * ws + jy, CELL * 2 * ws, CELL * 1.8 * ws); x.globalAlpha = 1;
         if (rnd(i, 5) < 0.5) { x.strokeStyle = `rgba(255,255,255,${a * 0.6})`; x.lineWidth = 1; x.beginPath(); x.moveTo(px - 12 + rnd(i, 1) * 6, py - 10); x.lineTo(px + 2, py + 2); x.lineTo(px + 12, py - 4); x.stroke(); }
         const g = (time * 0.6 + rnd(i, 2) * 3) % 3; if (g < 0.3) { x.fillStyle = `rgba(255,255,255,${(0.3 - g) * 3})`; x.fillRect(px + (rnd(i, 3) - 0.5) * 24, py + (rnd(i, 4) - 0.5) * 24, 3, 3); }
       }

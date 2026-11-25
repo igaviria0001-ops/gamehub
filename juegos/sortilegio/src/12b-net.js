@@ -305,7 +305,7 @@ const NetGame = (() => {
     if (evQ.length) { const l = evQ; evQ = []; const evs = [];
       for (const e of l) {
         if (e.type === '$fx') { try { G.fx.push(dec(JSON.parse(e.j))); } catch (er) { /* nada */ } continue; }
-        if (e.type === '$pop') { try { G.pops.push(Object.assign(dec(JSON.parse(e.j)), { t: 0 })); } catch (er) { /* nada */ } continue; }
+        if (e.type === '$pop') { try { const p = Object.assign(dec(JSON.parse(e.j)), { t: 0 }), old = p.combo != null && G.pops.find(q => q.combo === p.combo && q.t < 0.9); if (old) Object.assign(old, p, { dup: null }); else G.pops.push(p); } catch (er) { /* nada */ } continue; }
         if (e.unit != null) e.unit = unitOf(e.unit); evs.push(e);
       }
       Game.clientEvents(evs); }

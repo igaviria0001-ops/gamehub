@@ -157,7 +157,10 @@ const Game = (() => {
       Cine.onEvent(G, e);
       if (e.type === 'goal') { cam.shake = Math.max(cam.shake, 18); G.slow = Math.max(G.slow, 0.5); }
       if (e.type === 'down') { const m = G.mages[e.who]; G.slow = Math.max(G.slow, 0.9); cam.shake = Math.max(cam.shake, 16); if (m && G.mode === 'duel') G.koCam = { x: m.x, y: m.y, until: G.time + 1.1 }; }
-      if (e.type === 'combo' && !G.attract && e.n < 3) G.pops.push({ x: e.x, y: e.y - 70, text: e.name, t: 0, color: PLAYER_COLORS[e.who] ? PLAYER_COLORS[e.who].main : '#fff', big: true });
+      // combos seguidos del mismo mago: un solo cartel que crece («¡Rebote! ×3») en vez de tres letreros apilados
+      if (e.type === 'combo' && !G.attract && e.n < 3) { const old = G.pops.find(p => p.combo === e.who && p.t < 0.9);
+        if (old) { old.chain = (old.chain || 1) + 1; old.text = e.name + ' ×' + old.chain; old.t = 0; old.x = e.x; old.y = e.y - 70; old.dup = null; old.gran = old.chain >= 3; old._s = 0; }
+        else G.pops.push({ x: e.x, y: e.y - 70, text: e.name, t: 0, color: PLAYER_COLORS[e.who] ? PLAYER_COLORS[e.who].main : '#fff', big: true, combo: e.who }); }
       if (e.type === 'granStart') { G.granFx = { t: 0, who: e.who, name: e.name || '', els: e.els, rel: -1 }; G.koCam = { x: e.x, y: e.y - 20, until: G.time + GRAN_CHARGE + 0.25 }; G.slow = Math.max(G.slow, 1.05); }
       if (e.type === 'gran') { if (!G.granFx) G.granFx = { t: 0.8, who: e.who, name: e.name || '', els: e.els, rel: 0.8 }; else G.granFx.rel = G.granFx.t; G.hitStop = Math.max(G.hitStop || 0, 0.07); G.slow = Math.max(G.slow, 0.45); cam.shake = Math.max(cam.shake, 20); }
       if (e.type === 'fusion' && !e.gran && G.state === 'play' && !G.attract) G.pops.push({ x: 0, y: 0, follow: G.mages[e.who], text: FUSIONS[e.key].name, t: 0, color: '#f3eaff', small: true });
