@@ -137,10 +137,98 @@ const ArtEpic = (() => {
     // brasas que salen despedidas en espiral
     if (Math.random() < (LOWFX ? 0.3 : 0.7)) { const a = Math.random() * TAU, hf = Math.random(); FX.P({ x: s.x + Math.cos(a) * R * (0.3 + hf), y: s.y + Math.sin(a) * R * 0.3, z: 10 + hf * H, vx: -Math.sin(a) * 220 + Math.cos(a) * 80, vy: Math.cos(a) * 90, vz: vr(20, 90), g: -10, drag: 1.2, life: vr(0.6, 1.1), size: vr(1.5, 3), color: Math.random() < 0.5 ? '#ffd27a' : '#ff7a2a', kind: 'ember' }); }
   }
+  /* ---------- Supernova de Zuhé: un sol pequeño que vuela, atrae y estalla ---------- */
+  const SUNH = 128; // altura a la que flota el sol sobre el rival
+  function sunPos(s) {
+    const W = s.S.windup || 0.6, f = Math.min(1, 1 - Math.max(0, s.windup) / W), fl = Math.min(1, f / 0.3), e = smooth(fl);
+    const tx = s.x, ty = s.y - SUNH, x0 = s.x0 != null ? s.x0 : tx, y0 = s.y0 != null ? s.y0 : ty;
+    const R = fl < 1 ? 9 + fl * 3 : f < 0.86 ? 13 + 20 * (f - 0.3) / 0.56 : 33 - 24 * (f - 0.86) / 0.14; // crece y, justo antes de estallar, se comprime
+    return { X: x0 + (tx - x0) * e, Y: y0 + (ty - y0) * e - Math.sin(fl * Math.PI) * 70, f, fl, R };
+  }
+  function sunBall(x, X, Y, R, t, a, seed, hot) {
+    x.globalCompositeOperation = 'lighter';
+    glow(x, X, Y, R * 3.4, `rgba(255,130,40,${0.32 * a})`); glow(x, X, Y, R * 1.7, `rgba(255,210,120,${0.45 * a})`);
+    // llamaradas (protuberancias) que salen del borde y se curvan
+    x.lineCap = 'round';
+    const n = LOWFX ? 6 : 12;
+    for (let k = 0; k < n; k++) { const a0 = k / n * TAU + t * 1.4 + hash2(k, seed) * 0.5, L = R * (0.45 + 0.75 * Math.abs(Math.sin(t * 4.6 + k * 1.31 + seed))), b = 0.6 * Math.sin(t * 2 + k);
+      const x0 = X + Math.cos(a0) * R * 0.92, y0 = Y + Math.sin(a0) * R * 0.92, x1 = X + Math.cos(a0 + b * 0.5) * (R + L), y1 = Y + Math.sin(a0 + b * 0.5) * (R + L), cx = X + Math.cos(a0 + b) * (R + L * 0.7), cy = Y + Math.sin(a0 + b) * (R + L * 0.7);
+      const lg = x.createLinearGradient(x0, y0, x1, y1); lg.addColorStop(0, `rgba(255,236,170,${0.95 * a})`); lg.addColorStop(0.5, `rgba(255,140,40,${0.7 * a})`); lg.addColorStop(1, 'rgba(255,80,20,0)');
+      x.strokeStyle = lg; x.lineWidth = R * 0.22 + 1.5; x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(cx, cy, x1, y1); x.stroke(); }
+    x.globalCompositeOperation = 'source-over';
+    // el cuerpo del sol: núcleo blanco, fotosfera dorada y borde naranja que hierve
+    const g = x.createRadialGradient(X - R * 0.25, Y - R * 0.25, 0, X, Y, R); g.addColorStop(0, '#ffffff'); g.addColorStop(0.3, hot ? '#ffffff' : '#ffeaa6'); g.addColorStop(0.7, hot ? '#fff0b0' : '#ffa834'); g.addColorStop(1, hot ? '#ffc060' : '#f2560c');
+    x.globalAlpha = a; x.fillStyle = g; x.beginPath();
+    for (let k = 0; k <= 24; k++) { const an = k / 24 * TAU, rr = R * (1 + 0.06 * Math.sin(an * 5 + t * 9 + seed)); k ? x.lineTo(X + Math.cos(an) * rr, Y + Math.sin(an) * rr) : x.moveTo(X + Math.cos(an) * rr, Y + Math.sin(an) * rr); }
+    x.fill();
+    if (!LOWFX) { x.fillStyle = 'rgba(255,170,60,0.35)'; for (let k = 0; k < 5; k++) { const an = hash2(k, seed) * TAU + t * 0.7, d = R * 0.55 * hash2(seed, k); x.beginPath(); x.arc(X + Math.cos(an) * d, Y + Math.sin(an) * d, R * 0.16, 0, TAU); x.fill(); } }
+    x.globalAlpha = 1; x.globalCompositeOperation = 'lighter'; star4(x, X - R * 0.3, Y - R * 0.3, R * (0.9 + 0.3 * Math.sin(t * 9)), `rgba(255,255,240,${0.7 * a})`, t * 2);
+    x.globalCompositeOperation = 'source-over';
+  }
+  function novaUnder(x, G, s) {
+    const t = G.time, P = sunPos(s), R = s.r, R2 = R * 1.35, a = 0.35 + 0.65 * P.f;
+    x.save();
+    // calor en el suelo y la luz que baja del sol
+    const g = x.createRadialGradient(s.x, s.y, 0, s.x, s.y, R2); g.addColorStop(0, `rgba(255,214,120,${0.32 * a})`); g.addColorStop(0.7, `rgba(255,130,40,${0.14 * a})`); g.addColorStop(1, 'rgba(255,100,30,0)');
+    x.globalCompositeOperation = 'lighter'; x.fillStyle = g; x.beginPath(); x.ellipse(s.x, s.y, R2, R2 * 0.55, 0, 0, TAU); x.fill();
+    // el borde de la explosión: anillo dorado con trazos que giran
+    x.strokeStyle = `rgba(255,220,130,${0.35 + 0.55 * P.f})`; x.lineWidth = 2 + P.f * 2; x.setLineDash([10, 9]); x.lineDashOffset = -t * 60;
+    x.beginPath(); x.ellipse(s.x, s.y, R, R * 0.55, 0, 0, TAU); x.stroke(); x.setLineDash([]);
+    // la gravedad: anillos que se cierran y brasas que caen en espiral hacia el centro
+    for (let k = 0; k < 3; k++) { const p = (t * 1.6 + k / 3) % 1, rr = R2 * (1 - p); x.strokeStyle = `rgba(255,180,90,${0.3 * Math.sin(p * Math.PI) * a})`; x.lineWidth = 2; x.beginPath(); x.ellipse(s.x, s.y, rr, rr * 0.55, 0, 0, TAU); x.stroke(); }
+    const n = LOWFX ? 10 : 26; x.lineCap = 'round'; x.lineWidth = 2.2;
+    for (let k = 0; k < n; k++) { const p = (t * 1.25 + hash2(k, s.id)) % 1, a0 = hash2(s.id, k) * TAU + p * 2.6, d0 = R2 * (1 - p), d1 = R2 * (1 - Math.min(1, p + 0.07)), a1 = a0 + 0.2;
+      x.strokeStyle = `rgba(255,${190 + (k % 3) * 20},110,${0.85 * Math.sin(p * Math.PI) * a})`; x.beginPath(); x.moveTo(s.x + Math.cos(a0) * d0, s.y + Math.sin(a0) * d0 * 0.55); x.lineTo(s.x + Math.cos(a1) * d1, s.y + Math.sin(a1) * d1 * 0.55); x.stroke(); }
+    // cono de luz del sol al suelo (cuando ya llegó)
+    if (P.fl >= 1) { const w = P.R * 1.2, vg = x.createLinearGradient(0, P.Y, 0, s.y); vg.addColorStop(0, `rgba(255,236,170,${0.32 * a})`); vg.addColorStop(1, `rgba(255,190,90,${0.08 * a})`); x.fillStyle = vg;
+      x.beginPath(); x.moveTo(P.X - w, P.Y); x.lineTo(P.X + w, P.Y); x.lineTo(s.x + R * 0.45, s.y); x.lineTo(s.x - R * 0.45, s.y); x.closePath(); x.fill(); }
+    x.restore();
+  }
+  function novaOver(x, G, s) {
+    const t = G.time, P = sunPos(s);
+    x.save();
+    if (P.fl < 1) { // estela de fuego mientras vuela
+      const W = s.S.windup || 0.6;
+      for (let k = 1; k <= (LOWFX ? 3 : 6); k++) { const q = sunPos(Object.assign({}, s, { windup: Math.min(W, s.windup + k * 0.018) })); x.globalCompositeOperation = 'lighter'; glow(x, q.X, q.Y, q.R * (2.2 - k * 0.2), `rgba(255,${160 - k * 12},60,${0.5 - k * 0.07})`); }
+    }
+    sunBall(x, P.X, P.Y, P.R, t, 1, s.id % 89, P.f > 0.86);
+    if (P.f > 0.86) { const k = (P.f - 0.86) / 0.14; x.globalCompositeOperation = 'lighter'; star4(x, P.X, P.Y, 20 + 70 * k, `rgba(255,255,255,${0.5 + 0.5 * k})`, -t * 3); }
+    x.restore();
+  }
+  /* ---------- halo de sol a los pies de Zuhé ---------- */
+  function zuheHalo(x, G, u) {
+    if (u.st && u.st.hidden > 0) return;
+    const t = G.time, R = 34, n = LOWFX ? 8 : 14;
+    x.save(); x.globalCompositeOperation = 'lighter';
+    const g = x.createRadialGradient(u.x, u.y, 4, u.x, u.y, R * 1.3); g.addColorStop(0, 'rgba(255,214,120,0.22)'); g.addColorStop(1, 'rgba(255,150,50,0)'); x.fillStyle = g; x.beginPath(); x.ellipse(u.x, u.y, R * 1.3, R * 0.7, 0, 0, TAU); x.fill();
+    x.strokeStyle = 'rgba(255,214,130,0.45)'; x.lineWidth = 1.4; x.beginPath(); x.ellipse(u.x, u.y, R * 0.72, R * 0.4, 0, 0, TAU); x.stroke();
+    x.lineCap = 'round'; x.lineWidth = 2;
+    for (let k = 0; k < n; k++) { const a = k / n * TAU + t * 0.9, l = 0.55 + 0.45 * Math.sin(t * 3 + k * 1.7), r0 = R * 0.8, r1 = R * (0.95 + 0.3 * l);
+      x.strokeStyle = `rgba(255,${190 + (k % 2) * 40},110,${0.25 + 0.3 * l})`; x.beginPath(); x.moveTo(u.x + Math.cos(a) * r0, u.y + Math.sin(a) * r0 * 0.55); x.lineTo(u.x + Math.cos(a) * r1, u.y + Math.sin(a) * r1 * 0.55); x.stroke(); }
+    x.restore();
+  }
+  function novaRays(x, o, f, A) {
+    // el estallido: rayos de fuego que barren el suelo, un anillo que arde y una columna de luz
+    x.save(); x.globalCompositeOperation = 'lighter';
+    const n = LOWFX ? 10 : 20, L = o.r * (0.6 + 1.3 * smooth(Math.min(1, f * 2.2)));
+    for (let k = 0; k < n; k++) { const a = k / n * TAU + o.seed, w = 0.05 + 0.06 * hash2(k, 11), LL = L * (0.75 + 0.5 * hash2(k, 5));
+      const g = x.createRadialGradient(o.x, o.y, 0, o.x, o.y, LL); g.addColorStop(0, `rgba(255,236,180,${0.8 * A})`); g.addColorStop(0.45, `rgba(255,160,60,${0.5 * A})`); g.addColorStop(1, 'rgba(255,80,20,0)');
+      x.fillStyle = g; x.beginPath(); x.moveTo(o.x, o.y); x.lineTo(o.x + Math.cos(a - w) * LL, o.y + Math.sin(a - w) * LL * 0.55); x.lineTo(o.x + Math.cos(a + w) * LL, o.y + Math.sin(a + w) * LL * 0.55); x.closePath(); x.fill(); }
+    const rr = o.r * (0.3 + 0.85 * smooth(Math.min(1, f * 1.7)));
+    x.strokeStyle = `rgba(255,150,50,${0.7 * A})`; x.lineWidth = 16 * A + 2; x.beginPath(); x.ellipse(o.x, o.y, rr, rr * 0.55, 0, 0, TAU); x.stroke();
+    x.strokeStyle = `rgba(255,240,190,${A})`; x.lineWidth = 3; x.beginPath(); x.ellipse(o.x, o.y, rr, rr * 0.55, 0, 0, TAU); x.stroke();
+    const cw = 34 * A + 4, cg = x.createLinearGradient(o.x - cw, 0, o.x + cw, 0); cg.addColorStop(0, 'rgba(255,200,100,0)'); cg.addColorStop(0.5, `rgba(255,240,200,${0.6 * A})`); cg.addColorStop(1, 'rgba(255,200,100,0)');
+    x.fillStyle = cg; x.fillRect(o.x - cw, o.y - 420, cw * 2, 420);
+    x.restore();
+  }
   /* ---------- capas ---------- */
-  function under(x, G) { for (const s of G.spells) { if (s.t === 'eclipse') eclipseUnder(x, G, s); else if (s.t === 'bloom') lotusUnder(x, G, s); } }
-  function over(x, G) { for (const s of G.spells) { if (s.t === 'eclipse') eclipseOver(x, G, s); else if (s.t === 'bloom') lotusOver(x, G, s); } }
+  function under(x, G) {
+    for (const s of G.spells) { if (s.t === 'eclipse') eclipseUnder(x, G, s); else if (s.t === 'bloom') lotusUnder(x, G, s); else if (s.t === 'nova') novaUnder(x, G, s); }
+    for (const u of G.units) if (u.cid === 'zuhe' && u.alive !== false && (u.isMage || u.obj === 'decoy')) zuheHalo(x, G, u);
+  }
+  function over(x, G) { for (const s of G.spells) { if (s.t === 'eclipse') eclipseOver(x, G, s); else if (s.t === 'bloom') lotusOver(x, G, s); else if (s.t === 'nova') novaOver(x, G, s); } }
   function lights(G, add) {
+    for (const s of G.spells) if (s.t === 'nova') { const P = sunPos(s); add(P.X, P.Y + 40, 100 + P.f * 70, [255, 200, 120], 0.35 + P.f * 0.3, 0.18); }
     for (const s of G.spells) if (s.t === 'bloom') add(s.x, s.y - 20, s.r * 1.4, [160, 255, 190], 0.55, 0.18);
     for (const s of G.spells) if (s.t === 'eclipse') {
       if (s.warn > 0) add(s.x, s.y - SKY, 150, [255, 236, 170], 0.7, 0.3);
@@ -176,6 +264,11 @@ const ArtEpic = (() => {
       case 'blackStrike': // Rayo negro: un relámpago oscuro cae del cielo sobre el rival, con borde magenta, y deja la marca
         S({ type: 'blackPillar', x: f.x, y: f.y, life: 0.5, seed: Math.random() * 1000 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: 110, el: 'shadow', life: 0.4, w: 12 });
         for (let k = 0; k < (LOWFX ? 10 : 24); k++) { const a = Math.random() * TAU, v = vr(160, 420); P({ x: f.x, y: f.y, z: vr(4, 30), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(60, 200), g: 500, drag: 1.3, life: vr(0.4, 0.8), size: vr(2, 4), color: Math.random() < 0.6 ? '#1a0822' : '#ff5ad0', kind: 'shard', add: false }); }
+        return true;
+      case 'sunBlast': // Supernova: el estallido grande (rayos, anillo de fuego, columna de luz y brasas que suben)
+        S({ type: 'novaRays', x: f.x, y: f.y, r: f.r, life: 0.7, seed: Math.random() * 6 }); S({ type: 'star4', x: f.x, y: f.y - SUNH, r: 110, life: 0.4 });
+        S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: f.r * 1.6, el: 'fire', life: 0.5, w: 14, delay: 0.05 });
+        for (let k = 0; k < (LOWFX ? 14 : 36); k++) { const a = Math.random() * TAU, d = Math.random() * f.r * 0.8; P({ x: f.x + Math.cos(a) * d, y: f.y + Math.sin(a) * d * 0.55, z: vr(2, 20), vx: Math.cos(a) * vr(20, 80), vy: Math.sin(a) * vr(10, 40), vz: vr(140, 360), g: -20, drag: 1.2, life: vr(0.7, 1.4), size: vr(2, 4.5), color: Math.random() < 0.5 ? '#ffd27a' : '#ff8a2a', kind: 'ember' }); }
         return true;
       case 'diamond': // el anillo de diamante: luz que estalla desde el centro del eclipse
         S({ type: 'diamond', x: f.x, y: f.y, r: f.r, life: 0.75 });
@@ -213,6 +306,7 @@ const ArtEpic = (() => {
   function shape(x, o, f, A) {
     if (o.type === 'iceFan') { iceFan(x, o, f); return true; }
     if (o.type === 'blackPillar') { blackPillar(x, o, f, A); return true; }
+    if (o.type === 'novaRays') { novaRays(x, o, f, A); return true; }
     if (o.type !== 'diamond') return false;
     // rayos de luz que salen del centro y se abren hacia el cielo
     x.save(); x.globalCompositeOperation = 'lighter';

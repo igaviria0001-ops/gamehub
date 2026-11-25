@@ -54,7 +54,10 @@ const Spells2 = (() => {
       Object.assign(B, { x: tx, y: ty, id: -1 });
       for (const u of G.units) if (foe(B, u) && hypot(u.x - tx, u.y - ty) < S.r * Z + u.r) hit(G, B, u, S.dmg * P, { el: 'shadow', hex: S.hex, big: true, knock: 220, kx: u.x - tx, ky: u.y - ty });
     } else if (k === 'nova') {
-      add(G, Object.assign(B, { t: 'nova', S, el: 'light', x: m.x, y: m.y, windup: S.windup, r: S.r * Z, caster: m }));
+      // Supernova: un sol pequeño vuela hasta donde VA a estar el rival, lo atrae y estalla
+      const p = Spells.aimPoint(G, m, S.range, S.windup * 0.6);
+      add(G, Object.assign(B, { t: 'nova', S, el: 'light', x: p.tx, y: p.ty, x0: m.x, y0: m.y - 30, windup: S.windup, r: S.r * Z }));
+      G.events.push({ type: 'sunForm', x: p.tx, y: p.ty });
     } else if (k === 'mirage') {
       const n = S.n + (B.gran ? 1 : 0);
       for (let j = 0; j < n; j++) {
@@ -130,12 +133,15 @@ const Spells2 = (() => {
     const T = G.T;
     switch (s.t) {
       case 'nova': {
-        const m = s.caster; if (m && m.alive !== false) { s.x = m.x; s.y = m.y; }
-        s.windup -= dt; if (s.windup > 0) break; s.dead = true; const S = s.S;
+        const S = s.S; s.windup -= dt;
+        if (s.windup > 0) { // la gravedad del sol jala hacia el centro a los que estén cerca
+          for (const u of G.units) { if (!foe(s, u) || u.obj || u.untargetable) continue; const dx = s.x - u.x, dy = s.y - u.y, d = hypot(dx, dy), R = s.r * 1.35; if (d > R || d < 1) continue; const f = (S.pull || 0) * (0.35 + 0.65 * (1 - d / R)) * dt * (u.knockMul || 1); u.vx += dx / d * f; u.vy += dy / d * f; }
+          break; }
+        s.dead = true;
         for (const u of G.units) if (foe(s, u) && hypot(u.x - s.x, u.y - s.y) < s.r + u.r) hit(G, s, u, S.dmg * s.power, { el: 'light', burn: S.burn, dazzle: S.dazzle, knock: S.knock, kx: u.x - s.x, ky: u.y - s.y, big: true });
         for (const p of G.spells) if (p.t === 'proj' && !p.dead && p.team !== s.team && hypot(p.x - s.x, p.y - s.y) < s.r) Spells.endProj(G, p, true);
         Terrain.forCircle(T, s.x, s.y, s.r * 0.75, i => { if (hypot(Terrain.cx(T, i) - s.x, Terrain.cy(T, i) - s.y) > 46) Terrain.ignite(G, i, 2, s.by); });
-        G.fx.push({ type: 'nova', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'boom', x: s.x, y: s.y, r: s.r, el: 'light' }); break;
+        G.fx.push({ type: 'nova', x: s.x, y: s.y, r: s.r }, { type: 'sunBlast', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'boom', x: s.x, y: s.y, r: s.r, el: 'light' }, { type: 'sunBlast', x: s.x, y: s.y, r: s.r }); break;
       }
       case 'judgment': {
         s.delay -= dt; if (s.tg && s.tg.alive && s.delay > s.S.lockAt && !(s.tg.st.hidden > 0)) { s.x = s.tg.x; s.y = s.tg.y; }

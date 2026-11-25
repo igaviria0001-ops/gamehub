@@ -164,7 +164,7 @@ const Earth = (() => {
         for (const u of G.units) {
           if (!foe(s, u) || s.hitSet.has(u)) continue; const dx = u.x - s.x, dy = u.y - s.y, d = hypot(dx, dy) || 1;
           if (d > d0 - u.r && d < d1 + u.r && Math.abs(angDiff(s.ang, Math.atan2(dy, dx))) < s.half + u.r / d) {
-            s.hitSet.add(u); hit(G, s, u, s.dmg, { el: 'earth', knock: s.S.knock, kx: Math.cos(s.ang) * 0.85 + dx / d * 0.35, ky: Math.sin(s.ang) * 0.85 + dy / d * 0.35, wet: s.S.wet, big: true });
+            s.hitSet.add(u); hit(G, s, u, s.dmg, { el: 'earth', knock: s.S.knock, kx: Math.cos(s.ang) * 0.85 + dx / d * 0.35, ky: Math.sin(s.ang) * 0.85 + dy / d * 0.35, wet: s.S.wet, stun: s.S.stun, big: true });
             u.slow(1.4, s.S.slow);
           }
         }

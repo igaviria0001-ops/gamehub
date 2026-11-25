@@ -166,15 +166,24 @@ const ArtEarth = (() => {
   }
   // el frente de la avalancha de barro
   function mud(x, G, s) {
-    const t = G.time, d = s.d, H = 26 + 8 * Math.sin(t * 10), n = 16, fade = Math.min(1, (s.range - d) / 60 + 0.2);
+    const t = G.time, d = s.d, H = 38 + 9 * Math.sin(t * 10), n = 16, fade = Math.min(1, (s.range - d) / 60 + 0.2);
     const P = []; for (let k = 0; k <= n; k++) { const a = s.ang - s.half + k / n * s.half * 2; P.push([s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, a]); }
     x.save(); x.globalAlpha = Math.min(1, fade);
     x.fillStyle = 'rgba(10,6,4,0.3)'; x.beginPath(); P.forEach(([px, py], k) => k ? x.lineTo(px, py + 6) : x.moveTo(px, py + 6)); for (let k = n; k >= 0; k--) { const [px, py, a] = P[k]; x.lineTo(px - Math.cos(a) * 30, py - Math.sin(a) * 30 + 6); } x.fill();
-    x.fillStyle = '#5a3e22'; x.beginPath(); P.forEach(([px, py], k) => k ? x.lineTo(px, py) : x.moveTo(px, py)); for (let k = n; k >= 0; k--) { const [px, py, a] = P[k]; const w = Math.sin(k * 1.7 + t * 12) * 5; x.lineTo(px - Math.cos(a) * 18, py - Math.sin(a) * 18 - H - w); } x.closePath(); x.fill();
+    // el cuerpo del alud: una lengua de barro que viene detrás de la cresta, con grumos y piedras que ruedan
+    const TL = Math.min(90, d * 0.6) + 10;
+    const bg = x.createLinearGradient(P[n >> 1][0] - Math.cos(s.ang) * TL, P[n >> 1][1] - Math.sin(s.ang) * TL, P[n >> 1][0], P[n >> 1][1]); bg.addColorStop(0, 'rgba(70,48,28,0)'); bg.addColorStop(0.45, 'rgba(78,54,30,0.8)'); bg.addColorStop(1, '#4e3520');
+    x.fillStyle = bg; x.beginPath(); P.forEach(([px, py, a], k) => { const X = px - Math.cos(a) * 6, Y = py - Math.sin(a) * 6 - H * 0.35; k ? x.lineTo(X, Y) : x.moveTo(X, Y); }); for (let k = n; k >= 0; k--) { const [px, py, a] = P[k], w = Math.sin(k * 2.3 + t * 7) * 8; x.lineTo(px - Math.cos(a) * (TL + w), py - Math.sin(a) * (TL + w)); } x.closePath(); x.fill();
+    for (let k = 0; k < (LOWFX ? 6 : 14); k++) { const q = hash2(k, s.id), j = Math.min(n, Math.round(q * n)), [px, py, a] = P[j], back = 14 + hash2(s.id, k) * (TL - 24), bob = Math.sin(t * 9 + k * 1.9) * 3, r = 6 + hash2(k, 3) * 7;
+      const X = px - Math.cos(a) * back, Y = py - Math.sin(a) * back - H * 0.25 * (1 - back / TL) + bob; x.fillStyle = '#5e4128'; x.beginPath(); x.ellipse(X, Y, r, r * 0.7, 0, 0, TAU); x.fill(); x.fillStyle = 'rgba(176,140,96,0.55)'; x.beginPath(); x.ellipse(X - r * 0.25, Y - r * 0.3, r * 0.45, r * 0.25, -0.3, 0, TAU); x.fill(); }
+    // la cresta: una ola de barro que se levanta y se enrosca
+    const cg = x.createLinearGradient(0, P[n >> 1][1] - H - 10, 0, P[n >> 1][1]); cg.addColorStop(0, '#7a5634'); cg.addColorStop(0.5, '#5a3e22'); cg.addColorStop(1, '#3e2a16');
+    x.fillStyle = cg; x.beginPath(); P.forEach(([px, py], k) => k ? x.lineTo(px, py) : x.moveTo(px, py)); for (let k = n; k >= 0; k--) { const [px, py, a] = P[k]; const w = Math.sin(k * 1.7 + t * 12) * 5; x.lineTo(px - Math.cos(a) * 26, py - Math.sin(a) * 26 - H - w); } x.closePath(); x.fill();
     x.strokeStyle = '#8a6a40'; x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); for (let k = 0; k <= n; k++) { const [px, py, a] = P[k], w = Math.sin(k * 1.7 + t * 12) * 5; const X = px - Math.cos(a) * 18, Y = py - Math.sin(a) * 18 - H - w; k ? x.lineTo(X, Y) : x.moveTo(X, Y); } x.stroke();
+    x.strokeStyle = 'rgba(214,190,150,0.7)'; x.lineWidth = 2; x.beginPath(); for (let k = 0; k <= n; k++) { const [px, py, a] = P[k], w = Math.sin(k * 1.7 + t * 12) * 5; const X = px - Math.cos(a) * 16, Y = py - Math.sin(a) * 16 - H - w - 3; k ? x.lineTo(X, Y) : x.moveTo(X, Y); } x.stroke();
     for (let k = 1; k < n; k += 2) { const [px, py, a] = P[k]; rock(x, px - Math.cos(a) * 10, py - Math.sin(a) * 10 - H * 0.6 + Math.sin(t * 14 + k) * 6, 6 + (k % 3) * 2, t * 8 + k, k + s.id, false); }
     x.restore();
-    if (!LOWFX && Math.random() < 0.7) { const [px, py, a] = P[(Math.random() * n) | 0]; FX.P({ x: px, y: py, z: 20, vx: Math.cos(a) * 160 + (Math.random() - 0.5) * 80, vy: Math.sin(a) * 160 + (Math.random() - 0.5) * 60, vz: 120 + Math.random() * 120, g: 600, life: 0.5, size: 3 + Math.random() * 3, color: '#6b4a2a', kind: 'blob', add: false }); }
+    if (!LOWFX) for (let q = 0; q < 2; q++) { const [px, py, a] = P[(Math.random() * n) | 0]; FX.P({ x: px, y: py, z: 20, vx: Math.cos(a) * 160 + (Math.random() - 0.5) * 80, vy: Math.sin(a) * 160 + (Math.random() - 0.5) * 60, vz: 120 + Math.random() * 120, g: 600, life: 0.5, size: 3 + Math.random() * 3, color: '#6b4a2a', kind: 'blob', add: false }); }
   }
 
   /* ---------- por encima ---------- */

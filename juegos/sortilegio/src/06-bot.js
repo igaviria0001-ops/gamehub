@@ -278,7 +278,7 @@ class Bot {
         case 'turret': hi = S.range + 80; lo = 60; dmg = 20; p = 0.7; break;
         case 'sunray': hi = S.len * 0.85; dmg = S.dmg + 2; p = vis ? 0.75 : 0.2; break;
         case 'blink': hi = S.range + 60; dmg = S.dmg + 6; p = m.hp > m.maxHp * 0.3 ? 0.75 : 0.3; break;
-        case 'nova': dmg = d < S.r * 0.85 ? S.dmg + 8 : 0; p = 0.9; hi = 9999; still = true; break;
+        case 'nova': hi = S.range + 40; lo = 0; dmg = S.dmg + 10; p = 0.7; break;
         case 'prism': hi = S.len * 0.8; dmg = S.dmg * (d < 200 ? 2 : 1.3) * (wet ? 1.5 : 1); p = vis ? 0.75 : 0.05; break;
         case 'mirage': dmg = incoming || m.hp < m.maxHp * 0.6 ? 14 : 5; p = 1; hi = 9999; break;
         case 'cage': hi = S.range; lo = 60; dmg = 16 + (held ? 10 : 0); p = 0.55; break;

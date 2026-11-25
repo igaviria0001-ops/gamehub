@@ -33,6 +33,7 @@ const Cine = (() => {
       case 'cast': if (!e.fusion && e.level === 2) { sigil(e.x, e.y, [e.el], false); punch(0.012); } break;
       case 'eclipseOn': punch(0.03); edge([120, 70, 200], 0.16, 0.5); break;
       case 'diamond': punch(0.05); edge([255, 240, 200], 0.3, 0.35); break;
+      case 'sunBlast': punch(0.045); edge([255, 200, 110], 0.26, 0.35); decal('scorch', e.x, e.y, e.r * 0.6); break;
       case 'hurt': {
         if (e.dot || !(e.dmg >= 6)) break; const u = e.unit, dx = u && u.vx ? u.vx : (Math.random() - 0.5), dy = u && u.vy ? u.vy : (Math.random() - 0.5);
         const el = e.el && ELEMENTS[e.el] ? e.el : 'wind';

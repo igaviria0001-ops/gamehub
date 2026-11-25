@@ -375,7 +375,7 @@ function noise2(x, y) {
 function fbm2(x, y, oct = 4) { let v = 0, a = 0.5, n = 0; for (let k = 0; k < oct; k++) { v += a * noise2(x, y); n += a; x = x * 2.03 + 17.1; y = y * 2.03 + 9.7; a *= 0.5; } return v / n; }
 
 /* ---------- guardado (prefijo propio: no choca con los otros juegos) ---------- */
-const GAME_META = { id: 'sortilegio', name: 'Sortilegio', version: '2.5', storagePrefix: 'srt_', players: 2 };
+const GAME_META = { id: 'sortilegio', name: 'Sortilegio', version: '2.6', storagePrefix: 'srt_', players: 2 };
 const Store = {
   get(k, def) { try { const v = localStorage.getItem(GAME_META.storagePrefix + k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } },
   set(k, v) { try { localStorage.setItem(GAME_META.storagePrefix + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
@@ -1475,7 +1475,7 @@ const fuseKey = (a, b) => (elIdx(a) <= elIdx(b) ? a + '+' + b : b + '+' + a);
 const SPELLS = {
   fire: [
     { name: 'Brasa', kind: 'proj', cd: 0.55, speed: 640, r: 11, life: 1.0, dmg: 7, burn: 2.4 },
-    { name: 'Llamarada', kind: 'proj', cd: 1.9, speed: 580, r: 18, life: 1.05, dmg: 11, burn: 2.8, boom: { r: 84, dmg: 14, ignite: 1 } },
+    { name: 'Llamarada', kind: 'proj', cd: 1.9, speed: 520, r: 17, life: 1.1, dmg: 8, burn: 2.4, boom: { r: 78, dmg: 12, ignite: 1 } },
   ],
   water: [
     { name: 'Chorro', kind: 'proj', cd: 0.5, speed: 720, r: 10, life: 0.85, dmg: 6, knock: 430, wet: 2.6, puddle: 1 },
@@ -1513,12 +1513,12 @@ const GRAN_CHARGE = 0.3, GRAN_WAVE = 170; // Gran Sortilegio: concentración (s 
 /* ---------- fusiones (las dos manos) ---------- */
 const FUSIONS = {
   'fire+water':  { name: 'Vapor', kind: 'cloud', cd: 4.0, range: 260, r: 112, life: 4.5, dps: 6, hide: 1, tip: 'Nube que escalda al rival, esconde a quien esté adentro y apaga el fuego.' },
-  'fire+wind':   { name: 'Torbellino de fuego', kind: 'firenado', cd: 4.5, speed: 255, r: 58, life: 3.3, dps: 17, turn: 2.3, pull: 330, tip: 'Persigue despacio y quema todo a su paso.' },
+  'fire+wind':   { name: 'Torbellino de fuego', kind: 'firenado', cd: 4.5, speed: 270, r: 58, life: 3.3, dps: 20, turn: 2.3, pull: 330, tip: 'Persigue despacio y quema todo a su paso.' },
   'fire+earth':  { name: 'Magma', kind: 'meteor', cd: 4.5, range: 340, flight: 0.6, r: 80, dmg: 20, knock: 340, pool: { r: 62, life: 4, dps: 10 }, frags: 3, tip: 'Un meteoro de lava cae en arco, rompe muros y se parte: tres fragmentos más llueven alrededor.' },
   'fire+plant':  { name: 'Vainas de fuego', kind: 'mines', cd: 4.0, n: 3, arm: 0.6, trig: 64, hop: 150, r: 80, dmg: 15, life: 10, tip: 'Tres vainas de fuego: si el rival pasa cerca, saltan hacia él y estallan.' },
-  'fire+bolt':   { name: 'Plasma', kind: 'beam', cd: 4.5, windup: 0.36, len: 660, w: 30, dmg: 27, tip: 'Rayo recto que rompe muros. Apunta bien.' },
+  'fire+bolt':   { name: 'Plasma', kind: 'beam', cd: 4.5, windup: 0.3, len: 660, w: 38, dmg: 31, tip: 'Rayo recto que rompe muros. Apunta bien.' },
   'water+wind':  { name: 'Ventisca', kind: 'frost', cd: 4.0, range: 295, half: 0.68, dmg: 10, chill: 2.0, freeze: 1.3, tip: 'Congela al mojado y vuelve hielo los charcos.' },
-  'water+earth': { name: 'Alud de lodo', kind: 'mudslide', cd: 4.0, speed: 440, range: 340, half: 0.55, dmg: 11, knock: 420, wet: 2.5, slow: 0.55, life: 6, tip: 'Una avalancha de barro avanza y arrastra: empuja, moja, deshace proyectiles y deja lodo que frena y no deja esquivar.' },
+  'water+earth': { name: 'Alud de lodo', kind: 'mudslide', cd: 4.0, speed: 440, range: 340, half: 0.55, dmg: 15, stun: 0.3, knock: 420, wet: 2.5, slow: 0.55, life: 6, tip: 'Una avalancha de barro avanza y arrastra: tumba, empuja, moja, deshace proyectiles y deja lodo que frena y no deja esquivar.' },
   'water+plant': { name: 'Flor de vida', kind: 'bloom', cd: 5.0, r: 104, life: 5, hps: 6.5, pollen: 2.5, pulse: 1.5, pulseDmg: 4, end: 7, endRoot: 0.8, endHeal: 6, tip: 'Un loto gigante: cura a los tuyos y les quita quemaduras, maleficios y enredos; al rival lo frena y lo quema con polen, cada latido lo empuja afuera y al cerrarse lo enreda.' },
   'water+bolt':  { name: 'Tormenta', kind: 'storm', cd: 4.5, range: 300, r: 122, life: 4.5, every: 0.5, sr: 48, dmg: 6.5, tip: 'Nube que moja y suelta rayos.' },
   'wind+earth':  { name: 'Tormenta de arena', kind: 'sandstorm', cd: 5.0, r: 160, life: 3.8, dps: 2, rocks: 4, rockDmg: 5, burst: 320, burstDmg: 4, tip: 'Un torbellino de arena y piedras te envuelve: las piedras golpean, las balas se deshacen y adentro nadie te puede apuntar.' },
@@ -1529,7 +1529,7 @@ const FUSIONS = {
   'plant+bolt':  { name: 'Flor eléctrica', kind: 'turret', cd: 5.0, range: 210, hp: 30, life: 6.5, every: 0.7, reach: 285, dmg: 5, tip: 'Torreta que dispara chispas.' },
 };
 Object.assign(FUSIONS, {
-  'fire+light':   { name: 'Supernova', kind: 'nova', cd: 4.5, windup: 0.42, r: 150, dmg: 19, burn: 2.2, knock: 420, dazzle: 0.5, tip: 'Estalla a tu alrededor: quema, empuja y encandila.' },
+  'fire+light':   { name: 'Supernova', kind: 'nova', cd: 5.0, range: 300, windup: 0.65, r: 150, pull: 200, dmg: 17, burn: 2.0, knock: 400, dazzle: 0.6, tip: 'Lanzas un sol pequeño sobre el rival: lo atrae hacia el centro y estalla quemando, empujando y encandilando; deja un anillo de fuego.' },
   'water+light':  { name: 'Prisma', kind: 'prism', cd: 4.0, n: 3, spread: 0.24, len: 520, w: 14, dmg: 9, dazzle: 0.5, tip: 'Tres rayos de arcoíris; al mojado le pegan más.' },
   'wind+light':   { name: 'Espejismo', kind: 'mirage', cd: 5.0, n: 2, life: 4.5, hide: 0.9, flash: 0.9, tip: 'Dos reflejos tuyos confunden al rival; al romperse lo encandilan.' },
   'earth+light':  { name: 'Jaula de cristal', kind: 'crystal', cd: 5.0, range: 360, lock: 0.34, hp: 30, life: 3.2, dps: 4.5, burst: 11, tip: 'Un anillo de luz persigue al rival y la jaula brota a su alrededor: adentro la luz quema y al final estalla hacia adentro.' },
@@ -1547,18 +1547,18 @@ const FUSION_ORDER = Object.keys(FUSIONS);
 
 /* ---------- magos ---------- */
 const CHARS = {
-  candela:   { name: 'Candela', title: 'llanera de fuego', hands: ['fire', 'wind'], hp: 160, speed: 1.06, sig: 'fire+wind', trait: 'Sus quemaduras duran 50 % más y al esquivar deja fuego.', look: 'candela' },
+  candela:   { name: 'Candela', title: 'llanera de fuego', hands: ['fire', 'wind'], hp: 168, speed: 1.06, sig: 'fire+wind', trait: 'Sus quemaduras duran 50 % más y al esquivar deja fuego.', look: 'candela' },
   yuma:      { name: 'Yuma', title: 'aprendiz del Mohán', hands: ['water', 'bolt'], hp: 114, speed: 1.05, sig: 'water+bolt', trait: 'Más rápido en agua y barro; su agua electrificada no lo toca.', look: 'yuma' },
   frailejon: { name: 'Frailejón', title: 'guardián del páramo', hands: ['earth', 'plant'], hp: 166, speed: 0.95, sig: 'earth+plant', trait: 'Casi no lo empujan; quieto sobre hierba se cura; sus plantas pegan 40 % más.', look: 'frailejon' },
-  purace:    { name: 'Puracé', title: 'hija del volcán', hands: ['fire', 'earth'], hp: 124, speed: 0.92, sig: 'fire+earth', trait: 'Recibe 25 % menos daño por fuego y lava.', look: 'purace' },
+  purace:    { name: 'Puracé', title: 'hija del volcán', hands: ['fire', 'earth'], hp: 136, speed: 0.92, sig: 'fire+earth', trait: 'Recibe 25 % menos daño por fuego y lava.', look: 'purace' },
   iguaque:   { name: 'Iguaque', title: 'sacerdotisa de la laguna', hands: ['water', 'plant'], hp: 118, speed: 1.0, sig: 'water+plant', trait: 'Cura 50 % más; con poca vida se regenera.', look: 'iguaque' },
   catatumbo: { name: 'Catatumbo', title: 'relámpago errante', hands: ['wind', 'bolt'], hp: 144, speed: 1.15, sig: 'wind+bolt', trait: 'Sus rayos pegan 35 % más; esquiva más seguido y al esquivar a través del rival lo electrocuta.', look: 'catatumbo' },
   // 2.0 — más magos de los seis elementos de siempre
   cocuy:     { name: 'Cocuy', title: 'ermitaño del nevado', hands: ['water', 'wind'], hp: 136, speed: 1.0, sig: 'water+wind', trait: 'Congela 40 % más tiempo, no resbala en el hielo y el frío no lo frena.', look: 'cocuy' },
   tatacoa:   { name: 'Tatacoa', title: 'caminante del desierto', hands: ['wind', 'earth'], hp: 136, speed: 0.98, sig: 'wind+earth', trait: 'Dentro de su tormenta de arena se cura; sus muros aguantan más.', look: 'tatacoa' },
-  galeras:   { name: 'Galeras', title: 'forjador de tormentas', hands: ['fire', 'bolt'], hp: 146, speed: 1.06, sig: 'fire+bolt', trait: 'Carga los hechizos 30 % más rápido y camina mientras prepara el Plasma.', look: 'galeras' },
+  galeras:   { name: 'Galeras', title: 'forjador de tormentas', hands: ['fire', 'bolt'], hp: 178, speed: 1.06, sig: 'fire+bolt', trait: 'Carga los hechizos 30 % más rápido y camina mientras prepara el Plasma.', look: 'galeras' },
   // 2.0 — magos de Luz y Sombra
-  zuhe:      { name: 'Zuhé', title: 'hijo del sol', hands: ['light', 'fire'], hp: 100, speed: 1.02, sig: 'fire+light', trait: 'Encandila 50 % más tiempo y cada golpe de luz lo cura un poco.', look: 'zuhe' },
+  zuhe:      { name: 'Zuhé', title: 'hijo del sol', hands: ['light', 'fire'], hp: 106, speed: 1.02, sig: 'fire+light', trait: 'Encandila 40 % más tiempo y cada golpe de luz lo cura; lo rodea un halo de sol.', look: 'zuhe' },
   chia:      { name: 'Chía', title: 'señora de la luna', hands: ['light', 'shadow'], hp: 114, speed: 1.08, sig: 'light+shadow', trait: 'Sus maleficios duran más y pegan más fuerte; escondida o en la oscuridad se regenera.', look: 'chia' },
   mapale:    { name: 'Mapalé', title: 'danzante de la noche', hands: ['shadow', 'wind'], hp: 132, speed: 1.2, sig: 'wind+shadow', trait: 'Tiene tres esquives y al esquivar se vuelve sombra un instante (no se le puede apuntar).', look: 'mapale' },
   tota:      { name: 'Tota', title: 'bruja del lago hondo', hands: ['shadow', 'water'], hp: 112, speed: 0.94, sig: 'water+shadow', trait: 'Roba vida con cada golpe de sombra y nada rápido en el agua.', look: 'tota' },
@@ -1575,7 +1575,7 @@ const TRAITS = {
   cocuy: { iceWalk: 1, freezeMul: 1.4 },
   tatacoa: { sandHeal: 3, wallMul: 1.7, knockMul: 0.75 },
   galeras: { chargeMul: 0.7, beamNoRoot: 1 },
-  zuhe: { dazzleMul: 1.4, lightHeal: 1.0 },
+  zuhe: { dazzleMul: 1.4, lightHeal: 1.4 },
   chia: { hexMul: 1.4, hexDmg: 1.55, hideRegen: 2 },
   mapale: { dashN: 3, dashHide: 0.7 },
   tota: { shadowLeech: 0.18, waterSpeed: 1.15 },
@@ -2758,7 +2758,10 @@ const Spells2 = (() => {
       Object.assign(B, { x: tx, y: ty, id: -1 });
       for (const u of G.units) if (foe(B, u) && hypot(u.x - tx, u.y - ty) < S.r * Z + u.r) hit(G, B, u, S.dmg * P, { el: 'shadow', hex: S.hex, big: true, knock: 220, kx: u.x - tx, ky: u.y - ty });
     } else if (k === 'nova') {
-      add(G, Object.assign(B, { t: 'nova', S, el: 'light', x: m.x, y: m.y, windup: S.windup, r: S.r * Z, caster: m }));
+      // Supernova: un sol pequeño vuela hasta donde VA a estar el rival, lo atrae y estalla
+      const p = Spells.aimPoint(G, m, S.range, S.windup * 0.6);
+      add(G, Object.assign(B, { t: 'nova', S, el: 'light', x: p.tx, y: p.ty, x0: m.x, y0: m.y - 30, windup: S.windup, r: S.r * Z }));
+      G.events.push({ type: 'sunForm', x: p.tx, y: p.ty });
     } else if (k === 'mirage') {
       const n = S.n + (B.gran ? 1 : 0);
       for (let j = 0; j < n; j++) {
@@ -2834,12 +2837,15 @@ const Spells2 = (() => {
     const T = G.T;
     switch (s.t) {
       case 'nova': {
-        const m = s.caster; if (m && m.alive !== false) { s.x = m.x; s.y = m.y; }
-        s.windup -= dt; if (s.windup > 0) break; s.dead = true; const S = s.S;
+        const S = s.S; s.windup -= dt;
+        if (s.windup > 0) { // la gravedad del sol jala hacia el centro a los que estén cerca
+          for (const u of G.units) { if (!foe(s, u) || u.obj || u.untargetable) continue; const dx = s.x - u.x, dy = s.y - u.y, d = hypot(dx, dy), R = s.r * 1.35; if (d > R || d < 1) continue; const f = (S.pull || 0) * (0.35 + 0.65 * (1 - d / R)) * dt * (u.knockMul || 1); u.vx += dx / d * f; u.vy += dy / d * f; }
+          break; }
+        s.dead = true;
         for (const u of G.units) if (foe(s, u) && hypot(u.x - s.x, u.y - s.y) < s.r + u.r) hit(G, s, u, S.dmg * s.power, { el: 'light', burn: S.burn, dazzle: S.dazzle, knock: S.knock, kx: u.x - s.x, ky: u.y - s.y, big: true });
         for (const p of G.spells) if (p.t === 'proj' && !p.dead && p.team !== s.team && hypot(p.x - s.x, p.y - s.y) < s.r) Spells.endProj(G, p, true);
         Terrain.forCircle(T, s.x, s.y, s.r * 0.75, i => { if (hypot(Terrain.cx(T, i) - s.x, Terrain.cy(T, i) - s.y) > 46) Terrain.ignite(G, i, 2, s.by); });
-        G.fx.push({ type: 'nova', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'boom', x: s.x, y: s.y, r: s.r, el: 'light' }); break;
+        G.fx.push({ type: 'nova', x: s.x, y: s.y, r: s.r }, { type: 'sunBlast', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'boom', x: s.x, y: s.y, r: s.r, el: 'light' }, { type: 'sunBlast', x: s.x, y: s.y, r: s.r }); break;
       }
       case 'judgment': {
         s.delay -= dt; if (s.tg && s.tg.alive && s.delay > s.S.lockAt && !(s.tg.st.hidden > 0)) { s.x = s.tg.x; s.y = s.tg.y; }
@@ -3088,7 +3094,7 @@ const Earth = (() => {
         for (const u of G.units) {
           if (!foe(s, u) || s.hitSet.has(u)) continue; const dx = u.x - s.x, dy = u.y - s.y, d = hypot(dx, dy) || 1;
           if (d > d0 - u.r && d < d1 + u.r && Math.abs(angDiff(s.ang, Math.atan2(dy, dx))) < s.half + u.r / d) {
-            s.hitSet.add(u); hit(G, s, u, s.dmg, { el: 'earth', knock: s.S.knock, kx: Math.cos(s.ang) * 0.85 + dx / d * 0.35, ky: Math.sin(s.ang) * 0.85 + dy / d * 0.35, wet: s.S.wet, big: true });
+            s.hitSet.add(u); hit(G, s, u, s.dmg, { el: 'earth', knock: s.S.knock, kx: Math.cos(s.ang) * 0.85 + dx / d * 0.35, ky: Math.sin(s.ang) * 0.85 + dy / d * 0.35, wet: s.S.wet, stun: s.S.stun, big: true });
             u.slow(1.4, s.S.slow);
           }
         }
@@ -3428,7 +3434,7 @@ class Bot {
         case 'turret': hi = S.range + 80; lo = 60; dmg = 20; p = 0.7; break;
         case 'sunray': hi = S.len * 0.85; dmg = S.dmg + 2; p = vis ? 0.75 : 0.2; break;
         case 'blink': hi = S.range + 60; dmg = S.dmg + 6; p = m.hp > m.maxHp * 0.3 ? 0.75 : 0.3; break;
-        case 'nova': dmg = d < S.r * 0.85 ? S.dmg + 8 : 0; p = 0.9; hi = 9999; still = true; break;
+        case 'nova': hi = S.range + 40; lo = 0; dmg = S.dmg + 10; p = 0.7; break;
         case 'prism': hi = S.len * 0.8; dmg = S.dmg * (d < 200 ? 2 : 1.3) * (wet ? 1.5 : 1); p = vis ? 0.75 : 0.05; break;
         case 'mirage': dmg = incoming || m.hp < m.maxHp * 0.6 ? 14 : 5; p = 1; hi = 9999; break;
         case 'cage': hi = S.range; lo = 60; dmg = 16 + (held ? 10 : 0); p = 0.55; break;
@@ -4661,7 +4667,7 @@ const FX = (() => {
       case 'sunray': S(Object.assign({ life: f.flat ? 0.2 : 0.3 }, f)); for (const [ax, ay, bx, by] of f.segs) for (let k = 0; k < (LOWFX ? 4 : 9); k++) { const q = Math.random(); P({ x: lerp(ax, bx, q), y: lerp(ay, by, q), z: 16, vx: vr(-40, 40), vy: vr(-30, 30), vz: vr(10, 70), g: -20, life: vr(0.3, 0.7), size: vr(1.2, 2.4), color: f.hue != null ? `hsl(${Math.round(f.hue * 290)},100%,75%)` : Math.random() < 0.5 ? '#ffffff' : '#ffe48a', kind: 'ember' }); } break;
       case 'flashRing': S({ type: 'ring', x: f.x, y: f.y, r0: 12, r1: f.r, el: f.el, life: 0.4, w: 8 }); S({ type: 'flash', x: f.x, y: f.y, r: f.r * 1.5, el: f.el, life: 0.3 }); S({ type: 'star4', x: f.x, y: f.y - 30, r: f.r * 0.7, life: 0.35 }); burst(f.x, f.y, f.el, 16, 220, { kind: 'ember' }); break;
       case 'dazzle': S({ type: 'star4', x: f.x, y: f.y, r: 34, life: 0.3 }); break;
-      case 'nova': S({ type: 'nova', x: f.x, y: f.y, r: f.r, life: 0.5, seed: Math.random() * 6 }); S({ type: 'flash', x: f.x, y: f.y, r: f.r * 2, el: 'light', life: 0.3 }); burst(f.x, f.y, 'light', 40, 420, { kind: 'ember' }); burst(f.x, f.y, 'fire', 20, 300, { kind: 'ember' }); break;
+      case 'nova': S({ type: 'nova', x: f.x, y: f.y, r: f.r, life: 0.5, seed: Math.random() * 6 }); S({ type: 'flash', x: f.x, y: f.y, r: f.r * 1.4, el: 'fire', life: 0.22 }); burst(f.x, f.y, 'light', 40, 420, { kind: 'ember' }); burst(f.x, f.y, 'fire', 20, 300, { kind: 'ember' }); break;
       case 'pillar': S({ type: 'pillar', x: f.x, y: f.y, r: f.r, life: 0.5 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: f.r * 1.8, el: 'light', life: 0.4, w: 9 }); S({ type: 'flash', x: f.x, y: f.y, r: f.r * 2.4, el: 'light', life: 0.25 }); burst(f.x, f.y, 'light', 26, 300, { kind: 'ember' }); break;
       case 'blink': S({ type: 'blinkTrail', x: f.x, y: f.y, x1: f.x1, y1: f.y1, life: 0.38 }); S({ type: 'ring', x: f.x1, y: f.y1, r0: 60, r1: 8, el: 'shadow', life: 0.25, w: 6 }); for (const [bx, by] of [[f.x, f.y], [f.x1, f.y1]]) for (let k = 0; k < (LOWFX ? 5 : 10); k++) P({ x: bx + vr(-14, 14), y: by + vr(-8, 8), z: vr(6, 60), vx: vr(-50, 50), vy: vr(-30, 30), vz: vr(10, 50), g: -10, drag: 2, life: vr(0.4, 0.9), size: vr(8, 16), color: Math.random() < 0.25 ? 'rgba(196,67,166,0.4)' : 'rgba(24,8,34,0.6)', kind: 'smoke', add: false }); break;
       case 'drain': for (let k = 0; k < 5; k++) { const q = k / 5, lf = 0.45; P({ x: lerp(f.x0, f.x1, q) + vr(-30, 30), y: lerp(f.y0, f.y1, q) + vr(-16, 16), z: 14, vx: (f.x1 - f.x0) / lf * (1 - q) * 0.9, vy: (f.y1 - f.y0) / lf * (1 - q) * 0.9, vz: 30, g: 0, drag: 0.4, life: lf, size: vr(1.6, 2.8), color: Math.random() < 0.5 ? '#ff9ae0' : '#9affc8', kind: 'ember' }); } break;
@@ -6378,12 +6384,6 @@ const ArtSpells2 = (() => {
     const t = G.time;
     for (const s of G.spells) {
       if (false) {
-      } else if (s.t === 'nova') {
-        const f = 1 - s.windup / s.S.windup;
-        x.save(); x.globalCompositeOperation = 'lighter'; glow(x, s.x, s.y - 30, 40 + f * 60, `rgba(255,220,120,${0.4 + f * 0.5})`);
-        x.strokeStyle = `rgba(255,240,190,${0.3 + f * 0.6})`; x.lineWidth = 2 + f * 2; x.beginPath(); x.ellipse(s.x, s.y, s.r * (1.15 - f * 0.15), s.r * (1.15 - f * 0.15) * 0.55, 0, 0, TAU); x.stroke();
-        for (let k = 0; k < 10; k++) { const a = k / 10 * TAU + t * 3, d = s.r * (1 - f) + 20; star4(x, s.x + Math.cos(a) * d, s.y - 30 + Math.sin(a) * d * 0.55, 5, 'rgba(255,246,200,0.9)', t * 4 + k); }
-        x.restore();
       }
     }
   }
@@ -6443,7 +6443,7 @@ const ArtSpells2 = (() => {
   function lights(G, add) {
     for (const s of G.spells) {
       if (s.t === 'judgment') add(s.x, s.y, s.r * 2, [255, 236, 170], 0.4 + (1 - s.delay / s.S.delay) * 0.6, 0.3);
-      else if (s.t === 'nova') add(s.x, s.y - 20, 180, [255, 220, 120], 1, 0.3);
+  
       else if (s.t === 'wisp') add(s.x, s.y - 30, 70, [170, 110, 255], 0.7, 0.3);
       else if (s.t === 'bog' || s.t === 'thorns') add(s.x, s.y, s.r * 0.9, [210, 70, 175], 0.3, 0.1);
     }
@@ -6623,15 +6623,24 @@ const ArtEarth = (() => {
   }
   // el frente de la avalancha de barro
   function mud(x, G, s) {
-    const t = G.time, d = s.d, H = 26 + 8 * Math.sin(t * 10), n = 16, fade = Math.min(1, (s.range - d) / 60 + 0.2);
+    const t = G.time, d = s.d, H = 38 + 9 * Math.sin(t * 10), n = 16, fade = Math.min(1, (s.range - d) / 60 + 0.2);
     const P = []; for (let k = 0; k <= n; k++) { const a = s.ang - s.half + k / n * s.half * 2; P.push([s.x + Math.cos(a) * d, s.y + Math.sin(a) * d, a]); }
     x.save(); x.globalAlpha = Math.min(1, fade);
     x.fillStyle = 'rgba(10,6,4,0.3)'; x.beginPath(); P.forEach(([px, py], k) => k ? x.lineTo(px, py + 6) : x.moveTo(px, py + 6)); for (let k = n; k >= 0; k--) { const [px, py, a] = P[k]; x.lineTo(px - Math.cos(a) * 30, py - Math.sin(a) * 30 + 6); } x.fill();
-    x.fillStyle = '#5a3e22'; x.beginPath(); P.forEach(([px, py], k) => k ? x.lineTo(px, py) : x.moveTo(px, py)); for (let k = n; k >= 0; k--) { const [px, py, a] = P[k]; const w = Math.sin(k * 1.7 + t * 12) * 5; x.lineTo(px - Math.cos(a) * 18, py - Math.sin(a) * 18 - H - w); } x.closePath(); x.fill();
+    // el cuerpo del alud: una lengua de barro que viene detrás de la cresta, con grumos y piedras que ruedan
+    const TL = Math.min(90, d * 0.6) + 10;
+    const bg = x.createLinearGradient(P[n >> 1][0] - Math.cos(s.ang) * TL, P[n >> 1][1] - Math.sin(s.ang) * TL, P[n >> 1][0], P[n >> 1][1]); bg.addColorStop(0, 'rgba(70,48,28,0)'); bg.addColorStop(0.45, 'rgba(78,54,30,0.8)'); bg.addColorStop(1, '#4e3520');
+    x.fillStyle = bg; x.beginPath(); P.forEach(([px, py, a], k) => { const X = px - Math.cos(a) * 6, Y = py - Math.sin(a) * 6 - H * 0.35; k ? x.lineTo(X, Y) : x.moveTo(X, Y); }); for (let k = n; k >= 0; k--) { const [px, py, a] = P[k], w = Math.sin(k * 2.3 + t * 7) * 8; x.lineTo(px - Math.cos(a) * (TL + w), py - Math.sin(a) * (TL + w)); } x.closePath(); x.fill();
+    for (let k = 0; k < (LOWFX ? 6 : 14); k++) { const q = hash2(k, s.id), j = Math.min(n, Math.round(q * n)), [px, py, a] = P[j], back = 14 + hash2(s.id, k) * (TL - 24), bob = Math.sin(t * 9 + k * 1.9) * 3, r = 6 + hash2(k, 3) * 7;
+      const X = px - Math.cos(a) * back, Y = py - Math.sin(a) * back - H * 0.25 * (1 - back / TL) + bob; x.fillStyle = '#5e4128'; x.beginPath(); x.ellipse(X, Y, r, r * 0.7, 0, 0, TAU); x.fill(); x.fillStyle = 'rgba(176,140,96,0.55)'; x.beginPath(); x.ellipse(X - r * 0.25, Y - r * 0.3, r * 0.45, r * 0.25, -0.3, 0, TAU); x.fill(); }
+    // la cresta: una ola de barro que se levanta y se enrosca
+    const cg = x.createLinearGradient(0, P[n >> 1][1] - H - 10, 0, P[n >> 1][1]); cg.addColorStop(0, '#7a5634'); cg.addColorStop(0.5, '#5a3e22'); cg.addColorStop(1, '#3e2a16');
+    x.fillStyle = cg; x.beginPath(); P.forEach(([px, py], k) => k ? x.lineTo(px, py) : x.moveTo(px, py)); for (let k = n; k >= 0; k--) { const [px, py, a] = P[k]; const w = Math.sin(k * 1.7 + t * 12) * 5; x.lineTo(px - Math.cos(a) * 26, py - Math.sin(a) * 26 - H - w); } x.closePath(); x.fill();
     x.strokeStyle = '#8a6a40'; x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); for (let k = 0; k <= n; k++) { const [px, py, a] = P[k], w = Math.sin(k * 1.7 + t * 12) * 5; const X = px - Math.cos(a) * 18, Y = py - Math.sin(a) * 18 - H - w; k ? x.lineTo(X, Y) : x.moveTo(X, Y); } x.stroke();
+    x.strokeStyle = 'rgba(214,190,150,0.7)'; x.lineWidth = 2; x.beginPath(); for (let k = 0; k <= n; k++) { const [px, py, a] = P[k], w = Math.sin(k * 1.7 + t * 12) * 5; const X = px - Math.cos(a) * 16, Y = py - Math.sin(a) * 16 - H - w - 3; k ? x.lineTo(X, Y) : x.moveTo(X, Y); } x.stroke();
     for (let k = 1; k < n; k += 2) { const [px, py, a] = P[k]; rock(x, px - Math.cos(a) * 10, py - Math.sin(a) * 10 - H * 0.6 + Math.sin(t * 14 + k) * 6, 6 + (k % 3) * 2, t * 8 + k, k + s.id, false); }
     x.restore();
-    if (!LOWFX && Math.random() < 0.7) { const [px, py, a] = P[(Math.random() * n) | 0]; FX.P({ x: px, y: py, z: 20, vx: Math.cos(a) * 160 + (Math.random() - 0.5) * 80, vy: Math.sin(a) * 160 + (Math.random() - 0.5) * 60, vz: 120 + Math.random() * 120, g: 600, life: 0.5, size: 3 + Math.random() * 3, color: '#6b4a2a', kind: 'blob', add: false }); }
+    if (!LOWFX) for (let q = 0; q < 2; q++) { const [px, py, a] = P[(Math.random() * n) | 0]; FX.P({ x: px, y: py, z: 20, vx: Math.cos(a) * 160 + (Math.random() - 0.5) * 80, vy: Math.sin(a) * 160 + (Math.random() - 0.5) * 60, vz: 120 + Math.random() * 120, g: 600, life: 0.5, size: 3 + Math.random() * 3, color: '#6b4a2a', kind: 'blob', add: false }); }
   }
 
   /* ---------- por encima ---------- */
@@ -6908,10 +6917,98 @@ const ArtEpic = (() => {
     // brasas que salen despedidas en espiral
     if (Math.random() < (LOWFX ? 0.3 : 0.7)) { const a = Math.random() * TAU, hf = Math.random(); FX.P({ x: s.x + Math.cos(a) * R * (0.3 + hf), y: s.y + Math.sin(a) * R * 0.3, z: 10 + hf * H, vx: -Math.sin(a) * 220 + Math.cos(a) * 80, vy: Math.cos(a) * 90, vz: vr(20, 90), g: -10, drag: 1.2, life: vr(0.6, 1.1), size: vr(1.5, 3), color: Math.random() < 0.5 ? '#ffd27a' : '#ff7a2a', kind: 'ember' }); }
   }
+  /* ---------- Supernova de Zuhé: un sol pequeño que vuela, atrae y estalla ---------- */
+  const SUNH = 128; // altura a la que flota el sol sobre el rival
+  function sunPos(s) {
+    const W = s.S.windup || 0.6, f = Math.min(1, 1 - Math.max(0, s.windup) / W), fl = Math.min(1, f / 0.3), e = smooth(fl);
+    const tx = s.x, ty = s.y - SUNH, x0 = s.x0 != null ? s.x0 : tx, y0 = s.y0 != null ? s.y0 : ty;
+    const R = fl < 1 ? 9 + fl * 3 : f < 0.86 ? 13 + 20 * (f - 0.3) / 0.56 : 33 - 24 * (f - 0.86) / 0.14; // crece y, justo antes de estallar, se comprime
+    return { X: x0 + (tx - x0) * e, Y: y0 + (ty - y0) * e - Math.sin(fl * Math.PI) * 70, f, fl, R };
+  }
+  function sunBall(x, X, Y, R, t, a, seed, hot) {
+    x.globalCompositeOperation = 'lighter';
+    glow(x, X, Y, R * 3.4, `rgba(255,130,40,${0.32 * a})`); glow(x, X, Y, R * 1.7, `rgba(255,210,120,${0.45 * a})`);
+    // llamaradas (protuberancias) que salen del borde y se curvan
+    x.lineCap = 'round';
+    const n = LOWFX ? 6 : 12;
+    for (let k = 0; k < n; k++) { const a0 = k / n * TAU + t * 1.4 + hash2(k, seed) * 0.5, L = R * (0.45 + 0.75 * Math.abs(Math.sin(t * 4.6 + k * 1.31 + seed))), b = 0.6 * Math.sin(t * 2 + k);
+      const x0 = X + Math.cos(a0) * R * 0.92, y0 = Y + Math.sin(a0) * R * 0.92, x1 = X + Math.cos(a0 + b * 0.5) * (R + L), y1 = Y + Math.sin(a0 + b * 0.5) * (R + L), cx = X + Math.cos(a0 + b) * (R + L * 0.7), cy = Y + Math.sin(a0 + b) * (R + L * 0.7);
+      const lg = x.createLinearGradient(x0, y0, x1, y1); lg.addColorStop(0, `rgba(255,236,170,${0.95 * a})`); lg.addColorStop(0.5, `rgba(255,140,40,${0.7 * a})`); lg.addColorStop(1, 'rgba(255,80,20,0)');
+      x.strokeStyle = lg; x.lineWidth = R * 0.22 + 1.5; x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(cx, cy, x1, y1); x.stroke(); }
+    x.globalCompositeOperation = 'source-over';
+    // el cuerpo del sol: núcleo blanco, fotosfera dorada y borde naranja que hierve
+    const g = x.createRadialGradient(X - R * 0.25, Y - R * 0.25, 0, X, Y, R); g.addColorStop(0, '#ffffff'); g.addColorStop(0.3, hot ? '#ffffff' : '#ffeaa6'); g.addColorStop(0.7, hot ? '#fff0b0' : '#ffa834'); g.addColorStop(1, hot ? '#ffc060' : '#f2560c');
+    x.globalAlpha = a; x.fillStyle = g; x.beginPath();
+    for (let k = 0; k <= 24; k++) { const an = k / 24 * TAU, rr = R * (1 + 0.06 * Math.sin(an * 5 + t * 9 + seed)); k ? x.lineTo(X + Math.cos(an) * rr, Y + Math.sin(an) * rr) : x.moveTo(X + Math.cos(an) * rr, Y + Math.sin(an) * rr); }
+    x.fill();
+    if (!LOWFX) { x.fillStyle = 'rgba(255,170,60,0.35)'; for (let k = 0; k < 5; k++) { const an = hash2(k, seed) * TAU + t * 0.7, d = R * 0.55 * hash2(seed, k); x.beginPath(); x.arc(X + Math.cos(an) * d, Y + Math.sin(an) * d, R * 0.16, 0, TAU); x.fill(); } }
+    x.globalAlpha = 1; x.globalCompositeOperation = 'lighter'; star4(x, X - R * 0.3, Y - R * 0.3, R * (0.9 + 0.3 * Math.sin(t * 9)), `rgba(255,255,240,${0.7 * a})`, t * 2);
+    x.globalCompositeOperation = 'source-over';
+  }
+  function novaUnder(x, G, s) {
+    const t = G.time, P = sunPos(s), R = s.r, R2 = R * 1.35, a = 0.35 + 0.65 * P.f;
+    x.save();
+    // calor en el suelo y la luz que baja del sol
+    const g = x.createRadialGradient(s.x, s.y, 0, s.x, s.y, R2); g.addColorStop(0, `rgba(255,214,120,${0.32 * a})`); g.addColorStop(0.7, `rgba(255,130,40,${0.14 * a})`); g.addColorStop(1, 'rgba(255,100,30,0)');
+    x.globalCompositeOperation = 'lighter'; x.fillStyle = g; x.beginPath(); x.ellipse(s.x, s.y, R2, R2 * 0.55, 0, 0, TAU); x.fill();
+    // el borde de la explosión: anillo dorado con trazos que giran
+    x.strokeStyle = `rgba(255,220,130,${0.35 + 0.55 * P.f})`; x.lineWidth = 2 + P.f * 2; x.setLineDash([10, 9]); x.lineDashOffset = -t * 60;
+    x.beginPath(); x.ellipse(s.x, s.y, R, R * 0.55, 0, 0, TAU); x.stroke(); x.setLineDash([]);
+    // la gravedad: anillos que se cierran y brasas que caen en espiral hacia el centro
+    for (let k = 0; k < 3; k++) { const p = (t * 1.6 + k / 3) % 1, rr = R2 * (1 - p); x.strokeStyle = `rgba(255,180,90,${0.3 * Math.sin(p * Math.PI) * a})`; x.lineWidth = 2; x.beginPath(); x.ellipse(s.x, s.y, rr, rr * 0.55, 0, 0, TAU); x.stroke(); }
+    const n = LOWFX ? 10 : 26; x.lineCap = 'round'; x.lineWidth = 2.2;
+    for (let k = 0; k < n; k++) { const p = (t * 1.25 + hash2(k, s.id)) % 1, a0 = hash2(s.id, k) * TAU + p * 2.6, d0 = R2 * (1 - p), d1 = R2 * (1 - Math.min(1, p + 0.07)), a1 = a0 + 0.2;
+      x.strokeStyle = `rgba(255,${190 + (k % 3) * 20},110,${0.85 * Math.sin(p * Math.PI) * a})`; x.beginPath(); x.moveTo(s.x + Math.cos(a0) * d0, s.y + Math.sin(a0) * d0 * 0.55); x.lineTo(s.x + Math.cos(a1) * d1, s.y + Math.sin(a1) * d1 * 0.55); x.stroke(); }
+    // cono de luz del sol al suelo (cuando ya llegó)
+    if (P.fl >= 1) { const w = P.R * 1.2, vg = x.createLinearGradient(0, P.Y, 0, s.y); vg.addColorStop(0, `rgba(255,236,170,${0.32 * a})`); vg.addColorStop(1, `rgba(255,190,90,${0.08 * a})`); x.fillStyle = vg;
+      x.beginPath(); x.moveTo(P.X - w, P.Y); x.lineTo(P.X + w, P.Y); x.lineTo(s.x + R * 0.45, s.y); x.lineTo(s.x - R * 0.45, s.y); x.closePath(); x.fill(); }
+    x.restore();
+  }
+  function novaOver(x, G, s) {
+    const t = G.time, P = sunPos(s);
+    x.save();
+    if (P.fl < 1) { // estela de fuego mientras vuela
+      const W = s.S.windup || 0.6;
+      for (let k = 1; k <= (LOWFX ? 3 : 6); k++) { const q = sunPos(Object.assign({}, s, { windup: Math.min(W, s.windup + k * 0.018) })); x.globalCompositeOperation = 'lighter'; glow(x, q.X, q.Y, q.R * (2.2 - k * 0.2), `rgba(255,${160 - k * 12},60,${0.5 - k * 0.07})`); }
+    }
+    sunBall(x, P.X, P.Y, P.R, t, 1, s.id % 89, P.f > 0.86);
+    if (P.f > 0.86) { const k = (P.f - 0.86) / 0.14; x.globalCompositeOperation = 'lighter'; star4(x, P.X, P.Y, 20 + 70 * k, `rgba(255,255,255,${0.5 + 0.5 * k})`, -t * 3); }
+    x.restore();
+  }
+  /* ---------- halo de sol a los pies de Zuhé ---------- */
+  function zuheHalo(x, G, u) {
+    if (u.st && u.st.hidden > 0) return;
+    const t = G.time, R = 34, n = LOWFX ? 8 : 14;
+    x.save(); x.globalCompositeOperation = 'lighter';
+    const g = x.createRadialGradient(u.x, u.y, 4, u.x, u.y, R * 1.3); g.addColorStop(0, 'rgba(255,214,120,0.22)'); g.addColorStop(1, 'rgba(255,150,50,0)'); x.fillStyle = g; x.beginPath(); x.ellipse(u.x, u.y, R * 1.3, R * 0.7, 0, 0, TAU); x.fill();
+    x.strokeStyle = 'rgba(255,214,130,0.45)'; x.lineWidth = 1.4; x.beginPath(); x.ellipse(u.x, u.y, R * 0.72, R * 0.4, 0, 0, TAU); x.stroke();
+    x.lineCap = 'round'; x.lineWidth = 2;
+    for (let k = 0; k < n; k++) { const a = k / n * TAU + t * 0.9, l = 0.55 + 0.45 * Math.sin(t * 3 + k * 1.7), r0 = R * 0.8, r1 = R * (0.95 + 0.3 * l);
+      x.strokeStyle = `rgba(255,${190 + (k % 2) * 40},110,${0.25 + 0.3 * l})`; x.beginPath(); x.moveTo(u.x + Math.cos(a) * r0, u.y + Math.sin(a) * r0 * 0.55); x.lineTo(u.x + Math.cos(a) * r1, u.y + Math.sin(a) * r1 * 0.55); x.stroke(); }
+    x.restore();
+  }
+  function novaRays(x, o, f, A) {
+    // el estallido: rayos de fuego que barren el suelo, un anillo que arde y una columna de luz
+    x.save(); x.globalCompositeOperation = 'lighter';
+    const n = LOWFX ? 10 : 20, L = o.r * (0.6 + 1.3 * smooth(Math.min(1, f * 2.2)));
+    for (let k = 0; k < n; k++) { const a = k / n * TAU + o.seed, w = 0.05 + 0.06 * hash2(k, 11), LL = L * (0.75 + 0.5 * hash2(k, 5));
+      const g = x.createRadialGradient(o.x, o.y, 0, o.x, o.y, LL); g.addColorStop(0, `rgba(255,236,180,${0.8 * A})`); g.addColorStop(0.45, `rgba(255,160,60,${0.5 * A})`); g.addColorStop(1, 'rgba(255,80,20,0)');
+      x.fillStyle = g; x.beginPath(); x.moveTo(o.x, o.y); x.lineTo(o.x + Math.cos(a - w) * LL, o.y + Math.sin(a - w) * LL * 0.55); x.lineTo(o.x + Math.cos(a + w) * LL, o.y + Math.sin(a + w) * LL * 0.55); x.closePath(); x.fill(); }
+    const rr = o.r * (0.3 + 0.85 * smooth(Math.min(1, f * 1.7)));
+    x.strokeStyle = `rgba(255,150,50,${0.7 * A})`; x.lineWidth = 16 * A + 2; x.beginPath(); x.ellipse(o.x, o.y, rr, rr * 0.55, 0, 0, TAU); x.stroke();
+    x.strokeStyle = `rgba(255,240,190,${A})`; x.lineWidth = 3; x.beginPath(); x.ellipse(o.x, o.y, rr, rr * 0.55, 0, 0, TAU); x.stroke();
+    const cw = 34 * A + 4, cg = x.createLinearGradient(o.x - cw, 0, o.x + cw, 0); cg.addColorStop(0, 'rgba(255,200,100,0)'); cg.addColorStop(0.5, `rgba(255,240,200,${0.6 * A})`); cg.addColorStop(1, 'rgba(255,200,100,0)');
+    x.fillStyle = cg; x.fillRect(o.x - cw, o.y - 420, cw * 2, 420);
+    x.restore();
+  }
   /* ---------- capas ---------- */
-  function under(x, G) { for (const s of G.spells) { if (s.t === 'eclipse') eclipseUnder(x, G, s); else if (s.t === 'bloom') lotusUnder(x, G, s); } }
-  function over(x, G) { for (const s of G.spells) { if (s.t === 'eclipse') eclipseOver(x, G, s); else if (s.t === 'bloom') lotusOver(x, G, s); } }
+  function under(x, G) {
+    for (const s of G.spells) { if (s.t === 'eclipse') eclipseUnder(x, G, s); else if (s.t === 'bloom') lotusUnder(x, G, s); else if (s.t === 'nova') novaUnder(x, G, s); }
+    for (const u of G.units) if (u.cid === 'zuhe' && u.alive !== false && (u.isMage || u.obj === 'decoy')) zuheHalo(x, G, u);
+  }
+  function over(x, G) { for (const s of G.spells) { if (s.t === 'eclipse') eclipseOver(x, G, s); else if (s.t === 'bloom') lotusOver(x, G, s); else if (s.t === 'nova') novaOver(x, G, s); } }
   function lights(G, add) {
+    for (const s of G.spells) if (s.t === 'nova') { const P = sunPos(s); add(P.X, P.Y + 40, 100 + P.f * 70, [255, 200, 120], 0.35 + P.f * 0.3, 0.18); }
     for (const s of G.spells) if (s.t === 'bloom') add(s.x, s.y - 20, s.r * 1.4, [160, 255, 190], 0.55, 0.18);
     for (const s of G.spells) if (s.t === 'eclipse') {
       if (s.warn > 0) add(s.x, s.y - SKY, 150, [255, 236, 170], 0.7, 0.3);
@@ -6947,6 +7044,11 @@ const ArtEpic = (() => {
       case 'blackStrike': // Rayo negro: un relámpago oscuro cae del cielo sobre el rival, con borde magenta, y deja la marca
         S({ type: 'blackPillar', x: f.x, y: f.y, life: 0.5, seed: Math.random() * 1000 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: 110, el: 'shadow', life: 0.4, w: 12 });
         for (let k = 0; k < (LOWFX ? 10 : 24); k++) { const a = Math.random() * TAU, v = vr(160, 420); P({ x: f.x, y: f.y, z: vr(4, 30), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(60, 200), g: 500, drag: 1.3, life: vr(0.4, 0.8), size: vr(2, 4), color: Math.random() < 0.6 ? '#1a0822' : '#ff5ad0', kind: 'shard', add: false }); }
+        return true;
+      case 'sunBlast': // Supernova: el estallido grande (rayos, anillo de fuego, columna de luz y brasas que suben)
+        S({ type: 'novaRays', x: f.x, y: f.y, r: f.r, life: 0.7, seed: Math.random() * 6 }); S({ type: 'star4', x: f.x, y: f.y - SUNH, r: 110, life: 0.4 });
+        S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: f.r * 1.6, el: 'fire', life: 0.5, w: 14, delay: 0.05 });
+        for (let k = 0; k < (LOWFX ? 14 : 36); k++) { const a = Math.random() * TAU, d = Math.random() * f.r * 0.8; P({ x: f.x + Math.cos(a) * d, y: f.y + Math.sin(a) * d * 0.55, z: vr(2, 20), vx: Math.cos(a) * vr(20, 80), vy: Math.sin(a) * vr(10, 40), vz: vr(140, 360), g: -20, drag: 1.2, life: vr(0.7, 1.4), size: vr(2, 4.5), color: Math.random() < 0.5 ? '#ffd27a' : '#ff8a2a', kind: 'ember' }); }
         return true;
       case 'diamond': // el anillo de diamante: luz que estalla desde el centro del eclipse
         S({ type: 'diamond', x: f.x, y: f.y, r: f.r, life: 0.75 });
@@ -6984,6 +7086,7 @@ const ArtEpic = (() => {
   function shape(x, o, f, A) {
     if (o.type === 'iceFan') { iceFan(x, o, f); return true; }
     if (o.type === 'blackPillar') { blackPillar(x, o, f, A); return true; }
+    if (o.type === 'novaRays') { novaRays(x, o, f, A); return true; }
     if (o.type !== 'diamond') return false;
     // rayos de luz que salen del centro y se abren hacia el cielo
     x.save(); x.globalCompositeOperation = 'lighter';
@@ -8046,6 +8149,7 @@ const Cine = (() => {
       case 'cast': if (!e.fusion && e.level === 2) { sigil(e.x, e.y, [e.el], false); punch(0.012); } break;
       case 'eclipseOn': punch(0.03); edge([120, 70, 200], 0.16, 0.5); break;
       case 'diamond': punch(0.05); edge([255, 240, 200], 0.3, 0.35); break;
+      case 'sunBlast': punch(0.045); edge([255, 200, 110], 0.26, 0.35); decal('scorch', e.x, e.y, e.r * 0.6); break;
       case 'hurt': {
         if (e.dot || !(e.dmg >= 6)) break; const u = e.unit, dx = u && u.vx ? u.vx : (Math.random() - 0.5), dy = u && u.vy ? u.vy : (Math.random() - 0.5);
         const el = e.el && ELEMENTS[e.el] ? e.el : 'wind';
@@ -8236,6 +8340,8 @@ const Sound = (() => {
       case 'eclipseRing': noise(4000, 1.5, 0.22, 0.1, 'bandpass', 2); tone(1320, 0.15, 0.05, 'sine', 1760); break;
       case 'blizzard': noise(5000, 0.8, 0.6, 0.12, 'highpass'); noise(1400, 1.2, 0.5, 0.08, 'bandpass', 0.6); chime([2093, 2637, 3136], 0.05, 0.04, 'sine', 0.12); break;
       case 'podHop': tone(300, 0.18, 0.06, 'triangle', 700); noise(1500, 1, 0.15, 0.05, 'bandpass', 1); break;
+      case 'sunForm': tone(220, 0.6, 0.07, 'sawtooth', 660); tone(440, 0.6, 0.05, 'sine', 1320, 0.05); noise(1800, 0.8, 0.6, 0.05, 'bandpass', 1.8); break;
+      case 'sunBlast': chime([1568, 2093, 2637], 0.08, 0.03, 'sine'); tone(70, 0.9, 0.3, 'sine', 35); noise(1400, 0.6, 0.8, 0.12, 'lowpass', 0.25); break;
       case 'crows': for (let k = 0; k < 3; k++) { tone(900 - k * 120, 0.12, 0.05, 'sawtooth', 600 - k * 80, k * 0.09); } noise(2500, 1.2, 0.35, 0.08, 'bandpass', 1.5); break;
       case 'lotusOpen': chime([523, 659, 784, 1047], 0.09, 0.06, 'sine'); noise(1200, 0.8, 0.5, 0.05, 'bandpass', 0.6); break;
       case 'lotusPulse': tone(392, 0.35, 0.06, 'sine', 523); noise(900, 1, 0.3, 0.05, 'bandpass', 0.8); break;
@@ -8269,7 +8375,7 @@ const Sound = (() => {
       case 'wall': play('wall'); break; case 'wallBreak': play('wallBreak'); break; case 'electrify': play('electrify'); break; case 'reflect': play('reflect'); break;
       case 'clash': play(e.kind === 'vapor' ? 'steam' : 'clash'); break; case 'beam': play('beam'); break; case 'tzap': play('tzap'); break; case 'bounce': play('bounce'); break;
       case 'round': play('round'); break; case 'go': play('go'); break; case 'roundWin': play('roundWin'); break; case 'matchWin': play('matchWin'); break; case 'mist': play('mist'); break;
-      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'eclipseCast': case 'eclipseOn': case 'eclipseRing': case 'diamond': case 'lotusOpen': case 'lotusPulse': case 'lotusEnd': case 'crows': case 'blizzard': case 'podHop': play(e.type); break;
+      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'eclipseCast': case 'eclipseOn': case 'eclipseRing': case 'diamond': case 'lotusOpen': case 'lotusPulse': case 'lotusEnd': case 'crows': case 'blizzard': case 'podHop': case 'sunForm': case 'sunBlast': play(e.type); break;
       case 'fall': play('fall'); break; case 'counter': play('counter'); break; case 'ram': play('ram'); break; case 'rune': play('rune'); break; case 'runeSpawn': play('runeSpawn'); break; case 'shieldHit': play('shieldHit'); break; case 'arenaEvent': play('mist'); break; case 'statueShot': cast('earth', 1.4); break; case 'bushGone': play('bushGone'); break; case 'quake': play('boom'); break; case 'intro': play('vs'); break; case 'retarget': if (!G.attract) play('retarget'); break; case 'ray': play('ray', e); break; case 'blink': play('blink'); break; case 'mirage': play('mirage'); break; case 'decoyPop': play('decoyPop'); break; case 'wispGo': play('wispGo'); break; case 'bossWarn': play('bossWarn'); break; case 'bossExposed': play('bossExposed'); break;
     }
   }

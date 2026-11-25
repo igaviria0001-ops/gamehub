@@ -102,3 +102,17 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
   - Arreglo: los reflejos del Espejismo podían salirse del mapa.
   - `test/powerstat.js`: daño por lanzamiento de cada poder (también los de un elemento y lo que hacen sus piezas).
 
+- **25 nov 08:08 — corrección de Ignacio**: «el día de la llamada» NO era Llamarada sino el **Alud de lodo** (agua + tierra);
+  Llamarada vuelve a como estaba (8 + 12). Y pidió a **Zuhé** (luz + fuego) más épico y un poco más útil, sin volverlo
+  invencible. Hecho (Sortilegio 2.6):
+  - **Supernova** rehecha: ya no estalla alrededor de Zuhé; lanza un sol pequeño (vuela en arco con estela) que se
+    queda flotando sobre donde VA a estar el rival, lo atrae hacia el centro 0,65 s y estalla (17, quema, empuja,
+    encandila; anillo de fuego en el suelo). Rayos, columna de luz, brasas, sacudida y sonidos nuevos (`sunForm`,
+    `sunBlast`). Dibujo en `10c4-art-epic.js` (`sunPos`, `sunBall`, `novaUnder/Over`, `novaRays`).
+  - Zuhé: 106 de vida (antes 100), cada golpe de luz cura 1,4 (antes 1); halo de sol a sus pies (no se ve si está escondido).
+  - **Alud de lodo**: 15 (antes 11) y tumba 0,3 s; ola de barro más grande (lengua de lodo con grumos y cresta).
+  - Al devolver la Llamarada los magos de fuego quedaron flojos; se subieron sin tocarla: Candela 168 de vida y
+    Torbellino de fuego 20 por s; Galeras 178 de vida y Plasma 31, más ancho y sale más rápido; Puracé 136 de vida.
+  - Resultado: Maestro (R=20, páramo) 43–54 % (Zuhé 54 %); Normal 33–63 % en el páramo, 35–64 % en todas las arenas
+    (Galeras flojo en Normal porque la máquina Normal apunta mal los rayos; con Maestro queda en 52 %).
+  - `test/balance.js` solo usa una arena; para mirar todas, rotar `ARENA_ORDER` (se hizo con una copia en /tmp).

@@ -152,12 +152,6 @@ const ArtSpells2 = (() => {
     const t = G.time;
     for (const s of G.spells) {
       if (false) {
-      } else if (s.t === 'nova') {
-        const f = 1 - s.windup / s.S.windup;
-        x.save(); x.globalCompositeOperation = 'lighter'; glow(x, s.x, s.y - 30, 40 + f * 60, `rgba(255,220,120,${0.4 + f * 0.5})`);
-        x.strokeStyle = `rgba(255,240,190,${0.3 + f * 0.6})`; x.lineWidth = 2 + f * 2; x.beginPath(); x.ellipse(s.x, s.y, s.r * (1.15 - f * 0.15), s.r * (1.15 - f * 0.15) * 0.55, 0, 0, TAU); x.stroke();
-        for (let k = 0; k < 10; k++) { const a = k / 10 * TAU + t * 3, d = s.r * (1 - f) + 20; star4(x, s.x + Math.cos(a) * d, s.y - 30 + Math.sin(a) * d * 0.55, 5, 'rgba(255,246,200,0.9)', t * 4 + k); }
-        x.restore();
       }
     }
   }
@@ -217,7 +211,7 @@ const ArtSpells2 = (() => {
   function lights(G, add) {
     for (const s of G.spells) {
       if (s.t === 'judgment') add(s.x, s.y, s.r * 2, [255, 236, 170], 0.4 + (1 - s.delay / s.S.delay) * 0.6, 0.3);
-      else if (s.t === 'nova') add(s.x, s.y - 20, 180, [255, 220, 120], 1, 0.3);
+  
       else if (s.t === 'wisp') add(s.x, s.y - 30, 70, [170, 110, 255], 0.7, 0.3);
       else if (s.t === 'bog' || s.t === 'thorns') add(s.x, s.y, s.r * 0.9, [210, 70, 175], 0.3, 0.1);
     }
