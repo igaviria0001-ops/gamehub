@@ -281,13 +281,13 @@ const ArtEarth = (() => {
         for (let k = 0; k < (LOWFX ? 6 : 14); k++) P({ x: f.x + vr(-f.r, f.r), y: f.y + vr(-f.r, f.r), z: 4, vz: vr(30, 90), g: -8, drag: 1, life: vr(0.8, 1.5), size: vr(14, 26), color: Math.random() < 0.3 ? 'rgba(196,67,166,0.35)' : 'rgba(20,8,26,0.55)', kind: 'smoke', add: false });
         break;
       case 'crater': S({ type: 'crater', x: f.x, y: f.y, r: f.r, life: 4.5, seed: Math.random() * 100 }); for (let k = 0; k < (LOWFX ? 10 : 22); k++) { const a = Math.random() * TAU, v = vr(80, 300); P({ x: f.x, y: f.y, z: 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: vr(30, 120), g: 30, drag: 2.2, life: vr(0.8, 1.6), size: vr(16, 32), color: 'rgba(70,52,46,0.45)', kind: 'smoke', add: false }); } burst(f.x, f.y, 'earth', LOWFX ? 10 : 22, 380, { kind: 'chunk', g: 750 }); break;
-      default: return false;
+      default: return ArtEpic.fx(G, f);
     }
     return true;
   }
   // figuras que duran (cráter humeante)
   function shape(x, o, f, A) {
-    if (o.type !== 'crater') return false;
+    if (o.type !== 'crater') return ArtEpic.shape(x, o, f, A);
     const r = o.r, a = Math.min(1, (1 - f) * 3);
     x.save(); x.globalAlpha = a;
     const g = x.createRadialGradient(o.x, o.y, r * 0.1, o.x, o.y, r); g.addColorStop(0, 'rgba(20,12,10,0.75)'); g.addColorStop(0.7, 'rgba(40,26,20,0.45)'); g.addColorStop(1, 'rgba(40,26,20,0)');

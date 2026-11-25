@@ -24,7 +24,7 @@ const fuseKey = (a, b) => (elIdx(a) <= elIdx(b) ? a + '+' + b : b + '+' + a);
 const SPELLS = {
   fire: [
     { name: 'Brasa', kind: 'proj', cd: 0.55, speed: 640, r: 11, life: 1.0, dmg: 7, burn: 2.4 },
-    { name: 'Llamarada', kind: 'proj', cd: 1.9, speed: 520, r: 17, life: 1.1, dmg: 8, burn: 2.4, boom: { r: 78, dmg: 12, ignite: 1 } },
+    { name: 'Llamarada', kind: 'proj', cd: 1.9, speed: 580, r: 18, life: 1.05, dmg: 11, burn: 2.8, boom: { r: 84, dmg: 14, ignite: 1 } },
   ],
   water: [
     { name: 'Chorro', kind: 'proj', cd: 0.5, speed: 720, r: 10, life: 0.85, dmg: 6, knock: 430, wet: 2.6, puddle: 1 },
@@ -84,7 +84,7 @@ Object.assign(FUSIONS, {
   'earth+light':  { name: 'Jaula de cristal', kind: 'crystal', cd: 5.0, range: 360, lock: 0.34, hp: 30, life: 3.2, dps: 4.5, burst: 11, tip: 'Un anillo de luz persigue al rival y la jaula brota a su alrededor: adentro la luz quema y al final estalla hacia adentro.' },
   'plant+light':  { name: 'Girasol', kind: 'sunflower', cd: 5.0, range: 200, hp: 34, life: 7, every: 1.25, reach: 380, dmg: 7, heal: 3.5, healR: 95, tip: 'Dispara rayos de sol y cura a quien esté a su lado.' },
   'bolt+light':   { name: 'Juicio', kind: 'judgment', cd: 4.5, range: 520, delay: 0.95, lockAt: 0.28, r: 58, dmg: 26, stun: 0.55, tip: 'Marca al rival y le cae una columna de luz. ¡Hay que salir a tiempo!' },
-  'light+shadow': { name: 'Eclipse', kind: 'eclipse', cd: 5.0, range: 300, r: 120, life: 3.4, dps: 4.5, tip: 'Dentro del eclipse el rival no puede lanzar hechizos.' },
+  'light+shadow': { name: 'Eclipse', kind: 'eclipse', cd: 5.5, range: 320, r: 128, warn: 0.42, life: 3.2, dps: 5, pull: 170, ring: 9, ringSil: 1.1, burst: 15, hex: 2.2, tip: 'La luna tapa el sol sobre el rival: adentro no puede lanzar hechizos y la oscuridad lo atrae; salir por el anillo de luz quema, y al final estalla el anillo de diamante (deja maleficio).' },
   'fire+shadow':  { name: 'Fuegos fatuos', kind: 'wisps', cd: 4.5, n: 4, life: 6, trig: 150, speed: 430, turn: 5, dmg: 7, burn: 1.6, tip: 'Cuatro llamas te rodean y se lanzan sobre quien se acerque.' },
   'water+shadow': { name: 'Marea negra', kind: 'bog', cd: 4.5, range: 290, flight: 0.45, r: 112, life: 5, dps: 5.5, slow: 0.7, drain: 0.45, tip: 'Charco oscuro que frena, hace daño y te devuelve vida.' },
   'wind+shadow':  { name: 'Cuervos', kind: 'crows', cd: 4.0, n: 4, speed: 360, turn: 3.6, dmg: 4.5, life: 3.0, r: 9, dazzle: 0.5, hex: 2, tip: 'Bandada que persigue, ciega y deja maleficio.' },

@@ -20,13 +20,6 @@ const ArtSpells2 = (() => {
         // haz tenue que baja del cielo antes del golpe
         const cg = x.createLinearGradient(0, s.y - 420, 0, s.y); cg.addColorStop(0, 'rgba(255,240,180,0)'); cg.addColorStop(1, `rgba(255,240,180,${0.1 + f * 0.25})`); x.fillStyle = cg; x.fillRect(s.x - r * 0.5 * (0.3 + f * 0.7), s.y - 420, r * (0.3 + f * 0.7), 420);
         x.restore();
-      } else if (s.t === 'eclipse') {
-        const fade = Math.min(1, s.life / 0.5, s.age * 3);
-        x.save(); x.globalAlpha = fade;
-        const g = x.createRadialGradient(s.x, s.y, s.r * 0.15, s.x, s.y, s.r); g.addColorStop(0, 'rgba(6,2,16,0.82)'); g.addColorStop(0.8, 'rgba(18,6,34,0.7)'); g.addColorStop(1, 'rgba(40,10,60,0)');
-        x.fillStyle = g; x.beginPath(); x.ellipse(s.x, s.y, s.r, s.r * 0.55, 0, 0, TAU); x.fill();
-        x.globalCompositeOperation = 'lighter'; x.strokeStyle = `rgba(255,214,130,${0.5 + 0.2 * Math.sin(t * 5)})`; x.lineWidth = 2; x.setLineDash([3, 10]); x.lineDashOffset = -t * 30; x.beginPath(); x.ellipse(s.x, s.y, s.r * 0.96, s.r * 0.53, 0, 0, TAU); x.stroke(); x.setLineDash([]);
-        x.restore();
       } else if (s.t === 'bog') {
         const fade = Math.min(1, s.life / 0.6, s.age * 4), R = s.r;
         x.save(); x.globalAlpha = fade;
@@ -155,14 +148,7 @@ const ArtSpells2 = (() => {
   function over(x, G) {
     const t = G.time;
     for (const s of G.spells) {
-      if (s.t === 'eclipse') {
-        const fade = Math.min(1, s.life / 0.5, s.age * 3), X = s.x, Y = s.y - 150, R = 30;
-        x.save(); x.globalAlpha = fade * 0.35; const vg = x.createLinearGradient(0, Y, 0, s.y); vg.addColorStop(0, 'rgba(20,6,34,0)'); vg.addColorStop(1, 'rgba(20,6,34,0.9)'); x.fillStyle = vg; x.beginPath(); x.moveTo(X - R, Y); x.lineTo(X + R, Y); x.lineTo(X + s.r, s.y); x.lineTo(X - s.r, s.y); x.fill();
-        x.globalAlpha = fade; x.globalCompositeOperation = 'lighter';
-        const cg = x.createRadialGradient(X, Y, R * 0.9, X, Y, R * 2.6); cg.addColorStop(0, 'rgba(255,226,150,0.95)'); cg.addColorStop(0.25, 'rgba(255,160,90,0.5)'); cg.addColorStop(1, 'rgba(255,120,60,0)'); x.fillStyle = cg; x.beginPath(); x.arc(X, Y, R * 2.6, 0, TAU); x.fill();
-        x.strokeStyle = 'rgba(255,240,200,0.8)'; x.lineWidth = 1.2; for (let k = 0; k < 14; k++) { const a = k / 14 * TAU + t * 0.4, L = R * (1.5 + 0.5 * Math.sin(t * 3 + k * 1.9)); x.beginPath(); x.moveTo(X + Math.cos(a) * R * 1.08, Y + Math.sin(a) * R * 1.08); x.lineTo(X + Math.cos(a) * L, Y + Math.sin(a) * L); x.stroke(); }
-        x.globalCompositeOperation = 'source-over'; x.fillStyle = '#04010a'; x.beginPath(); x.arc(X, Y, R, 0, TAU); x.fill();
-        x.restore();
+      if (false) {
       } else if (s.t === 'nova') {
         const f = 1 - s.windup / s.S.windup;
         x.save(); x.globalCompositeOperation = 'lighter'; glow(x, s.x, s.y - 30, 40 + f * 60, `rgba(255,220,120,${0.4 + f * 0.5})`);

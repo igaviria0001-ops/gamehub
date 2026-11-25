@@ -37,7 +37,7 @@ const Spells = (() => {
     if (el === 'bolt' && u.st.wet > 0) { d *= o.noWet ? 1.25 : 1.6; Combos.add(G, by, 'electrocutado', u); }
     if (!o.tick && u.lastSpell && u.lastSpell.by === by && u.lastSpell.id !== s.id && G.time - u.lastSpell.t < 0.35 && by >= 0) Combos.add(G, by, 'doblegolpe', u);
     if (!o.tick) u.lastSpell = { by, id: s.id, t: G.time };
-    const dealt = u.hurt(G, d, { by, el, dot: !!o.tick, fk: s.fusion || null });
+    const dealt = u.hurt(G, d, { by, el, dot: !!o.tick, fk: s.fusion || null, sk: s.sk || s.fusion || null });
     if (!u.alive) return dealt;
     if (o.dazzle) { if (u.isMage) { if (!(u.imm && u.imm.blind > 0)) u.st.blind = Math.max(u.st.blind, o.dazzle * (bm && bm.tr.dazzleMul || 1)); } else u.slow(o.dazzle * 2.5, 0.55); G.fx.push({ type: 'dazzle', x: u.x, y: u.y - 30 }); }
     if (o.hex) { u.st.hex = Math.max(u.st.hex, o.hex * (bm && bm.tr.hexMul || 1)); }
@@ -68,9 +68,9 @@ const Spells = (() => {
   }
   /* ---------- lanzar ---------- */
   function cast(G, m, S, el, o) {
-    const B = base(m, el, o), P = B.power, Z = B.size, k = S.kind, hx = m.x + Math.cos(m.face) * 22, hy = m.y - 20 + Math.sin(m.face) * 12;
+    const B = base(m, el, o), P = B.power, Z = B.size, k = S.kind, hx = m.x + Math.cos(m.face) * 22, hy = m.y - 20 + Math.sin(m.face) * 12; B.sk = o.fusion || S.name; // (sk: de qué hechizo viene el daño, para las pruebas)
     const mainEl = o.fusion ? o.fusion.split('+')[0] : el;
-    G.events.push({ type: 'cast', who: m.idx, el, kind: k, fusion: o.fusion || null, gran: B.gran, level: o.level || 0, x: m.x, y: m.y });
+    G.events.push({ type: 'cast', who: m.idx, el, kind: k, fusion: o.fusion || null, sk: B.sk, gran: B.gran, level: o.level || 0, x: m.x, y: m.y });
     if (o.fusion) { const rd = Math.min(S.range || S.len || 220, 240) * 0.6; G.events.push({ type: 'fusionCast', key: o.fusion, who: m.idx, x: m.x + Math.cos(m.face) * rd, y: m.y + Math.sin(m.face) * rd, x0: m.x, y0: m.y, res: !!o.res }); }
     if (k === 'proj') {
       const a = m.aim(G, S.speed * S.life, S.speed);

@@ -284,7 +284,7 @@ class Bot {
         case 'cage': hi = S.range; lo = 60; dmg = 16 + (held ? 10 : 0); p = 0.55; break;
         case 'sunflower': hi = S.range + 120; lo = 60; dmg = 18 + (m.hp < m.maxHp * 0.6 ? 8 : 0); p = 0.7; break;
         case 'judgment': hi = S.range; lo = 40; dmg = S.dmg; p = held ? 0.95 : 0.55 - fm * 0.25; break;
-        case 'eclipse': hi = S.range + 60; lo = 40; dmg = 20 + (f.holding ? 8 : 0); p = 0.6; break;
+        case 'eclipse': hi = S.range + 60; lo = 40; dmg = 28 + (f.holding ? 8 : 0); p = 0.65; break;
         case 'wisps': dmg = d < 260 ? 18 : 8; p = 0.9; hi = 9999; break;
         case 'bog': hi = S.range; lo = 50; dmg = 16 + (m.hp < m.maxHp * 0.7 ? 6 : 0); p = 0.55; break;
         case 'crows': hi = 650; lo = 80; dmg = S.dmg * S.n; p = 0.6; break;

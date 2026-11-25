@@ -74,8 +74,10 @@ const Spells2 = (() => {
       const a = aimOf(G, m, S.range), tg = a.target && !a.target.spot && a.dist < S.range * 1.1 ? a.target : null, d = Math.min(S.range, 280);
       add(G, Object.assign(B, { t: 'judgment', S, el: 'light', x: tg ? tg.x : m.x + Math.cos(a.ang) * d, y: tg ? tg.y : m.y + Math.sin(a.ang) * d, tg, delay: S.delay, r: S.r * Z, dmg: S.dmg * P }));
     } else if (k === 'eclipse') {
-      const p = Spells.aimPoint(G, m, S.range, 0.3);
-      add(G, Object.assign(B, { t: 'eclipse', S, el: 'shadow', x: p.tx, y: p.ty, r: S.r * Z, life: S.life * L, dps: S.dps * P }));
+      // el eclipse cae donde VA a estar el rival (la sombra se cierra en ~0,4 s) y queda encima de él
+      const p = Spells.aimPoint(G, m, S.range, S.warn + 0.15);
+      add(G, Object.assign(B, { t: 'eclipse', S, el: 'shadow', x: p.tx, y: p.ty, r: S.r * Z, warn: S.warn, life: S.life * L, dps: S.dps * P, P, inside: new Set(), rung: new Set() }));
+      G.events.push({ type: 'eclipseCast', x: p.tx, y: p.ty });
     } else if (k === 'wisps') {
       const n = S.n + (B.gran ? 2 : 0);
       for (let j = 0; j < n; j++) add(G, Object.assign({}, B, { t: 'wisp', S, el: 'shadow', caster: m, x: m.x, y: m.y, ph: j / n * TAU, life: S.life * L, arm: 0.5 + j * 0.12, dmg: S.dmg * P }));
@@ -142,9 +144,28 @@ const Spells2 = (() => {
         G.fx.push({ type: 'pillar', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'thunder', x: s.x, y: s.y, big: true }); break;
       }
       case 'eclipse': {
-        for (const u of G.units) { if (u.obj || !u.alive) continue; const d = hypot(u.x - s.x, u.y - s.y); if (d > s.r) continue;
-          if (foe(s, u)) { if (!(u.imm && u.imm.silence > 0) || u.st.silence > 0) u.st.silence = Math.max(u.st.silence, 0.25); hit(G, s, u, s.dps * dt, { el: 'shadow', tick: true }); u.lastSpell = null; } else u.st.hidden = Math.max(u.st.hidden, 0.2); }
-        s.life -= dt; if (s.life <= 0) s.dead = true; break;
+        // 1) la sombra de la luna se cierra (aviso)  2) totalidad: adentro no se lanza nada, la oscuridad atrae y quema
+        // despacio; salir cruzando el anillo de luz quema y deja callado un rato  3) al final, el anillo de diamante estalla
+        const S = s.S, P = s.P || 1;
+        if (s.warn > 0) { s.warn -= dt; if (s.warn <= 0) { G.events.push({ type: 'eclipseOn', x: s.x, y: s.y, r: s.r }); G.fx.push({ type: 'eclipseOn', x: s.x, y: s.y, r: s.r }); } break; }
+        const now = new Set();
+        for (const u of G.units) { if (u.obj || !u.alive) continue; const dx = s.x - u.x, dy = s.y - u.y, d = hypot(dx, dy);
+          if (!foe(s, u)) { if (d < s.r) u.st.hidden = Math.max(u.st.hidden, 0.2); continue; }
+          if (d < s.r) { now.add(u);
+            if (!(u.imm && u.imm.silence > 0) || u.st.silence > 0) u.st.silence = Math.max(u.st.silence, 0.25);
+            if (!u.untargetable) { const f = S.pull * (0.35 + 0.65 * d / s.r) * dt * (u.knockMul || 1); u.vx += dx / (d || 1) * f; u.vy += dy / (d || 1) * f; }
+            hit(G, s, u, s.dps * dt, { el: 'shadow', tick: true }); u.lastSpell = null; }
+          else if (s.inside.has(u) && !s.rung.has(u) && d < s.r + 60) { // cruzó el anillo de luz hacia afuera
+            s.rung.add(u); hit(G, s, u, S.ring * P, { el: 'light', dazzle: 0.6, knock: 160, kx: -dx, ky: -dy, unavoid: true });
+            if (!(u.imm && u.imm.silence > 0)) u.st.silence = Math.max(u.st.silence, S.ringSil); G.fx.push({ type: 'eclipseRing', x: u.x, y: u.y }); G.events.push({ type: 'eclipseRing', x: u.x, y: u.y }); }
+        }
+        for (const u of now) s.inside.add(u);
+        s.life -= dt;
+        if (s.life <= 0) { s.dead = true;
+          for (const u of G.units) { if (u.obj || !u.alive) continue; const d = hypot(u.x - s.x, u.y - s.y); if (d > s.r * 1.08) continue;
+            if (foe(s, u)) hit(G, s, u, S.burst * P, { el: 'light', dazzle: 0.8, hex: S.hex, big: true, knock: 240, kx: u.x - s.x, ky: u.y - s.y }); else if (u.isMage) { u.heal(G, 8 * P); u._healT = 0.4; } }
+          G.fx.push({ type: 'diamond', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'diamond', x: s.x, y: s.y, r: s.r }); }
+        break;
       }
       case 'wisp': {
         const m = s.caster; s.life -= dt; if (!m || m.alive === false || s.life <= 0) { s.dead = true; G.fx.push({ type: 'pop', x: s.x, y: s.y, el: 'shadow', r: 8 }); break; }
