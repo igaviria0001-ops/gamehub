@@ -331,7 +331,11 @@ const ArtGround = (() => {
       }
       if (T.ice[i] > 0) {
         const a = Math.min(0.95, T.ice[i] / 1.5), jx = (rnd(i, 44) - 0.5) * 12, jy = (rnd(i, 45) - 0.5) * 9, ws = 1 + rnd(i, 46) * 0.25;
-        x.globalAlpha = a * 0.85; x.drawImage(blob('205,240,255', 0.9), px - CELL * ws + jx, py - CELL * 0.9 * ws + jy, CELL * 2 * ws, CELL * 1.8 * ws); x.globalAlpha = 1;
+        x.globalAlpha = a * 0.55; x.drawImage(blob('205,240,255', 0.9), px - CELL * ws + jx, py - CELL * 0.9 * ws + jy, CELL * 2 * ws, CELL * 1.8 * ws);
+        // placa de hielo: borde nítido con grietas y un brillo en diagonal (se lee como hielo, no como niebla)
+        x.globalAlpha = a; x.beginPath(); for (let q = 0; q < 6; q++) { const an = q / 6 * TAU + rnd(i, 47) * 0.5, rr = CELL * (0.44 + 0.3 * rnd(i, 48 + q)); const qx = px + Math.cos(an) * rr, qy = py + Math.sin(an) * rr * 0.92; q ? x.lineTo(qx, qy) : x.moveTo(qx, qy); } x.closePath();
+        x.fillStyle = 'rgba(214,244,255,0.42)'; x.fill(); x.strokeStyle = 'rgba(255,255,255,0.55)'; x.lineWidth = 1.1; x.stroke();
+        x.strokeStyle = 'rgba(255,255,255,0.35)'; x.lineWidth = 3; x.beginPath(); x.moveTo(px - 12, py + 6); x.lineTo(px - 4, py - 4); x.stroke(); x.lineWidth = 1.5; x.beginPath(); x.moveTo(px + 2, py + 8); x.lineTo(px + 8, py); x.stroke(); x.globalAlpha = 1;
         if (rnd(i, 5) < 0.5) { x.strokeStyle = `rgba(255,255,255,${a * 0.6})`; x.lineWidth = 1; x.beginPath(); x.moveTo(px - 12 + rnd(i, 1) * 6, py - 10); x.lineTo(px + 2, py + 2); x.lineTo(px + 12, py - 4); x.stroke(); }
         const g = (time * 0.6 + rnd(i, 2) * 3) % 3; if (g < 0.3) { x.fillStyle = `rgba(255,255,255,${(0.3 - g) * 3})`; x.fillRect(px + (rnd(i, 3) - 0.5) * 24, py + (rnd(i, 4) - 0.5) * 24, 3, 3); }
       }

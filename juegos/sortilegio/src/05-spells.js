@@ -79,6 +79,7 @@ const Spells = (() => {
     } else if (k === 'cone' || k === 'frost') {
       const a = m.aim(G, S.range, 0), R = S.range * Z;
       G.fx.push({ type: 'cone', x: m.x, y: m.y - 14, ang: a.ang, range: R, half: S.half, el: k === 'frost' ? 'frost' : 'wind', big: !!o.fusion });
+      if (k === 'frost') { G.fx.push({ type: 'blizzard', x: m.x, y: m.y, ang: a.ang, range: R, half: S.half }); G.events.push({ type: 'blizzard', x: m.x, y: m.y }); }
       for (const u of G.units) {
         if (!foe(B, u)) continue; const dx = u.x - m.x, dy = u.y - m.y, d = hypot(dx, dy);
         if (d > R + u.r || Math.abs(angDiff(a.ang, Math.atan2(dy, dx))) > S.half + u.r / Math.max(d, 1)) continue;
@@ -160,7 +161,8 @@ const Spells = (() => {
       add(G, Object.assign(B, { t: 'beam', S, el: 'fire', x: m.x, y: m.y, windup: S.windup, fired: false, ang: m.face }));
       if (!m.tr.beamNoRoot) m.st.root = Math.max(m.st.root, S.windup);
     } else if (k === 'bloom') {
-      add(G, Object.assign(B, { t: 'bloom', S, el: 'plant', x: m.x + Math.cos(m.face) * 16, y: m.y + Math.sin(m.face) * 16, r: S.r * Z, life: S.life * (B.gran ? 1.3 : 1), hps: S.hps * P * (m.tr.healMul || 1) }));
+      add(G, Object.assign(B, { t: 'bloom', S, el: 'plant', x: m.x + Math.cos(m.face) * 16, y: m.y + Math.sin(m.face) * 16, r: S.r * Z, life: S.life * (B.gran ? 1.3 : 1), hps: S.hps * P * (m.tr.healMul || 1), P, healMul: m.tr.healMul || 1, next: S.pulse * 0.6 }));
+      G.events.push({ type: 'lotusOpen', x: m.x, y: m.y });
     } else if (k === 'storm') {
       const p = aimPoint(G, m, S.range, 0.5);
       add(G, Object.assign(B, { t: 'storm', S, el: 'water', x: p.tx, y: p.ty, vx: 0, vy: 0, r: S.r * Z, life: S.life * (B.gran ? 1.3 : 1), next: 0.35, dmg: S.dmg * P }));
@@ -278,9 +280,20 @@ const Spells = (() => {
         case 'bloom': {
           // cura solo a los del equipo de quien la lanzó y les quita lo malo (quemadura, maleficio, enredo, frío, lentitud); al rival lo frena el polen
           for (const u of G.units) { if (!u.alive || u.obj || hypot(u.x - s.x, u.y - s.y) >= s.r + u.r) continue;
-            if (foe(s, u)) { u.slow(0.2, 0.8); continue; }
+            if (foe(s, u)) { u.slow(0.2, 0.65); hit(G, s, u, s.S.pollen * (s.P || 1) * dt, { el: 'plant', tick: true }); continue; }
             const h = u.heal(G, s.hps * dt); if (h > 0 && u.isMage) u._healT = 0.3; const st = u.st; if (st.burn > 0) st.burn = 0; if (st.hex > 0) st.hex = 0; if (st.root > 0) st.root = Math.min(st.root, 0.1); if (st.chill > 0) st.chill = 0; if (st.slow > 0) { st.slow = 0; st.slowF = 1; } }
-          s.life -= dt; if (s.life <= 0) s.dead = true; break;
+          // latido del loto: empuja al rival hacia afuera y da un sorbo de vida a los tuyos; al cerrarse, lo enreda
+          const S = s.S, P = s.P || 1; s.next -= dt;
+          if (s.next <= 0 && s.life > 0.4) { s.next = S.pulse;
+            for (const u of G.units) { if (!u.alive || u.obj || hypot(u.x - s.x, u.y - s.y) >= s.r + u.r) continue;
+              if (foe(s, u)) hit(G, s, u, S.pulseDmg * P, { el: 'water', knock: 300, kx: u.x - s.x, ky: u.y - s.y }); else if (u.isMage) { u.heal(G, 3 * P * (s.healMul || 1)); u._healT = 0.3; } }
+            G.fx.push({ type: 'lotusPulse', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'lotusPulse', x: s.x, y: s.y }); }
+          s.life -= dt;
+          if (s.life <= 0) { s.dead = true;
+            for (const u of G.units) { if (!u.alive || u.obj || hypot(u.x - s.x, u.y - s.y) >= s.r * 1.1 + u.r) continue;
+              if (foe(s, u)) { hit(G, s, u, S.end * P, { el: 'plant', root: S.endRoot, big: true }); } else if (u.isMage) { u.heal(G, S.endHeal * P * (s.healMul || 1)); u._healT = 0.5; } }
+            G.fx.push({ type: 'lotusEnd', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'lotusEnd', x: s.x, y: s.y }); }
+          break;
         }
         case 'storm': {
           s.x += (s.vx || 0) * dt; s.y += (s.vy || 0) * dt; s.vx *= 1 - 1.2 * dt; s.vy *= 1 - 1.2 * dt;
@@ -339,6 +352,10 @@ const Spells = (() => {
       if (best) { const sp = hypot(s.vx, s.vy), a = Math.atan2(s.vy, s.vx), na = a + clamp(angDiff(a, Math.atan2(best.y - s.y, best.x - s.x)), -s.turn * dt, s.turn * dt); s.vx = Math.cos(na) * sp; s.vy = Math.sin(na) * sp; }
     }
     const ox = s.x, oy = s.y; s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
+    // bola de rayo: en el camino suelta rayos a quien esté cerca (cada 0,4 s, al más cercano)
+    if (s.S && s.S.arc) { s.arcT = (s.arcT == null ? 0.15 : s.arcT) - dt;
+      if (s.arcT <= 0) { let best = null, bd = s.S.arc; for (const u of G.units) if (foe(s, u) && !u.untargetable && u.st.hidden <= 0) { const d = hypot(u.x - s.x, u.y - s.y) - u.r; if (d < bd) { bd = d; best = u; } }
+        if (best) { s.arcT = s.S.arcEvery; hit(G, s, best, s.S.arcDmg * s.power, { el: 'bolt' }); G.fx.push({ type: 'zap', x0: s.x, y0: s.y - 18, x1: best.x, y1: best.y - 14, el: 'bolt' }); G.events.push({ type: 'tzap', x: best.x, y: best.y }); } else s.arcT = 0.1; } }
     const i = Terrain.idx(T, s.x, s.y);
     if (i < 0 || Terrain.solid(T, i)) {
       if (i >= 0 && T.wall[i] > 0) Terrain.hitWall(G, i, s.heavy ? s.dmg * 2.2 : s.dmg);

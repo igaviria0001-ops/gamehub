@@ -103,14 +103,17 @@ const ArtSpells2 = (() => {
     const t = G.time, rnd = Math.random;
     if (s.wisp) { wisp(x, G, s.x, Y - 6, s.id, 0.9); return true; }
     if (s.crow) {
-      ribbon(5, 'rgba(60,20,80,0.55)', 'rgba(20,6,30,0)', false);
-      const fl = Math.sin(t * 26 + s.id * 2); x.save(); x.translate(s.x, Y); x.rotate(a);
+      ribbon(9, 'rgba(70,20,90,0.6)', 'rgba(20,6,30,0)', false);
+      // humo de sombra alrededor del cuervo y ojos que brillan
+      x.save(); x.globalCompositeOperation = 'lighter'; glow(x, s.x, Y, 30, 'rgba(196,67,166,0.35)'); x.restore();
+      const fl = Math.sin(t * 26 + s.id * 2); x.save(); x.translate(s.x, Y); x.rotate(a); x.scale(1.65, 1.65);
       x.fillStyle = '#0b0610'; x.strokeStyle = 'rgba(196,67,166,0.7)'; x.lineWidth = 0.9;
       x.beginPath(); x.moveTo(11, 0); x.quadraticCurveTo(4, -4, -9, -1.5); x.lineTo(-14, -4); x.lineTo(-12, 0); x.lineTo(-14, 4); x.lineTo(-9, 1.5); x.quadraticCurveTo(4, 4, 11, 0); x.fill(); x.stroke();
       for (const sd of [-1, 1]) { x.beginPath(); x.moveTo(3, sd * 2); x.quadraticCurveTo(-2, sd * (10 + fl * 7), -11, sd * (13 + fl * 9)); x.quadraticCurveTo(-5, sd * (6 + fl * 3), -4, sd * 2); x.closePath(); x.fill(); x.stroke(); }
-      x.fillStyle = '#ff6ad0'; x.beginPath(); x.arc(7, -1, 1.1, 0, TAU); x.fill(); x.fillStyle = '#d8a030'; x.beginPath(); x.moveTo(11, -0.8); x.lineTo(15, 0.3); x.lineTo(11, 1); x.fill();
+      x.globalCompositeOperation = 'lighter'; x.fillStyle = '#ff6ad0'; x.beginPath(); x.arc(7, -1, 1.5, 0, TAU); x.fill(); x.fillStyle = 'rgba(255,120,220,0.4)'; x.beginPath(); x.arc(7, -1, 3.2, 0, TAU); x.fill(); x.globalCompositeOperation = 'source-over';
+      x.fillStyle = '#d8a030'; x.beginPath(); x.moveTo(11, -0.8); x.lineTo(15, 0.3); x.lineTo(11, 1); x.fill();
       x.restore();
-      if (rnd() < 0.25) FX.P({ x: s.x, y: s.y, z: 18, vx: (rnd() - 0.5) * 30, vy: (rnd() - 0.5) * 20, vz: -10, g: 60, drag: 2, life: 0.5, size: 2.4, color: '#1a0c22', kind: 'leaf', add: false });
+      if (rnd() < 0.45) FX.P({ x: s.x, y: s.y, z: 18, vx: (rnd() - 0.5) * 40, vy: (rnd() - 0.5) * 30, vz: -10, g: 60, drag: 2, life: 0.6, size: 3, color: rnd() < 0.7 ? '#1a0c22' : '#5a1a5e', kind: 'leaf', add: false });
       return true;
     }
     if (s.el === 'light') {

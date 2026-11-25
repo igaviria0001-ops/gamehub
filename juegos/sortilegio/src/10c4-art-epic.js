@@ -80,10 +80,68 @@ const ArtEpic = (() => {
     if (s.life < 0.5) { const k = 1 - s.life / 0.5, a0 = -0.9; x.globalCompositeOperation = 'lighter'; star4(x, X + Math.cos(a0) * R, Y + Math.sin(a0) * R, 8 + k * 34, `rgba(255,255,255,${0.6 + 0.4 * k})`, t * 2); glow(x, X + Math.cos(a0) * R, Y + Math.sin(a0) * R, 18 + k * 50, `rgba(255,246,220,${0.5 * k})`); }
     x.restore();
   }
+  /* ---------- Flor de vida: un loto gigante sobre agua ---------- */
+  function petal(x, cx, cy, a, L, W, lift, c0, c1) {
+    // pétalo en punta, aplastado por la perspectiva, con la punta levantada
+    const ca = Math.cos(a), sa = Math.sin(a), tx = cx + ca * L, ty = cy + sa * L * 0.58 - lift, nx = -sa, ny = ca * 0.58;
+    const g = x.createLinearGradient(cx, cy, tx, ty); g.addColorStop(0, c0); g.addColorStop(1, c1); x.fillStyle = g;
+    x.beginPath(); x.moveTo(cx, cy); x.quadraticCurveTo(cx + ca * L * 0.5 + nx * W, cy + sa * L * 0.3 + ny * W - lift * 0.4, tx, ty); x.quadraticCurveTo(cx + ca * L * 0.5 - nx * W, cy + sa * L * 0.3 - ny * W - lift * 0.4, cx, cy); x.fill();
+    x.strokeStyle = 'rgba(255,255,255,0.35)'; x.lineWidth = 0.8; x.beginPath(); x.moveTo(cx + ca * L * 0.15, cy + sa * L * 0.09 - lift * 0.1); x.lineTo(tx - ca * 3, ty + 1); x.stroke();
+  }
+  function lotusUnder(x, G, s) {
+    const t = G.time, R = s.r, f = smooth(Math.min(1, s.age * 2.2)), fade = Math.min(1, s.life / 0.5);
+    x.save(); x.globalAlpha = fade;
+    // agua de la laguna bajo el loto, con ondas
+    const g = x.createRadialGradient(s.x, s.y, R * 0.1, s.x, s.y, R); g.addColorStop(0, 'rgba(70,190,200,0.42)'); g.addColorStop(0.8, 'rgba(40,140,170,0.26)'); g.addColorStop(1, 'rgba(40,140,170,0)');
+    x.fillStyle = g; x.beginPath(); x.ellipse(s.x, s.y, R * f, R * 0.55 * f, 0, 0, TAU); x.fill();
+    x.lineWidth = 1.6;
+    for (let k = 0; k < 3; k++) { const p = (t * 0.45 + k / 3) % 1; x.strokeStyle = `rgba(200,255,240,${0.4 * (1 - p)})`; x.beginPath(); x.ellipse(s.x, s.y, R * (0.3 + 0.7 * p) * f, R * 0.55 * (0.3 + 0.7 * p) * f, 0, 0, TAU); x.stroke(); }
+    x.strokeStyle = `rgba(160,255,190,${0.55 + 0.2 * Math.sin(t * 3)})`; x.lineWidth = 2; x.beginPath(); x.ellipse(s.x, s.y, R * f, R * 0.55 * f, 0, 0, TAU); x.stroke();
+    // hojas de loto flotando
+    for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + 0.4 + Math.sin(t * 0.5 + k) * 0.05, d = R * 0.78 * f, px = s.x + Math.cos(a) * d, py = s.y + Math.sin(a) * d * 0.55, pr = (13 + 4 * hash2(k, 3)) * f;
+      x.fillStyle = k % 2 ? '#3f9a4a' : '#4fb055'; x.beginPath(); x.ellipse(px, py, pr, pr * 0.55, 0, a + 0.35, a + 0.35 + TAU - 0.5); x.lineTo(px, py); x.fill(); x.strokeStyle = 'rgba(20,70,30,0.5)'; x.lineWidth = 1; x.stroke(); }
+    // el loto: pétalos de afuera (rosado), de adentro (blanco) y el corazón dorado
+    const cx = s.x, cy = s.y - 4, rot = t * 0.12;
+    for (let k = 0; k < 10; k++) { const a = k / 10 * TAU + rot; if (Math.sin(a) > 0) continue; petal(x, cx, cy, a, 62 * f, 19 * f, 14 * f, 'rgba(255,140,196,0.95)', 'rgba(255,236,246,0.95)'); }
+    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU - rot * 1.3 + 0.39; petal(x, cx, cy - 2, a, 40 * f, 14 * f, 18 * f, 'rgba(255,190,222,0.98)', 'rgba(255,255,255,0.98)'); }
+    for (let k = 0; k < 10; k++) { const a = k / 10 * TAU + rot; if (Math.sin(a) <= 0) continue; petal(x, cx, cy, a, 62 * f, 19 * f, 14 * f, 'rgba(255,140,196,0.95)', 'rgba(255,236,246,0.95)'); }
+    x.fillStyle = '#ffd24a'; x.beginPath(); x.ellipse(cx, cy - 8 * f, 8 * f, 5 * f, 0, 0, TAU); x.fill(); x.fillStyle = '#c8901a'; for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; x.fillRect(cx + Math.cos(a) * 4 * f - 0.8, cy - 8 * f + Math.sin(a) * 2.4 * f - 0.8, 1.6, 1.6); }
+    x.restore();
+  }
+  function lotusOver(x, G, s) {
+    const t = G.time, R = s.r, fade = Math.min(1, s.life / 0.5, s.age * 3);
+    x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = fade;
+    // columna de vida que sube del loto
+    const cg = x.createLinearGradient(0, s.y - 190, 0, s.y); cg.addColorStop(0, 'rgba(170,255,190,0)'); cg.addColorStop(1, `rgba(190,255,200,${0.22 + 0.08 * Math.sin(t * 4)})`); x.fillStyle = cg; x.beginPath(); x.moveTo(s.x - 16, s.y - 190); x.lineTo(s.x + 16, s.y - 190); x.lineTo(s.x + 44, s.y - 6); x.lineTo(s.x - 44, s.y - 6); x.fill();
+    // polen dorado y chispas de vida que suben
+    for (let k = 0; k < (LOWFX ? 8 : 20); k++) { const p = (t * (0.35 + 0.25 * hash2(k, 1)) + hash2(k, 2)) % 1, a = hash2(k, 3) * TAU, d = Math.sqrt(hash2(k, 4)) * R * 0.85;
+      const px = s.x + Math.cos(a) * d + Math.sin(t * 2 + k) * 6, py = s.y + Math.sin(a) * d * 0.55 - p * 120, al = Math.sin(p * Math.PI);
+      if (k % 4 === 0) { x.fillStyle = `rgba(190,255,190,${al * 0.9})`; x.font = fontB(11); x.fillText('+', px, py); } else { x.fillStyle = `rgba(255,${226 + (k % 3) * 10},140,${al * 0.85})`; x.beginPath(); x.arc(px, py, 1.6 + (k % 3) * 0.6, 0, TAU); x.fill(); } }
+    x.restore();
+  }
+  /* ---------- Torbellino de fuego: anillos de llama que giran alrededor del embudo (como la tormenta de arena) ---------- */
+  function fireRings(x, G, s, H, fade, sway) {
+    const t = G.time, R = s.r, lay = LOWFX ? 4 : 7, ring = [];
+    for (let L = 0; L < lay; L++) { const hf = L / (lay - 1); ring.push({ hf, L, cx: s.x + sway(hf), cy: s.y - 8 - hf * (H - 10), rr: R * (0.32 + 0.78 * hf), spin: t * (9 - hf * 3) + L * 1.1, dv: 0.6 + 0.8 * hash2(L, 5) }); }
+    const band = (o, back) => { const { hf, cx, cy, rr, spin, dv } = o, a0 = back ? Math.PI : 0, a1 = back ? TAU : Math.PI;
+      x.setLineDash([rr * 0.5 * dv, rr * 0.3 / dv]); x.lineDashOffset = -spin * rr; x.lineCap = 'round';
+      if (back) { x.globalCompositeOperation = 'source-over'; x.strokeStyle = `rgba(110,24,10,${0.5 * fade})`; x.lineWidth = 5 + hf * 4; }
+      else { x.globalCompositeOperation = 'source-over'; x.strokeStyle = hf < 0.3 ? `rgba(255,214,120,${0.9 * fade})` : hf < 0.65 ? `rgba(255,128,40,${0.88 * fade})` : `rgba(200,54,24,${0.8 * fade})`; x.lineWidth = 7 + hf * 5; }
+      x.beginPath(); x.ellipse(cx, cy, rr, rr * 0.3, 0, a0, a1); x.stroke();
+      if (!back) { x.globalCompositeOperation = 'lighter'; x.strokeStyle = `rgba(255,246,200,${0.55 * fade})`; x.lineWidth = 1.8; x.beginPath(); x.ellipse(cx, cy - 2, rr * 0.97, rr * 0.28, 0, a0 + 0.2, a1 - 0.2); x.stroke(); }
+      x.setLineDash([]); };
+    x.save(); for (let L = lay - 1; L >= 0; L--) band(ring[L], true); for (let L = 0; L < lay; L++) band(ring[L], false);
+    // anillo de fuego en el suelo
+    x.globalCompositeOperation = 'lighter'; x.strokeStyle = `rgba(255,120,40,${0.45 * fade})`; x.lineWidth = 4; x.beginPath(); x.ellipse(s.x, s.y, R * 1.1, R * 0.45, 0, 0, TAU); x.stroke();
+    x.restore();
+    // brasas que salen despedidas en espiral
+    if (Math.random() < (LOWFX ? 0.3 : 0.7)) { const a = Math.random() * TAU, hf = Math.random(); FX.P({ x: s.x + Math.cos(a) * R * (0.3 + hf), y: s.y + Math.sin(a) * R * 0.3, z: 10 + hf * H, vx: -Math.sin(a) * 220 + Math.cos(a) * 80, vy: Math.cos(a) * 90, vz: vr(20, 90), g: -10, drag: 1.2, life: vr(0.6, 1.1), size: vr(1.5, 3), color: Math.random() < 0.5 ? '#ffd27a' : '#ff7a2a', kind: 'ember' }); }
+  }
   /* ---------- capas ---------- */
-  function under(x, G) { for (const s of G.spells) if (s.t === 'eclipse') eclipseUnder(x, G, s); }
-  function over(x, G) { for (const s of G.spells) if (s.t === 'eclipse') eclipseOver(x, G, s); }
+  function under(x, G) { for (const s of G.spells) { if (s.t === 'eclipse') eclipseUnder(x, G, s); else if (s.t === 'bloom') lotusUnder(x, G, s); } }
+  function over(x, G) { for (const s of G.spells) { if (s.t === 'eclipse') eclipseOver(x, G, s); else if (s.t === 'bloom') lotusOver(x, G, s); } }
   function lights(G, add) {
+    for (const s of G.spells) if (s.t === 'bloom') add(s.x, s.y - 20, s.r * 1.4, [160, 255, 190], 0.55, 0.18);
     for (const s of G.spells) if (s.t === 'eclipse') {
       if (s.warn > 0) add(s.x, s.y - SKY, 150, [255, 236, 170], 0.7, 0.3);
       else { add(s.x, s.y - SKY, 130, [255, 226, 190], 0.6, 0.25); add(s.x, s.y, s.r * 1.3, [255, 190, 120], 0.22, 0.12); }
@@ -98,6 +156,23 @@ const ArtEpic = (() => {
         for (let k = 0; k < (LOWFX ? 10 : 24); k++) { const a = Math.random() * TAU; P({ x: f.x + Math.cos(a) * f.r, y: f.y + Math.sin(a) * f.r * 0.55, z: vr(4, 30), vx: -Math.cos(a) * vr(80, 180), vy: -Math.sin(a) * vr(40, 100), vz: vr(10, 60), g: 0, drag: 1.5, life: vr(0.4, 0.8), size: vr(2, 4), color: Math.random() < 0.5 ? '#c49aff' : '#ffe2a8', kind: 'dot' }); }
         return true;
       case 'eclipseRing': S({ type: 'star4', x: f.x, y: f.y - 24, r: 34, life: 0.25 }); burst(f.x, f.y - 20, 'light', LOWFX ? 6 : 14, 260); return true;
+      case 'lotusPulse': S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: f.r * 1.15, el: 'water', life: 0.45, w: 10 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: f.r * 0.9, el: 'plant', life: 0.5, w: 4, delay: 0.08 });
+        for (let k = 0; k < (LOWFX ? 6 : 14); k++) { const a = Math.random() * TAU, v = vr(120, 260); P({ x: f.x, y: f.y - 6, z: 8, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(40, 120), g: 260, drag: 1.6, life: vr(0.5, 0.9), size: vr(2.5, 4), color: Math.random() < 0.5 ? '#ffd0e6' : '#ffffff', kind: 'leaf' }); }
+        return true;
+      case 'lotusEnd': S({ type: 'ring', x: f.x, y: f.y, r0: f.r * 1.2, r1: 10, el: 'plant', life: 0.35, w: 12 }); S({ type: 'flash', x: f.x, y: f.y, r: f.r * 1.4, el: 'plant', life: 0.3, delay: 0.25 }); S({ type: 'snare', x: f.x, y: f.y, life: 0.8, delay: 0.2 });
+        for (let k = 0; k < (LOWFX ? 12 : 30); k++) { const a = Math.random() * TAU, v = vr(160, 380); P({ x: f.x, y: f.y - 8, z: 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(80, 220), g: 300, drag: 1.4, life: vr(0.7, 1.2), size: vr(3, 5), color: ['#ffb0d4', '#ffffff', '#ffd24a', '#9fe07a'][k % 4], kind: 'leaf' }); }
+        return true;
+      case 'crowBurst': // la bandada sale de una mancha de sombra entre plumas
+        S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: 90, el: 'shadow', life: 0.35, w: 10 });
+        for (let k = 0; k < (LOWFX ? 10 : 24); k++) { const a = f.a + vr(-1.3, 1.3), v = vr(120, 360); P({ x: f.x + Math.cos(a) * 16, y: f.y + Math.sin(a) * 10, z: vr(10, 40), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.7, vz: vr(20, 120), g: 120, drag: 2.2, life: vr(0.6, 1.2), size: vr(2.5, 4), color: Math.random() < 0.75 ? '#140a1a' : '#6a2070', kind: 'leaf', add: false }); }
+        return true;
+      case 'blizzard': { // Ventisca: ventarrón de nieve y un abanico de cristales de hielo que brotan donde pega
+        const n = LOWFX ? 7 : 13, spikes = [];
+        for (let k = 0; k < n; k++) { const a = f.ang + (k / (n - 1) - 0.5) * 2 * f.half * 0.92 + vr(-0.05, 0.05), d = f.range * vr(0.55, 1.0); spikes.push({ x: f.x + Math.cos(a) * d, y: f.y + Math.sin(a) * d * 0.62, h: vr(22, 46), w: vr(7, 12), tilt: Math.cos(a) * 0.35 + vr(-0.15, 0.15), delay: d / f.range * 0.18 }); }
+        S({ type: 'iceFan', x: f.x, y: f.y, spikes, life: 1.1 });
+        for (let k = 0; k < (LOWFX ? 18 : 46); k++) { const a = f.ang + vr(-f.half, f.half), v = vr(380, 760); P({ x: f.x, y: f.y, z: vr(10, 40), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.62, vz: vr(-20, 60), g: 40, drag: 1.6, life: f.range / v * vr(0.8, 1.2), size: vr(1.5, 3.2), color: Math.random() < 0.7 ? '#ffffff' : '#bfe8ff', kind: 'flake', add: false }); }
+        for (let k = 0; k < (LOWFX ? 3 : 6); k++) { const a = f.ang + vr(-f.half, f.half), d = f.range * vr(0.3, 0.95); P({ x: f.x + Math.cos(a) * d, y: f.y + Math.sin(a) * d * 0.62, z: vr(4, 20), vx: Math.cos(a) * 40, vy: Math.sin(a) * 30, vz: vr(10, 40), g: 0, drag: 1, life: vr(0.8, 1.4), size: vr(12, 20), color: 'rgba(200,235,255,0.16)', kind: 'smoke', add: false }); }
+        return true; }
       case 'diamond': // el anillo de diamante: luz que estalla desde el centro del eclipse
         S({ type: 'diamond', x: f.x, y: f.y, r: f.r, life: 0.75 });
         S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: f.r * 1.5, el: 'light', life: 0.45, w: 12, gold: true }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: f.r * 2.1, el: 'shadow', life: 0.6, w: 6, delay: 0.08 });
@@ -107,7 +182,21 @@ const ArtEpic = (() => {
     }
     return false;
   }
+  function iceFan(x, o, f) {
+    // cristales que brotan (rápido), brillan y al final se quiebran (bajan y se apagan)
+    x.save();
+    for (const sp of o.spikes) { const tt = o.t - sp.delay; if (tt < 0) continue; const g = Math.min(1, tt / 0.12), fadeK = o.t > o.life - 0.35 ? (o.life - o.t) / 0.35 : 1, h = sp.h * g * (0.6 + 0.4 * fadeK);
+      x.globalAlpha = Math.max(0, fadeK);
+      x.fillStyle = 'rgba(200,235,255,0.35)'; x.beginPath(); x.ellipse(sp.x, sp.y, sp.w * 1.8, sp.w * 0.7, 0, 0, TAU); x.fill();
+      const tx = sp.x + sp.tilt * h, ty = sp.y - h, gr = x.createLinearGradient(sp.x, sp.y, tx, ty); gr.addColorStop(0, 'rgba(120,190,240,0.95)'); gr.addColorStop(0.6, 'rgba(200,240,255,0.95)'); gr.addColorStop(1, 'rgba(255,255,255,1)');
+      x.fillStyle = gr; x.beginPath(); x.moveTo(sp.x - sp.w * 0.6, sp.y); x.lineTo(tx, ty); x.lineTo(sp.x + sp.w * 0.6, sp.y); x.closePath(); x.fill();
+      x.strokeStyle = 'rgba(255,255,255,0.8)'; x.lineWidth = 1; x.beginPath(); x.moveTo(sp.x - sp.w * 0.15, sp.y - 1); x.lineTo(tx, ty); x.stroke();
+      x.fillStyle = 'rgba(150,210,250,0.9)'; x.beginPath(); x.moveTo(sp.x + sp.w * 0.5, sp.y); x.lineTo(sp.x + sp.w * 0.9 + sp.tilt * h * 0.4, sp.y - h * 0.45); x.lineTo(sp.x + sp.w * 1.1, sp.y); x.fill();
+      if (g >= 1 && Math.sin(o.t * 20 + sp.x) > 0.8) { x.globalCompositeOperation = 'lighter'; star4(x, tx, ty, 6, 'rgba(255,255,255,0.9)', o.t * 4); x.globalCompositeOperation = 'source-over'; } }
+    x.restore();
+  }
   function shape(x, o, f, A) {
+    if (o.type === 'iceFan') { iceFan(x, o, f); return true; }
     if (o.type !== 'diamond') return false;
     // rayos de luz que salen del centro y se abren hacia el cielo
     x.save(); x.globalCompositeOperation = 'lighter';
@@ -117,5 +206,5 @@ const ArtEpic = (() => {
     glow(x, o.x, o.y - 30, o.r * (0.6 + f), `rgba(255,250,230,${A})`);
     x.restore(); return true;
   }
-  return { under, over, lights, fx, shape };
+  return { under, over, lights, fx, shape, fireRings };
 })();

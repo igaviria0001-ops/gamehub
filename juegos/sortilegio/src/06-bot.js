@@ -264,7 +264,7 @@ class Bot {
         case 'cloud': dmg = m.hp < m.maxHp * 0.5 ? 12 : 4; p = 1; hi = 300; break;
         case 'mines': dmg = d < 260 ? 16 : 3; p = 0.6; hi = 9999; break;
         case 'beam': hi = S.len * 0.9; lo = 120; dmg = S.dmg; p = (vis ? 0.65 : 0.05) * (held ? 1.4 : 1); still = true; break;
-        case 'bloom': dmg = m.hp < m.maxHp * 0.6 && d > 230 ? 26 : 0; p = 1; hi = 9999; break;
+        case 'bloom': dmg = m.hp < m.maxHp * 0.6 && d > 230 ? 26 : d < 150 ? 20 : m.hp < m.maxHp * 0.85 ? 12 : 0; p = 1; hi = 9999; break;
         case 'storm': hi = S.range + 40; lo = 60; dmg = 18; p = 0.6; break;
         case 'sand': dmg = d < 190 ? 14 : 0; p = 1; hi = 9999; break;
         case 'sandstorm': dmg = d < S.r * 1.05 ? 22 : incoming ? 14 : d < 300 ? 5 : 0; p = 1; hi = 9999; break;

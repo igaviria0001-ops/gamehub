@@ -94,6 +94,11 @@ const Sound = (() => {
       case 'eclipseCast': tone(330, 0.45, 0.08, 'sine', 165); noise(700, 0.7, 0.45, 0.06, 'bandpass', 0.5); break;
       case 'eclipseOn': tone(82, 1.4, 0.2, 'sine', 62); tone(164, 1.0, 0.07, 'triangle', 123); chime([1047, 1568, 2093], 0.09, 0.04, 'sine'); noise(300, 1.2, 1.1, 0.06, 'lowpass', 0.5); break;
       case 'eclipseRing': noise(4000, 1.5, 0.22, 0.1, 'bandpass', 2); tone(1320, 0.15, 0.05, 'sine', 1760); break;
+      case 'blizzard': noise(5000, 0.8, 0.6, 0.12, 'highpass'); noise(1400, 1.2, 0.5, 0.08, 'bandpass', 0.6); chime([2093, 2637, 3136], 0.05, 0.04, 'sine', 0.12); break;
+      case 'crows': for (let k = 0; k < 3; k++) { tone(900 - k * 120, 0.12, 0.05, 'sawtooth', 600 - k * 80, k * 0.09); } noise(2500, 1.2, 0.35, 0.08, 'bandpass', 1.5); break;
+      case 'lotusOpen': chime([523, 659, 784, 1047], 0.09, 0.06, 'sine'); noise(1200, 0.8, 0.5, 0.05, 'bandpass', 0.6); break;
+      case 'lotusPulse': tone(392, 0.35, 0.06, 'sine', 523); noise(900, 1, 0.3, 0.05, 'bandpass', 0.8); break;
+      case 'lotusEnd': chime([1047, 784, 659, 523], 0.07, 0.07, 'triangle'); tone(130, 0.4, 0.12, 'sine', 98); break;
       case 'diamond': chime([1568, 2093, 2637, 3136], 0.045, 0.07, 'sine'); tone(196, 0.6, 0.16, 'sine', 98); noise(2500, 0.8, 0.5, 0.14, 'bandpass', 1.5); break;
       case 'fall': tone(500, 0.6, 0.12, 'sine', 80); break;
       case 'counter': chime([1319, 1760, 2093], 0.04, 0.09, 'triangle'); noise(3000, 1, 0.25, 0.15, 'bandpass', 2); tone(220, 0.4, 0.12, 'sawtooth', 880); break;
@@ -123,7 +128,7 @@ const Sound = (() => {
       case 'wall': play('wall'); break; case 'wallBreak': play('wallBreak'); break; case 'electrify': play('electrify'); break; case 'reflect': play('reflect'); break;
       case 'clash': play(e.kind === 'vapor' ? 'steam' : 'clash'); break; case 'beam': play('beam'); break; case 'tzap': play('tzap'); break; case 'bounce': play('bounce'); break;
       case 'round': play('round'); break; case 'go': play('go'); break; case 'roundWin': play('roundWin'); break; case 'matchWin': play('matchWin'); break; case 'mist': play('mist'); break;
-      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'eclipseCast': case 'eclipseOn': case 'eclipseRing': case 'diamond': play(e.type); break;
+      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'eclipseCast': case 'eclipseOn': case 'eclipseRing': case 'diamond': case 'lotusOpen': case 'lotusPulse': case 'lotusEnd': case 'crows': case 'blizzard': play(e.type); break;
       case 'fall': play('fall'); break; case 'counter': play('counter'); break; case 'ram': play('ram'); break; case 'rune': play('rune'); break; case 'runeSpawn': play('runeSpawn'); break; case 'shieldHit': play('shieldHit'); break; case 'arenaEvent': play('mist'); break; case 'statueShot': cast('earth', 1.4); break; case 'bushGone': play('bushGone'); break; case 'quake': play('boom'); break; case 'intro': play('vs'); break; case 'retarget': if (!G.attract) play('retarget'); break; case 'ray': play('ray', e); break; case 'blink': play('blink'); break; case 'mirage': play('mirage'); break; case 'decoyPop': play('decoyPop'); break; case 'wispGo': play('wispGo'); break; case 'bossWarn': play('bossWarn'); break; case 'bossExposed': play('bossExposed'); break;
     }
   }

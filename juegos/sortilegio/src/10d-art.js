@@ -20,13 +20,12 @@ const Art = (() => {
       const E = ELEMENTS[s.el] || ELEMENTS.wind;
       switch (s.t) {
         case 'proj': add(s.x, s.y - 18, s.petal ? 40 : 95, E.light, 0.9, 0.45); break;
-        case 'firenado': add(s.x, s.y - 40, 190, [255, 130, 50], 1, 0.5); break;
+        case 'firenado': add(s.x, s.y - 40, 190, [255, 130, 50], 0.7, 0.3); break;
         case 'vortex': add(s.x, s.y - 20, 110, [180, 255, 225], 0.6, 0.2); break;
         case 'wave': add(s.x + Math.cos(s.ang) * s.d, s.y + Math.sin(s.ang) * s.d, 140, [90, 175, 255], 0.6, 0.3); break;
         case 'strike': add(s.x, s.y, s.r * 1.8, [190, 150, 255], 0.4 + (1 - s.delay / s.S.delay) * 0.5, 0.3); break;
         case 'lob': add(s.x, s.y - s.z, s.kind === 'meteor' ? 150 : 60, s.kind === 'meteor' ? [255, 130, 50] : E.light, 0.9, 0.4); break;
         case 'mine': add(s.x, s.y, 50, [255, 140, 60], 0.6, 0.3); break;
-        case 'bloom': add(s.x, s.y, 140, [150, 255, 170], 0.8, 0.3); break;
         case 'magnet': add(s.x, s.y - 34, 150, [190, 150, 255], 0.9, 0.4); break;
         case 'storm': add(s.x, s.y, s.r * 1.2, [120, 150, 220], 0.35, 0.1); break;
         case 'beam': if (!s.fired) add(s.x, s.y - 20, 100, [255, 180, 90], 0.8, 0.4); break;

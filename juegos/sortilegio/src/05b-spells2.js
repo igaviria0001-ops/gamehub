@@ -82,7 +82,7 @@ const Spells2 = (() => {
       const n = S.n + (B.gran ? 2 : 0);
       for (let j = 0; j < n; j++) add(G, Object.assign({}, B, { t: 'wisp', S, el: 'shadow', caster: m, x: m.x, y: m.y, ph: j / n * TAU, life: S.life * L, arm: 0.5 + j * 0.12, dmg: S.dmg * P }));
     } else if (k === 'crows') {
-      const a = aimOf(G, m, 700), n = S.n + (B.gran ? 3 : 0);
+      const a = aimOf(G, m, 700), n = S.n + (B.gran ? 3 : 0); G.fx.push({ type: 'crowBurst', x: m.x, y: m.y, a: a.ang }); G.events.push({ type: 'crows', x: m.x, y: m.y });
       for (let j = 0; j < n; j++) { const off = (j / Math.max(1, n - 1) - 0.5) * 1.5, sp = S.speed * (0.9 + 0.25 * ((j * 5) % 4) / 3);
         add(G, Object.assign({}, B, { t: 'proj', S, el: 'shadow', crow: true, x: m.x + Math.cos(a.ang + off) * 20, y: m.y + Math.sin(a.ang + off) * 20, vx: Math.cos(a.ang + off) * sp, vy: Math.sin(a.ang + off) * sp, r: S.r, life: S.life + j * 0.05, dmg: S.dmg * P, turn: S.turn, delayHome: 0.2 + j * 0.04, fusion: o.fusion })); }
     } else if (k === 'pit') {
