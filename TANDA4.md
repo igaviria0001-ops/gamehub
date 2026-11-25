@@ -58,6 +58,21 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
   velocidad) y sólido para el bólido propio (`Boss.solid`), reloj de la pista `tt` (antes los géiseres no se movían en
   el remoto), los objetos de `R.hz` ya no se rehacen cada cuadro. `11-ui.js` `netWorld`, resultados con estrellas del
   anfitrión y botones Siguiente/Repetir (`resRep`)/Elegir reto. Arreglo aparte: el reto «sin chocar» no contaba choques.
+- **Siguiente: E2 Sortilegio épico (plan concreto)**, mirar `ALTA=1 CHARS=… ARENA=… node juegos/sortilegio/test/film.js`
+  (hoja de fotos en `juegos/sortilegio/test/shots/film.png`; `ALTA=1` fuerza calidad alta):
+  1. **Cámara de cine**: hoy toda la arena se ve fija y los magos se ven chiquitos. Encuadre que sigue a los dos magos
+     con zoom suave (nunca corta a nadie, límites de la arena, más cerca cuando están cerca), un leve empuje hacia el
+     que lanza un Gran Sortilegio y hacia el golpe final. Probar en PC y celular (táctil), y que no maree.
+  2. **Golpe que se siente**: pausa de impacto (40–70 ms) en golpes grandes y en el contraconjuro; destellos de
+     recarga en el sello; anillo de onda en el suelo.
+  3. **Textos que no se tapen**: «¡Doble golpe! ¡Rebote! ¡CONTRACONJURO!» salen uno encima del otro; apilarlos con
+     espacio, un solo cartel grande por combo, y que no tapen a los magos.
+  4. **Lava del volcán** se ve como mancha amarilla plana (sobre todo en calidad media): costra oscura, grietas que
+     laten, borde que humea.
+  5. **Entrada de ronda de película**: cartel con los dos magos frente a frente, nombre de la arena, barras de cine.
+  6. Clima propio de cada arena (ceniza, nieve, pétalos, brisa) solo donde luce. Todo con versión ligera en celular.
+  Después medir que no cambie el equilibrio (`LV=4 node juegos/sortilegio/test/balance.js`) y revisar Candela con
+  bots Normal (22 %).
 - **Después**: volver a Sortilegio (más épica/cine; revisar Candela en bots Normal 22 %), luego P (todo.sh,
   offline-eq en TyA/Ventolera/VÉRTIGO, versiones, docs, merge a main, artefactos, bitácoras, README, memoria) y al
   final R/en línea + Cloudflare.

@@ -5,6 +5,7 @@ const path = require('path'), fs = require('fs');
 (async () => {
   const browser = await chromium.launch(); const page = await (await browser.newContext({ viewport: { width: 960, height: 540 } })).newPage();
   const errors = []; page.on('pageerror', e => errors.push(e.message));
+  if (process.env.ALTA) await page.addInitScript(() => { try { localStorage.setItem('srt_quality', JSON.stringify('alta')); localStorage.setItem('srt_qManual', 'true'); } catch (e) { /* nada */ } });
   await page.goto('file://' + path.resolve(__dirname, 'index.html')); await page.waitForTimeout(800);
   const chars = (process.env.CHARS || 'tatacoa,purace').split(','), arena = process.env.ARENA || 'volcan', N = +(process.env.N || 12);
   await page.evaluate(([chars, arena]) => { UI.show(null, false); Game.start('duel', 0, { chars, wins: 3, level: 4, arena }); Game.G.introT = 0; Game.G.countT = 0.1; Game.advance(5); }, [chars, arena]);
