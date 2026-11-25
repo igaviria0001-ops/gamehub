@@ -439,3 +439,8 @@ Plan, detalle y cómo retomar en [TANDA4.md](TANDA4.md). Resumen:
   tanto todo sigue como antes (señal por MQTT, TURN público, relevo por MQTT).
 - La sala avisa cuando un aparato tiene otra versión de GameHub.
 
+
+## Quinta tanda — servidor propio en Cloudflare (plan cerrado)
+Plan completo, metas medibles, pasos en orden, pruebas y cálculo del plan gratis en
+[RED-CLOUDFLARE.md](RED-CLOUDFLARE.md). Parte A (mejoras del cliente y del servidor) se puede hacer sin la dirección;
+Parte B cuando Ignacio mande la dirección del Worker (pasos en `servidor/GUIA-CLOUDFLARE.md`).

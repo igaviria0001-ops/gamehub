@@ -1,0 +1,104 @@
+# En línea con servidor propio en Cloudflare — plan completo (Tanda 5)
+
+> Plan cerrado para seguirlo paso a paso, sin improvisar. Diseño y bitácora de lo anterior: [ONLINE.md](ONLINE.md) y
+> [TANDA4.md](TANDA4.md). Pasos de Ignacio: [servidor/GUIA-CLOUDFLARE.md](servidor/GUIA-CLOUDFLARE.md).
+> Trabajo en la rama `tanda5`; a `main` solo cuando todo lo de «Pruebas» pase.
+
+## 1. Dónde estamos (25 nov 2026)
+- Hoy el en línea funciona así: **señal** (encontrarse) por 3 servidores MQTT públicos a la vez; **datos** por WebRTC
+  directo (canal ordenado `r` + canal rápido sin reenvío `u`); si no conecta, **TURN público** (Open Relay, lejos y
+  lento) y, como último recurso, **relevo por MQTT** (lento). Ya hay: vuelta a directo apenas revive, colchón de hasta
+  400 ms, predicción del personaje propio, instantáneas pequeñas, aviso de versión distinta.
+- Ya está escrito y probado en local (`wrangler dev`): el **servidor** (`servidor/src/index.js`: un Durable Object por
+  sala que reparte mensajes cifrados; `/ice` con credenciales TURN de Cloudflare; `/ping`) y el **cliente** que lo usa
+  si `SERVER0` (`app/net.js`) tiene la dirección. Con `SERVER0 = ''` todo queda como hoy.
+- **Falta**: que Ignacio active la cuenta, cree la llave TURN, conecte el repositorio y mande la dirección del Worker.
+
+## 2. Meta (medible, se mide antes y después)
+| | Hoy | Meta |
+|---|---|---|
+| Unirse a una sala (abrir el enlace → «conectado») | 3–10 s, a veces falla un broker | **< 2 s** |
+| Conexión con datos móviles | directo o TURN público lejano | directo o **TURN de Cloudflare en Colombia** en ≥ 95 % |
+| Ping entre dos celulares en Colombia por TURN | 150–300 ms (Open Relay) | **≤ 80 ms** |
+| Relevo de último recurso | MQTT público (lento, a saltos) | **WebSocket propio** (mismo ritmo que lo directo) |
+| Cambiar de wifi a datos en plena partida | 3–7 s congelado | **< 2 s** y sin salirse de la partida |
+| «Hambre» del dibujo (`test/netmovil.js`, perfil mob/relay) | 0–3 % | **≤ 1 %**, ninguna congelada > 0,3 s |
+| Costo | 0 | **0** (dentro del plan gratis, ver §6) |
+| Sin conexión | — | **idéntico** (`test/offline-eq.js`) |
+
+## 3. Cómo queda (arquitectura final)
+1. **Señal**: primero el WebSocket del servidor (Durable Object de la sala, pedido en Sudamérica con `locationHint: 'sam'`).
+   Si en 2 s no abre, se suman los MQTT públicos (hoy van siempre los 3 a la vez: más tráfico y más lento).
+2. **Datos**: WebRTC directo; si no se puede, por **TURN de Cloudflare** (anycast: entra por el punto más cercano,
+   Bogotá/Medellín/Barranquilla), con `turns:…:443` para redes que bloquean UDP. Open Relay solo si Cloudflare no responde.
+3. **Último recurso**: relevo por el WebSocket del servidor (no por MQTT).
+4. **Elección por medida**: cada aparato mide el ping de cada camino que tiene abierto y usa el más rápido (con margen de
+   20 ms y 3 medidas seguidas para no saltar de un lado a otro).
+5. **Cambio de red**: al pasar a `disconnected` más de 1 s se hace `restartIce()` en la misma conexión (sin rehacer la sala);
+   mientras tanto los datos siguen por el relevo propio, así la partida no se congela.
+
+## 4. Pasos (en este orden; cada uno con su prueba)
+**Parte A — se puede hacer ya, sin la dirección (se prueba con `cd servidor && npx wrangler dev --port 8799`)**
+- **A1 · Servidor**: `locationHint: 'sam'` al pedir la sala; `/ping` devuelve también el `colo` del Worker y el de la sala;
+  límite por aparato (≤ 120 mensajes/s y ≤ 64 KB por mensaje; si pasa, se cierra con 1008) para que un error no gaste el
+  plan gratis; `/ice` sigue con caché de 6 h. Prueba: `test/netsrv.js` + nueva `test/srvlimit.js` (tasa y tamaño).
+- **A2 · Señal por el servidor primero** (`app/net.js`, `Signal()`): MQTT entra solo si el servidor no abre en 2 s o se cae;
+  si el servidor vuelve, MQTT se apaga a los 30 s. Prueba: `test/net.js`, `test/sala.js`, `test/netsync.js` con y sin
+  `?server=`; nueva medida «tiempo hasta conectado» en `test/netmovil.js`.
+- **A3 · TURN de Cloudflare completo**: no recortar las direcciones `turns:` (hoy `.slice(0, 8)`); Open Relay al final y
+  solo si `/ice` falló. Prueba: `iceTypes()` en Ajustes → «Probar» muestra `relay` por Cloudflare.
+- **A4 · Cambio de red sin congelarse**: `restartIce()` + relevo propio mientras tanto; el anfitrión también lo hace.
+  Prueba: `PERFIL=corte` y `CORTE=directo` en `test/netmovil.js` (meta: < 2 s sin datos nuevos).
+- **A5 · Elegir el camino más rápido** (directo / TURN / relevo propio) por ping medido, con margen. Prueba: perfil nuevo
+  `PERFIL=lento-directo` (lo directo con +200 ms): debe pasarse al relevo propio y volver cuando mejore.
+- **A6 · Se ve cómo va**: en la sala, junto a cada aparato, «Directo · 35 ms» / «Cloudflare · 60 ms» / «Respaldo · 90 ms»;
+  en Ajustes → EN LÍNEA → «Probar»: servidor ✓ (y su ciudad), TURN ✓, ping. Prueba: `test/sala.js` (que se vea y no tape nada,
+  también en celular).
+- **A7 · Si el servidor falla o se acaba el plan del día**: el juego sigue solo con MQTT + Open Relay sin que nadie note
+  nada. Prueba: servidor local apagado a mitad de partida y respuesta 429/1011 simulada.
+
+**Parte B — cuando Ignacio mande la dirección**
+- **B1** Poner la dirección en `SERVER0` (`app/net.js`); `node build.js`.
+- **B2** Revisar `/ice` y `/ping` (si el navegador de pruebas de Claude no alcanza `workers.dev`, lo revisa Ignacio con
+  «Probar» y manda una foto).
+- **B3** Medir antes/después con `test/netmovil.js` (mob, relay, corte, lento-directo) apuntando al servidor de verdad
+  si se alcanza; si no, al local, y la prueba real la hace Ignacio (B5).
+- **B4** Pruebas completas (§5), publicar a `main`, republicar el artefacto.
+- **B5** Prueba real con Ignacio (lista corta): dos celulares con datos (uno con Claro/Tigo/Movistar distinto si se
+  puede), uno con wifi; Ajustes → «Probar» en los tres; jugar 5 min de Sortilegio y 5 de Ventolera; a mitad, apagar el
+  wifi de uno; mandar foto de lo que dice la sala (camino y ms de cada uno).
+- **B6** Mirar el uso en Cloudflare a la semana (Ignacio manda foto de «Metrics» del Worker) y confirmar que va muy
+  por debajo del plan gratis.
+
+## 5. Pruebas que tienen que pasar antes de `main`
+`bash test/todo.sh` completo (levanta su servidor local), más: `test/netsrv.js`, `test/srvlimit.js`, `test/netmovil.js`
+(los 4 perfiles, los 3 juegos que se pueden medir), `test/netpred.js`, `test/netver.js` (19 modos), `test/nettour.js`,
+las 4 campañas en línea (`test/netcamp-*.js`) y `test/offline-eq.js` (sin conexión idéntico en los 4 juegos).
+
+## 6. Plan gratis (cálculo; se revisa en B6)
+- **TURN**: 1.000 GB al mes gratis (cuenta lo que sale de Cloudflare). Una partida de Sortilegio manda ~1,2 KB × 20 por
+  segundo por remoto ≈ 90 MB por hora: alcanza para miles de horas al mes.
+- **Durable Objects**: 100.000 pedidos al día; los mensajes de WebSocket que llegan cuentan 20 a 1 (≈ 2 millones de
+  mensajes al día). La señal casi no gasta; el relevo de un aparato a 20 mensajes/s ≈ 3.600 pedidos por hora. Si un día se
+  acabara, el juego sigue por MQTT (A7).
+- **Workers**: 100.000 pedidos al día (cada conexión de sala y cada `/ice` es uno): sobra.
+
+## 7. Lo que no se toca
+Códigos de sala, enlace `?sala=`, cifrado de aparato a aparato (el servidor nunca ve el contenido), nombres y prefijos de
+lo guardado, el modo sin conexión. Los secretos de TURN solo viven en Cloudflare, nunca en el código ni en el chat.
+Para volver atrás en cualquier momento: `SERVER0 = ''`.
+
+## 7b. Antes de escribir código: revisar lo que pueda estar viejo
+- Volver a leer en la documentación de Cloudflare: `locationHint` (Durable Objects → Data location), límites del plan
+  gratis (Durable Objects → Pricing) y la llamada de credenciales TURN (Realtime → TURN), porque Cloudflare los cambia.
+- Volver a leer `app/net.js` (`Signal`, `iceServers`, `newPeer`, `toRelay`/`backToDirect`) para no repetir lo que ya hace.
+
+## 8. Cómo retomar
+1. `git checkout tanda5` (si no existe: crearla desde `main`).
+2. Leer la bitácora de abajo: el último paso dice qué sigue.
+3. Servidor local: `cd servidor && npx --yes wrangler dev --port 8799 --ip 127.0.0.1`; página: `cd docs && python3 -m
+   http.server 8765 --bind 127.0.0.1` (los dos en segundo plano); probar con `?server=http://127.0.0.1:8799`.
+
+## Bitácora (lo más nuevo abajo)
+- **25 nov 15:50** — Plan escrito. Esperando la dirección del Worker de Ignacio para la Parte B; la Parte A se puede
+  empezar cuando Ignacio diga.
