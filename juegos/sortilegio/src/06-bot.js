@@ -24,7 +24,7 @@ class Bot {
   // rival más útil: el mago (o criatura) más cercano
   target(G, m) {
     let best = null, bd = 1e9;
-    for (const u of G.units) { if (!u.alive || u.team === m.team) continue; const dec = u.obj === 'decoy' && u.foolK < this.P.fool; if (u.obj && !dec) continue; if (u.isMage && u.st.hidden > 0 && G.mode !== 'camp') continue; const d = hypot(u.x - m.x, u.y - m.y) - (u.isMage || dec ? 120 : 0); if (d < bd) { bd = d; best = u; } }
+    for (const u of G.units) { if (!u.alive || u.team === m.team) continue; const dec = u.obj === 'decoy' && u.foolK < this.P.fool; if (u.obj && !dec) continue; if (u.isMage && u.st.hidden > 0 && G.mode !== 'camp') continue; if (u.st.sunk > 0) continue; const d = hypot(u.x - m.x, u.y - m.y) - (u.isMage || dec ? 120 : 0); if (d < bd) { bd = d; best = u; } }
     return best;
   }
   danger(G, x, y, m) {
@@ -43,7 +43,7 @@ class Bot {
       if (s.team === m.team) continue;
       if ((s.t === 'strike' || s.t === 'judgment' || s.t === 'nova') && hypot(x - s.x, y - s.y) < s.r + 26) d += 40;
       else if (s.t === 'pit' && hypot(x - s.x, y - s.y) < s.r + 20) d += 45;
-      else if ((s.t === 'eclipse' || s.t === 'bog') && hypot(x - s.x, y - s.y) < s.r) d += 14;
+      else if (s.t === 'bog' && hypot(x - s.x, y - s.y) < s.r) d += 14;
       else if (s.t === 'thorns' && Math.abs(hypot(x - s.x, y - s.y) - s.r) < 30) d += 20;
       else if ((s.t === 'firenado' || s.t === 'vortex') && hypot(x - s.x, y - s.y) < s.r + 40) d += 24;
       else if ((s.t === 'storm' || s.t === 'cloud') && s.dps !== 0 && hypot(x - s.x, y - s.y) < s.r) d += s.t === 'storm' ? 16 : 6;
@@ -280,11 +280,11 @@ class Bot {
         case 'blink': hi = S.range + 60; dmg = S.dmg + 6; p = m.hp > m.maxHp * 0.3 ? 0.75 : 0.3; break;
         case 'nova': hi = S.range + 40; lo = 0; dmg = S.dmg + 10; p = 0.7; break;
         case 'prism': hi = S.len * 0.8; dmg = S.dmg * (d < 200 ? 2 : 1.3) * (wet ? 1.5 : 1); p = vis ? 0.75 : 0.05; break;
-        case 'mirage': dmg = incoming || m.hp < m.maxHp * 0.6 ? 14 : 5; p = 1; hi = 9999; break;
+        case 'comet': hi = S.dist + 20; lo = 0; dmg = S.dmg + 6 + (incoming ? 8 : 0); p = 0.7; break;
         case 'cage': hi = S.range; lo = 60; dmg = 16 + (held ? 10 : 0); p = 0.55; break;
         case 'sunflower': hi = S.range + 120; lo = 60; dmg = 18 + (m.hp < m.maxHp * 0.6 ? 8 : 0); p = 0.7; break;
         case 'judgment': hi = S.range; lo = 40; dmg = S.dmg; p = held ? 0.95 : 0.55 - fm * 0.25; break;
-        case 'eclipse': hi = S.range + 60; lo = 40; dmg = 28 + (f.holding ? 8 : 0); p = 0.65; break;
+        case 'crescent': hi = S.range + 20; lo = 30; dmg = S.dmgOut + S.dmgBack * 0.7; p = 0.65; break;
         case 'wisps': dmg = d < 260 ? 18 : 8; p = 0.9; hi = 9999; break;
         case 'bog': hi = S.range; lo = 50; dmg = 16 + (m.hp < m.maxHp * 0.7 ? 6 : 0); p = 0.55; break;
         case 'crows': hi = 650; lo = 80; dmg = S.dmg * S.n; p = 0.6; break;

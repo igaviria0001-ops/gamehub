@@ -67,7 +67,7 @@ const Earth = (() => {
     }
     if (S.kind === 'maw') {
       const p = pickTarget(G, m, S.range);
-      add(G, Object.assign(B, { t: 'maw', S, el: 'shadow', x: p.x, y: p.y, tg: p.tg, chase: S.chase, phase: 0, r: S.r * Z, life: S.life * L, cells: [], hitSet: new Set(), bite: S.bite * P, grip: 0 }));
+      add(G, Object.assign(B, { t: 'maw', S, el: 'shadow', x: p.x, y: p.y, tg: p.tg, chase: S.chase, phase: 0, r: S.r * Z, life: 0.55, sink: 0, P, grip: 0 }));
       return;
     }
     if (S.kind === 'mudslide') {
@@ -149,14 +149,25 @@ const Earth = (() => {
         break;
       }
       case 'maw': {
+        const S = s.S;
         if (s.phase === 0) {
-          const tg = s.tg; if (tg && tg.alive && tg.st.hidden <= 0) { const dx = tg.x - s.x, dy = tg.y - s.y, d = hypot(dx, dy), v = s.S.speed * dt; if (d <= v) { s.x = tg.x; s.y = tg.y; } else { s.x += dx / d * v; s.y += dy / d * v; } }
-          // manos de sombra: frenan a quien pise la mancha (esquivar las suelta)
-          s.grip = 0;
-          for (const u of G.units) if (foe(s, u) && !u.obj && hypot(u.x - s.x, u.y - s.y) < s.r * 0.85 + u.r * 0.5 && !dashing(u)) { u.slow(0.12, s.S.slow); s.grip = 1; }
-          s.chase -= dt; if (s.chase <= 0) openMaw(G, s); break;
+          const tg = s.tg; if (tg && tg.alive && tg.st.hidden <= 0) { const dx = tg.x - s.x, dy = tg.y - s.y, d = hypot(dx, dy), v = S.speed * dt; if (d <= v) { s.x = tg.x; s.y = tg.y; } else { s.x += dx / d * v; s.y += dy / d * v; } }
+          // manos de sombra: si alguien se queda encima sin esquivar, lo van agarrando; al completar, la tierra se lo traga
+          let g = null; for (const u of G.units) if (foe(s, u) && !u.obj && hypot(u.x - s.x, u.y - s.y) < s.r * 0.8 + u.r * 0.5 && !dashing(u)) { g = u; break; }
+          if (g) { s.grip += dt; if (s.grip >= S.grab) { swallow(G, s, g); break; } } else s.grip = Math.max(0, s.grip - dt * 2);
+          s.chase -= dt;
+          if (s.chase <= 0) { // se acabó la persecución: muerde donde está
+            const v = G.units.find(u => foe(s, u) && !u.obj && hypot(u.x - s.x, u.y - s.y) < s.r + u.r * 0.4 && !dashing(u));
+            if (v) swallow(G, s, v); else { s.phase = 2; G.fx.push({ type: 'mawMiss', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'mawMiss', x: s.x, y: s.y }); }
+          }
+          break;
         }
-        for (const u of G.units) { if (!foe(s, u) || u.isMage || u.obj || s.hitSet.has(u)) continue; const i = Terrain.idx(T, u.x, u.y); if (i >= 0 && T.pit[i] > 0) { s.hitSet.add(u); hit(G, s, u, u.boss ? 14 : 22, { el: 'shadow', stun: 0.9, big: true }); } }
+        if (s.phase === 1) { // adentro: no se mueve, nadie lo toca; luego lo escupe
+          const v = s.victim; s.sink -= dt;
+          if (v && v.alive) { v.x = s.x; v.y = s.y; v.vx = v.vy = 0; }
+          if (s.sink <= 0) spit(G, s);
+          break;
+        }
         s.life -= dt; if (s.life <= 0) s.dead = true; break;
       }
       case 'mudslide': {
@@ -197,12 +208,18 @@ const Earth = (() => {
     for (const i of s.cells) if (T.wall[i] > 0) { T.wall[i] = 0; T.wallT[i] = 0; T.crys[i] = 0; T.ver++; }
     G.fx.push({ type: 'crystalBurst', x: s.x, y: s.y, r: 90 }); G.events.push({ type: 'cageBurst', x: s.x, y: s.y });
   }
-  function openMaw(G, s) {
-    const T = G.T; s.phase = 1;
-    Terrain.forCircle(T, s.x, s.y, s.r, i => { const b = T.base[i]; if (!Terrain.solid(T, i) && b !== TT.DEEP && b !== TT.CHASM && b !== TT.LAVA && T.wall[i] <= 0) { s.cells.push(i); T.pit[i] = s.life; T.pitO[i] = s.by; T.fire[i] = 0; T.vine[i] = 0; T.mud[i] = 0; } });
-    T.ver++;
-    for (const u of G.units) if (foe(s, u) && u.isMage && hypot(u.x - s.x, u.y - s.y) < s.r + u.r * 0.4 && !dashing(u)) { if (hit(G, s, u, s.bite, { el: 'shadow', hex: 1.5, big: true }) > 0) Combos.add(G, s.by, 'enterrado', u); }
+  function swallow(G, s, v) {
+    const S = s.S; s.x = v.x; s.y = v.y;
+    if (hit(G, s, v, S.bite * s.P, { el: 'shadow', big: true }) > 0) Combos.add(G, s.by, 'enterrado', v);
     G.events.push({ type: 'quake', x: s.x, y: s.y }); G.events.push({ type: 'mawOpen', x: s.x, y: s.y }); G.fx.push({ type: 'mawBite', x: s.x, y: s.y, r: s.r });
+    if (!v.alive || !v.isMage) { if (v.alive) hit(G, s, v, (v.boss ? 10 : 14) * s.P, { el: 'shadow', stun: 0.9 }); s.phase = 2; return; } // a las criaturas solo las muerde
+    s.phase = 1; s.victim = v; s.sink = S.sink; v.st.sunk = S.sink + 0.06; v.vx = v.vy = 0; v.fuse = false;
+  }
+  function spit(G, s) {
+    const S = s.S, v = s.victim; s.phase = 2; s.victim = null;
+    if (!v || !v.alive) return; v.st.sunk = 0;
+    const a = G.rng() * TAU; hit(G, s, v, S.spit * s.P, { el: 'shadow', hex: S.hex, knock: 300, kx: Math.cos(a), ky: Math.sin(a), big: true });
+    G.fx.push({ type: 'mawSpit', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'mawSpit', x: s.x, y: s.y });
   }
 
   /* ---------- lo que cae: fragmentos del Magma ---------- */

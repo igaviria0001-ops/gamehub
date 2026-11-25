@@ -375,7 +375,7 @@ function noise2(x, y) {
 function fbm2(x, y, oct = 4) { let v = 0, a = 0.5, n = 0; for (let k = 0; k < oct; k++) { v += a * noise2(x, y); n += a; x = x * 2.03 + 17.1; y = y * 2.03 + 9.7; a *= 0.5; } return v / n; }
 
 /* ---------- guardado (prefijo propio: no choca con los otros juegos) ---------- */
-const GAME_META = { id: 'sortilegio', name: 'Sortilegio', version: '2.6', storagePrefix: 'srt_', players: 2 };
+const GAME_META = { id: 'sortilegio', name: 'Sortilegio', version: '2.7', storagePrefix: 'srt_', players: 2 };
 const Store = {
   get(k, def) { try { const v = localStorage.getItem(GAME_META.storagePrefix + k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } },
   set(k, v) { try { localStorage.setItem(GAME_META.storagePrefix + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
@@ -1531,15 +1531,15 @@ const FUSIONS = {
 Object.assign(FUSIONS, {
   'fire+light':   { name: 'Supernova', kind: 'nova', cd: 5.0, range: 300, windup: 0.65, r: 150, pull: 200, dmg: 17, burn: 2.0, knock: 400, dazzle: 0.6, tip: 'Lanzas un sol pequeño sobre el rival: lo atrae hacia el centro y estalla quemando, empujando y encandilando; deja un anillo de fuego.' },
   'water+light':  { name: 'Prisma', kind: 'prism', cd: 4.0, n: 3, spread: 0.24, len: 520, w: 14, dmg: 9, dazzle: 0.5, tip: 'Tres rayos de arcoíris; al mojado le pegan más.' },
-  'wind+light':   { name: 'Espejismo', kind: 'mirage', cd: 5.0, n: 2, life: 4.5, hide: 0.9, flash: 0.9, tip: 'Dos reflejos tuyos confunden al rival; al romperse lo encandilan.' },
+  'wind+light':   { name: 'Cometa', kind: 'comet', cd: 4.5, dist: 310, speed: 1150, r: 36, dmg: 15, dazzle: 0.8, knock: 320, burstR: 92, burst: 8, trail: 1.3, tip: 'Sales disparado como un cometa: atraviesas al rival (daño y lo encandila), cortas lo que te lanzan y estallas al llegar. Sirve para atacar o para huir.' },
   'earth+light':  { name: 'Jaula de cristal', kind: 'crystal', cd: 5.0, range: 360, lock: 0.34, hp: 30, life: 3.2, dps: 4.5, burst: 11, tip: 'Un anillo de luz persigue al rival y la jaula brota a su alrededor: adentro la luz quema y al final estalla hacia adentro.' },
   'plant+light':  { name: 'Girasol', kind: 'sunflower', cd: 5.0, range: 200, hp: 34, life: 7, every: 1.25, reach: 380, dmg: 7, heal: 3.5, healR: 95, tip: 'Dispara rayos de sol y cura a quien esté a su lado.' },
   'bolt+light':   { name: 'Juicio', kind: 'judgment', cd: 4.5, range: 520, delay: 0.95, lockAt: 0.28, r: 58, dmg: 26, stun: 0.55, tip: 'Marca al rival y le cae una columna de luz. ¡Hay que salir a tiempo!' },
-  'light+shadow': { name: 'Eclipse', kind: 'eclipse', cd: 5.0, range: 320, r: 128, warn: 0.36, life: 3.2, dps: 6, pull: 170, ring: 10, ringSil: 1.1, burst: 17, hex: 2.2, tip: 'La luna tapa el sol sobre el rival: adentro no puede lanzar hechizos y la oscuridad lo atrae; salir por el anillo de luz quema, y al final estalla el anillo de diamante (deja maleficio).' },
+  'light+shadow': { name: 'Media luna', kind: 'crescent', cd: 4.5, range: 340, W: 46, r: 32, T: 1.2, dmgOut: 12, dazzle: 0.6, dmgBack: 13, hex: 2.0, tip: 'Lanzas una media luna que vuela en curva y vuelve a tus manos: a la ida es de luz (encandila y destapa al escondido) y a la vuelta de sombra (maleficio). Corta los proyectiles que toca.' },
   'fire+shadow':  { name: 'Fuegos fatuos', kind: 'wisps', cd: 4.5, n: 5, life: 6, trig: 230, speed: 470, turn: 5.5, dmg: 8, burn: 1.8, tip: 'Cinco llamas te rodean y se lanzan sobre quien se acerque.' },
   'water+shadow': { name: 'Marea negra', kind: 'bog', cd: 4.5, range: 290, flight: 0.45, r: 118, life: 5, dps: 6.5, slow: 0.68, drain: 0.55, tip: 'Charco oscuro que frena, hace daño y te devuelve vida.' },
   'wind+shadow':  { name: 'Cuervos', kind: 'crows', cd: 4.0, n: 5, speed: 380, turn: 3.4, dmg: 5, life: 3.0, r: 11, dazzle: 0.5, hex: 2, tip: 'Una bandada de cinco cuervos que persigue, ciega y deja maleficio.' },
-  'earth+shadow': { name: 'Fosa', kind: 'maw', cd: 5.0, range: 340, chase: 0.8, speed: 230, slow: 0.5, r: 52, life: 2.4, bite: 12, tip: 'Una sombra se pega a los pies del rival y lo frena con manos oscuras; luego el suelo se lo traga. ¡Esquiva para soltarte!' },
+  'earth+shadow': { name: 'Fosa', kind: 'maw', cd: 5.0, range: 340, chase: 1.1, speed: 265, r: 50, grab: 0.22, sink: 0.85, bite: 9, spit: 11, hex: 1.8, tip: 'Una sombra con manos corre a los pies del rival; si lo agarra, la tierra se lo traga (no se mueve ni lo pueden tocar) y lo escupe con daño y maleficio. ¡Esquiva para soltarte!' },
   'plant+shadow': { name: 'Zarzal', kind: 'thorns', cd: 4.5, r: 118, life: 4.5, dmg: 9, root: 0.6, tip: 'Anillo de espinas a tu alrededor: quien lo cruce queda enredado.' },
   'bolt+shadow':  { name: 'Rayo negro', kind: 'blackbolt', cd: 4.0, range: 330, dmg: 15, hex: 3.2, silence: 0.7, chain: 190, tip: 'Rayo que maldice, salta a otro rival y lo silencia un instante.' },
 });
@@ -1909,10 +1909,10 @@ const HOLD_FULL = 0.6, ABSORB_T = 0.42, ABSORB_USES = 3;
 class Unit {
   constructor(x, y, r, team) {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0; this.r = r; this.team = team; this.alive = true;
-    this.st = { burn: 0, burnO: -1, wet: 0, frozen: 0, root: 0, stun: 0, slow: 0, slowF: 1, chill: 0, blind: 0, hidden: 0, hex: 0, silence: 0 };
+    this.st = { burn: 0, burnO: -1, wet: 0, frozen: 0, root: 0, stun: 0, slow: 0, slowF: 1, chill: 0, blind: 0, hidden: 0, hex: 0, silence: 0, sunk: 0 };
     this.flash = 0; this.knockMul = 1; this.fireRes = 1; this.iframes = 0; this.isMage = false; this.lastHitBy = -1; this.hitT = 0;
   }
-  get busy() { return this.st.frozen > 0 || this.st.stun > 0; }
+  get busy() { return this.st.frozen > 0 || this.st.stun > 0 || this.st.sunk > 0; } // (sunk: se lo tragó la Fosa)
   // daño con sus multiplicadores; src = { by (índice de mago o -1), el, dot, kind }
   hurt(G, dmg, src = {}) {
     if (!this.alive || dmg <= 0) return 0;
@@ -1957,7 +1957,7 @@ class Unit {
     if (s.burn > 0) { s.burn -= dt; this.hurt(G, 3 * dt, { by: s.burnO, el: 'fire', dot: 1 }); }
     if (!this.imm) this.imm = { root: 0, stun: 0, frozen: 0, blind: 0, silence: 0 };
     for (const k of ['root', 'stun', 'frozen', 'blind', 'silence']) { if (this.imm[k] > 0) this.imm[k] -= dt; if (s[k] > 0 && s[k] - dt <= 0) this.imm[k] = k === 'stun' ? 0.6 : k === 'blind' ? 1.6 : k === 'silence' ? 2 : 1.2; }
-    for (const k of ['wet', 'frozen', 'root', 'stun', 'chill', 'blind', 'hidden', 'hex', 'silence']) if (s[k] > 0) s[k] = Math.max(0, s[k] - dt);
+    for (const k of ['wet', 'frozen', 'root', 'stun', 'chill', 'blind', 'hidden', 'hex', 'silence', 'sunk']) if (s[k] > 0) s[k] = Math.max(0, s[k] - dt);
     if (s.slow > 0) { s.slow -= dt; if (s.slow <= 0) { s.slow = 0; s.slowF = 1; } }
     if (this.flash > 0) this.flash -= dt; if (this.iframes > 0) this.iframes -= dt; if (this.hitT > 0) this.hitT -= dt; if (this.kt > 0) this.kt -= dt;
   }
@@ -1998,7 +1998,7 @@ class Mage extends Unit {
   get fullAt() { return (this.impulse > 0 ? 0.3 : HOLD_FULL) * (this.tr.chargeMul || 1); }
   get dashMax() { return 1.2 * (this.tr.dashCd || 1); }
   nearestFoe(G, maxD = 950) { let b = null, bd = maxD; for (const u of G.units) { if (!this.canTarget(u)) continue; const d = hypot(u.x - this.x, u.y - this.y); if (d < bd) { bd = d; b = u; } } return b; }
-  canTarget(u) { return u && u.alive && u.team !== this.team && !(u.st.hidden > 0) && !u.untargetable && u.obj !== 'turret' && u.obj !== 'stone'; }
+  canTarget(u) { return u && u.alive && u.team !== this.team && !(u.st.hidden > 0) && !(u.st.sunk > 0) && !u.untargetable && u.obj !== 'turret' && u.obj !== 'stone'; }
   // APUNTADO (personas): se apunta hacia donde uno mira/camina; quieto no se voltea solo hacia
   // el más cercano si ya hay alguien al frente; cargando, señalar con la palanca a otro lo cambia;
   // en el celular, tocar a un enemigo lo marca (pin) unos segundos
@@ -2027,7 +2027,7 @@ class Mage extends Unit {
     const L = this.lockOn && this.lockOn.alive && this.lockOn.st.hidden <= 0 && (this.holding || this.fuse || this.queue) ? this.lockOn : null;
     const P = !L && this.pin && G.time < this.pin.until && this.canTarget(this.pin.u) ? this.pin.u : null;
     for (const u of G.units) {
-      if (!u.alive || u.team === this.team || u.st.hidden > 0 || u.untargetable) continue;
+      if (!u.alive || u.team === this.team || u.st.hidden > 0 || u.st.sunk > 0 || u.untargetable) continue;
       if ((L && u !== L) || (P && u !== P)) continue;
       const dx = u.x - this.x, dy = u.y - this.y, d = hypot(dx, dy);
       if (d > range * 1.7 + 80 || (G.mist > 0.5 && d > 380)) continue;
@@ -2067,7 +2067,7 @@ class Mage extends Unit {
     // ---- suelo ----
     const ci = Terrain.idx(T, this.x, this.y);
     let spd = 230 * this.C.speed * (this.buff.haste > 0 ? 1.15 : 1), acc = 22, noDash = false;
-    if (ci >= 0) {
+    if (ci >= 0 && !(st.sunk > 0)) {
       const b = T.base[ci];
       if (T.ice[ci] > 0) acc = this.tr.iceWalk ? 22 : 2.4;
       else if ((b === TT.DEEP) && T.ice[ci] <= 0) { spd *= this.tr.waterSpeed ? 1.0 : 0.56; noDash = true; this.soak(G, 1.5); }
@@ -2109,7 +2109,7 @@ class Mage extends Unit {
     if (st.chill > 0 && !this.tr.iceWalk) spd *= 0.6;
     if (st.slow > 0) spd *= st.slowF;
     if (this.dash.t > 0) {
-      this.dash.t -= dt; const ds = 920 * (noDash ? 0.5 : 1);
+      this.dash.t -= dt; const ds = this.dash.spd || 920 * (noDash ? 0.5 : 1); // (spd: el Cometa)
       this.vx = this.dash.dx * ds; this.vy = this.dash.dy * ds;
       if (this.tr.dashFire && G.frame % 4 === 0) Terrain.ignite(G, ci, 1.2, this.idx);
       this.dash.age += dt;
@@ -2119,7 +2119,7 @@ class Mage extends Unit {
         Combos.add(G, this.idx, 'embestida', u);
         if (z) { if (u.st.wet > 0) Combos.add(G, this.idx, 'electrocutado', u); G.fx.push({ type: 'zap', x0: this.x, y0: this.y - 20, x1: u.x, y1: u.y - 20, el: 'bolt' }); }
       }
-      if (this.dash.t <= 0) this.impulse = 0.55;
+      if (this.dash.t <= 0) { this.impulse = 0.55; this.dash.spd = 0; this.dash.comet = 0; }
     } else {
       const k = 1 - Math.exp(-(ml < 0.2 && acc > 10 ? 30 : acc) * dt), kk = this.kt > 0 ? k * 0.25 : k;
       this.vx += (mx * spd - this.vx) * kk; this.vy += (my * spd - this.vy) * kk;
@@ -2245,7 +2245,7 @@ const Combos = {
   },
 };
 const Spells = (() => {
-  const foe = (s, u) => u.alive && (s.team < 0 || u.team !== s.team) && !(u.idx === s.by && s.team < 0 && s.noSelf);
+  const foe = (s, u) => u.alive && (s.team < 0 || u.team !== s.team) && !(u.idx === s.by && s.team < 0 && s.noSelf) && !(u.st && u.st.sunk > 0); // (bajo tierra nadie lo toca)
   const segDist = (px, py, ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1; const t = clamp(((px - ax) * dx + (py - ay) * dy) / l2, 0, 1); return hypot(px - (ax + dx * t), py - (ay + dy * t)); };
   // golpe a una unidad con los efectos del elemento
   function hit(G, s, u, dmg, o = {}) {
@@ -2735,6 +2735,12 @@ const Spells2 = (() => {
     }
   }
   const aimOf = (G, m, range, speed = 0) => m.aim(G, range, speed);
+  // camino de la Media luna (u de 0 a 1): sale hacia adelante abriéndose a un lado y vuelve por el otro, a donde esté quien la lanzó
+  function crescentAt(s, u) {
+    const e = smooth(u), bx = s.ox + ((s.hx != null ? s.hx : s.ox) - s.ox) * e, by = s.oy + ((s.hy != null ? s.hy : s.oy) - s.oy) * e;
+    const F = s.L * Math.sin(Math.PI * u), Lat = s.side * (s.S.W || 64) * Math.sin(TAU * u), ca = Math.cos(s.ang), sa = Math.sin(s.ang);
+    return [bx + ca * F - sa * Lat, by + sa * F + ca * Lat];
+  }
   /* ---------- lanzar ---------- */
   function cast(G, m, S, el, o, B) {
     const P = B.power, Z = B.size, k = S.kind, T = G.T, L = B.gran ? 1.3 : 1;
@@ -2762,14 +2768,14 @@ const Spells2 = (() => {
       const p = Spells.aimPoint(G, m, S.range, S.windup * 0.6);
       add(G, Object.assign(B, { t: 'nova', S, el: 'light', x: p.tx, y: p.ty, x0: m.x, y0: m.y - 30, windup: S.windup, r: S.r * Z }));
       G.events.push({ type: 'sunForm', x: p.tx, y: p.ty });
-    } else if (k === 'mirage') {
-      const n = S.n + (B.gran ? 1 : 0);
-      for (let j = 0; j < n; j++) {
-        const off = (j - (n - 1) / 2) * 1.5 + (n % 2 ? 0 : 0), a = m.face + off, d = new Unit(m.x + Math.cos(a) * 26, m.y + Math.sin(a) * 26, 18, m.team);
-        Object.assign(d, { obj: 'decoy', idx: -1, by: m.idx, hp: 1, maxHp: 1, life: S.life * L, knockMul: 0.6, dir: a, foolK: G.rng(), flashT: S.flash, cid: m.cid, skin: m.skin || 0, face: a, walk: 0, moving: 150, swap: 0.8 + G.rng() });
-        d.update = decoyStep; d.die = decoyDie; G.units.push(d);
-      }
-      m.st.hidden = Math.max(m.st.hidden, S.hide); G.fx.push({ type: 'flashRing', x: m.x, y: m.y, el: 'light', r: 90 }); G.events.push({ type: 'mirage', x: m.x, y: m.y });
+    } else if (k === 'comet') {
+      // Cometa: el mago sale disparado en una estela de luz (un esquive largo con su propia velocidad)
+      const a = aimOf(G, m, S.dist + 120);
+      if (!m.isMage || !m.dash) { add(G, Object.assign(B, { t: 'proj', S: SPELLS.light[0], el: 'light', x: m.x, y: m.y, vx: Math.cos(a.ang) * 640, vy: Math.sin(a.ang) * 640, r: 14, life: 0.8, dmg: 8 * P, big: true })); return; }
+      const dx = Math.cos(a.ang), dy = Math.sin(a.ang), t = S.dist * Z / S.speed;
+      Object.assign(m.dash, { t, dx, dy, spd: S.speed, comet: 1, hit: true, age: 0 }); m.iframes = Math.max(m.iframes, t + 0.05); m.st.root = 0; m.face = a.ang;
+      add(G, Object.assign(B, { t: 'comet', S, el: 'light', x: m.x, y: m.y, x0: m.x, y0: m.y, x1: m.x, y1: m.y, ang: a.ang, life: t + 0.08, phase: 0, P, hitSet: new Set() }));
+      G.fx.push({ type: 'cometGo', x: m.x, y: m.y, ang: a.ang }); G.events.push({ type: 'cometGo', x: m.x, y: m.y, who: m.idx });
     } else if (k === 'cage' || k === 'bog') {
       const p = Spells.aimPoint(G, m, S.range, S.flight * 0.6);
       add(G, Object.assign(B, { t: 'lob', S, kind: k, el: k === 'cage' ? 'light' : 'shadow', x0: m.x, y0: m.y - 20, x: m.x, y: m.y, z: 0, tx: p.tx, ty: p.ty, T: S.flight, tt: 0 }));
@@ -2780,11 +2786,12 @@ const Spells2 = (() => {
     } else if (k === 'judgment') {
       const a = aimOf(G, m, S.range), tg = a.target && !a.target.spot && a.dist < S.range * 1.1 ? a.target : null, d = Math.min(S.range, 280);
       add(G, Object.assign(B, { t: 'judgment', S, el: 'light', x: tg ? tg.x : m.x + Math.cos(a.ang) * d, y: tg ? tg.y : m.y + Math.sin(a.ang) * d, tg, delay: S.delay, r: S.r * Z, dmg: S.dmg * P }));
-    } else if (k === 'eclipse') {
-      // el eclipse cae donde VA a estar el rival (la sombra se cierra en ~0,4 s) y queda encima de él
-      const p = Spells.aimPoint(G, m, S.range, S.warn + 0.15);
-      add(G, Object.assign(B, { t: 'eclipse', S, el: 'shadow', x: p.tx, y: p.ty, r: S.r * Z, warn: S.warn, life: S.life * L, dps: S.dps * P, P, inside: new Set(), rung: new Set() }));
-      G.events.push({ type: 'eclipseCast', x: p.tx, y: p.ty });
+    } else if (k === 'crescent') {
+      // Media luna: vuela en curva hasta un poco más allá de donde va a estar el rival y vuelve a las manos
+      const p = Spells.aimPoint(G, m, S.range, 0.3), ang = Math.atan2(p.ty - m.y, p.tx - m.x), d = clamp(hypot(p.tx - m.x, p.ty - m.y) + 24, 160, S.range * Z);
+      const sides = B.gran ? [1, -1] : [G.rng() < 0.5 ? 1 : -1];
+      for (const side of sides) add(G, Object.assign({}, B, { t: 'crescent', S, el: 'light', x: m.x, y: m.y, ox: m.x, oy: m.y, hx: m.x, hy: m.y, ang, L: d, side, T: S.T * (0.7 + 0.3 * d / S.range), age: 0, r: S.r * Z, P, back: 0, hitO: new Set(), hitB: new Set() }));
+      G.events.push({ type: 'moonThrow', x: m.x, y: m.y });
     } else if (k === 'wisps') {
       const n = S.n + (B.gran ? 2 : 0);
       for (let j = 0; j < n; j++) add(G, Object.assign({}, B, { t: 'wisp', S, el: 'shadow', caster: m, x: m.x, y: m.y, ph: j / n * TAU, life: S.life * L, arm: 0.5 + j * 0.12, dmg: S.dmg * P }));
@@ -2808,7 +2815,7 @@ const Spells2 = (() => {
         if (n2) { hit(G, B, n2, S.dmg * 0.6 * P, { el: 'shadow', hex: S.hex }); G.fx.push({ type: 'zap', x0: tg.x, y0: tg.y - 14, x1: n2.x, y1: n2.y - 14, el: 'shadow' }); } }
     } else Earth.cast(G, m, S, el, o, B);
   }
-  /* ---------- reflejos (Espejismo) y girasol: unidades con vida propia ---------- */
+  /* ---------- reflejos (del antiguo Espejismo; ya no se lanzan) y girasol: unidades con vida propia ---------- */
   function decoyStep(G, dt) {
     if (!this.alive) return; this.life -= dt; this.tickStatus(G, dt); if (this.life <= 0 || this.hp <= 0) { if (this.alive) this.die(G, {}); return; }
     this.swap -= dt; if (this.swap <= 0) { this.swap = 0.7 + G.rng() * 0.9; this.dir += (G.rng() - 0.5) * 2.2; }
@@ -2854,28 +2861,39 @@ const Spells2 = (() => {
         Terrain.forCircle(T, s.x, s.y, s.r * 0.6, i => Terrain.hitWall(G, i, 60));
         G.fx.push({ type: 'pillar', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'thunder', x: s.x, y: s.y, big: true }); break;
       }
-      case 'eclipse': {
-        // 1) la sombra de la luna se cierra (aviso)  2) totalidad: adentro no se lanza nada, la oscuridad atrae y quema
-        // despacio; salir cruzando el anillo de luz quema y deja callado un rato  3) al final, el anillo de diamante estalla
-        const S = s.S, P = s.P || 1;
-        if (s.warn > 0) { s.warn -= dt; if (s.warn <= 0) { G.events.push({ type: 'eclipseOn', x: s.x, y: s.y, r: s.r }); G.fx.push({ type: 'eclipseOn', x: s.x, y: s.y, r: s.r }); } break; }
-        const now = new Set();
-        for (const u of G.units) { if (u.obj || !u.alive) continue; const dx = s.x - u.x, dy = s.y - u.y, d = hypot(dx, dy);
-          if (!foe(s, u)) { if (d < s.r) u.st.hidden = Math.max(u.st.hidden, 0.2); continue; }
-          if (d < s.r) { now.add(u);
-            if (!(u.imm && u.imm.silence > 0) || u.st.silence > 0) u.st.silence = Math.max(u.st.silence, 0.25);
-            if (!u.untargetable) { const f = S.pull * (0.35 + 0.65 * d / s.r) * dt * (u.knockMul || 1); u.vx += dx / (d || 1) * f; u.vy += dy / (d || 1) * f; }
-            hit(G, s, u, s.dps * dt, { el: 'shadow', tick: true }); u.lastSpell = null; }
-          else if (s.inside.has(u) && !s.rung.has(u) && d < s.r + 60) { // cruzó el anillo de luz hacia afuera
-            s.rung.add(u); hit(G, s, u, S.ring * P, { el: 'light', dazzle: 0.6, knock: 160, kx: -dx, ky: -dy, unavoid: true });
-            if (!(u.imm && u.imm.silence > 0)) u.st.silence = Math.max(u.st.silence, S.ringSil); G.fx.push({ type: 'eclipseRing', x: u.x, y: u.y }); G.events.push({ type: 'eclipseRing', x: u.x, y: u.y }); }
-        }
-        for (const u of now) s.inside.add(u);
-        s.life -= dt;
-        if (s.life <= 0) { s.dead = true;
-          for (const u of G.units) { if (u.obj || !u.alive) continue; const d = hypot(u.x - s.x, u.y - s.y); if (d > s.r * 1.08) continue;
-            if (foe(s, u)) hit(G, s, u, S.burst * P, { el: 'light', dazzle: 0.8, hex: S.hex, big: true, knock: 240, kx: u.x - s.x, ky: u.y - s.y }); else if (u.isMage) { u.heal(G, 8 * P); u._healT = 0.4; } }
-          G.fx.push({ type: 'diamond', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'diamond', x: s.x, y: s.y, r: s.r }); }
+      case 'crescent': {
+        // la media luna: ida de luz (encandila, destapa), vuelta de sombra (maleficio); corta proyectiles; vuelve a quien la lanzó
+        const S = s.S, m = G.mages[s.by]; const u = Math.min(1, s.age / s.T); // (s.age lo suma Spells.step)
+        if (m && m.alive) { s.hx = m.x; s.hy = m.y; }
+        const P = crescentAt(s, u); s.x = P[0]; s.y = P[1];
+        const back = u >= 0.5, ca = Math.cos(s.ang), sa = Math.sin(s.ang);
+        if (back && !s.back) { s.back = 1; s.el = 'shadow'; G.fx.push({ type: 'moonFlip', x: s.x, y: s.y }); G.events.push({ type: 'moonFlip', x: s.x, y: s.y }); }
+        for (const v of G.units) { if (!foe(s, v)) continue; const set = back ? s.hitB : s.hitO; if (set.has(v) || hypot(v.x - s.x, v.y - s.y) > s.r + v.r) continue; set.add(v);
+          if (!back) { if (v.st.hidden > 0) v.st.hidden = 0; hit(G, s, v, S.dmgOut * s.P, { el: 'light', dazzle: S.dazzle, knock: 170, kx: ca, ky: sa }); }
+          else hit(G, s, v, S.dmgBack * s.P, { el: 'shadow', hex: S.hex, knock: 170, kx: -ca, ky: -sa });
+          G.fx.push({ type: back ? 'moonHitB' : 'moonHitO', x: v.x, y: v.y }); }
+        for (const p of G.spells) if (p.t === 'proj' && !p.dead && p.team !== s.team && hypot(p.x - s.x, p.y - s.y) < s.r + (p.r || 10)) Spells.endProj(G, p, true);
+        if (u >= 1 || (u > 0.65 && m && m.alive && hypot(m.x - s.x, m.y - s.y) < 24)) { s.dead = true; G.fx.push({ type: 'moonCatch', x: s.x, y: s.y }); G.events.push({ type: 'moonCatch', x: s.x, y: s.y }); }
+        break;
+      }
+      case 'comet': {
+        // el Cometa sigue al mago mientras vuela; al llegar estalla y la estela se queda brillando un momento
+        const S = s.S, m = G.mages[s.by];
+        if (s.phase === 0) {
+          if (m && m.alive) { s.x = m.x; s.y = m.y; }
+          const nx = -Math.sin(s.ang), ny = Math.cos(s.ang);
+          for (const v of G.units) { if (!foe(s, v) || s.hitSet.has(v) || hypot(v.x - s.x, v.y - s.y) > S.r + v.r) continue; s.hitSet.add(v);
+            const sd = Math.sign((v.x - s.x) * nx + (v.y - s.y) * ny) || 1;
+            hit(G, s, v, S.dmg * s.P, { el: 'light', dazzle: S.dazzle, knock: S.knock, kx: nx * sd + Math.cos(s.ang) * 0.35, ky: ny * sd + Math.sin(s.ang) * 0.35, big: true });
+            G.fx.push({ type: 'cometHit', x: v.x, y: v.y }); }
+          for (const p of G.spells) if (p.t === 'proj' && !p.dead && p.team !== s.team && hypot(p.x - s.x, p.y - s.y) < S.r + (p.r || 10)) Spells.endProj(G, p, true);
+          s.x1 = s.x; s.y1 = s.y; s.life -= dt;
+          if (s.life <= 0 || !m || !m.alive || !(m.dash && m.dash.t > 0 && m.dash.comet)) {
+            s.phase = 1; s.life = S.trail;
+            for (const v of G.units) if (foe(s, v) && hypot(v.x - s.x, v.y - s.y) < S.burstR + v.r) hit(G, s, v, S.burst * s.P, { el: 'light', dazzle: 0.4, knock: 260, kx: v.x - s.x, ky: v.y - s.y });
+            G.fx.push({ type: 'cometBurst', x: s.x, y: s.y, r: S.burstR, ang: s.ang }); G.events.push({ type: 'cometBurst', x: s.x, y: s.y });
+          }
+        } else { s.life -= dt; if (s.life <= 0) s.dead = true; }
         break;
       }
       case 'wisp': {
@@ -2924,7 +2942,7 @@ const Spells2 = (() => {
       G.fx.push({ type: 'splat', x: s.tx, y: s.ty, r: S.r * s.size, el: 'shadow' });
     } else Earth.land(G, s);
   }
-  return { cast, step, land, trace };
+  return { cast, step, land, trace, crescentAt };
 })();
 
 /* ===== 05c-earth.js ===== */
@@ -2997,7 +3015,7 @@ const Earth = (() => {
     }
     if (S.kind === 'maw') {
       const p = pickTarget(G, m, S.range);
-      add(G, Object.assign(B, { t: 'maw', S, el: 'shadow', x: p.x, y: p.y, tg: p.tg, chase: S.chase, phase: 0, r: S.r * Z, life: S.life * L, cells: [], hitSet: new Set(), bite: S.bite * P, grip: 0 }));
+      add(G, Object.assign(B, { t: 'maw', S, el: 'shadow', x: p.x, y: p.y, tg: p.tg, chase: S.chase, phase: 0, r: S.r * Z, life: 0.55, sink: 0, P, grip: 0 }));
       return;
     }
     if (S.kind === 'mudslide') {
@@ -3079,14 +3097,25 @@ const Earth = (() => {
         break;
       }
       case 'maw': {
+        const S = s.S;
         if (s.phase === 0) {
-          const tg = s.tg; if (tg && tg.alive && tg.st.hidden <= 0) { const dx = tg.x - s.x, dy = tg.y - s.y, d = hypot(dx, dy), v = s.S.speed * dt; if (d <= v) { s.x = tg.x; s.y = tg.y; } else { s.x += dx / d * v; s.y += dy / d * v; } }
-          // manos de sombra: frenan a quien pise la mancha (esquivar las suelta)
-          s.grip = 0;
-          for (const u of G.units) if (foe(s, u) && !u.obj && hypot(u.x - s.x, u.y - s.y) < s.r * 0.85 + u.r * 0.5 && !dashing(u)) { u.slow(0.12, s.S.slow); s.grip = 1; }
-          s.chase -= dt; if (s.chase <= 0) openMaw(G, s); break;
+          const tg = s.tg; if (tg && tg.alive && tg.st.hidden <= 0) { const dx = tg.x - s.x, dy = tg.y - s.y, d = hypot(dx, dy), v = S.speed * dt; if (d <= v) { s.x = tg.x; s.y = tg.y; } else { s.x += dx / d * v; s.y += dy / d * v; } }
+          // manos de sombra: si alguien se queda encima sin esquivar, lo van agarrando; al completar, la tierra se lo traga
+          let g = null; for (const u of G.units) if (foe(s, u) && !u.obj && hypot(u.x - s.x, u.y - s.y) < s.r * 0.8 + u.r * 0.5 && !dashing(u)) { g = u; break; }
+          if (g) { s.grip += dt; if (s.grip >= S.grab) { swallow(G, s, g); break; } } else s.grip = Math.max(0, s.grip - dt * 2);
+          s.chase -= dt;
+          if (s.chase <= 0) { // se acabó la persecución: muerde donde está
+            const v = G.units.find(u => foe(s, u) && !u.obj && hypot(u.x - s.x, u.y - s.y) < s.r + u.r * 0.4 && !dashing(u));
+            if (v) swallow(G, s, v); else { s.phase = 2; G.fx.push({ type: 'mawMiss', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'mawMiss', x: s.x, y: s.y }); }
+          }
+          break;
         }
-        for (const u of G.units) { if (!foe(s, u) || u.isMage || u.obj || s.hitSet.has(u)) continue; const i = Terrain.idx(T, u.x, u.y); if (i >= 0 && T.pit[i] > 0) { s.hitSet.add(u); hit(G, s, u, u.boss ? 14 : 22, { el: 'shadow', stun: 0.9, big: true }); } }
+        if (s.phase === 1) { // adentro: no se mueve, nadie lo toca; luego lo escupe
+          const v = s.victim; s.sink -= dt;
+          if (v && v.alive) { v.x = s.x; v.y = s.y; v.vx = v.vy = 0; }
+          if (s.sink <= 0) spit(G, s);
+          break;
+        }
         s.life -= dt; if (s.life <= 0) s.dead = true; break;
       }
       case 'mudslide': {
@@ -3127,12 +3156,18 @@ const Earth = (() => {
     for (const i of s.cells) if (T.wall[i] > 0) { T.wall[i] = 0; T.wallT[i] = 0; T.crys[i] = 0; T.ver++; }
     G.fx.push({ type: 'crystalBurst', x: s.x, y: s.y, r: 90 }); G.events.push({ type: 'cageBurst', x: s.x, y: s.y });
   }
-  function openMaw(G, s) {
-    const T = G.T; s.phase = 1;
-    Terrain.forCircle(T, s.x, s.y, s.r, i => { const b = T.base[i]; if (!Terrain.solid(T, i) && b !== TT.DEEP && b !== TT.CHASM && b !== TT.LAVA && T.wall[i] <= 0) { s.cells.push(i); T.pit[i] = s.life; T.pitO[i] = s.by; T.fire[i] = 0; T.vine[i] = 0; T.mud[i] = 0; } });
-    T.ver++;
-    for (const u of G.units) if (foe(s, u) && u.isMage && hypot(u.x - s.x, u.y - s.y) < s.r + u.r * 0.4 && !dashing(u)) { if (hit(G, s, u, s.bite, { el: 'shadow', hex: 1.5, big: true }) > 0) Combos.add(G, s.by, 'enterrado', u); }
+  function swallow(G, s, v) {
+    const S = s.S; s.x = v.x; s.y = v.y;
+    if (hit(G, s, v, S.bite * s.P, { el: 'shadow', big: true }) > 0) Combos.add(G, s.by, 'enterrado', v);
     G.events.push({ type: 'quake', x: s.x, y: s.y }); G.events.push({ type: 'mawOpen', x: s.x, y: s.y }); G.fx.push({ type: 'mawBite', x: s.x, y: s.y, r: s.r });
+    if (!v.alive || !v.isMage) { if (v.alive) hit(G, s, v, (v.boss ? 10 : 14) * s.P, { el: 'shadow', stun: 0.9 }); s.phase = 2; return; } // a las criaturas solo las muerde
+    s.phase = 1; s.victim = v; s.sink = S.sink; v.st.sunk = S.sink + 0.06; v.vx = v.vy = 0; v.fuse = false;
+  }
+  function spit(G, s) {
+    const S = s.S, v = s.victim; s.phase = 2; s.victim = null;
+    if (!v || !v.alive) return; v.st.sunk = 0;
+    const a = G.rng() * TAU; hit(G, s, v, S.spit * s.P, { el: 'shadow', hex: S.hex, knock: 300, kx: Math.cos(a), ky: Math.sin(a), big: true });
+    G.fx.push({ type: 'mawSpit', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'mawSpit', x: s.x, y: s.y });
   }
 
   /* ---------- lo que cae: fragmentos del Magma ---------- */
@@ -3180,7 +3215,7 @@ class Bot {
   // rival más útil: el mago (o criatura) más cercano
   target(G, m) {
     let best = null, bd = 1e9;
-    for (const u of G.units) { if (!u.alive || u.team === m.team) continue; const dec = u.obj === 'decoy' && u.foolK < this.P.fool; if (u.obj && !dec) continue; if (u.isMage && u.st.hidden > 0 && G.mode !== 'camp') continue; const d = hypot(u.x - m.x, u.y - m.y) - (u.isMage || dec ? 120 : 0); if (d < bd) { bd = d; best = u; } }
+    for (const u of G.units) { if (!u.alive || u.team === m.team) continue; const dec = u.obj === 'decoy' && u.foolK < this.P.fool; if (u.obj && !dec) continue; if (u.isMage && u.st.hidden > 0 && G.mode !== 'camp') continue; if (u.st.sunk > 0) continue; const d = hypot(u.x - m.x, u.y - m.y) - (u.isMage || dec ? 120 : 0); if (d < bd) { bd = d; best = u; } }
     return best;
   }
   danger(G, x, y, m) {
@@ -3199,7 +3234,7 @@ class Bot {
       if (s.team === m.team) continue;
       if ((s.t === 'strike' || s.t === 'judgment' || s.t === 'nova') && hypot(x - s.x, y - s.y) < s.r + 26) d += 40;
       else if (s.t === 'pit' && hypot(x - s.x, y - s.y) < s.r + 20) d += 45;
-      else if ((s.t === 'eclipse' || s.t === 'bog') && hypot(x - s.x, y - s.y) < s.r) d += 14;
+      else if (s.t === 'bog' && hypot(x - s.x, y - s.y) < s.r) d += 14;
       else if (s.t === 'thorns' && Math.abs(hypot(x - s.x, y - s.y) - s.r) < 30) d += 20;
       else if ((s.t === 'firenado' || s.t === 'vortex') && hypot(x - s.x, y - s.y) < s.r + 40) d += 24;
       else if ((s.t === 'storm' || s.t === 'cloud') && s.dps !== 0 && hypot(x - s.x, y - s.y) < s.r) d += s.t === 'storm' ? 16 : 6;
@@ -3436,11 +3471,11 @@ class Bot {
         case 'blink': hi = S.range + 60; dmg = S.dmg + 6; p = m.hp > m.maxHp * 0.3 ? 0.75 : 0.3; break;
         case 'nova': hi = S.range + 40; lo = 0; dmg = S.dmg + 10; p = 0.7; break;
         case 'prism': hi = S.len * 0.8; dmg = S.dmg * (d < 200 ? 2 : 1.3) * (wet ? 1.5 : 1); p = vis ? 0.75 : 0.05; break;
-        case 'mirage': dmg = incoming || m.hp < m.maxHp * 0.6 ? 14 : 5; p = 1; hi = 9999; break;
+        case 'comet': hi = S.dist + 20; lo = 0; dmg = S.dmg + 6 + (incoming ? 8 : 0); p = 0.7; break;
         case 'cage': hi = S.range; lo = 60; dmg = 16 + (held ? 10 : 0); p = 0.55; break;
         case 'sunflower': hi = S.range + 120; lo = 60; dmg = 18 + (m.hp < m.maxHp * 0.6 ? 8 : 0); p = 0.7; break;
         case 'judgment': hi = S.range; lo = 40; dmg = S.dmg; p = held ? 0.95 : 0.55 - fm * 0.25; break;
-        case 'eclipse': hi = S.range + 60; lo = 40; dmg = 28 + (f.holding ? 8 : 0); p = 0.65; break;
+        case 'crescent': hi = S.range + 20; lo = 30; dmg = S.dmgOut + S.dmgBack * 0.7; p = 0.65; break;
         case 'wisps': dmg = d < 260 ? 18 : 8; p = 0.9; hi = 9999; break;
         case 'bog': hi = S.range; lo = 50; dmg = 16 + (m.hp < m.maxHp * 0.7 ? 6 : 0); p = 0.55; break;
         case 'crows': hi = 650; lo = 80; dmg = S.dmg * S.n; p = 0.6; break;
@@ -4024,7 +4059,7 @@ const Camp = (() => {
       goal: G => G.objs.filter(o => o.t === 'seal').every(o => o.done),
       label: G => { const n = G.objs.filter(o => o.t === 'seal' && o.done).length; return n < 3 ? `Abran los sellos con la fusión de luz que piden (${n}/3)` : '¡A la salida!'; },
       script(G, dt) { G.cs.wt = (G.cs.wt || 10) - dt; if (G.cs.wt <= 0) { G.cs.wt = 17; const n = G.objs.filter(o => o.t === 'seal' && o.done).length; wave(G, [['centella', 'centella'], ['arpia', 'centella'], ['nimbo', 'centella'], ['nimbo', 'arpia']][n], [[950, 760], [1100, 400]]); } },
-      hint: 'Prisma = agua + luz · Jaula de cristal = tierra + luz · Espejismo = viento + luz.' },
+      hint: 'Prisma = agua + luz · Jaula de cristal = tierra + luz · Cometa = viento + luz.' },
     { id: 'c14', world: 2, name: 'El Cóndor de Oro', place: 'La cumbre del cielo', kind: 'Jefe', theme: 'cielo', W: 1700, H: 1050, par: 210, boss: 'condor',
       text: 'El guardián del cielo fue cegado por la sombra. En el aire casi no le duele nada: encandílenlo con LUZ (tres golpes) para que caiga, o esperen a que aterrice tras su picada.',
       spawns: [[300, 480], [300, 580]], sources: [S(260, 300, 'light'), S(1440, 760, 'light'), S(850, 170, 'shadow'), S(850, 880, 'wind'), S(1440, 300, 'bolt'), S(260, 760, 'earth')],
@@ -5690,7 +5725,13 @@ const ArtMage = (() => {
     else if (view === 'side') { const near = fx > 0 ? 1 : 0; drawArm(near, false); drawOrb(near); }
     return { view, fx, B, moving };
   }
+  // tragado por la Fosa: se hunde en el suelo (se recorta a ras de tierra) y al final asoma
   function draw(x, G, m) {
+    const sk = m.st && m.st.sunk > 0 ? m.st.sunk : 0; if (!sk) return draw0(x, G, m);
+    const T0 = (FUSIONS['earth+shadow'].sink || 0.85) + 0.06, D = clamp(Math.min((T0 - sk) / 0.16, sk / 0.1), 0, 1), dep = D * 78;
+    x.save(); x.beginPath(); x.rect(m.x - 140, m.y - 300, 280, 302); x.clip(); x.translate(Math.sin(G.time * 40) * 2 * D, dep); draw0(x, G, m); x.restore();
+  }
+  function draw0(x, G, m) {
     const Lk = look(m.cid, m.skin || 0), t = G.time + m.idx * 1.7;
     const now = performance.now() / 1000, dt = clamp(now - (m._lt || now), 0, 0.05); m._lt = now;
     if (G.state !== 'roundEnd' || G.slow <= 0) aura(m, Lk, dt);
@@ -6544,22 +6585,33 @@ const ArtEarth = (() => {
     for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + s.id, L = R * (0.3 + 0.7 * f) * (0.6 + 0.4 * hash2(k, s.id)); x.beginPath(); x.moveTo(s.x, s.y); x.lineTo(s.x + Math.cos(a + 0.25) * L * 0.5, s.y + Math.sin(a + 0.25) * L * 0.5); x.lineTo(s.x + Math.cos(a) * L, s.y + Math.sin(a) * L); x.stroke(); }
     x.restore();
   }
-  // las fauces abiertas: borde de roca con colmillos y el vacío adentro
+  // las fauces: borde de roca con colmillos y el vacío adentro; mientras se lo traga, los colmillos se van cerrando
   function pit(x, G, s) {
-    const t = G.time, R = s.r, fade = Math.min(1, s.life / 0.4, (s.age - (s.S.chase || 0.8)) * 7 + 0.2);
-    x.save(); x.globalAlpha = Math.max(0, fade);
-    x.fillStyle = '#2c2128'; x.beginPath(); for (let k = 0; k <= 22; k++) { const a = k / 22 * TAU, rr = R * (1.08 + 0.1 * hash2(k % 22, s.id)); k ? x.lineTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr) : x.moveTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr); } x.closePath(); x.fill();
-    const g = x.createRadialGradient(s.x, s.y + R * 0.15, R * 0.05, s.x, s.y, R); g.addColorStop(0, '#000'); g.addColorStop(0.65, '#06020b'); g.addColorStop(1, '#241130');
-    x.fillStyle = g; x.beginPath(); x.arc(s.x, s.y, R * 0.94, 0, TAU); x.fill();
-    // remolino del vacío
+    const t = G.time, R = s.r, S = s.S, sk = S.sink || 0.85, bite = s.phase === 1 ? clamp((sk - s.sink) / sk, 0, 1) : 1, fade = s.phase === 2 ? clamp(s.life / 0.55, 0, 1) : Math.min(1, (sk - s.sink) * 8 + 0.25);
+    const Rm = s.phase === 2 ? R * 0.55 * fade + 4 : R * (1 - 0.3 * bite); // la boca se va cerrando
+    x.save(); x.globalAlpha = Math.max(0, fade); x.translate(s.x, s.y); x.scale(1, 0.62);
+    // borde de roca partida, oscuro y violeta
+    x.fillStyle = '#231a26'; x.beginPath(); for (let k = 0; k <= 22; k++) { const a = k / 22 * TAU, rr = R * (1.12 + 0.12 * hash2(k % 22, s.id)); k ? x.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : x.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } x.closePath(); x.fill();
+    // el vacío
+    const g = x.createRadialGradient(0, R * 0.1, Rm * 0.05, 0, 0, Rm); g.addColorStop(0, '#000'); g.addColorStop(0.6, '#07020d'); g.addColorStop(1, '#3a1150');
+    x.fillStyle = g; x.beginPath(); x.arc(0, 0, Rm, 0, TAU); x.fill();
     x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
-    for (let k = 0; k < 3; k++) { x.strokeStyle = `rgba(150,50,140,${0.2 - k * 0.05})`; x.lineWidth = 3 - k * 0.6; x.beginPath(); for (let j = 0; j <= 18; j++) { const q = j / 18, a = -t * 2.2 + k * 2.1 + q * 4, rr = R * 0.85 * (1 - q * 0.9); j ? x.lineTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr) : x.moveTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr); } x.stroke(); }
+    for (let k = 0; k < 3; k++) { x.strokeStyle = `rgba(170,60,170,${0.26 - k * 0.06})`; x.lineWidth = 3 - k * 0.6; x.beginPath(); for (let j = 0; j <= 18; j++) { const q = j / 18, a = -t * 2.6 + k * 2.1 + q * 4, rr = Rm * 0.9 * (1 - q * 0.9); j ? x.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : x.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } x.stroke(); }
+    // labio de la boca: brilla magenta y late
+    const pl = 0.6 + 0.4 * Math.sin(t * 9); x.strokeStyle = `rgba(235,80,210,${0.75 * pl})`; x.lineWidth = 3.5; x.beginPath(); x.arc(0, 0, Rm, 0, TAU); x.stroke();
     x.globalCompositeOperation = 'source-over';
-    // colmillos de roca hacia adentro
+    // colmillos cortos de roca alrededor de la boca, apuntando adentro
     const N = LOWFX ? 9 : 14;
-    for (let k = 0; k < N; k++) { const a = k / N * TAU + s.id * 0.3, ca = Math.cos(a), sa = Math.sin(a), b = R * 0.98, L = R * (0.22 + 0.14 * hash2(k, s.id)), w = 0.16; x.fillStyle = k % 2 ? '#5a4a52' : '#776670'; x.beginPath(); x.moveTo(s.x + Math.cos(a - w) * b, s.y + Math.sin(a - w) * b); x.lineTo(s.x + ca * (b - L), s.y + sa * (b - L)); x.lineTo(s.x + Math.cos(a + w) * b, s.y + Math.sin(a + w) * b); x.closePath(); x.fill(); }
-    x.globalCompositeOperation = 'lighter'; for (let k = 0; k < 6; k++) { const p = (t * 0.8 + k / 6) % 1; x.fillStyle = `rgba(214,84,180,${(1 - p) * 0.6})`; x.beginPath(); x.arc(s.x + Math.sin(k * 2.3 + t) * R * 0.5, s.y - p * 60, 2.4 * (1 - p) + 0.7, 0, TAU); x.fill(); }
+    for (let k = 0; k < N; k++) { const a = k / N * TAU + s.id * 0.3, ca = Math.cos(a), sa = Math.sin(a), b = Rm * 1.04, L = R * (0.2 + 0.14 * hash2(k, s.id)), w = 0.17; x.fillStyle = k % 2 ? '#4e3f52' : '#6c5c70'; x.beginPath(); x.moveTo(Math.cos(a - w) * b, Math.sin(a - w) * b); x.lineTo(ca * (b - L), sa * (b - L)); x.lineTo(Math.cos(a + w) * b, Math.sin(a + w) * b); x.closePath(); x.fill(); }
     x.restore();
+    // manos de sombra que salen del borde y lo sujetan (mientras está adentro)
+    if (s.phase === 1) { x.save(); x.lineCap = 'round'; const n = LOWFX ? 3 : 5;
+      for (let k = 0; k < n; k++) { const a = k / n * TAU + s.id + Math.sin(t * 3 + k) * 0.2, bx = s.x + Math.cos(a) * Rm, by = s.y + Math.sin(a) * Rm * 0.62, h = 30 + 16 * Math.sin(t * 5 + k * 1.7), tx = s.x + Math.cos(a) * Rm * 0.25, ty = s.y - h;
+        x.strokeStyle = 'rgba(12,4,18,0.92)'; x.lineWidth = 7; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(bx + (tx - bx) * 0.2, ty + 6, tx, ty + 12); x.stroke();
+        x.strokeStyle = 'rgba(230,90,210,0.7)'; x.lineWidth = 1.4; x.stroke();
+        x.fillStyle = 'rgba(12,4,18,0.92)'; x.beginPath(); x.arc(tx, ty + 12, 5, 0, TAU); x.fill(); }
+      x.restore(); }
+    x.save(); x.globalCompositeOperation = 'lighter'; for (let k = 0; k < 6; k++) { const p = (t * 0.8 + k / 6) % 1; x.fillStyle = `rgba(214,84,180,${(1 - p) * 0.6 * fade})`; x.beginPath(); x.arc(s.x + Math.sin(k * 2.3 + t) * R * 0.5, s.y - p * 60, 2.4 * (1 - p) + 0.7, 0, TAU); x.fill(); } x.restore();
   }
   // raíces: van reventando del suelo por donde pasa la que corre por debajo
   function roots(x, G, s) {
@@ -6780,84 +6832,78 @@ const ArtEarth = (() => {
 /* ===== 10c4-art-epic.js ===== */
 /* =========================================================================
    FUSIONES ÉPICAS — el dibujo de los poderes rehechos «en grande» (como la
-   tormenta de arena): primero el Eclipse de Chía.
-   · Eclipse: la luna se desliza sobre el sol encima del rival y su sombra se
-     cierra en el suelo; en la totalidad el sol negro arde con su corona, el
-     suelo se vuelve noche con estrellas, bandas de sombra corren hacia el
-     centro y un anillo de luz con runas encierra la zona. Al final, el anillo
-     de diamante: un destello en el borde del sol y una explosión de luz.
+   tormenta de arena).
+   · Media luna (luz + sombra): una luna creciente que gira, sale de luz y
+     vuelve de sombra, con estela de lunas fantasma y polvo de estrellas.
+   · Cometa (viento + luz): el mago cruza como una estrella fugaz.
    Con calidad ligera dibuja menos piezas.
    ========================================================================= */
 const ArtEpic = (() => {
   const star4 = (...a) => ArtSpells2.star4(...a), glow = (...a) => ArtSpells.glow(...a);
   const SKY = 175; // altura del sol negro sobre el suelo
-  /* ---------- Eclipse ---------- */
-  function eclipseUnder(x, G, s) {
-    const t = G.time, R = s.r;
-    if (s.warn > 0) { // la sombra de la luna llega y se cierra
-      const f = 1 - s.warn / (s.S.warn || 0.42), off = (1 - f) * R * 0.9, rr = R * (1.5 - 0.5 * f);
-      x.save(); x.globalAlpha = 0.25 + f * 0.55;
-      const g = x.createRadialGradient(s.x - off, s.y - off * 0.3, rr * 0.1, s.x - off, s.y - off * 0.3, rr); g.addColorStop(0, 'rgba(8,2,20,0.85)'); g.addColorStop(0.75, 'rgba(18,6,34,0.55)'); g.addColorStop(1, 'rgba(30,8,50,0)');
-      x.fillStyle = g; x.beginPath(); x.ellipse(s.x - off, s.y - off * 0.3, rr, rr * 0.55, 0, 0, TAU); x.fill();
-      x.globalAlpha = 1; x.globalCompositeOperation = 'lighter'; x.strokeStyle = `rgba(255,214,130,${0.35 + f * 0.5})`; x.lineWidth = 1.5 + f * 2; x.setLineDash([6, 8]); x.lineDashOffset = t * 40;
-      x.beginPath(); x.ellipse(s.x, s.y, rr, rr * 0.55, 0, 0, TAU); x.stroke(); x.setLineDash([]); x.restore(); return;
+  /* ---------- Media luna ---------- */
+  // luna creciente (cóncava hacia +x) centrada en 0,0
+  function crescentPath(x, R) {
+    const d = R * 0.62, r = R * 0.9, xi = (R * R - r * r + d * d) / (2 * d), yi = Math.sqrt(Math.max(0, R * R - xi * xi)), to = Math.atan2(yi, xi), ti = Math.atan2(yi, xi - d);
+    x.beginPath(); x.arc(0, 0, R, to, TAU - to, false); x.arc(d, 0, r, -ti, ti, true); x.closePath();
+  }
+  function moon(x, X, Y, R, rot, dark, a) {
+    if (a <= 0.01) return;
+    x.save(); x.translate(X, Y); x.rotate(rot);
+    if (!dark) {
+      x.globalCompositeOperation = 'lighter'; glow(x, -R * 0.3, 0, R * 2.1, `rgba(170,205,255,${0.26 * a})`);
+      x.globalCompositeOperation = 'source-over'; crescentPath(x, R); x.strokeStyle = `rgba(40,58,110,${0.55 * a})`; x.lineWidth = 3.5; x.stroke();
+      const g = x.createLinearGradient(-R, 0, R * 0.3, 0); g.addColorStop(0, `rgba(255,253,240,${a})`); g.addColorStop(0.5, `rgba(200,216,255,${a})`); g.addColorStop(1, `rgba(255,214,130,${a})`); x.fillStyle = g; x.fill();
+      x.globalCompositeOperation = 'lighter'; x.strokeStyle = `rgba(255,244,210,${0.7 * a})`; x.lineWidth = 1.4; x.stroke();
+    } else {
+      x.globalCompositeOperation = 'lighter'; glow(x, -R * 0.3, 0, R * 2.3, `rgba(200,50,220,${0.36 * a})`);
+      x.globalCompositeOperation = 'source-over'; crescentPath(x, R); const g = x.createLinearGradient(-R, 0, R * 0.3, 0); g.addColorStop(0, `rgba(10,2,18,${a})`); g.addColorStop(1, `rgba(52,14,74,${a})`); x.fillStyle = g; x.fill();
+      x.globalCompositeOperation = 'lighter'; x.strokeStyle = `rgba(245,120,235,${0.95 * a})`; x.lineWidth = 2.4; x.stroke();
     }
-    const fade = Math.min(1, s.life / 0.45, (s.age - (s.S.warn || 0)) * 4 + 0.2);
-    x.save(); x.globalAlpha = fade;
-    // noche en el suelo
-    const g = x.createRadialGradient(s.x, s.y, R * 0.1, s.x, s.y, R * 1.05); g.addColorStop(0, 'rgba(4,1,12,0.9)'); g.addColorStop(0.72, 'rgba(14,4,30,0.82)'); g.addColorStop(0.95, 'rgba(36,10,58,0.4)'); g.addColorStop(1, 'rgba(40,10,60,0)');
-    x.fillStyle = g; x.beginPath(); x.ellipse(s.x, s.y, R * 1.05, R * 0.58, 0, 0, TAU); x.fill();
-    // bandas de sombra que corren hacia el centro
-    x.lineWidth = 3;
-    for (let k = 0; k < 4; k++) { const p = ((t * 0.55 + k / 4) % 1), rr = R * (1 - p) * 0.95; x.strokeStyle = `rgba(150,90,220,${0.22 * Math.sin(p * Math.PI)})`; x.beginPath(); x.ellipse(s.x, s.y, rr, rr * 0.55, 0, 0, TAU); x.stroke(); }
-    // estrellas que titilan en la noche del eclipse
-    x.globalCompositeOperation = 'lighter';
-    const n = LOWFX ? 10 : 26;
-    for (let k = 0; k < n; k++) { const a = hash2(k, s.id) * TAU, d = Math.sqrt(hash2(s.id, k)) * R * 0.9, tw = 0.5 + 0.5 * Math.sin(t * (2 + hash2(k, 3) * 4) + k);
-      const px = s.x + Math.cos(a) * d, py = s.y + Math.sin(a) * d * 0.55; if (tw > 0.75 && !LOWFX) star4(x, px, py, 3 + tw * 4, `rgba(255,246,220,${tw * 0.9})`, t + k); else { x.fillStyle = `rgba(230,220,255,${0.3 + tw * 0.6})`; x.fillRect(px - 1, py - 1, 2, 2); } }
-    // el anillo de luz: quema al que lo cruza hacia afuera
-    const pul = 0.7 + 0.3 * Math.sin(t * 6);
-    x.strokeStyle = `rgba(255,176,80,${0.35 * pul})`; x.lineWidth = 12; x.beginPath(); x.ellipse(s.x, s.y, R, R * 0.55, 0, 0, TAU); x.stroke();
-    x.strokeStyle = `rgba(255,232,170,${0.85 * pul})`; x.lineWidth = 2.6; x.beginPath(); x.ellipse(s.x, s.y, R, R * 0.55, 0, 0, TAU); x.stroke();
-    // runas que giran sobre el anillo
-    x.fillStyle = `rgba(255,240,200,${0.8 * pul})`;
-    for (let k = 0; k < 12; k++) { const a = k / 12 * TAU + t * 0.6, px = s.x + Math.cos(a) * R, py = s.y + Math.sin(a) * R * 0.55; x.save(); x.translate(px, py); x.rotate(a + Math.PI / 2); x.fillRect(-1, -6, 2, 12); x.fillRect(-4, -2, 8, 2); x.restore(); }
     x.restore();
   }
-  function corona(x, X, Y, R, t, a, seed) {
-    // brillo de la corona y serpentinas que salen del borde (giran despacio y laten)
-    x.globalCompositeOperation = 'lighter';
-    const cg = x.createRadialGradient(X, Y, R * 0.95, X, Y, R * 3.4); cg.addColorStop(0, `rgba(255,244,214,${0.95 * a})`); cg.addColorStop(0.18, `rgba(255,214,150,${0.55 * a})`); cg.addColorStop(0.5, `rgba(200,140,255,${0.18 * a})`); cg.addColorStop(1, 'rgba(120,60,200,0)');
-    x.fillStyle = cg; x.beginPath(); x.arc(X, Y, R * 3.4, 0, TAU); x.fill();
-    x.lineCap = 'round';
-    for (let k = 0; k < (LOWFX ? 7 : 14); k++) { const a0 = k / (LOWFX ? 7 : 14) * TAU + t * 0.25 + hash2(k, seed) * 0.4, L = R * (1.9 + 1.4 * hash2(seed, k) + 0.35 * Math.sin(t * 2.2 + k * 1.7)), bend = 0.35 * Math.sin(t * 0.8 + k);
-      const x0 = X + Math.cos(a0) * R * 1.02, y0 = Y + Math.sin(a0) * R * 1.02, x1 = X + Math.cos(a0 + bend) * L, y1 = Y + Math.sin(a0 + bend) * L, cx = X + Math.cos(a0 + bend * 0.4) * (R + L) * 0.55, cy = Y + Math.sin(a0 + bend * 0.4) * (R + L) * 0.55;
-      const lg = x.createLinearGradient(x0, y0, x1, y1); lg.addColorStop(0, `rgba(255,246,226,${0.85 * a})`); lg.addColorStop(1, 'rgba(255,200,150,0)');
-      x.strokeStyle = lg; x.lineWidth = 2 + 2.5 * hash2(k, seed + 1); x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(cx, cy, x1, y1); x.stroke(); }
-    // protuberancias rosadas pegadas al borde
-    for (let k = 0; k < 3; k++) { const a0 = hash2(seed, k + 9) * TAU + t * 0.1; x.strokeStyle = `rgba(255,110,170,${0.7 * a})`; x.lineWidth = 2.2; x.beginPath(); x.arc(X + Math.cos(a0) * R * 1.05, Y + Math.sin(a0) * R * 1.05, R * 0.22, a0 + Math.PI * 0.9, a0 + Math.PI * 2.1); x.stroke(); }
-    // perlas de Baily: puntitos de luz que titilan en el borde
-    for (let k = 0; k < 8; k++) { const a0 = k / 8 * TAU + seed, tw = Math.sin(t * 7 + k * 2.3); if (tw > 0.4) star4(x, X + Math.cos(a0) * R, Y + Math.sin(a0) * R, 2 + tw * 5, `rgba(255,255,255,${tw * a})`, t * 3 + k); }
-    x.globalCompositeOperation = 'source-over';
+  const MZ = 34; // altura a la que vuela la media luna
+  function crescentUnder(x, G, s) {
+    const u = Math.min(1, s.age / s.T), k = clamp((u - 0.44) / 0.12, 0, 1), R = 27 * (s.r / 32);
+    x.save(); x.fillStyle = 'rgba(6,2,12,0.32)'; x.beginPath(); x.ellipse(s.x, s.y + 2, R * 1.1, R * 0.4, 0, 0, TAU); x.fill();
+    x.globalCompositeOperation = 'lighter'; x.fillStyle = k < 0.5 ? 'rgba(190,215,255,0.16)' : 'rgba(200,70,220,0.12)'; x.beginPath(); x.ellipse(s.x, s.y, R * 2.4, R * 1.0, 0, 0, TAU); x.fill();
+    x.restore();
   }
-  function eclipseOver(x, G, s) {
-    const t = G.time, R = 34 * (s.r / 128), X = s.x, Y = s.y - SKY;
-    x.save();
-    if (s.warn > 0) { // el sol, y la luna que se le pone encima
-      const f = 1 - s.warn / (s.S.warn || 0.42);
-      x.globalCompositeOperation = 'lighter'; glow(x, X, Y, R * 3, `rgba(255,236,170,${0.5 + 0.3 * (1 - f)})`); x.fillStyle = '#fff6d8'; x.beginPath(); x.arc(X, Y, R, 0, TAU); x.fill();
-      x.globalCompositeOperation = 'source-over'; x.fillStyle = '#05010c'; x.beginPath(); x.arc(X - (1 - f) * R * 2.1, Y - (1 - f) * R * 0.5, R * 1.02, 0, TAU); x.fill();
-      x.restore(); return;
+  function crescentOver(x, G, s) {
+    const u = Math.min(1, s.age / s.T), k = clamp((u - 0.44) / 0.12, 0, 1), R = 27 * (s.r / 32), rot = s.age * 15 * (s.side || 1), P0 = Spells2.crescentAt(s, u);
+    // estela: lunas fantasma de donde acaba de pasar
+    for (let j = LOWFX ? 3 : 6; j >= 1; j--) { const uj = u - j * 0.022; if (uj <= 0) continue; const Pj = Spells2.crescentAt(s, uj), kj = clamp((uj - 0.44) / 0.12, 0, 1);
+      moon(x, s.x + Pj[0] - P0[0], s.y + Pj[1] - P0[1] - MZ, R * (1 - j * 0.05), rot - j * 0.34 * (s.side || 1), kj > 0.5, (kj > 0.5 ? 0.42 : 0.26) * (1 - j / 7)); }
+    // al dar la vuelta se voltea: de luz a sombra (con un destello)
+    if (k > 0 && k < 1) { x.save(); x.globalCompositeOperation = 'lighter'; star4(x, s.x, s.y - MZ, R * (1 + 1.4 * Math.sin(k * Math.PI)), `rgba(255,240,255,${0.9 * Math.sin(k * Math.PI)})`, rot); x.restore(); }
+    moon(x, s.x, s.y - MZ, R, rot, false, 1 - k); moon(x, s.x, s.y - MZ, R, rot, true, k);
+    if (!LOWFX && Math.random() < 0.85) { const dark = k > 0.5; FX.P({ x: s.x + vr(-12, 12), y: s.y + vr(-6, 6), z: MZ + vr(-10, 10), vx: vr(-30, 30), vy: vr(-20, 20), vz: dark ? vr(20, 60) : vr(-40, 10), g: dark ? -30 : 90, drag: 1, life: vr(0.4, 0.8), size: vr(1.5, 3.2), color: dark ? (Math.random() < 0.5 ? '#c84ad0' : '#5a1c86') : (Math.random() < 0.5 ? '#ffffff' : '#ffe6a0'), kind: 'ember', add: !dark }); }
+  }
+  /* ---------- Cometa ---------- */
+  const CZ = 26;
+  function cometUnder(x, G, s) {
+    const x1 = s.phase ? s.x1 : s.x, y1 = s.phase ? s.y1 : s.y, fade = s.phase ? clamp(s.life / (s.S.trail || 1.3), 0, 1) : 1;
+    x.save(); x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
+    const g = x.createLinearGradient(s.x0, s.y0, x1, y1); g.addColorStop(0, 'rgba(180,210,255,0)'); g.addColorStop(1, `rgba(255,244,210,${0.28 * fade})`);
+    x.strokeStyle = g; x.lineWidth = 22; x.beginPath(); x.moveTo(s.x0, s.y0); x.lineTo(x1, y1); x.stroke(); x.restore();
+  }
+  function cometOver(x, G, s) {
+    const t = G.time, x0 = s.x0, y0 = s.y0 - CZ, x1 = s.phase ? s.x1 : s.x, y1 = (s.phase ? s.y1 : s.y) - CZ, L = hypot(x1 - x0, y1 - y0);
+    const fade = s.phase ? clamp(s.life / (s.S.trail || 1.3), 0, 1) : 1, ang = L > 1 ? Math.atan2(y1 - y0, x1 - x0) : s.ang, nx = -Math.sin(ang), ny = Math.cos(ang), W = 25 * (s.phase ? 0.5 + 0.5 * fade : 1);
+    x.save(); x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
+    if (L > 4) {
+      // la estela: un cono de luz que se afina hacia atrás, con el núcleo blanco
+      const g = x.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, 'rgba(150,190,255,0)'); g.addColorStop(0.5, `rgba(190,220,255,${0.3 * fade})`); g.addColorStop(0.85, `rgba(255,226,150,${0.55 * fade})`); g.addColorStop(1, `rgba(255,248,226,${0.85 * fade})`);
+      x.fillStyle = g; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1 + nx * W, y1 + ny * W); x.lineTo(x1 - nx * W, y1 - ny * W); x.closePath(); x.fill();
+      const g2 = x.createLinearGradient(x0, y0, x1, y1); g2.addColorStop(0, 'rgba(255,255,255,0)'); g2.addColorStop(1, `rgba(255,255,255,${fade})`); x.strokeStyle = g2; x.lineWidth = 3; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
+      // cintas de viento que se enroscan alrededor
+      for (const k of [-1, 1]) { x.strokeStyle = `rgba(214,236,255,${0.5 * fade})`; x.lineWidth = 1.6; x.beginPath();
+        for (let j = 0; j <= 18; j++) { const q = j / 18, w = Math.sin(q * 10 - t * 20 + k) * W * 0.9 * q, px = x0 + (x1 - x0) * q + nx * w * k, py = y0 + (y1 - y0) * q + ny * w * k; j ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke(); }
+      // chispas que titilan en la estela
+      const n = LOWFX ? 6 : 16; for (let j = 0; j < n; j++) { const q = hash2(j, s.id), tw = 0.5 + 0.5 * Math.sin(t * 12 + j * 2.1), o = (hash2(s.id, j) - 0.5) * W * 1.8;
+        if (tw > 0.5) star4(x, x0 + (x1 - x0) * q + nx * o, y0 + (y1 - y0) * q + ny * o, 2.5 + tw * 6 * q, `rgba(255,255,236,${tw * fade})`, t * 3 + j); }
     }
-    const fade = Math.min(1, s.life / 0.45, (s.age - (s.S.warn || 0)) * 4 + 0.2);
-    // columna de noche que baja del sol negro
-    x.globalAlpha = fade * 0.45; const vg = x.createLinearGradient(0, Y, 0, s.y); vg.addColorStop(0, 'rgba(14,4,30,0)'); vg.addColorStop(1, 'rgba(14,4,30,0.85)'); x.fillStyle = vg;
-    x.beginPath(); x.moveTo(X - R, Y); x.lineTo(X + R, Y); x.lineTo(X + s.r, s.y); x.lineTo(X - s.r, s.y); x.fill();
-    x.globalAlpha = 1; corona(x, X, Y, R, t, fade, s.id % 97);
-    x.fillStyle = '#04010a'; x.beginPath(); x.arc(X, Y, R, 0, TAU); x.fill();
-    x.strokeStyle = `rgba(255,250,235,${0.9 * fade})`; x.lineWidth = 1.5; x.beginPath(); x.arc(X, Y, R + 0.5, 0, TAU); x.stroke();
-    // a punto de acabar: el anillo de diamante empieza a brillar en el borde
-    if (s.life < 0.5) { const k = 1 - s.life / 0.5, a0 = -0.9; x.globalCompositeOperation = 'lighter'; star4(x, X + Math.cos(a0) * R, Y + Math.sin(a0) * R, 8 + k * 34, `rgba(255,255,255,${0.6 + 0.4 * k})`, t * 2); glow(x, X + Math.cos(a0) * R, Y + Math.sin(a0) * R, 18 + k * 50, `rgba(255,246,220,${0.5 * k})`); }
+    if (!s.phase) { glow(x, x1, y1, 60, 'rgba(255,244,214,0.8)'); star4(x, x1, y1, 30 + 7 * Math.sin(t * 30), 'rgba(255,255,255,0.95)', t * 6); }
     x.restore();
   }
   /* ---------- Flor de vida: un loto gigante sobre agua ---------- */
@@ -7003,27 +7049,35 @@ const ArtEpic = (() => {
   }
   /* ---------- capas ---------- */
   function under(x, G) {
-    for (const s of G.spells) { if (s.t === 'eclipse') eclipseUnder(x, G, s); else if (s.t === 'bloom') lotusUnder(x, G, s); else if (s.t === 'nova') novaUnder(x, G, s); }
+    for (const s of G.spells) { if (s.t === 'crescent') crescentUnder(x, G, s); else if (s.t === 'comet') cometUnder(x, G, s); else if (s.t === 'bloom') lotusUnder(x, G, s); else if (s.t === 'nova') novaUnder(x, G, s); }
     for (const u of G.units) if (u.cid === 'zuhe' && u.alive !== false && (u.isMage || u.obj === 'decoy')) zuheHalo(x, G, u);
   }
-  function over(x, G) { for (const s of G.spells) { if (s.t === 'eclipse') eclipseOver(x, G, s); else if (s.t === 'bloom') lotusOver(x, G, s); else if (s.t === 'nova') novaOver(x, G, s); } }
+  function over(x, G) { for (const s of G.spells) { if (s.t === 'crescent') crescentOver(x, G, s); else if (s.t === 'comet') cometOver(x, G, s); else if (s.t === 'bloom') lotusOver(x, G, s); else if (s.t === 'nova') novaOver(x, G, s); } }
   function lights(G, add) {
     for (const s of G.spells) if (s.t === 'nova') { const P = sunPos(s); add(P.X, P.Y + 40, 100 + P.f * 70, [255, 200, 120], 0.35 + P.f * 0.3, 0.18); }
     for (const s of G.spells) if (s.t === 'bloom') add(s.x, s.y - 20, s.r * 1.4, [160, 255, 190], 0.55, 0.18);
-    for (const s of G.spells) if (s.t === 'eclipse') {
-      if (s.warn > 0) add(s.x, s.y - SKY, 150, [255, 236, 170], 0.7, 0.3);
-      else { add(s.x, s.y - SKY, 130, [255, 226, 190], 0.6, 0.25); add(s.x, s.y, s.r * 1.3, [255, 190, 120], 0.22, 0.12); }
+    for (const s of G.spells) {
+      if (s.t === 'crescent') { const k = Math.min(1, s.age / s.T) > 0.5; add(s.x, s.y - MZ, k ? 90 : 130, k ? [200, 80, 220] : [210, 226, 255], k ? 0.35 : 0.7, 0.25); }
+      else if (s.t === 'comet') { if (!s.phase) add(s.x, s.y - 20, 160, [255, 242, 210], 0.85, 0.3); else add((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, 140, [200, 220, 255], 0.35 * clamp(s.life, 0, 1), 0.15); }
     }
   }
   /* ---------- destellos ---------- */
   function fx(G, f) {
     const P = FX.P, S = FX.S, burst = FX.burst;
     switch (f.type) {
-      case 'eclipseOn': // se cierra la totalidad: onda oscura hacia adentro y chispazo en el sol
-        S({ type: 'ring', x: f.x, y: f.y, r0: f.r * 1.7, r1: f.r, el: 'shadow', life: 0.3, w: 14 }); S({ type: 'star4', x: f.x, y: f.y - SKY, r: 60, life: 0.3 });
-        for (let k = 0; k < (LOWFX ? 10 : 24); k++) { const a = Math.random() * TAU; P({ x: f.x + Math.cos(a) * f.r, y: f.y + Math.sin(a) * f.r * 0.55, z: vr(4, 30), vx: -Math.cos(a) * vr(80, 180), vy: -Math.sin(a) * vr(40, 100), vz: vr(10, 60), g: 0, drag: 1.5, life: vr(0.4, 0.8), size: vr(2, 4), color: Math.random() < 0.5 ? '#c49aff' : '#ffe2a8', kind: 'dot' }); }
+      case 'moonFlip': // la luna se voltea: de luz a sombra
+        S({ type: 'star4', x: f.x, y: f.y - MZ, r: 54, life: 0.3 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: 70, el: 'shadow', life: 0.35, w: 6 });
+        burst(f.x, f.y - MZ, 'light', LOWFX ? 5 : 10, 200); burst(f.x, f.y - MZ, 'shadow', LOWFX ? 5 : 10, 200); return true;
+      case 'moonHitO': S({ type: 'star4', x: f.x, y: f.y - 26, r: 44, life: 0.28 }); S({ type: 'flash', x: f.x, y: f.y, r: 70, el: 'light', life: 0.2 }); burst(f.x, f.y - 20, 'light', LOWFX ? 8 : 18, 280, { kind: 'ember' }); return true;
+      case 'moonHitB': S({ type: 'ring', x: f.x, y: f.y, r0: 60, r1: 8, el: 'shadow', life: 0.3, w: 8 }); S({ type: 'flashRing', x: f.x, y: f.y - 20, el: 'shadow', r: 70 }); burst(f.x, f.y - 20, 'shadow', LOWFX ? 8 : 18, 240); return true;
+      case 'moonCatch': S({ type: 'star4', x: f.x, y: f.y - 30, r: 28, life: 0.25 }); burst(f.x, f.y - 26, 'light', LOWFX ? 4 : 8, 140); return true;
+      case 'cometGo': S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: 90, el: 'wind', life: 0.35, w: 8 }); S({ type: 'star4', x: f.x, y: f.y - CZ, r: 46, life: 0.25 }); burst(f.x, f.y - 20, 'light', LOWFX ? 6 : 14, 240, { kind: 'ember' }); return true;
+      case 'cometHit': S({ type: 'star4', x: f.x, y: f.y - 24, r: 52, life: 0.3 }); S({ type: 'flash', x: f.x, y: f.y, r: 80, el: 'light', life: 0.2 }); burst(f.x, f.y - 20, 'light', LOWFX ? 10 : 22, 340, { kind: 'ember' }); return true;
+      case 'cometBurst': // al llegar: estallido de luz y una ráfaga que barre el polvo
+        S({ type: 'ring', x: f.x, y: f.y, r0: 16, r1: f.r * 1.5, el: 'light', life: 0.4, w: 12, gold: true }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: f.r * 2, el: 'wind', life: 0.5, w: 5, delay: 0.05 });
+        S({ type: 'flash', x: f.x, y: f.y, r: f.r * 1.5, el: 'light', life: 0.25 }); S({ type: 'star4', x: f.x, y: f.y - CZ, r: 80, life: 0.35 });
+        for (let k = 0; k < (LOWFX ? 14 : 34); k++) { const a = Math.random() * TAU, v = vr(160, 460); P({ x: f.x, y: f.y, z: vr(10, 36), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(40, 180), g: 300, drag: 1.6, life: vr(0.4, 0.9), size: vr(1.8, 3.6), color: Math.random() < 0.5 ? '#ffffff' : '#ffe8a8', kind: 'ember' }); }
         return true;
-      case 'eclipseRing': S({ type: 'star4', x: f.x, y: f.y - 24, r: 34, life: 0.25 }); burst(f.x, f.y - 20, 'light', LOWFX ? 6 : 14, 260); return true;
       case 'lotusPulse': S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: f.r * 1.15, el: 'water', life: 0.45, w: 10 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: f.r * 0.9, el: 'plant', life: 0.5, w: 4, delay: 0.08 });
         for (let k = 0; k < (LOWFX ? 6 : 14); k++) { const a = Math.random() * TAU, v = vr(120, 260); P({ x: f.x, y: f.y - 6, z: 8, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(40, 120), g: 260, drag: 1.6, life: vr(0.5, 0.9), size: vr(2.5, 4), color: Math.random() < 0.5 ? '#ffd0e6' : '#ffffff', kind: 'leaf' }); }
         return true;
@@ -7049,12 +7103,6 @@ const ArtEpic = (() => {
         S({ type: 'novaRays', x: f.x, y: f.y, r: f.r, life: 0.7, seed: Math.random() * 6 }); S({ type: 'star4', x: f.x, y: f.y - SUNH, r: 110, life: 0.4 });
         S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: f.r * 1.6, el: 'fire', life: 0.5, w: 14, delay: 0.05 });
         for (let k = 0; k < (LOWFX ? 14 : 36); k++) { const a = Math.random() * TAU, d = Math.random() * f.r * 0.8; P({ x: f.x + Math.cos(a) * d, y: f.y + Math.sin(a) * d * 0.55, z: vr(2, 20), vx: Math.cos(a) * vr(20, 80), vy: Math.sin(a) * vr(10, 40), vz: vr(140, 360), g: -20, drag: 1.2, life: vr(0.7, 1.4), size: vr(2, 4.5), color: Math.random() < 0.5 ? '#ffd27a' : '#ff8a2a', kind: 'ember' }); }
-        return true;
-      case 'diamond': // el anillo de diamante: luz que estalla desde el centro del eclipse
-        S({ type: 'diamond', x: f.x, y: f.y, r: f.r, life: 0.75 });
-        S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: f.r * 1.5, el: 'light', life: 0.45, w: 12, gold: true }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: f.r * 2.1, el: 'shadow', life: 0.6, w: 6, delay: 0.08 });
-        S({ type: 'flash', x: f.x, y: f.y, r: f.r * 2.3, el: 'light', life: 0.35 }); S({ type: 'star4', x: f.x, y: f.y - SKY, r: 120, life: 0.45 });
-        for (let k = 0; k < (LOWFX ? 16 : 40); k++) { const a = Math.random() * TAU, v = vr(200, 560); P({ x: f.x, y: f.y, z: vr(10, 40), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(60, 220), g: 400, drag: 1.4, life: vr(0.5, 1.0), size: vr(2, 4), color: Math.random() < 0.55 ? '#fff6d8' : Math.random() < 0.5 ? '#ffd27a' : '#d4a8ff', kind: 'shard' }); }
         return true;
     }
     return false;
@@ -7087,14 +7135,7 @@ const ArtEpic = (() => {
     if (o.type === 'iceFan') { iceFan(x, o, f); return true; }
     if (o.type === 'blackPillar') { blackPillar(x, o, f, A); return true; }
     if (o.type === 'novaRays') { novaRays(x, o, f, A); return true; }
-    if (o.type !== 'diamond') return false;
-    // rayos de luz que salen del centro y se abren hacia el cielo
-    x.save(); x.globalCompositeOperation = 'lighter';
-    const n = LOWFX ? 10 : 18, L = o.r * (1.2 + 2.2 * smooth(Math.min(1, f * 1.8)));
-    for (let k = 0; k < n; k++) { const a = k / n * TAU + o.x * 0.01, w = 0.06 + 0.05 * hash2(k, 7); const g = x.createRadialGradient(o.x, o.y - 30, 0, o.x, o.y - 30, L); g.addColorStop(0, `rgba(255,252,236,${A})`); g.addColorStop(0.5, `rgba(255,220,150,${0.5 * A})`); g.addColorStop(1, 'rgba(255,200,120,0)');
-      x.fillStyle = g; x.beginPath(); x.moveTo(o.x, o.y - 30); x.lineTo(o.x + Math.cos(a - w) * L, o.y - 30 + Math.sin(a - w) * L * 0.62); x.lineTo(o.x + Math.cos(a + w) * L, o.y - 30 + Math.sin(a + w) * L * 0.62); x.closePath(); x.fill(); }
-    glow(x, o.x, o.y - 30, o.r * (0.6 + f), `rgba(255,250,230,${A})`);
-    x.restore(); return true;
+    return false;
   }
   return { under, over, lights, fx, shape, fireRings };
 })();
@@ -8147,8 +8188,8 @@ const Cine = (() => {
     switch (e.type) {
       case 'fusionCast': { const k = String(e.key || '').split('+'); sigil(e.x0, e.y0, k, true); punch(0.03); break; }
       case 'cast': if (!e.fusion && e.level === 2) { sigil(e.x, e.y, [e.el], false); punch(0.012); } break;
-      case 'eclipseOn': punch(0.03); edge([120, 70, 200], 0.16, 0.5); break;
-      case 'diamond': punch(0.05); edge([255, 240, 200], 0.3, 0.35); break;
+      case 'cometBurst': punch(0.022); break;
+      case 'mawSpit': punch(0.035); decal('crack', e.x, e.y, 70); break;
       case 'sunBlast': punch(0.045); edge([255, 200, 110], 0.26, 0.35); decal('scorch', e.x, e.y, e.r * 0.6); break;
       case 'hurt': {
         if (e.dot || !(e.dmg >= 6)) break; const u = e.unit, dx = u && u.vx ? u.vx : (Math.random() - 0.5), dy = u && u.vy ? u.vy : (Math.random() - 0.5);
@@ -8335,18 +8376,21 @@ const Sound = (() => {
       case 'bossExposed': chime([523, 784, 1047, 1568], 0.07, 0.09, 'triangle'); noise(2500, 0.8, 0.5, 0.12, 'bandpass', 2); break;
       case 'retarget': tone(1180, 0.05, 0.035, 'triangle', 1560); tone(1560, 0.05, 0.025, 'sine', 1760, 0.04); break;
       case 'back': tone(520, 0.08, 0.05, 'triangle', 390); break;
-      case 'eclipseCast': tone(330, 0.45, 0.08, 'sine', 165); noise(700, 0.7, 0.45, 0.06, 'bandpass', 0.5); break;
-      case 'eclipseOn': tone(82, 1.4, 0.2, 'sine', 62); tone(164, 1.0, 0.07, 'triangle', 123); chime([1047, 1568, 2093], 0.09, 0.04, 'sine'); noise(300, 1.2, 1.1, 0.06, 'lowpass', 0.5); break;
-      case 'eclipseRing': noise(4000, 1.5, 0.22, 0.1, 'bandpass', 2); tone(1320, 0.15, 0.05, 'sine', 1760); break;
       case 'blizzard': noise(5000, 0.8, 0.6, 0.12, 'highpass'); noise(1400, 1.2, 0.5, 0.08, 'bandpass', 0.6); chime([2093, 2637, 3136], 0.05, 0.04, 'sine', 0.12); break;
       case 'podHop': tone(300, 0.18, 0.06, 'triangle', 700); noise(1500, 1, 0.15, 0.05, 'bandpass', 1); break;
       case 'sunForm': tone(220, 0.6, 0.07, 'sawtooth', 660); tone(440, 0.6, 0.05, 'sine', 1320, 0.05); noise(1800, 0.8, 0.6, 0.05, 'bandpass', 1.8); break;
       case 'sunBlast': chime([1568, 2093, 2637], 0.08, 0.03, 'sine'); tone(70, 0.9, 0.3, 'sine', 35); noise(1400, 0.6, 0.8, 0.12, 'lowpass', 0.25); break;
+      case 'moonThrow': noise(1600, 1.4, 0.5, 0.07, 'bandpass', 1.8); chime([1319, 1760], 0.06, 0.05, 'sine'); break;
+      case 'moonFlip': tone(880, 0.3, 0.06, 'sine', 330); tone(110, 0.35, 0.1, 'triangle', 82); noise(500, 1, 0.3, 0.05, 'bandpass', 0.5); break;
+      case 'moonCatch': chime([2093, 1568], 0.04, 0.05, 'sine'); break;
+      case 'cometGo': noise(900, 1.2, 0.45, 0.12, 'bandpass', 3); tone(520, 0.35, 0.07, 'sine', 1760); break;
+      case 'cometBurst': chime([1568, 2349, 3136], 0.06, 0.03, 'sine'); tone(90, 0.5, 0.18, 'sine', 45); noise(2200, 0.8, 0.4, 0.08, 'lowpass', 0.3); break;
+      case 'mawSpit': tone(70, 0.5, 0.3, 'sine', 140); noise(400, 0.8, 0.45, 0.25, 'lowpass', 1.6); tone(260, 0.2, 0.08, 'sawtooth', 520, 0.05); break;
+      case 'mawMiss': noise(300, 0.7, 0.4, 0.12, 'lowpass', 0.4); tone(90, 0.3, 0.1, 'sine', 50); break;
       case 'crows': for (let k = 0; k < 3; k++) { tone(900 - k * 120, 0.12, 0.05, 'sawtooth', 600 - k * 80, k * 0.09); } noise(2500, 1.2, 0.35, 0.08, 'bandpass', 1.5); break;
       case 'lotusOpen': chime([523, 659, 784, 1047], 0.09, 0.06, 'sine'); noise(1200, 0.8, 0.5, 0.05, 'bandpass', 0.6); break;
       case 'lotusPulse': tone(392, 0.35, 0.06, 'sine', 523); noise(900, 1, 0.3, 0.05, 'bandpass', 0.8); break;
       case 'lotusEnd': chime([1047, 784, 659, 523], 0.07, 0.07, 'triangle'); tone(130, 0.4, 0.12, 'sine', 98); break;
-      case 'diamond': chime([1568, 2093, 2637, 3136], 0.045, 0.07, 'sine'); tone(196, 0.6, 0.16, 'sine', 98); noise(2500, 0.8, 0.5, 0.14, 'bandpass', 1.5); break;
       case 'fall': tone(500, 0.6, 0.12, 'sine', 80); break;
       case 'counter': chime([1319, 1760, 2093], 0.04, 0.09, 'triangle'); noise(3000, 1, 0.25, 0.15, 'bandpass', 2); tone(220, 0.4, 0.12, 'sawtooth', 880); break;
       case 'ram': tone(140, 0.2, 0.3, 'sine', 60); noise(900, 0.8, 0.15, 0.2, 'bandpass', 0.5); break;
@@ -8375,7 +8419,7 @@ const Sound = (() => {
       case 'wall': play('wall'); break; case 'wallBreak': play('wallBreak'); break; case 'electrify': play('electrify'); break; case 'reflect': play('reflect'); break;
       case 'clash': play(e.kind === 'vapor' ? 'steam' : 'clash'); break; case 'beam': play('beam'); break; case 'tzap': play('tzap'); break; case 'bounce': play('bounce'); break;
       case 'round': play('round'); break; case 'go': play('go'); break; case 'roundWin': play('roundWin'); break; case 'matchWin': play('matchWin'); break; case 'mist': play('mist'); break;
-      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'eclipseCast': case 'eclipseOn': case 'eclipseRing': case 'diamond': case 'lotusOpen': case 'lotusPulse': case 'lotusEnd': case 'crows': case 'blizzard': case 'podHop': case 'sunForm': case 'sunBlast': play(e.type); break;
+      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'lotusOpen': case 'lotusPulse': case 'lotusEnd': case 'crows': case 'blizzard': case 'podHop': case 'sunForm': case 'sunBlast': case 'moonThrow': case 'moonFlip': case 'moonCatch': case 'cometGo': case 'cometBurst': case 'mawSpit': case 'mawMiss': play(e.type); break;
       case 'fall': play('fall'); break; case 'counter': play('counter'); break; case 'ram': play('ram'); break; case 'rune': play('rune'); break; case 'runeSpawn': play('runeSpawn'); break; case 'shieldHit': play('shieldHit'); break; case 'arenaEvent': play('mist'); break; case 'statueShot': cast('earth', 1.4); break; case 'bushGone': play('bushGone'); break; case 'quake': play('boom'); break; case 'intro': play('vs'); break; case 'retarget': if (!G.attract) play('retarget'); break; case 'ray': play('ray', e); break; case 'blink': play('blink'); break; case 'mirage': play('mirage'); break; case 'decoyPop': play('decoyPop'); break; case 'wispGo': play('wispGo'); break; case 'bossWarn': play('bossWarn'); break; case 'bossExposed': play('bossExposed'); break;
     }
   }
@@ -9115,7 +9159,7 @@ const NetGame = (() => {
   // la misma cuenta de moverse de Mage.update (sin daño, sin hechizos, sin tocar el terreno)
   function moveGhost(g, m, inp, G, dt) {
     const T = G.T, st = m.st || {}, bf = m.buff || {}, tr = m.tr || {}, C = m.C || { speed: 1 };
-    const locked = G.state !== 'play' || !!m.busy || (st.stun || 0) > 0 || (st.frozen || 0) > 0 || (m.granCharge || 0) > 0;
+    const locked = G.state !== 'play' || !!m.busy || (st.stun || 0) > 0 || (st.frozen || 0) > 0 || (st.sunk || 0) > 0 || (m.granCharge || 0) > 0;
     const ci = Terrain.idx(T, g.x, g.y);
     let spd = 230 * C.speed * ((bf.haste || 0) > 0 ? 1.15 : 1), acc = 22, noDash = false;
     if (ci >= 0) {
@@ -9133,7 +9177,7 @@ const NetGame = (() => {
     if (m.fuse) spd *= 0.6; else if (m.holding) spd *= 0.72;
     if ((st.chill || 0) > 0 && !tr.iceWalk) spd *= 0.6;
     if ((st.slow || 0) > 0) spd *= st.slowF || 1;
-    if (g.dash.t > 0) { g.dash.t -= dt; const ds = 920 * (noDash ? 0.5 : 1); g.vx = g.dash.dx * ds; g.vy = g.dash.dy * ds; }
+    if (g.dash.t > 0) { g.dash.t -= dt; const ds = g.dash.spd || 920 * (noDash ? 0.5 : 1); g.vx = g.dash.dx * ds; g.vy = g.dash.dy * ds; }
     else { const k = 1 - Math.exp(-(ml < 0.2 && acc > 10 ? 30 : acc) * dt), kk = (m.kt || 0) > 0 ? k * 0.25 : k; g.vx += (mx * spd - g.vx) * kk; g.vy += (my * spd - g.vy) * kk; }
     if (G.wind && ci >= 0 && T.base[ci] !== TT.ROCK) { g.vx += G.wind.x * 40 * dt; g.vy += G.wind.y * 40 * dt; }
     if (G.current && ci >= 0 && T.base[ci] === TT.DEEP && T.ice[ci] <= 0) { g.vx += G.current.x * dt * 3; g.vy += G.current.y * dt * 3; }
@@ -9157,7 +9201,7 @@ const NetGame = (() => {
     const hardSet = () => { g.x = sx; g.y = sy; g.vx = svx; g.vy = svy; g.dash.t = 0; g.hist = [{ t: tAt, x: sx, y: sy, vx: svx, vy: svy }]; }; // la historia arranca en ese instante
     if (!c.alive || (c.granCharge || 0) > 0) { hardSet(); return; }
     // el anfitrión empezó a esquivar (y aquí no): se toma su esquive
-    if (c.dash && c.dash.t > 0 && g.dash.t <= 0 && !(g.dashAt && performance.now() - g.dashAt < 400)) { g.dash = { t: c.dash.t, dx: c.dash.dx || 0, dy: c.dash.dy || 0 }; }
+    if (c.dash && c.dash.t > 0 && g.dash.t <= 0 && !(g.dashAt && performance.now() - g.dashAt < 400)) { g.dash = { t: c.dash.t, dx: c.dash.dx || 0, dy: c.dash.dy || 0, spd: c.dash.spd || 0 }; }
     const h = histAt(g.hist, tAt); if (!h) { hardSet(); PST.hard++; return; }
     const ex = sx - h.x, ey = sy - h.y, evx = svx - h.vx, evy = svy - h.vy; PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(ex, ey) * 0.05;
     if (Math.hypot(ex, ey) > 140) { hardSet(); PST.hard++; return; }

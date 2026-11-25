@@ -488,7 +488,13 @@ const ArtMage = (() => {
     else if (view === 'side') { const near = fx > 0 ? 1 : 0; drawArm(near, false); drawOrb(near); }
     return { view, fx, B, moving };
   }
+  // tragado por la Fosa: se hunde en el suelo (se recorta a ras de tierra) y al final asoma
   function draw(x, G, m) {
+    const sk = m.st && m.st.sunk > 0 ? m.st.sunk : 0; if (!sk) return draw0(x, G, m);
+    const T0 = (FUSIONS['earth+shadow'].sink || 0.85) + 0.06, D = clamp(Math.min((T0 - sk) / 0.16, sk / 0.1), 0, 1), dep = D * 78;
+    x.save(); x.beginPath(); x.rect(m.x - 140, m.y - 300, 280, 302); x.clip(); x.translate(Math.sin(G.time * 40) * 2 * D, dep); draw0(x, G, m); x.restore();
+  }
+  function draw0(x, G, m) {
     const Lk = look(m.cid, m.skin || 0), t = G.time + m.idx * 1.7;
     const now = performance.now() / 1000, dt = clamp(now - (m._lt || now), 0, 0.05); m._lt = now;
     if (G.state !== 'roundEnd' || G.slow <= 0) aura(m, Lk, dt);

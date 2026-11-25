@@ -31,6 +31,12 @@ const Spells2 = (() => {
     }
   }
   const aimOf = (G, m, range, speed = 0) => m.aim(G, range, speed);
+  // camino de la Media luna (u de 0 a 1): sale hacia adelante abriéndose a un lado y vuelve por el otro, a donde esté quien la lanzó
+  function crescentAt(s, u) {
+    const e = smooth(u), bx = s.ox + ((s.hx != null ? s.hx : s.ox) - s.ox) * e, by = s.oy + ((s.hy != null ? s.hy : s.oy) - s.oy) * e;
+    const F = s.L * Math.sin(Math.PI * u), Lat = s.side * (s.S.W || 64) * Math.sin(TAU * u), ca = Math.cos(s.ang), sa = Math.sin(s.ang);
+    return [bx + ca * F - sa * Lat, by + sa * F + ca * Lat];
+  }
   /* ---------- lanzar ---------- */
   function cast(G, m, S, el, o, B) {
     const P = B.power, Z = B.size, k = S.kind, T = G.T, L = B.gran ? 1.3 : 1;
@@ -58,14 +64,14 @@ const Spells2 = (() => {
       const p = Spells.aimPoint(G, m, S.range, S.windup * 0.6);
       add(G, Object.assign(B, { t: 'nova', S, el: 'light', x: p.tx, y: p.ty, x0: m.x, y0: m.y - 30, windup: S.windup, r: S.r * Z }));
       G.events.push({ type: 'sunForm', x: p.tx, y: p.ty });
-    } else if (k === 'mirage') {
-      const n = S.n + (B.gran ? 1 : 0);
-      for (let j = 0; j < n; j++) {
-        const off = (j - (n - 1) / 2) * 1.5 + (n % 2 ? 0 : 0), a = m.face + off, d = new Unit(m.x + Math.cos(a) * 26, m.y + Math.sin(a) * 26, 18, m.team);
-        Object.assign(d, { obj: 'decoy', idx: -1, by: m.idx, hp: 1, maxHp: 1, life: S.life * L, knockMul: 0.6, dir: a, foolK: G.rng(), flashT: S.flash, cid: m.cid, skin: m.skin || 0, face: a, walk: 0, moving: 150, swap: 0.8 + G.rng() });
-        d.update = decoyStep; d.die = decoyDie; G.units.push(d);
-      }
-      m.st.hidden = Math.max(m.st.hidden, S.hide); G.fx.push({ type: 'flashRing', x: m.x, y: m.y, el: 'light', r: 90 }); G.events.push({ type: 'mirage', x: m.x, y: m.y });
+    } else if (k === 'comet') {
+      // Cometa: el mago sale disparado en una estela de luz (un esquive largo con su propia velocidad)
+      const a = aimOf(G, m, S.dist + 120);
+      if (!m.isMage || !m.dash) { add(G, Object.assign(B, { t: 'proj', S: SPELLS.light[0], el: 'light', x: m.x, y: m.y, vx: Math.cos(a.ang) * 640, vy: Math.sin(a.ang) * 640, r: 14, life: 0.8, dmg: 8 * P, big: true })); return; }
+      const dx = Math.cos(a.ang), dy = Math.sin(a.ang), t = S.dist * Z / S.speed;
+      Object.assign(m.dash, { t, dx, dy, spd: S.speed, comet: 1, hit: true, age: 0 }); m.iframes = Math.max(m.iframes, t + 0.05); m.st.root = 0; m.face = a.ang;
+      add(G, Object.assign(B, { t: 'comet', S, el: 'light', x: m.x, y: m.y, x0: m.x, y0: m.y, x1: m.x, y1: m.y, ang: a.ang, life: t + 0.08, phase: 0, P, hitSet: new Set() }));
+      G.fx.push({ type: 'cometGo', x: m.x, y: m.y, ang: a.ang }); G.events.push({ type: 'cometGo', x: m.x, y: m.y, who: m.idx });
     } else if (k === 'cage' || k === 'bog') {
       const p = Spells.aimPoint(G, m, S.range, S.flight * 0.6);
       add(G, Object.assign(B, { t: 'lob', S, kind: k, el: k === 'cage' ? 'light' : 'shadow', x0: m.x, y0: m.y - 20, x: m.x, y: m.y, z: 0, tx: p.tx, ty: p.ty, T: S.flight, tt: 0 }));
@@ -76,11 +82,12 @@ const Spells2 = (() => {
     } else if (k === 'judgment') {
       const a = aimOf(G, m, S.range), tg = a.target && !a.target.spot && a.dist < S.range * 1.1 ? a.target : null, d = Math.min(S.range, 280);
       add(G, Object.assign(B, { t: 'judgment', S, el: 'light', x: tg ? tg.x : m.x + Math.cos(a.ang) * d, y: tg ? tg.y : m.y + Math.sin(a.ang) * d, tg, delay: S.delay, r: S.r * Z, dmg: S.dmg * P }));
-    } else if (k === 'eclipse') {
-      // el eclipse cae donde VA a estar el rival (la sombra se cierra en ~0,4 s) y queda encima de él
-      const p = Spells.aimPoint(G, m, S.range, S.warn + 0.15);
-      add(G, Object.assign(B, { t: 'eclipse', S, el: 'shadow', x: p.tx, y: p.ty, r: S.r * Z, warn: S.warn, life: S.life * L, dps: S.dps * P, P, inside: new Set(), rung: new Set() }));
-      G.events.push({ type: 'eclipseCast', x: p.tx, y: p.ty });
+    } else if (k === 'crescent') {
+      // Media luna: vuela en curva hasta un poco más allá de donde va a estar el rival y vuelve a las manos
+      const p = Spells.aimPoint(G, m, S.range, 0.3), ang = Math.atan2(p.ty - m.y, p.tx - m.x), d = clamp(hypot(p.tx - m.x, p.ty - m.y) + 24, 160, S.range * Z);
+      const sides = B.gran ? [1, -1] : [G.rng() < 0.5 ? 1 : -1];
+      for (const side of sides) add(G, Object.assign({}, B, { t: 'crescent', S, el: 'light', x: m.x, y: m.y, ox: m.x, oy: m.y, hx: m.x, hy: m.y, ang, L: d, side, T: S.T * (0.7 + 0.3 * d / S.range), age: 0, r: S.r * Z, P, back: 0, hitO: new Set(), hitB: new Set() }));
+      G.events.push({ type: 'moonThrow', x: m.x, y: m.y });
     } else if (k === 'wisps') {
       const n = S.n + (B.gran ? 2 : 0);
       for (let j = 0; j < n; j++) add(G, Object.assign({}, B, { t: 'wisp', S, el: 'shadow', caster: m, x: m.x, y: m.y, ph: j / n * TAU, life: S.life * L, arm: 0.5 + j * 0.12, dmg: S.dmg * P }));
@@ -104,7 +111,7 @@ const Spells2 = (() => {
         if (n2) { hit(G, B, n2, S.dmg * 0.6 * P, { el: 'shadow', hex: S.hex }); G.fx.push({ type: 'zap', x0: tg.x, y0: tg.y - 14, x1: n2.x, y1: n2.y - 14, el: 'shadow' }); } }
     } else Earth.cast(G, m, S, el, o, B);
   }
-  /* ---------- reflejos (Espejismo) y girasol: unidades con vida propia ---------- */
+  /* ---------- reflejos (del antiguo Espejismo; ya no se lanzan) y girasol: unidades con vida propia ---------- */
   function decoyStep(G, dt) {
     if (!this.alive) return; this.life -= dt; this.tickStatus(G, dt); if (this.life <= 0 || this.hp <= 0) { if (this.alive) this.die(G, {}); return; }
     this.swap -= dt; if (this.swap <= 0) { this.swap = 0.7 + G.rng() * 0.9; this.dir += (G.rng() - 0.5) * 2.2; }
@@ -150,28 +157,39 @@ const Spells2 = (() => {
         Terrain.forCircle(T, s.x, s.y, s.r * 0.6, i => Terrain.hitWall(G, i, 60));
         G.fx.push({ type: 'pillar', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'thunder', x: s.x, y: s.y, big: true }); break;
       }
-      case 'eclipse': {
-        // 1) la sombra de la luna se cierra (aviso)  2) totalidad: adentro no se lanza nada, la oscuridad atrae y quema
-        // despacio; salir cruzando el anillo de luz quema y deja callado un rato  3) al final, el anillo de diamante estalla
-        const S = s.S, P = s.P || 1;
-        if (s.warn > 0) { s.warn -= dt; if (s.warn <= 0) { G.events.push({ type: 'eclipseOn', x: s.x, y: s.y, r: s.r }); G.fx.push({ type: 'eclipseOn', x: s.x, y: s.y, r: s.r }); } break; }
-        const now = new Set();
-        for (const u of G.units) { if (u.obj || !u.alive) continue; const dx = s.x - u.x, dy = s.y - u.y, d = hypot(dx, dy);
-          if (!foe(s, u)) { if (d < s.r) u.st.hidden = Math.max(u.st.hidden, 0.2); continue; }
-          if (d < s.r) { now.add(u);
-            if (!(u.imm && u.imm.silence > 0) || u.st.silence > 0) u.st.silence = Math.max(u.st.silence, 0.25);
-            if (!u.untargetable) { const f = S.pull * (0.35 + 0.65 * d / s.r) * dt * (u.knockMul || 1); u.vx += dx / (d || 1) * f; u.vy += dy / (d || 1) * f; }
-            hit(G, s, u, s.dps * dt, { el: 'shadow', tick: true }); u.lastSpell = null; }
-          else if (s.inside.has(u) && !s.rung.has(u) && d < s.r + 60) { // cruzó el anillo de luz hacia afuera
-            s.rung.add(u); hit(G, s, u, S.ring * P, { el: 'light', dazzle: 0.6, knock: 160, kx: -dx, ky: -dy, unavoid: true });
-            if (!(u.imm && u.imm.silence > 0)) u.st.silence = Math.max(u.st.silence, S.ringSil); G.fx.push({ type: 'eclipseRing', x: u.x, y: u.y }); G.events.push({ type: 'eclipseRing', x: u.x, y: u.y }); }
-        }
-        for (const u of now) s.inside.add(u);
-        s.life -= dt;
-        if (s.life <= 0) { s.dead = true;
-          for (const u of G.units) { if (u.obj || !u.alive) continue; const d = hypot(u.x - s.x, u.y - s.y); if (d > s.r * 1.08) continue;
-            if (foe(s, u)) hit(G, s, u, S.burst * P, { el: 'light', dazzle: 0.8, hex: S.hex, big: true, knock: 240, kx: u.x - s.x, ky: u.y - s.y }); else if (u.isMage) { u.heal(G, 8 * P); u._healT = 0.4; } }
-          G.fx.push({ type: 'diamond', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'diamond', x: s.x, y: s.y, r: s.r }); }
+      case 'crescent': {
+        // la media luna: ida de luz (encandila, destapa), vuelta de sombra (maleficio); corta proyectiles; vuelve a quien la lanzó
+        const S = s.S, m = G.mages[s.by]; const u = Math.min(1, s.age / s.T); // (s.age lo suma Spells.step)
+        if (m && m.alive) { s.hx = m.x; s.hy = m.y; }
+        const P = crescentAt(s, u); s.x = P[0]; s.y = P[1];
+        const back = u >= 0.5, ca = Math.cos(s.ang), sa = Math.sin(s.ang);
+        if (back && !s.back) { s.back = 1; s.el = 'shadow'; G.fx.push({ type: 'moonFlip', x: s.x, y: s.y }); G.events.push({ type: 'moonFlip', x: s.x, y: s.y }); }
+        for (const v of G.units) { if (!foe(s, v)) continue; const set = back ? s.hitB : s.hitO; if (set.has(v) || hypot(v.x - s.x, v.y - s.y) > s.r + v.r) continue; set.add(v);
+          if (!back) { if (v.st.hidden > 0) v.st.hidden = 0; hit(G, s, v, S.dmgOut * s.P, { el: 'light', dazzle: S.dazzle, knock: 170, kx: ca, ky: sa }); }
+          else hit(G, s, v, S.dmgBack * s.P, { el: 'shadow', hex: S.hex, knock: 170, kx: -ca, ky: -sa });
+          G.fx.push({ type: back ? 'moonHitB' : 'moonHitO', x: v.x, y: v.y }); }
+        for (const p of G.spells) if (p.t === 'proj' && !p.dead && p.team !== s.team && hypot(p.x - s.x, p.y - s.y) < s.r + (p.r || 10)) Spells.endProj(G, p, true);
+        if (u >= 1 || (u > 0.65 && m && m.alive && hypot(m.x - s.x, m.y - s.y) < 24)) { s.dead = true; G.fx.push({ type: 'moonCatch', x: s.x, y: s.y }); G.events.push({ type: 'moonCatch', x: s.x, y: s.y }); }
+        break;
+      }
+      case 'comet': {
+        // el Cometa sigue al mago mientras vuela; al llegar estalla y la estela se queda brillando un momento
+        const S = s.S, m = G.mages[s.by];
+        if (s.phase === 0) {
+          if (m && m.alive) { s.x = m.x; s.y = m.y; }
+          const nx = -Math.sin(s.ang), ny = Math.cos(s.ang);
+          for (const v of G.units) { if (!foe(s, v) || s.hitSet.has(v) || hypot(v.x - s.x, v.y - s.y) > S.r + v.r) continue; s.hitSet.add(v);
+            const sd = Math.sign((v.x - s.x) * nx + (v.y - s.y) * ny) || 1;
+            hit(G, s, v, S.dmg * s.P, { el: 'light', dazzle: S.dazzle, knock: S.knock, kx: nx * sd + Math.cos(s.ang) * 0.35, ky: ny * sd + Math.sin(s.ang) * 0.35, big: true });
+            G.fx.push({ type: 'cometHit', x: v.x, y: v.y }); }
+          for (const p of G.spells) if (p.t === 'proj' && !p.dead && p.team !== s.team && hypot(p.x - s.x, p.y - s.y) < S.r + (p.r || 10)) Spells.endProj(G, p, true);
+          s.x1 = s.x; s.y1 = s.y; s.life -= dt;
+          if (s.life <= 0 || !m || !m.alive || !(m.dash && m.dash.t > 0 && m.dash.comet)) {
+            s.phase = 1; s.life = S.trail;
+            for (const v of G.units) if (foe(s, v) && hypot(v.x - s.x, v.y - s.y) < S.burstR + v.r) hit(G, s, v, S.burst * s.P, { el: 'light', dazzle: 0.4, knock: 260, kx: v.x - s.x, ky: v.y - s.y });
+            G.fx.push({ type: 'cometBurst', x: s.x, y: s.y, r: S.burstR, ang: s.ang }); G.events.push({ type: 'cometBurst', x: s.x, y: s.y });
+          }
+        } else { s.life -= dt; if (s.life <= 0) s.dead = true; }
         break;
       }
       case 'wisp': {
@@ -220,5 +238,5 @@ const Spells2 = (() => {
       G.fx.push({ type: 'splat', x: s.tx, y: s.ty, r: S.r * s.size, el: 'shadow' });
     } else Earth.land(G, s);
   }
-  return { cast, step, land, trace };
+  return { cast, step, land, trace, crescentAt };
 })();

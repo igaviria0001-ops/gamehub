@@ -91,18 +91,21 @@ const Sound = (() => {
       case 'bossExposed': chime([523, 784, 1047, 1568], 0.07, 0.09, 'triangle'); noise(2500, 0.8, 0.5, 0.12, 'bandpass', 2); break;
       case 'retarget': tone(1180, 0.05, 0.035, 'triangle', 1560); tone(1560, 0.05, 0.025, 'sine', 1760, 0.04); break;
       case 'back': tone(520, 0.08, 0.05, 'triangle', 390); break;
-      case 'eclipseCast': tone(330, 0.45, 0.08, 'sine', 165); noise(700, 0.7, 0.45, 0.06, 'bandpass', 0.5); break;
-      case 'eclipseOn': tone(82, 1.4, 0.2, 'sine', 62); tone(164, 1.0, 0.07, 'triangle', 123); chime([1047, 1568, 2093], 0.09, 0.04, 'sine'); noise(300, 1.2, 1.1, 0.06, 'lowpass', 0.5); break;
-      case 'eclipseRing': noise(4000, 1.5, 0.22, 0.1, 'bandpass', 2); tone(1320, 0.15, 0.05, 'sine', 1760); break;
       case 'blizzard': noise(5000, 0.8, 0.6, 0.12, 'highpass'); noise(1400, 1.2, 0.5, 0.08, 'bandpass', 0.6); chime([2093, 2637, 3136], 0.05, 0.04, 'sine', 0.12); break;
       case 'podHop': tone(300, 0.18, 0.06, 'triangle', 700); noise(1500, 1, 0.15, 0.05, 'bandpass', 1); break;
       case 'sunForm': tone(220, 0.6, 0.07, 'sawtooth', 660); tone(440, 0.6, 0.05, 'sine', 1320, 0.05); noise(1800, 0.8, 0.6, 0.05, 'bandpass', 1.8); break;
       case 'sunBlast': chime([1568, 2093, 2637], 0.08, 0.03, 'sine'); tone(70, 0.9, 0.3, 'sine', 35); noise(1400, 0.6, 0.8, 0.12, 'lowpass', 0.25); break;
+      case 'moonThrow': noise(1600, 1.4, 0.5, 0.07, 'bandpass', 1.8); chime([1319, 1760], 0.06, 0.05, 'sine'); break;
+      case 'moonFlip': tone(880, 0.3, 0.06, 'sine', 330); tone(110, 0.35, 0.1, 'triangle', 82); noise(500, 1, 0.3, 0.05, 'bandpass', 0.5); break;
+      case 'moonCatch': chime([2093, 1568], 0.04, 0.05, 'sine'); break;
+      case 'cometGo': noise(900, 1.2, 0.45, 0.12, 'bandpass', 3); tone(520, 0.35, 0.07, 'sine', 1760); break;
+      case 'cometBurst': chime([1568, 2349, 3136], 0.06, 0.03, 'sine'); tone(90, 0.5, 0.18, 'sine', 45); noise(2200, 0.8, 0.4, 0.08, 'lowpass', 0.3); break;
+      case 'mawSpit': tone(70, 0.5, 0.3, 'sine', 140); noise(400, 0.8, 0.45, 0.25, 'lowpass', 1.6); tone(260, 0.2, 0.08, 'sawtooth', 520, 0.05); break;
+      case 'mawMiss': noise(300, 0.7, 0.4, 0.12, 'lowpass', 0.4); tone(90, 0.3, 0.1, 'sine', 50); break;
       case 'crows': for (let k = 0; k < 3; k++) { tone(900 - k * 120, 0.12, 0.05, 'sawtooth', 600 - k * 80, k * 0.09); } noise(2500, 1.2, 0.35, 0.08, 'bandpass', 1.5); break;
       case 'lotusOpen': chime([523, 659, 784, 1047], 0.09, 0.06, 'sine'); noise(1200, 0.8, 0.5, 0.05, 'bandpass', 0.6); break;
       case 'lotusPulse': tone(392, 0.35, 0.06, 'sine', 523); noise(900, 1, 0.3, 0.05, 'bandpass', 0.8); break;
       case 'lotusEnd': chime([1047, 784, 659, 523], 0.07, 0.07, 'triangle'); tone(130, 0.4, 0.12, 'sine', 98); break;
-      case 'diamond': chime([1568, 2093, 2637, 3136], 0.045, 0.07, 'sine'); tone(196, 0.6, 0.16, 'sine', 98); noise(2500, 0.8, 0.5, 0.14, 'bandpass', 1.5); break;
       case 'fall': tone(500, 0.6, 0.12, 'sine', 80); break;
       case 'counter': chime([1319, 1760, 2093], 0.04, 0.09, 'triangle'); noise(3000, 1, 0.25, 0.15, 'bandpass', 2); tone(220, 0.4, 0.12, 'sawtooth', 880); break;
       case 'ram': tone(140, 0.2, 0.3, 'sine', 60); noise(900, 0.8, 0.15, 0.2, 'bandpass', 0.5); break;
@@ -131,7 +134,7 @@ const Sound = (() => {
       case 'wall': play('wall'); break; case 'wallBreak': play('wallBreak'); break; case 'electrify': play('electrify'); break; case 'reflect': play('reflect'); break;
       case 'clash': play(e.kind === 'vapor' ? 'steam' : 'clash'); break; case 'beam': play('beam'); break; case 'tzap': play('tzap'); break; case 'bounce': play('bounce'); break;
       case 'round': play('round'); break; case 'go': play('go'); break; case 'roundWin': play('roundWin'); break; case 'matchWin': play('matchWin'); break; case 'mist': play('mist'); break;
-      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'eclipseCast': case 'eclipseOn': case 'eclipseRing': case 'diamond': case 'lotusOpen': case 'lotusPulse': case 'lotusEnd': case 'crows': case 'blizzard': case 'podHop': case 'sunForm': case 'sunBlast': play(e.type); break;
+      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'lotusOpen': case 'lotusPulse': case 'lotusEnd': case 'crows': case 'blizzard': case 'podHop': case 'sunForm': case 'sunBlast': case 'moonThrow': case 'moonFlip': case 'moonCatch': case 'cometGo': case 'cometBurst': case 'mawSpit': case 'mawMiss': play(e.type); break;
       case 'fall': play('fall'); break; case 'counter': play('counter'); break; case 'ram': play('ram'); break; case 'rune': play('rune'); break; case 'runeSpawn': play('runeSpawn'); break; case 'shieldHit': play('shieldHit'); break; case 'arenaEvent': play('mist'); break; case 'statueShot': cast('earth', 1.4); break; case 'bushGone': play('bushGone'); break; case 'quake': play('boom'); break; case 'intro': play('vs'); break; case 'retarget': if (!G.attract) play('retarget'); break; case 'ray': play('ray', e); break; case 'blink': play('blink'); break; case 'mirage': play('mirage'); break; case 'decoyPop': play('decoyPop'); break; case 'wispGo': play('wispGo'); break; case 'bossWarn': play('bossWarn'); break; case 'bossExposed': play('bossExposed'); break;
     }
   }

@@ -8,10 +8,10 @@ const HOLD_FULL = 0.6, ABSORB_T = 0.42, ABSORB_USES = 3;
 class Unit {
   constructor(x, y, r, team) {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0; this.r = r; this.team = team; this.alive = true;
-    this.st = { burn: 0, burnO: -1, wet: 0, frozen: 0, root: 0, stun: 0, slow: 0, slowF: 1, chill: 0, blind: 0, hidden: 0, hex: 0, silence: 0 };
+    this.st = { burn: 0, burnO: -1, wet: 0, frozen: 0, root: 0, stun: 0, slow: 0, slowF: 1, chill: 0, blind: 0, hidden: 0, hex: 0, silence: 0, sunk: 0 };
     this.flash = 0; this.knockMul = 1; this.fireRes = 1; this.iframes = 0; this.isMage = false; this.lastHitBy = -1; this.hitT = 0;
   }
-  get busy() { return this.st.frozen > 0 || this.st.stun > 0; }
+  get busy() { return this.st.frozen > 0 || this.st.stun > 0 || this.st.sunk > 0; } // (sunk: se lo tragó la Fosa)
   // daño con sus multiplicadores; src = { by (índice de mago o -1), el, dot, kind }
   hurt(G, dmg, src = {}) {
     if (!this.alive || dmg <= 0) return 0;
@@ -56,7 +56,7 @@ class Unit {
     if (s.burn > 0) { s.burn -= dt; this.hurt(G, 3 * dt, { by: s.burnO, el: 'fire', dot: 1 }); }
     if (!this.imm) this.imm = { root: 0, stun: 0, frozen: 0, blind: 0, silence: 0 };
     for (const k of ['root', 'stun', 'frozen', 'blind', 'silence']) { if (this.imm[k] > 0) this.imm[k] -= dt; if (s[k] > 0 && s[k] - dt <= 0) this.imm[k] = k === 'stun' ? 0.6 : k === 'blind' ? 1.6 : k === 'silence' ? 2 : 1.2; }
-    for (const k of ['wet', 'frozen', 'root', 'stun', 'chill', 'blind', 'hidden', 'hex', 'silence']) if (s[k] > 0) s[k] = Math.max(0, s[k] - dt);
+    for (const k of ['wet', 'frozen', 'root', 'stun', 'chill', 'blind', 'hidden', 'hex', 'silence', 'sunk']) if (s[k] > 0) s[k] = Math.max(0, s[k] - dt);
     if (s.slow > 0) { s.slow -= dt; if (s.slow <= 0) { s.slow = 0; s.slowF = 1; } }
     if (this.flash > 0) this.flash -= dt; if (this.iframes > 0) this.iframes -= dt; if (this.hitT > 0) this.hitT -= dt; if (this.kt > 0) this.kt -= dt;
   }
@@ -97,7 +97,7 @@ class Mage extends Unit {
   get fullAt() { return (this.impulse > 0 ? 0.3 : HOLD_FULL) * (this.tr.chargeMul || 1); }
   get dashMax() { return 1.2 * (this.tr.dashCd || 1); }
   nearestFoe(G, maxD = 950) { let b = null, bd = maxD; for (const u of G.units) { if (!this.canTarget(u)) continue; const d = hypot(u.x - this.x, u.y - this.y); if (d < bd) { bd = d; b = u; } } return b; }
-  canTarget(u) { return u && u.alive && u.team !== this.team && !(u.st.hidden > 0) && !u.untargetable && u.obj !== 'turret' && u.obj !== 'stone'; }
+  canTarget(u) { return u && u.alive && u.team !== this.team && !(u.st.hidden > 0) && !(u.st.sunk > 0) && !u.untargetable && u.obj !== 'turret' && u.obj !== 'stone'; }
   // APUNTADO (personas): se apunta hacia donde uno mira/camina; quieto no se voltea solo hacia
   // el más cercano si ya hay alguien al frente; cargando, señalar con la palanca a otro lo cambia;
   // en el celular, tocar a un enemigo lo marca (pin) unos segundos
@@ -126,7 +126,7 @@ class Mage extends Unit {
     const L = this.lockOn && this.lockOn.alive && this.lockOn.st.hidden <= 0 && (this.holding || this.fuse || this.queue) ? this.lockOn : null;
     const P = !L && this.pin && G.time < this.pin.until && this.canTarget(this.pin.u) ? this.pin.u : null;
     for (const u of G.units) {
-      if (!u.alive || u.team === this.team || u.st.hidden > 0 || u.untargetable) continue;
+      if (!u.alive || u.team === this.team || u.st.hidden > 0 || u.st.sunk > 0 || u.untargetable) continue;
       if ((L && u !== L) || (P && u !== P)) continue;
       const dx = u.x - this.x, dy = u.y - this.y, d = hypot(dx, dy);
       if (d > range * 1.7 + 80 || (G.mist > 0.5 && d > 380)) continue;
@@ -166,7 +166,7 @@ class Mage extends Unit {
     // ---- suelo ----
     const ci = Terrain.idx(T, this.x, this.y);
     let spd = 230 * this.C.speed * (this.buff.haste > 0 ? 1.15 : 1), acc = 22, noDash = false;
-    if (ci >= 0) {
+    if (ci >= 0 && !(st.sunk > 0)) {
       const b = T.base[ci];
       if (T.ice[ci] > 0) acc = this.tr.iceWalk ? 22 : 2.4;
       else if ((b === TT.DEEP) && T.ice[ci] <= 0) { spd *= this.tr.waterSpeed ? 1.0 : 0.56; noDash = true; this.soak(G, 1.5); }
@@ -208,7 +208,7 @@ class Mage extends Unit {
     if (st.chill > 0 && !this.tr.iceWalk) spd *= 0.6;
     if (st.slow > 0) spd *= st.slowF;
     if (this.dash.t > 0) {
-      this.dash.t -= dt; const ds = 920 * (noDash ? 0.5 : 1);
+      this.dash.t -= dt; const ds = this.dash.spd || 920 * (noDash ? 0.5 : 1); // (spd: el Cometa)
       this.vx = this.dash.dx * ds; this.vy = this.dash.dy * ds;
       if (this.tr.dashFire && G.frame % 4 === 0) Terrain.ignite(G, ci, 1.2, this.idx);
       this.dash.age += dt;
@@ -218,7 +218,7 @@ class Mage extends Unit {
         Combos.add(G, this.idx, 'embestida', u);
         if (z) { if (u.st.wet > 0) Combos.add(G, this.idx, 'electrocutado', u); G.fx.push({ type: 'zap', x0: this.x, y0: this.y - 20, x1: u.x, y1: u.y - 20, el: 'bolt' }); }
       }
-      if (this.dash.t <= 0) this.impulse = 0.55;
+      if (this.dash.t <= 0) { this.impulse = 0.55; this.dash.spd = 0; this.dash.comet = 0; }
     } else {
       const k = 1 - Math.exp(-(ml < 0.2 && acc > 10 ? 30 : acc) * dt), kk = this.kt > 0 ? k * 0.25 : k;
       this.vx += (mx * spd - this.vx) * kk; this.vy += (my * spd - this.vy) * kk;

@@ -134,7 +134,7 @@ const Camp = (() => {
       goal: G => G.objs.filter(o => o.t === 'seal').every(o => o.done),
       label: G => { const n = G.objs.filter(o => o.t === 'seal' && o.done).length; return n < 3 ? `Abran los sellos con la fusión de luz que piden (${n}/3)` : '¡A la salida!'; },
       script(G, dt) { G.cs.wt = (G.cs.wt || 10) - dt; if (G.cs.wt <= 0) { G.cs.wt = 17; const n = G.objs.filter(o => o.t === 'seal' && o.done).length; wave(G, [['centella', 'centella'], ['arpia', 'centella'], ['nimbo', 'centella'], ['nimbo', 'arpia']][n], [[950, 760], [1100, 400]]); } },
-      hint: 'Prisma = agua + luz · Jaula de cristal = tierra + luz · Espejismo = viento + luz.' },
+      hint: 'Prisma = agua + luz · Jaula de cristal = tierra + luz · Cometa = viento + luz.' },
     { id: 'c14', world: 2, name: 'El Cóndor de Oro', place: 'La cumbre del cielo', kind: 'Jefe', theme: 'cielo', W: 1700, H: 1050, par: 210, boss: 'condor',
       text: 'El guardián del cielo fue cegado por la sombra. En el aire casi no le duele nada: encandílenlo con LUZ (tres golpes) para que caiga, o esperen a que aterrice tras su picada.',
       spawns: [[300, 480], [300, 580]], sources: [S(260, 300, 'light'), S(1440, 760, 'light'), S(850, 170, 'shadow'), S(850, 880, 'wind'), S(1440, 300, 'bolt'), S(260, 760, 'earth')],

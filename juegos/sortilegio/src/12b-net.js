@@ -225,7 +225,7 @@ const NetGame = (() => {
   // la misma cuenta de moverse de Mage.update (sin daño, sin hechizos, sin tocar el terreno)
   function moveGhost(g, m, inp, G, dt) {
     const T = G.T, st = m.st || {}, bf = m.buff || {}, tr = m.tr || {}, C = m.C || { speed: 1 };
-    const locked = G.state !== 'play' || !!m.busy || (st.stun || 0) > 0 || (st.frozen || 0) > 0 || (m.granCharge || 0) > 0;
+    const locked = G.state !== 'play' || !!m.busy || (st.stun || 0) > 0 || (st.frozen || 0) > 0 || (st.sunk || 0) > 0 || (m.granCharge || 0) > 0;
     const ci = Terrain.idx(T, g.x, g.y);
     let spd = 230 * C.speed * ((bf.haste || 0) > 0 ? 1.15 : 1), acc = 22, noDash = false;
     if (ci >= 0) {
@@ -243,7 +243,7 @@ const NetGame = (() => {
     if (m.fuse) spd *= 0.6; else if (m.holding) spd *= 0.72;
     if ((st.chill || 0) > 0 && !tr.iceWalk) spd *= 0.6;
     if ((st.slow || 0) > 0) spd *= st.slowF || 1;
-    if (g.dash.t > 0) { g.dash.t -= dt; const ds = 920 * (noDash ? 0.5 : 1); g.vx = g.dash.dx * ds; g.vy = g.dash.dy * ds; }
+    if (g.dash.t > 0) { g.dash.t -= dt; const ds = g.dash.spd || 920 * (noDash ? 0.5 : 1); g.vx = g.dash.dx * ds; g.vy = g.dash.dy * ds; }
     else { const k = 1 - Math.exp(-(ml < 0.2 && acc > 10 ? 30 : acc) * dt), kk = (m.kt || 0) > 0 ? k * 0.25 : k; g.vx += (mx * spd - g.vx) * kk; g.vy += (my * spd - g.vy) * kk; }
     if (G.wind && ci >= 0 && T.base[ci] !== TT.ROCK) { g.vx += G.wind.x * 40 * dt; g.vy += G.wind.y * 40 * dt; }
     if (G.current && ci >= 0 && T.base[ci] === TT.DEEP && T.ice[ci] <= 0) { g.vx += G.current.x * dt * 3; g.vy += G.current.y * dt * 3; }
@@ -267,7 +267,7 @@ const NetGame = (() => {
     const hardSet = () => { g.x = sx; g.y = sy; g.vx = svx; g.vy = svy; g.dash.t = 0; g.hist = [{ t: tAt, x: sx, y: sy, vx: svx, vy: svy }]; }; // la historia arranca en ese instante
     if (!c.alive || (c.granCharge || 0) > 0) { hardSet(); return; }
     // el anfitrión empezó a esquivar (y aquí no): se toma su esquive
-    if (c.dash && c.dash.t > 0 && g.dash.t <= 0 && !(g.dashAt && performance.now() - g.dashAt < 400)) { g.dash = { t: c.dash.t, dx: c.dash.dx || 0, dy: c.dash.dy || 0 }; }
+    if (c.dash && c.dash.t > 0 && g.dash.t <= 0 && !(g.dashAt && performance.now() - g.dashAt < 400)) { g.dash = { t: c.dash.t, dx: c.dash.dx || 0, dy: c.dash.dy || 0, spd: c.dash.spd || 0 }; }
     const h = histAt(g.hist, tAt); if (!h) { hardSet(); PST.hard++; return; }
     const ex = sx - h.x, ey = sy - h.y, evx = svx - h.vx, evy = svy - h.vy; PST.soft++; PST.err = PST.err * 0.95 + Math.hypot(ex, ey) * 0.05;
     if (Math.hypot(ex, ey) > 140) { hardSet(); PST.hard++; return; }

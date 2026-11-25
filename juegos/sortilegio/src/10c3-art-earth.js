@@ -87,22 +87,33 @@ const ArtEarth = (() => {
     for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + s.id, L = R * (0.3 + 0.7 * f) * (0.6 + 0.4 * hash2(k, s.id)); x.beginPath(); x.moveTo(s.x, s.y); x.lineTo(s.x + Math.cos(a + 0.25) * L * 0.5, s.y + Math.sin(a + 0.25) * L * 0.5); x.lineTo(s.x + Math.cos(a) * L, s.y + Math.sin(a) * L); x.stroke(); }
     x.restore();
   }
-  // las fauces abiertas: borde de roca con colmillos y el vacío adentro
+  // las fauces: borde de roca con colmillos y el vacío adentro; mientras se lo traga, los colmillos se van cerrando
   function pit(x, G, s) {
-    const t = G.time, R = s.r, fade = Math.min(1, s.life / 0.4, (s.age - (s.S.chase || 0.8)) * 7 + 0.2);
-    x.save(); x.globalAlpha = Math.max(0, fade);
-    x.fillStyle = '#2c2128'; x.beginPath(); for (let k = 0; k <= 22; k++) { const a = k / 22 * TAU, rr = R * (1.08 + 0.1 * hash2(k % 22, s.id)); k ? x.lineTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr) : x.moveTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr); } x.closePath(); x.fill();
-    const g = x.createRadialGradient(s.x, s.y + R * 0.15, R * 0.05, s.x, s.y, R); g.addColorStop(0, '#000'); g.addColorStop(0.65, '#06020b'); g.addColorStop(1, '#241130');
-    x.fillStyle = g; x.beginPath(); x.arc(s.x, s.y, R * 0.94, 0, TAU); x.fill();
-    // remolino del vacío
+    const t = G.time, R = s.r, S = s.S, sk = S.sink || 0.85, bite = s.phase === 1 ? clamp((sk - s.sink) / sk, 0, 1) : 1, fade = s.phase === 2 ? clamp(s.life / 0.55, 0, 1) : Math.min(1, (sk - s.sink) * 8 + 0.25);
+    const Rm = s.phase === 2 ? R * 0.55 * fade + 4 : R * (1 - 0.3 * bite); // la boca se va cerrando
+    x.save(); x.globalAlpha = Math.max(0, fade); x.translate(s.x, s.y); x.scale(1, 0.62);
+    // borde de roca partida, oscuro y violeta
+    x.fillStyle = '#231a26'; x.beginPath(); for (let k = 0; k <= 22; k++) { const a = k / 22 * TAU, rr = R * (1.12 + 0.12 * hash2(k % 22, s.id)); k ? x.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : x.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } x.closePath(); x.fill();
+    // el vacío
+    const g = x.createRadialGradient(0, R * 0.1, Rm * 0.05, 0, 0, Rm); g.addColorStop(0, '#000'); g.addColorStop(0.6, '#07020d'); g.addColorStop(1, '#3a1150');
+    x.fillStyle = g; x.beginPath(); x.arc(0, 0, Rm, 0, TAU); x.fill();
     x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
-    for (let k = 0; k < 3; k++) { x.strokeStyle = `rgba(150,50,140,${0.2 - k * 0.05})`; x.lineWidth = 3 - k * 0.6; x.beginPath(); for (let j = 0; j <= 18; j++) { const q = j / 18, a = -t * 2.2 + k * 2.1 + q * 4, rr = R * 0.85 * (1 - q * 0.9); j ? x.lineTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr) : x.moveTo(s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr); } x.stroke(); }
+    for (let k = 0; k < 3; k++) { x.strokeStyle = `rgba(170,60,170,${0.26 - k * 0.06})`; x.lineWidth = 3 - k * 0.6; x.beginPath(); for (let j = 0; j <= 18; j++) { const q = j / 18, a = -t * 2.6 + k * 2.1 + q * 4, rr = Rm * 0.9 * (1 - q * 0.9); j ? x.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : x.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } x.stroke(); }
+    // labio de la boca: brilla magenta y late
+    const pl = 0.6 + 0.4 * Math.sin(t * 9); x.strokeStyle = `rgba(235,80,210,${0.75 * pl})`; x.lineWidth = 3.5; x.beginPath(); x.arc(0, 0, Rm, 0, TAU); x.stroke();
     x.globalCompositeOperation = 'source-over';
-    // colmillos de roca hacia adentro
+    // colmillos cortos de roca alrededor de la boca, apuntando adentro
     const N = LOWFX ? 9 : 14;
-    for (let k = 0; k < N; k++) { const a = k / N * TAU + s.id * 0.3, ca = Math.cos(a), sa = Math.sin(a), b = R * 0.98, L = R * (0.22 + 0.14 * hash2(k, s.id)), w = 0.16; x.fillStyle = k % 2 ? '#5a4a52' : '#776670'; x.beginPath(); x.moveTo(s.x + Math.cos(a - w) * b, s.y + Math.sin(a - w) * b); x.lineTo(s.x + ca * (b - L), s.y + sa * (b - L)); x.lineTo(s.x + Math.cos(a + w) * b, s.y + Math.sin(a + w) * b); x.closePath(); x.fill(); }
-    x.globalCompositeOperation = 'lighter'; for (let k = 0; k < 6; k++) { const p = (t * 0.8 + k / 6) % 1; x.fillStyle = `rgba(214,84,180,${(1 - p) * 0.6})`; x.beginPath(); x.arc(s.x + Math.sin(k * 2.3 + t) * R * 0.5, s.y - p * 60, 2.4 * (1 - p) + 0.7, 0, TAU); x.fill(); }
+    for (let k = 0; k < N; k++) { const a = k / N * TAU + s.id * 0.3, ca = Math.cos(a), sa = Math.sin(a), b = Rm * 1.04, L = R * (0.2 + 0.14 * hash2(k, s.id)), w = 0.17; x.fillStyle = k % 2 ? '#4e3f52' : '#6c5c70'; x.beginPath(); x.moveTo(Math.cos(a - w) * b, Math.sin(a - w) * b); x.lineTo(ca * (b - L), sa * (b - L)); x.lineTo(Math.cos(a + w) * b, Math.sin(a + w) * b); x.closePath(); x.fill(); }
     x.restore();
+    // manos de sombra que salen del borde y lo sujetan (mientras está adentro)
+    if (s.phase === 1) { x.save(); x.lineCap = 'round'; const n = LOWFX ? 3 : 5;
+      for (let k = 0; k < n; k++) { const a = k / n * TAU + s.id + Math.sin(t * 3 + k) * 0.2, bx = s.x + Math.cos(a) * Rm, by = s.y + Math.sin(a) * Rm * 0.62, h = 30 + 16 * Math.sin(t * 5 + k * 1.7), tx = s.x + Math.cos(a) * Rm * 0.25, ty = s.y - h;
+        x.strokeStyle = 'rgba(12,4,18,0.92)'; x.lineWidth = 7; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(bx + (tx - bx) * 0.2, ty + 6, tx, ty + 12); x.stroke();
+        x.strokeStyle = 'rgba(230,90,210,0.7)'; x.lineWidth = 1.4; x.stroke();
+        x.fillStyle = 'rgba(12,4,18,0.92)'; x.beginPath(); x.arc(tx, ty + 12, 5, 0, TAU); x.fill(); }
+      x.restore(); }
+    x.save(); x.globalCompositeOperation = 'lighter'; for (let k = 0; k < 6; k++) { const p = (t * 0.8 + k / 6) % 1; x.fillStyle = `rgba(214,84,180,${(1 - p) * 0.6 * fade})`; x.beginPath(); x.arc(s.x + Math.sin(k * 2.3 + t) * R * 0.5, s.y - p * 60, 2.4 * (1 - p) + 0.7, 0, TAU); x.fill(); } x.restore();
   }
   // raíces: van reventando del suelo por donde pasa la que corre por debajo
   function roots(x, G, s) {

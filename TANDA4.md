@@ -116,3 +116,21 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
   - Resultado: Maestro (R=20, páramo) 43–54 % (Zuhé 54 %); Normal 33–63 % en el páramo, 35–64 % en todas las arenas
     (Galeras flojo en Normal porque la máquina Normal apunta mal los rayos; con Maestro queda en 52 %).
   - `test/balance.js` solo usa una arena; para mirar todas, rotar `ARENA_ORDER` (se hizo con una copia en /tmp).
+- **25 nov 10:02 — pedido de Ignacio**: el Eclipse seguía sin convencer (explosión lenta, poco útil) → cambiar la idea;
+  viento + luz (los clones) «se ve trabado y no es útil» → cambiarla o mejorarla mucho; y que agua + tierra y
+  tierra + sombra no se parezcan. Hecho (Sortilegio 2.7):
+  - **Media luna** (luz + sombra, firma de Chía; reemplaza al Eclipse): una luna creciente que gira y vuela en curva
+    hasta un poco más allá del rival y vuelve a sus manos. A la ida es de luz (12, encandila, destapa al escondido); al
+    dar la vuelta se voltea con un destello y vuelve de sombra (13 y maleficio). Corta los proyectiles que toca. En el
+    Gran Sortilegio salen dos (una por cada lado). Estela de lunas fantasma y polvo de estrellas. `Spells2.crescentAt`
+    da el camino (lo usan la cuenta y el dibujo).
+  - **Cometa** (viento + luz; reemplaza al Espejismo): el mago sale disparado 310 px en una estela de luz (es un
+    esquive largo con su propia velocidad: `dash.spd`, también en la predicción en línea), atraviesa al rival (15,
+    encandila, lo empuja de lado), corta proyectiles y estalla al llegar (8). Sirve para atacar o para huir.
+  - **Fosa** (tierra + sombra) ya no frena (eso lo hace el lodo): la sombra con manos persigue los pies del rival; si lo
+    agarra (0,22 s encima sin esquivar), la tierra se lo traga: se hunde (estado `st.sunk`: no se mueve, no lanza y
+    nadie lo puede tocar) y a los 0,85 s lo escupe (9 + 11 y maleficio). Boca violeta que se cierra, manos de sombra.
+    El Alud de lodo sigue siendo la ola de barro que empuja, moja y deja lodo.
+  - Resultado: Maestro (páramo, R=20) 45–55 % (Chía 54 %); Maestro en todas las arenas 44–57 %; Normal 37–61 %.
+    `test/fusionstat.js` (R=120): Media luna 16 por lanzamiento (72 % tocan), Cometa 14,7 (75 %), Fosa 25 (100 %).
+  - Lo viejo del Espejismo (reflejos `decoy`) quedó en el código pero ya no se lanza.

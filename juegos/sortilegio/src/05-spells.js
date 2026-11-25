@@ -19,7 +19,7 @@ const Combos = {
   },
 };
 const Spells = (() => {
-  const foe = (s, u) => u.alive && (s.team < 0 || u.team !== s.team) && !(u.idx === s.by && s.team < 0 && s.noSelf);
+  const foe = (s, u) => u.alive && (s.team < 0 || u.team !== s.team) && !(u.idx === s.by && s.team < 0 && s.noSelf) && !(u.st && u.st.sunk > 0); // (bajo tierra nadie lo toca)
   const segDist = (px, py, ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1; const t = clamp(((px - ax) * dx + (py - ay) * dy) / l2, 0, 1); return hypot(px - (ax + dx * t), py - (ay + dy * t)); };
   // golpe a una unidad con los efectos del elemento
   function hit(G, s, u, dmg, o = {}) {
