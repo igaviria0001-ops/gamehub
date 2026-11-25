@@ -44,7 +44,7 @@ class Bot {
       if ((s.t === 'strike' || s.t === 'judgment' || s.t === 'nova') && hypot(x - s.x, y - s.y) < s.r + 26) d += 40;
       else if (s.t === 'pit' && hypot(x - s.x, y - s.y) < s.r + 20) d += 45;
       else if (s.t === 'bog' && hypot(x - s.x, y - s.y) < s.r) d += 14;
-      else if (s.t === 'thorns' && Math.abs(hypot(x - s.x, y - s.y) - s.r) < 30) d += 20;
+      else if (s.t === 'thorns' && Spells.segDist(x, y, s.x0, s.y0, s.x0 + Math.cos(s.ang) * s.front, s.y0 + Math.sin(s.ang) * s.front) < s.w / 2 + 18) d += 20;
       else if ((s.t === 'firenado' || s.t === 'vortex') && hypot(x - s.x, y - s.y) < s.r + 40) d += 24;
       else if ((s.t === 'storm' || s.t === 'cloud') && s.dps !== 0 && hypot(x - s.x, y - s.y) < s.r) d += s.t === 'storm' ? 16 : 6;
       else if (s.t === 'magnet' && hypot(x - s.x, y - s.y) < s.pullR) d += 10;
@@ -289,7 +289,7 @@ class Bot {
         case 'bog': hi = S.range; lo = 50; dmg = 16 + (m.hp < m.maxHp * 0.7 ? 6 : 0); p = 0.55; break;
         case 'crows': hi = 650; lo = 80; dmg = S.dmg * S.n; p = 0.6; break;
         case 'pit': hi = S.range; lo = 60; dmg = held ? 22 : 10; p = held ? 0.9 : 0.4; break;
-        case 'thorns': dmg = d < 190 ? 14 : 2; p = 1; hi = 9999; break;
+        case 'thorns': hi = S.len * 0.9; lo = 30; dmg = S.dmg + 8; p = 0.65; break;
         case 'blackbolt': hi = S.range; dmg = S.dmg + 6; p = vis ? 0.9 : 0; break;
       }
       if (d > hi || d < lo) p *= 0.08;

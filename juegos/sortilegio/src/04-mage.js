@@ -123,7 +123,7 @@ class Mage extends Unit {
     let ang = this.face, target = null;
     if (this.st.blind > 0) return { ang: ang + (G.rng() - 0.5) * 0.62, target: null, dist: range };
     let best = 1e9;
-    const L = this.lockOn && this.lockOn.alive && this.lockOn.st.hidden <= 0 && (this.holding || this.fuse || this.queue) ? this.lockOn : null;
+    const L = this.lockOn && this.lockOn.alive && this.lockOn.st.hidden <= 0 && !(this.lockOn.st.sunk > 0) && (this.holding || this.fuse || this.queue || this.casting) ? this.lockOn : null; // (casting: al soltar, el tiro va al fijado aunque camines para otro lado)
     const P = !L && this.pin && G.time < this.pin.until && this.canTarget(this.pin.u) ? this.pin.u : null;
     for (const u of G.units) {
       if (!u.alive || u.team === this.team || u.st.hidden > 0 || u.st.sunk > 0 || u.untargetable) continue;
@@ -280,7 +280,7 @@ class Mage extends Unit {
   useHand(h) { if (h.uses > 0) { h.uses--; if (h.uses === 0) h.el = h.nat; } }
   castSingle(G, k, level) {
     const h = this.hands[k], el = h.el, S = SPELLS[el][level - 1];
-    Spells.cast(G, this, S, el, { level, power: 1 });
+    this.casting = true; try { Spells.cast(G, this, S, el, { level, power: 1 }); } finally { this.casting = false; }
     h.cd = S.cd; this.rec = 0.16; this.castT = 0.25; this.castEl = el; this.castHand = k; this.stats.casts++;
     this.useHand(h);
   }
@@ -295,8 +295,11 @@ class Mage extends Unit {
     }
     const power = gran ? 1.65 : 1, size = gran ? 1.45 : 1;
     let S, el;
-    if (a.el === b.el) { S = Object.assign({}, SPELLS[a.el][1], { name: 'Doble ' + SPELLS[a.el][1].name.toLowerCase(), cd: 3.6 }); el = a.el; Spells.cast(G, this, S, el, { level: 2, power: power * 1.6, size: size * 1.25, double: true, gran }); }
-    else { const key = fuseKey(a.el, b.el); S = FUSIONS[key]; el = key; Spells.cast(G, this, S, key, { fusion: key, power, size, gran }); G.events.push({ type: 'fusion', who: this.idx, key, gran }); }
+    this.casting = true;
+    try {
+      if (a.el === b.el) { S = Object.assign({}, SPELLS[a.el][1], { name: 'Doble ' + SPELLS[a.el][1].name.toLowerCase(), cd: 3.6 }); el = a.el; Spells.cast(G, this, S, el, { level: 2, power: power * 1.6, size: size * 1.25, double: true, gran }); }
+      else { const key = fuseKey(a.el, b.el); S = FUSIONS[key]; el = key; Spells.cast(G, this, S, key, { fusion: key, power, size, gran }); G.events.push({ type: 'fusion', who: this.idx, key, gran }); }
+    } finally { this.casting = false; }
     a.cd = b.cd = S.cd; this.rec = 0.3; this.castT = 0.4; this.castEl = a.el; this.castEl2 = b.el; this.castHand = 2; this.stats.casts++; this.stats.fusions++;
     if (gran) {
       this.emb = 0; this.stats.gran++; this.granGlow = 1.1; G.events.push({ type: 'gran', who: this.idx, x: this.x, y: this.y, name: S.name, els: [a.el, b.el] });

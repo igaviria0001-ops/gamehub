@@ -134,3 +134,14 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
   - Resultado: Maestro (páramo, R=20) 45–55 % (Chía 54 %); Maestro en todas las arenas 44–57 %; Normal 37–61 %.
     `test/fusionstat.js` (R=120): Media luna 16 por lanzamiento (72 % tocan), Cometa 14,7 (75 %), Fosa 25 (100 %).
   - Lo viejo del Espejismo (reflejos `decoy`) quedó en el código pero ya no se lanza.
+- **25 nov 11:14 — pedido de Ignacio (EN CURSO, rama tanda4, sin publicar)**:
+  - HECHO (commit «WIP»): **Zarzal** (planta + sombra) ya no es un anillo: una hilera recta de espinas brota hacia el
+    rival (400 px, hasta el primer muro; golpe 13 + enredo + maleficio al que alcanza; la hilera se queda 3,4 s y
+    cruzarla pincha y enreda; tres en abanico en el Gran Sortilegio). **Puntería**: el tiro va al rival fijado aunque
+    camines para el otro lado (`casting` en `Mage.aim`) y el Plasma sigue al fijado durante la preparación
+    (`s.tg`). Probado con /tmp/sim/aim.js: antes salía hacia atrás (3,14) o de lado; ahora va al rival.
+  - FALTA: balance (LV=4 y LV=2, R=20), pruebas (chaos, spells, modes, gran, camp, campmech; en línea: netsrt,
+    netcamp-srt, netver JUEGOS=sortilegio), versión 2.8, publicar a main y artefacto.
+  - NUEVO: **Buziraco** (c18, jefe final del mundo 2): (1) en el celular de Ignacio se congela a la mitad (dos veces;
+    tiene que cerrar el navegador entero) → buscar la causa (partículas/efectos que crecen sin límite, bucles,
+    memoria) y arreglarlo; (2) hacerlo mucho más chévere de ver (calidad del jefe final).

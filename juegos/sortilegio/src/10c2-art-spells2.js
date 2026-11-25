@@ -46,11 +46,14 @@ const ArtSpells2 = (() => {
           x.restore();
         }
       } else if (s.t === 'thorns') {
-        const fade = Math.min(1, s.life / 0.5), R = s.r * s.grow, N = 30;
-        x.save(); x.globalAlpha = fade; x.lineCap = 'round';
-        x.strokeStyle = '#150a1c'; x.lineWidth = 9; x.beginPath(); x.ellipse(s.x, s.y, R, R * 0.55, 0, 0, TAU); x.stroke();
-        x.strokeStyle = '#3c1c48'; x.lineWidth = 5; x.beginPath(); for (let k = 0; k <= 60; k++) { const a = k / 60 * TAU, w = Math.sin(a * 9 + s.id) * 5; x.lineTo(s.x + Math.cos(a) * (R + w), s.y + Math.sin(a) * (R + w) * 0.55); } x.stroke();
-        for (let k = 0; k < N; k++) { const a = k / N * TAU + s.id * 0.1, px = s.x + Math.cos(a) * R, py = s.y + Math.sin(a) * R * 0.55, out = k % 2 ? 1 : -1, h = 15 + (k % 3) * 5; x.fillStyle = k % 3 ? '#2a1234' : '#5a1e58'; x.beginPath(); x.moveTo(px - 4, py); x.lineTo(px + Math.cos(a) * out * 7, py - h); x.lineTo(px + 4, py); x.fill(); x.fillStyle = '#e06ac8'; x.fillRect(px + Math.cos(a) * out * 7 - 0.8, py - h, 1.6, 2.6); }
+        // la raíz de la hilera: una franja de zarza negra en el suelo y un brillo violeta en el frente que avanza
+        const fade = Math.min(1, s.life / 0.5), ca = Math.cos(s.ang), sa = Math.sin(s.ang), nx = -sa, ny = ca, F = s.front, W = s.w;
+        x.save(); x.globalAlpha = fade; x.lineCap = 'round'; x.lineJoin = 'round';
+        x.fillStyle = 'rgba(14,6,20,0.45)'; x.beginPath(); x.moveTo(s.x0 + nx * W * 0.55, s.y0 + ny * W * 0.55); x.lineTo(s.x0 + ca * F + nx * W * 0.4, s.y0 + sa * F + ny * W * 0.4); x.lineTo(s.x0 + ca * F - nx * W * 0.4, s.y0 + sa * F - ny * W * 0.4); x.lineTo(s.x0 - nx * W * 0.55, s.y0 - ny * W * 0.55); x.closePath(); x.fill();
+        for (const side of [-1, 1]) { x.strokeStyle = side < 0 ? '#1c0c26' : '#3c1c48'; x.lineWidth = 4; x.beginPath();
+          for (let d = 0; d <= F; d += 8) { const w = Math.sin(d * 0.09 + s.id + side) * W * 0.28 + side * 4, px = s.x0 + ca * d + nx * w, py = s.y0 + sa * d + ny * w; d ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke(); }
+        if (F < s.len) { x.globalCompositeOperation = 'lighter'; const fx = s.x0 + ca * F, fy = s.y0 + sa * F, g = x.createRadialGradient(fx, fy, 2, fx, fy, 46); g.addColorStop(0, 'rgba(240,90,220,0.7)'); g.addColorStop(1, 'rgba(160,40,170,0)'); x.fillStyle = g; x.beginPath(); x.ellipse(fx, fy, 46, 26, 0, 0, TAU); x.fill();
+          if (!LOWFX) for (let q = 0; q < 2; q++) FX.P({ x: fx + vr(-10, 10), y: fy + vr(-8, 8), z: 4, vx: ca * vr(40, 140) + vr(-40, 40), vy: sa * vr(40, 140) + vr(-30, 30), vz: vr(80, 200), g: 600, drag: 1, life: vr(0.3, 0.6), size: vr(2, 4), color: Math.random() < 0.5 ? '#2a1a14' : '#4a2a50', kind: 'chunk', add: false }); }
         x.restore();
       } else if (s.t === 'lob' && (s.kind === 'cage' || s.kind === 'bog')) {
         const f = s.tt / s.T, r = s.kind === 'cage' ? 92 : s.S.r * (s.size || 1);
@@ -61,7 +64,28 @@ const ArtSpells2 = (() => {
   /* ---------- lo que se ordena con los magos ---------- */
   function items(G, list) {
     for (const s of G.spells) if (s.t === 'wisp') list.push({ y: s.y + 4, draw: x => wisp(x, G, s.x, s.y - 30, s.id, s.arm > 0 ? 0.85 : 1.35) });
+    for (const s of G.spells) if (s.t === 'thorns') thornItems(G, s, list);
     for (const u of G.units) { if (!u.alive) continue; if (u.obj === 'decoy') list.push({ y: u.y, draw: x => decoy(x, G, u) }); else if (u.obj === 'sunflower') list.push({ y: u.y, draw: x => sunflower(x, G, u) }); }
+  }
+  // espinas de la hilera: brotan con un rebote cuando pasa el frente, en dos filas torcidas, y al final se esconden
+  function thornItems(G, s, list) {
+    const S = s.S, ca = Math.cos(s.ang), sa = Math.sin(s.ang), nx = -sa, ny = ca, step = LOWFX ? 24 : 17, end = s.life < 0.45 ? s.life / 0.45 : 1, Z = s.w / (S.w || 36);
+    for (let d = 10, k = 0; d <= s.front; d += step, k++) {
+      const e = clamp((s.front - d) / (S.speed * 0.12), 0, 1), pop = e < 1 ? 1 - Math.pow(1 - e, 3) * Math.cos(e * 9) : 1, h = (30 + hash2(k, s.id) * 30) * Z * pop * end; if (h < 2) continue;
+      const side = k % 2 ? 1 : -1, off = side * s.w * 0.22 + (hash2(s.id, k) - 0.5) * 10, px = s.x0 + ca * d + nx * off, py = s.y0 + sa * d + ny * off, lean = (hash2(k + 7, s.id) - 0.5) * 0.7 + side * 0.15;
+      list.push({ y: py, draw: x => thornSpike(x, px, py, h, lean, 6 + hash2(k, 3) * 4, k) });
+    }
+  }
+  function thornSpike(x, px, py, h, lean, w, k) {
+    const tx = px + lean * h * 0.5, ty = py - h;
+    x.save();
+    x.fillStyle = 'rgba(8,2,12,0.35)'; x.beginPath(); x.ellipse(px, py + 1, w * 1.3, w * 0.5, 0, 0, TAU); x.fill();
+    const g = x.createLinearGradient(px, py, tx, ty); g.addColorStop(0, '#12061a'); g.addColorStop(0.6, '#3a1446'); g.addColorStop(1, '#8a2a86'); x.fillStyle = g;
+    x.beginPath(); x.moveTo(px - w, py); x.quadraticCurveTo(px - w * 0.3 + lean * h * 0.2, py - h * 0.55, tx, ty); x.quadraticCurveTo(px + w * 0.3 + lean * h * 0.25, py - h * 0.5, px + w, py); x.closePath(); x.fill();
+    // espinitas a los lados (zarza)
+    x.fillStyle = '#2a0e34'; for (let j = 1; j <= 2; j++) { const q = j / 3.2, bx = px + (tx - px) * q, by = py + (ty - py) * q, sd = (j + k) % 2 ? 1 : -1; x.beginPath(); x.moveTo(bx, by - 3); x.lineTo(bx + sd * w * 1.1, by - 7); x.lineTo(bx, by + 3); x.fill(); }
+    x.globalCompositeOperation = 'lighter'; x.fillStyle = 'rgba(255,110,230,0.75)'; x.beginPath(); x.arc(tx, ty + 2, 2.2, 0, TAU); x.fill();
+    x.restore();
   }
   function wisp(x, G, X, Y, id, k = 1) {
     const t = G.time + id;
@@ -213,7 +237,8 @@ const ArtSpells2 = (() => {
       if (s.t === 'judgment') add(s.x, s.y, s.r * 2, [255, 236, 170], 0.4 + (1 - s.delay / s.S.delay) * 0.6, 0.3);
   
       else if (s.t === 'wisp') add(s.x, s.y - 30, 70, [170, 110, 255], 0.7, 0.3);
-      else if (s.t === 'bog' || s.t === 'thorns') add(s.x, s.y, s.r * 0.9, [210, 70, 175], 0.3, 0.1);
+      else if (s.t === 'bog') add(s.x, s.y, s.r * 0.9, [210, 70, 175], 0.3, 0.1);
+      else if (s.t === 'thorns') add(s.x0 + Math.cos(s.ang) * s.front * 0.5, s.y0 + Math.sin(s.ang) * s.front * 0.5, Math.max(60, s.front * 0.55), [210, 70, 175], 0.25, 0.08);
     }
     for (const u of G.units) if (u.alive && u.obj === 'sunflower') add(u.x, u.y - 40, 170, [255, 226, 130], 0.95, 0.3);
     for (let i = 0; i < G.T.n; i++) if (G.T.crys[i] === 1 && G.T.wall[i] > 0 && i % 2 === 0) add(Terrain.cx(G.T, i), Terrain.cy(G.T, i) - 20, 80, [255, 236, 170], 0.45, 0.1);

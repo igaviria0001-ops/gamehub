@@ -100,7 +100,12 @@ const Spells2 = (() => {
       Terrain.forCircle(T, p.tx, p.ty, 46 * Z, i => { const b = T.base[i]; if (!Terrain.solid(T, i) && b !== TT.DEEP && b !== TT.CHASM && b !== TT.LAVA) cells.push(i); });
       add(G, Object.assign(B, { t: 'pit', S, el: 'shadow', x: p.tx, y: p.ty, r: 62 * Z, delay: S.delay, life: S.life * L, cells, open: false, hitSet: new Set() }));
     } else if (k === 'thorns') {
-      add(G, Object.assign(B, { t: 'thorns', S, el: 'shadow', x: m.x, y: m.y, r: S.r * Z, life: S.life * L, dmg: S.dmg * P, last: new Map(), grow: 0 }));
+      // Zarzal: una hilera de espinas que brota en línea recta hacia el rival (hasta el primer muro); en el Gran Sortilegio, tres en abanico
+      const a = aimOf(G, m, S.len), n = B.gran ? 3 : 1;
+      for (let j = 0; j < n; j++) { const ang = a.ang + (j - (n - 1) / 2) * 0.32, dx = Math.cos(ang), dy = Math.sin(ang), x0 = m.x + dx * 26, y0 = m.y + dy * 26;
+        let len = 0; while (len < S.len * Z) { const i = Terrain.idx(T, x0 + dx * (len + 16), y0 + dy * (len + 16)); if (i < 0 || Terrain.solid(T, i)) break; len += 16; }
+        add(G, Object.assign({}, B, { t: 'thorns', S, el: 'shadow', x: x0, y: y0, x0, y0, ang, len, front: 0, life: S.life * L, dmg: S.dmg * P, P, w: S.w * Z, hitE: new Set(), last: new Map() })); }
+      G.events.push({ type: 'thornLine', x: m.x, y: m.y });
     } else if (k === 'blackbolt') {
       const a = aimOf(G, m, S.range), hx = m.x + Math.cos(m.face) * 22, hy = m.y - 20 + Math.sin(m.face) * 12; let x1, y1, tg = null; Object.assign(B, { x: m.x, y: m.y, id: -1 });
       if (a.target && !a.target.spot && a.dist <= S.range * Z + a.target.r) { tg = a.target; x1 = tg.x; y1 = tg.y - 14; } else { x1 = m.x + Math.cos(a.ang) * S.range; y1 = m.y + Math.sin(a.ang) * S.range; }
@@ -213,8 +218,14 @@ const Spells2 = (() => {
         s.life -= dt; if (s.life <= 0) s.dead = true; break;
       }
       case 'thorns': {
-        s.grow = Math.min(1, s.grow + dt * 4);
-        for (const u of G.units) { if (!foe(s, u) || u.obj) continue; const d = hypot(u.x - s.x, u.y - s.y); if (Math.abs(d - s.r) > 15 + u.r) continue; const l = s.last.get(u) || -9; if (G.time - l < 1.2) continue; s.last.set(u, G.time); hit(G, s, u, s.dmg, { el: 'plant', root: s.S.root, hex: 1.5, big: true, unavoid: true }); G.fx.push({ type: 'snare', x: u.x, y: u.y }); }
+        // el frente brota a lo largo de la línea; al que alcanza: golpe, enredo y maleficio. Después, cruzar la hilera pincha y enreda
+        const S = s.S, ca = Math.cos(s.ang), sa = Math.sin(s.ang), f0 = s.front; s.front = Math.min(s.len, s.front + S.speed * dt);
+        for (const u of G.units) { if (!foe(s, u) || u.obj) continue;
+          const rx = u.x - s.x0, ry = u.y - s.y0, along = rx * ca + ry * sa, perp = Math.abs(-rx * sa + ry * ca);
+          if (along < -u.r || along > s.front + u.r || perp > s.w / 2 + u.r) continue;
+          if (!s.hitE.has(u) && along >= f0 - u.r - 8) { s.hitE.add(u); s.last.set(u, G.time); hit(G, s, u, s.dmg, { el: 'plant', root: S.root, hex: S.hex, big: true }); G.fx.push({ type: 'thornHit', x: u.x, y: u.y }); continue; }
+          const l = s.last.get(u) || -9; if (G.time - l < 1.2) continue; s.last.set(u, G.time); s.hitE.add(u);
+          hit(G, s, u, S.touch * s.P, { el: 'plant', root: S.troot, unavoid: true }); G.fx.push({ type: 'thornHit', x: u.x, y: u.y, small: 1 }); }
         s.life -= dt; if (s.life <= 0) s.dead = true; break;
       }
       default: Earth.step(G, s, dt);

@@ -159,7 +159,8 @@ const Spells = (() => {
         add(G, Object.assign({}, B, { t: 'mine', S, el: 'fire', x, y, arm: S.arm + j * 0.08, life: S.life, r: S.r * Z, dmg: S.dmg * P }));
       }
     } else if (k === 'beam') {
-      add(G, Object.assign(B, { t: 'beam', S, el: 'fire', x: m.x, y: m.y, windup: S.windup, fired: false, ang: m.face }));
+      const a = m.aim(G, S.len, 0), tg = a.target && !a.target.spot ? a.target : null; // se fija al que apuntabas: sigue apuntándole aunque camines para otro lado
+      add(G, Object.assign(B, { t: 'beam', S, el: 'fire', x: m.x, y: m.y, windup: S.windup, fired: false, ang: a.ang, tg }));
       if (!m.tr.beamNoRoot) m.st.root = Math.max(m.st.root, S.windup);
     } else if (k === 'bloom') {
       add(G, Object.assign(B, { t: 'bloom', S, el: 'plant', x: m.x + Math.cos(m.face) * 16, y: m.y + Math.sin(m.face) * 16, r: S.r * Z, life: S.life * (B.gran ? 1.3 : 1), hps: S.hps * P * (m.tr.healMul || 1), P, healMul: m.tr.healMul || 1, next: S.pulse * 0.6 }));
@@ -279,7 +280,7 @@ const Spells = (() => {
         case 'beam': {
           const m = G.mages[s.by]; if (!m || !m.alive) { s.dead = true; break; }
           s.x = m.x; s.y = m.y;
-          if (!s.fired) { s.windup -= dt; const a = m.aim(G, s.S.len, 0); s.ang = a.ang; if (s.windup <= 0) { s.fired = true; s.show = 0.28; fireBeam(G, s, m); } }
+          if (!s.fired) { s.windup -= dt; const tg = s.tg; if (tg && tg.alive && !(tg.st.hidden > 0) && !(tg.st.sunk > 0)) s.ang = Math.atan2(tg.y - m.y, tg.x - m.x); if (s.windup <= 0) { s.fired = true; s.show = 0.28; fireBeam(G, s, m); } }
           else { s.show -= dt; if (s.show <= 0) s.dead = true; } break;
         }
         case 'bloom': {

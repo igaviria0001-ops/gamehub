@@ -233,6 +233,8 @@ const ArtEpic = (() => {
   function fx(G, f) {
     const P = FX.P, S = FX.S, burst = FX.burst;
     switch (f.type) {
+      case 'thornHit': S({ type: 'ring', x: f.x, y: f.y, r0: f.small ? 30 : 60, r1: 8, el: 'shadow', life: 0.25, w: f.small ? 4 : 8 });
+        burst(f.x, f.y - 16, 'plant', LOWFX ? 5 : f.small ? 6 : 14, 220); if (!f.small) S({ type: 'snare', x: f.x, y: f.y, life: 0.7 }); return true;
       case 'moonFlip': // la luna se voltea: de luz a sombra
         S({ type: 'star4', x: f.x, y: f.y - MZ, r: 54, life: 0.3 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: 70, el: 'shadow', life: 0.35, w: 6 });
         burst(f.x, f.y - MZ, 'light', LOWFX ? 5 : 10, 200); burst(f.x, f.y - MZ, 'shadow', LOWFX ? 5 : 10, 200); return true;

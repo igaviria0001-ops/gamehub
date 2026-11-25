@@ -89,7 +89,7 @@ Object.assign(FUSIONS, {
   'water+shadow': { name: 'Marea negra', kind: 'bog', cd: 4.5, range: 290, flight: 0.45, r: 118, life: 5, dps: 6.5, slow: 0.68, drain: 0.55, tip: 'Charco oscuro que frena, hace daño y te devuelve vida.' },
   'wind+shadow':  { name: 'Cuervos', kind: 'crows', cd: 4.0, n: 5, speed: 380, turn: 3.4, dmg: 5, life: 3.0, r: 11, dazzle: 0.5, hex: 2, tip: 'Una bandada de cinco cuervos que persigue, ciega y deja maleficio.' },
   'earth+shadow': { name: 'Fosa', kind: 'maw', cd: 5.0, range: 340, chase: 1.1, speed: 265, r: 50, grab: 0.22, sink: 0.85, bite: 9, spit: 11, hex: 1.8, tip: 'Una sombra con manos corre a los pies del rival; si lo agarra, la tierra se lo traga (no se mueve ni lo pueden tocar) y lo escupe con daño y maleficio. ¡Esquiva para soltarte!' },
-  'plant+shadow': { name: 'Zarzal', kind: 'thorns', cd: 4.5, r: 118, life: 4.5, dmg: 9, root: 0.6, tip: 'Anillo de espinas a tu alrededor: quien lo cruce queda enredado.' },
+  'plant+shadow': { name: 'Zarzal', kind: 'thorns', cd: 4.5, len: 400, speed: 900, w: 36, life: 3.4, dmg: 13, root: 0.9, hex: 1.5, touch: 5, troot: 0.5, tip: 'Una hilera de espinas negras brota del suelo en línea recta hacia el rival: al que alcanza lo hiere, lo enreda y le deja maleficio. La hilera se queda un rato y cruzarla pincha y enreda.' },
   'bolt+shadow':  { name: 'Rayo negro', kind: 'blackbolt', cd: 4.0, range: 330, dmg: 15, hex: 3.2, silence: 0.7, chain: 190, tip: 'Rayo que maldice, salta a otro rival y lo silencia un instante.' },
 });
 const FUSION_ORDER = Object.keys(FUSIONS);
