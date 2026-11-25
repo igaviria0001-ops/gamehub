@@ -134,7 +134,7 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
   - Resultado: Maestro (páramo, R=20) 45–55 % (Chía 54 %); Maestro en todas las arenas 44–57 %; Normal 37–61 %.
     `test/fusionstat.js` (R=120): Media luna 16 por lanzamiento (72 % tocan), Cometa 14,7 (75 %), Fosa 25 (100 %).
   - Lo viejo del Espejismo (reflejos `decoy`) quedó en el código pero ya no se lanza.
-- **25 nov 11:14 — pedido de Ignacio (EN CURSO, rama tanda4, sin publicar)**:
+- **25 nov 11:14 — pedido de Ignacio (publicado como Sortilegio 2.8, ver abajo)**:
   - HECHO (commit «WIP»): **Zarzal** (planta + sombra) ya no es un anillo: una hilera recta de espinas brota hacia el
     rival (400 px, hasta el primer muro; golpe 13 + enredo + maleficio al que alcanza; la hilera se queda 3,4 s y
     cruzarla pincha y enreda; tres en abanico en el Gran Sortilegio). **Puntería**: el tiro va al rival fijado aunque
@@ -145,3 +145,21 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
   - NUEVO: **Buziraco** (c18, jefe final del mundo 2): (1) en el celular de Ignacio se congela a la mitad (dos veces;
     tiene que cerrar el navegador entero) → buscar la causa (partículas/efectos que crecen sin límite, bucles,
     memoria) y arreglarlo; (2) hacerlo mucho más chévere de ver (calidad del jefe final).
+- **25 nov ~12:30 — PUBLICADO Sortilegio 2.8**:
+  - **Congelamiento de Buziraco (causa encontrada)**: al romperle la coraza queda aturdido y sus ojos se pintaban con el
+    color `'#888' + 'cc'` = `'#888cc'`, que no es un color: el dibujo lanzaba un error en cada cuadro y el bucle del
+    juego se detenía (pantalla congelada). Arreglado (`hex6` en `eye` de `10g-art-beasts.js`) y, además, el bucle de
+    `08-game.js` ya no se puede detener por un error en un cuadro (pide el siguiente primero; avisa el error una vez).
+    Probado con celular simulado (844×390, calidad alta y ligera): la pelea entera hasta el final, sin errores y sin
+    memoria que crezca (/tmp/sim/buzi.js).
+  - **Buziraco más épico**: 30 % más grande, llamas de sombra (con coraza) o de fuego (sin coraza) detrás del cuerpo,
+    corona de fuego, esquirlas de sombra que giran (menos a medida que la luz rompe la coraza), sello del color del
+    ataque sobre la cabeza al avisar, círculo del abismo bajo sus pies con grietas de lava; al cambiar de fase ruge
+    (onda de fuego, cámara lenta, borde rojo, «¡Buziraco se enfurece!» / «¡El abismo despierta!»); al caer, rayos de
+    luz y lluvia de brasas.
+  - **Zarzal** apunta a donde VA a estar el rival (más rápido y un poco más ancho): 11 por lanzamiento, 74 % tocan.
+  - **Puntería**: solo para personas (la máquina apunta como antes, si no la máquina Normal quedaba perfecta). El
+    Plasma sigue al fijado mientras se prepara, menos el último instante (0,14 s) para que se pueda esquivar.
+  - **Galeras vuelve a sus números de antes** (146 de vida, Plasma 27, ancho 30, 0,36 s): esos aumentos eran para
+    compensar que su Plasma apuntaba mal; con la puntería arreglada quedaba en 73–93 %. Ahora: Maestro 44–57 %
+    (Galeras 49 %), Normal 40–63 % (Galeras 53 %).

@@ -236,7 +236,7 @@ const Camp = (() => {
       if (this.boss === 'buziraco' && this.shield > 0) { if (src.el === 'light') { this.shield -= d * 1.15; this.flash = 0.08; G.fx.push({ type: 'dazzle', x: this.x + (Math.random() - 0.5) * 50, y: this.y - 60 - Math.random() * 60 }); if (this.shield <= 0) { this.shield = 0; this.tele = null; this._selfStun = 1; this.stun(3.6); this._selfStun = 0; this.regrow = 14; G.pops.push({ x: this.x, y: this.y - 150, text: '¡Sin coraza!', t: 0, color: '#ffe9a0', big: true }); G.events.push({ type: 'bossExposed', x: this.x, y: this.y }); G.fx.push({ type: 'flashRing', x: this.x, y: this.y, el: 'light', r: 190 }); } } else if (!src.dot && G.time - (this.denyT || -9) > 3) { this.denyT = G.time; G.pops.push({ x: this.x, y: this.y - 150, text: 'La coraza solo cede ante la LUZ', t: 0, color: '#e6b8ff', small: true }); } return 0; }
       this.hp -= d; this.flash = 0.1; if (src.by >= 0 && G.mages[src.by]) { G.mages[src.by].stats.dmg += d; G.mages[src.by].gainEmb(G, d * 0.3); }
       G.events.push({ type: 'hurt', x: this.x, y: this.y - 40, dmg: d, el: src.el, dot: !!src.dot, who: -1, unit: this });
-      if (this.hp <= 0) { this.alive = false; this.hp = 0; G.events.push({ type: 'bossDown', x: this.x, y: this.y }); G.fx.push({ type: 'boom', x: this.x, y: this.y - 30, r: 160, el: this.el }); G.slow = 1.2; }
+      if (this.hp <= 0) { this.alive = false; this.hp = 0; G.events.push({ type: 'bossDown', x: this.x, y: this.y, k: this.boss }); if (this.boss === 'buziraco') G.fx.push({ type: 'demonDown', x: this.x, y: this.y }); G.fx.push({ type: 'boom', x: this.x, y: this.y - 30, r: 160, el: this.el }); G.slow = 1.2; }
       return d;
     };
     const caster = { get x() { return b.x; }, get y() { return b.y; }, idx: -1, team: 9, tr: {}, st: { hidden: 0, blind: 0 }, face: 0,
@@ -249,7 +249,11 @@ const Camp = (() => {
     b.warn = (t, el, fn) => { b.tele = { t, max: t, el, fn }; G.events.push({ type: 'bossWarn', x: b.x, y: b.y, el }); };
     b.update = function (G, dt) {
       this.t += dt; this.tickStatus(G, dt); if (!this.alive) return;
-      const f = 1 - this.hp / this.maxHp; this.phase = f > 0.66 ? 2 : f > 0.33 ? 1 : 0;
+      const f = 1 - this.hp / this.maxHp, ph = f > 0.66 ? 2 : f > 0.33 ? 1 : 0;
+      if (this.boss === 'buziraco' && ph > this.phase) { // cambia de fase: ruge, la cámara tiembla y el salón se enciende
+        G.events.push({ type: 'bossRage', x: this.x, y: this.y, ph }); G.fx.push({ type: 'bossRage', x: this.x, y: this.y }); G.slow = Math.max(G.slow, 0.45);
+        G.pops.push({ x: this.x, y: this.y - 210, text: ph === 1 ? '¡Buziraco se enfurece!' : '¡El abismo despierta!', t: 0, color: '#ff9a5a', big: true }); }
+      this.phase = ph;
       let tgt = null, bd = 1e9; for (const m of G.mages) if (m.alive) { const d = hypot(m.x - this.x, m.y - this.y); if (d < bd) { bd = d; tgt = m; } }
       if (this.boss === 'madremonte') {
         if (this.regrow > 0) { this.regrow -= dt; if (this.regrow <= 0) { this.shield = this.maxShield * 0.65; G.pops.push({ x: this.x, y: this.y - 120, text: 'Las lianas vuelven a crecer', t: 0, color: '#9fe07a', small: true }); } }

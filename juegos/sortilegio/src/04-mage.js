@@ -123,7 +123,7 @@ class Mage extends Unit {
     let ang = this.face, target = null;
     if (this.st.blind > 0) return { ang: ang + (G.rng() - 0.5) * 0.62, target: null, dist: range };
     let best = 1e9;
-    const L = this.lockOn && this.lockOn.alive && this.lockOn.st.hidden <= 0 && !(this.lockOn.st.sunk > 0) && (this.holding || this.fuse || this.queue || this.casting) ? this.lockOn : null; // (casting: al soltar, el tiro va al fijado aunque camines para otro lado)
+    const L = this.lockOn && this.lockOn.alive && this.lockOn.st.hidden <= 0 && !(this.lockOn.st.sunk > 0) && (this.holding || this.fuse || this.queue || (this.casting && !this.ctrl)) ? this.lockOn : null; // (casting: al soltar, el tiro de una persona va al fijado aunque camine para otro lado; la máquina apunta como antes)
     const P = !L && this.pin && G.time < this.pin.until && this.canTarget(this.pin.u) ? this.pin.u : null;
     for (const u of G.units) {
       if (!u.alive || u.team === this.team || u.st.hidden > 0 || u.st.sunk > 0 || u.untargetable) continue;

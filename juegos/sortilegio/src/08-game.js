@@ -209,7 +209,17 @@ const Game = (() => {
   /* ---------- bucle ---------- */
   let last = performance.now(), acc = 0, fpsT = 0, fpsN = 0, fps = 60;
   function advance(t) { let n = Math.round(t / DT); while (n-- > 0) step(DT); }
+  // un error en un cuadro no puede detener el juego (antes un color mal escrito lo dejaba congelado): se pide el siguiente
+  // cuadro primero; el error se avisa una vez (las pruebas lo ven) y el lienzo se deja limpio para seguir
+  let frameErr = 0;
   function frame(now) {
+    requestAnimationFrame(frame);
+    try { frameBody(now); } catch (e) {
+      if (!frameErr++) setTimeout(() => { throw e; });
+      try { if (ctx.reset) ctx.reset(); else { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; } } catch (e2) { /* nada */ }
+    }
+  }
+  function frameBody(now) {
     let dt = Math.min(0.1, (now - last) / 1000); last = now;
     fpsT += dt; fpsN++; if (fpsT > 1) { fps = fpsN / fpsT; fpsT = 0; fpsN = 0; }
     watchPerf(dt);
@@ -227,8 +237,7 @@ const Game = (() => {
     }
     Cine.step(Math.min(0.05, dt));
     // golpe de cámara de los momentos grandes (Cine): un pelito de acercamiento que se suelta solo
-    if (G.T) { const z0 = cam.z; cam.z = z0 * (1 + Cine.punch); Art.render(G, ctx, cam, sw, sh, dpr); cam.z = z0; }
-    requestAnimationFrame(frame);
+    if (G.T) { const z0 = cam.z; cam.z = z0 * (1 + Cine.punch); try { Art.render(G, ctx, cam, sw, sh, dpr); } finally { cam.z = z0; } }
   }
   requestAnimationFrame(frame);
   // en línea, remoto: arma la ronda nueva igual que el anfitrión (mismo escenario y semilla); lo que cambia lo manda él

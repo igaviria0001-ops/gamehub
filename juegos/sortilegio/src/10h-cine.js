@@ -33,6 +33,8 @@ const Cine = (() => {
       case 'cast': if (!e.fusion && e.level === 2) { sigil(e.x, e.y, [e.el], false); punch(0.012); } break;
       case 'cometBurst': punch(0.022); break;
       case 'mawSpit': punch(0.035); decal('crack', e.x, e.y, 70); break;
+      case 'bossRage': punch(0.06); edge([255, 70, 30], 0.4, 0.7); decal('crack', e.x, e.y, 130); break;
+      case 'bossDown': if (e.k === 'buziraco') { punch(0.08); edge([255, 240, 220], 0.5, 0.6); decal('scorch', e.x, e.y, 150); } break;
       case 'sunBlast': punch(0.045); edge([255, 200, 110], 0.26, 0.35); decal('scorch', e.x, e.y, e.r * 0.6); break;
       case 'hurt': {
         if (e.dot || !(e.dmg >= 6)) break; const u = e.unit, dx = u && u.vx ? u.vx : (Math.random() - 0.5), dy = u && u.vy ? u.vy : (Math.random() - 0.5);

@@ -375,7 +375,7 @@ function noise2(x, y) {
 function fbm2(x, y, oct = 4) { let v = 0, a = 0.5, n = 0; for (let k = 0; k < oct; k++) { v += a * noise2(x, y); n += a; x = x * 2.03 + 17.1; y = y * 2.03 + 9.7; a *= 0.5; } return v / n; }
 
 /* ---------- guardado (prefijo propio: no choca con los otros juegos) ---------- */
-const GAME_META = { id: 'sortilegio', name: 'Sortilegio', version: '2.7', storagePrefix: 'srt_', players: 2 };
+const GAME_META = { id: 'sortilegio', name: 'Sortilegio', version: '2.8', storagePrefix: 'srt_', players: 2 };
 const Store = {
   get(k, def) { try { const v = localStorage.getItem(GAME_META.storagePrefix + k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } },
   set(k, v) { try { localStorage.setItem(GAME_META.storagePrefix + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
@@ -1516,7 +1516,7 @@ const FUSIONS = {
   'fire+wind':   { name: 'Torbellino de fuego', kind: 'firenado', cd: 4.5, speed: 270, r: 58, life: 3.3, dps: 20, turn: 2.3, pull: 330, tip: 'Persigue despacio y quema todo a su paso.' },
   'fire+earth':  { name: 'Magma', kind: 'meteor', cd: 4.5, range: 340, flight: 0.6, r: 80, dmg: 20, knock: 340, pool: { r: 62, life: 4, dps: 10 }, frags: 3, tip: 'Un meteoro de lava cae en arco, rompe muros y se parte: tres fragmentos más llueven alrededor.' },
   'fire+plant':  { name: 'Vainas de fuego', kind: 'mines', cd: 4.0, n: 3, arm: 0.6, trig: 64, hop: 150, r: 80, dmg: 15, life: 10, tip: 'Tres vainas de fuego: si el rival pasa cerca, saltan hacia él y estallan.' },
-  'fire+bolt':   { name: 'Plasma', kind: 'beam', cd: 4.5, windup: 0.3, len: 660, w: 38, dmg: 31, tip: 'Rayo recto que rompe muros. Apunta bien.' },
+  'fire+bolt':   { name: 'Plasma', kind: 'beam', cd: 4.5, windup: 0.36, len: 660, w: 30, dmg: 27, tip: 'Rayo recto que rompe muros. Apunta bien.' },
   'water+wind':  { name: 'Ventisca', kind: 'frost', cd: 4.0, range: 295, half: 0.68, dmg: 10, chill: 2.0, freeze: 1.3, tip: 'Congela al mojado y vuelve hielo los charcos.' },
   'water+earth': { name: 'Alud de lodo', kind: 'mudslide', cd: 4.0, speed: 440, range: 340, half: 0.55, dmg: 15, stun: 0.3, knock: 420, wet: 2.5, slow: 0.55, life: 6, tip: 'Una avalancha de barro avanza y arrastra: tumba, empuja, moja, deshace proyectiles y deja lodo que frena y no deja esquivar.' },
   'water+plant': { name: 'Flor de vida', kind: 'bloom', cd: 5.0, r: 104, life: 5, hps: 6.5, pollen: 2.5, pulse: 1.5, pulseDmg: 4, end: 7, endRoot: 0.8, endHeal: 6, tip: 'Un loto gigante: cura a los tuyos y les quita quemaduras, maleficios y enredos; al rival lo frena y lo quema con polen, cada latido lo empuja afuera y al cerrarse lo enreda.' },
@@ -1540,7 +1540,7 @@ Object.assign(FUSIONS, {
   'water+shadow': { name: 'Marea negra', kind: 'bog', cd: 4.5, range: 290, flight: 0.45, r: 118, life: 5, dps: 6.5, slow: 0.68, drain: 0.55, tip: 'Charco oscuro que frena, hace daño y te devuelve vida.' },
   'wind+shadow':  { name: 'Cuervos', kind: 'crows', cd: 4.0, n: 5, speed: 380, turn: 3.4, dmg: 5, life: 3.0, r: 11, dazzle: 0.5, hex: 2, tip: 'Una bandada de cinco cuervos que persigue, ciega y deja maleficio.' },
   'earth+shadow': { name: 'Fosa', kind: 'maw', cd: 5.0, range: 340, chase: 1.1, speed: 265, r: 50, grab: 0.22, sink: 0.85, bite: 9, spit: 11, hex: 1.8, tip: 'Una sombra con manos corre a los pies del rival; si lo agarra, la tierra se lo traga (no se mueve ni lo pueden tocar) y lo escupe con daño y maleficio. ¡Esquiva para soltarte!' },
-  'plant+shadow': { name: 'Zarzal', kind: 'thorns', cd: 4.5, r: 118, life: 4.5, dmg: 9, root: 0.6, tip: 'Anillo de espinas a tu alrededor: quien lo cruce queda enredado.' },
+  'plant+shadow': { name: 'Zarzal', kind: 'thorns', cd: 4.5, len: 400, speed: 1000, w: 44, life: 3.4, dmg: 13, root: 0.9, hex: 1.5, touch: 5, troot: 0.5, tip: 'Una hilera de espinas negras brota del suelo en línea recta hacia el rival: al que alcanza lo hiere, lo enreda y le deja maleficio. La hilera se queda un rato y cruzarla pincha y enreda.' },
   'bolt+shadow':  { name: 'Rayo negro', kind: 'blackbolt', cd: 4.0, range: 330, dmg: 15, hex: 3.2, silence: 0.7, chain: 190, tip: 'Rayo que maldice, salta a otro rival y lo silencia un instante.' },
 });
 const FUSION_ORDER = Object.keys(FUSIONS);
@@ -1556,7 +1556,7 @@ const CHARS = {
   // 2.0 — más magos de los seis elementos de siempre
   cocuy:     { name: 'Cocuy', title: 'ermitaño del nevado', hands: ['water', 'wind'], hp: 136, speed: 1.0, sig: 'water+wind', trait: 'Congela 40 % más tiempo, no resbala en el hielo y el frío no lo frena.', look: 'cocuy' },
   tatacoa:   { name: 'Tatacoa', title: 'caminante del desierto', hands: ['wind', 'earth'], hp: 136, speed: 0.98, sig: 'wind+earth', trait: 'Dentro de su tormenta de arena se cura; sus muros aguantan más.', look: 'tatacoa' },
-  galeras:   { name: 'Galeras', title: 'forjador de tormentas', hands: ['fire', 'bolt'], hp: 178, speed: 1.06, sig: 'fire+bolt', trait: 'Carga los hechizos 30 % más rápido y camina mientras prepara el Plasma.', look: 'galeras' },
+  galeras:   { name: 'Galeras', title: 'forjador de tormentas', hands: ['fire', 'bolt'], hp: 146, speed: 1.06, sig: 'fire+bolt', trait: 'Carga los hechizos 30 % más rápido y camina mientras prepara el Plasma.', look: 'galeras' },
   // 2.0 — magos de Luz y Sombra
   zuhe:      { name: 'Zuhé', title: 'hijo del sol', hands: ['light', 'fire'], hp: 106, speed: 1.02, sig: 'fire+light', trait: 'Encandila 40 % más tiempo y cada golpe de luz lo cura; lo rodea un halo de sol.', look: 'zuhe' },
   chia:      { name: 'Chía', title: 'señora de la luna', hands: ['light', 'shadow'], hp: 114, speed: 1.08, sig: 'light+shadow', trait: 'Sus maleficios duran más y pegan más fuerte; escondida o en la oscuridad se regenera.', look: 'chia' },
@@ -2024,7 +2024,7 @@ class Mage extends Unit {
     let ang = this.face, target = null;
     if (this.st.blind > 0) return { ang: ang + (G.rng() - 0.5) * 0.62, target: null, dist: range };
     let best = 1e9;
-    const L = this.lockOn && this.lockOn.alive && this.lockOn.st.hidden <= 0 && (this.holding || this.fuse || this.queue) ? this.lockOn : null;
+    const L = this.lockOn && this.lockOn.alive && this.lockOn.st.hidden <= 0 && !(this.lockOn.st.sunk > 0) && (this.holding || this.fuse || this.queue || (this.casting && !this.ctrl)) ? this.lockOn : null; // (casting: al soltar, el tiro de una persona va al fijado aunque camine para otro lado; la máquina apunta como antes)
     const P = !L && this.pin && G.time < this.pin.until && this.canTarget(this.pin.u) ? this.pin.u : null;
     for (const u of G.units) {
       if (!u.alive || u.team === this.team || u.st.hidden > 0 || u.st.sunk > 0 || u.untargetable) continue;
@@ -2181,7 +2181,7 @@ class Mage extends Unit {
   useHand(h) { if (h.uses > 0) { h.uses--; if (h.uses === 0) h.el = h.nat; } }
   castSingle(G, k, level) {
     const h = this.hands[k], el = h.el, S = SPELLS[el][level - 1];
-    Spells.cast(G, this, S, el, { level, power: 1 });
+    this.casting = true; try { Spells.cast(G, this, S, el, { level, power: 1 }); } finally { this.casting = false; }
     h.cd = S.cd; this.rec = 0.16; this.castT = 0.25; this.castEl = el; this.castHand = k; this.stats.casts++;
     this.useHand(h);
   }
@@ -2196,8 +2196,11 @@ class Mage extends Unit {
     }
     const power = gran ? 1.65 : 1, size = gran ? 1.45 : 1;
     let S, el;
-    if (a.el === b.el) { S = Object.assign({}, SPELLS[a.el][1], { name: 'Doble ' + SPELLS[a.el][1].name.toLowerCase(), cd: 3.6 }); el = a.el; Spells.cast(G, this, S, el, { level: 2, power: power * 1.6, size: size * 1.25, double: true, gran }); }
-    else { const key = fuseKey(a.el, b.el); S = FUSIONS[key]; el = key; Spells.cast(G, this, S, key, { fusion: key, power, size, gran }); G.events.push({ type: 'fusion', who: this.idx, key, gran }); }
+    this.casting = true;
+    try {
+      if (a.el === b.el) { S = Object.assign({}, SPELLS[a.el][1], { name: 'Doble ' + SPELLS[a.el][1].name.toLowerCase(), cd: 3.6 }); el = a.el; Spells.cast(G, this, S, el, { level: 2, power: power * 1.6, size: size * 1.25, double: true, gran }); }
+      else { const key = fuseKey(a.el, b.el); S = FUSIONS[key]; el = key; Spells.cast(G, this, S, key, { fusion: key, power, size, gran }); G.events.push({ type: 'fusion', who: this.idx, key, gran }); }
+    } finally { this.casting = false; }
     a.cd = b.cd = S.cd; this.rec = 0.3; this.castT = 0.4; this.castEl = a.el; this.castEl2 = b.el; this.castHand = 2; this.stats.casts++; this.stats.fusions++;
     if (gran) {
       this.emb = 0; this.stats.gran++; this.granGlow = 1.1; G.events.push({ type: 'gran', who: this.idx, x: this.x, y: this.y, name: S.name, els: [a.el, b.el] });
@@ -2385,7 +2388,8 @@ const Spells = (() => {
         add(G, Object.assign({}, B, { t: 'mine', S, el: 'fire', x, y, arm: S.arm + j * 0.08, life: S.life, r: S.r * Z, dmg: S.dmg * P }));
       }
     } else if (k === 'beam') {
-      add(G, Object.assign(B, { t: 'beam', S, el: 'fire', x: m.x, y: m.y, windup: S.windup, fired: false, ang: m.face }));
+      const a = m.aim(G, S.len, 0), tg = a.target && !a.target.spot ? a.target : null; // se fija al que apuntabas: sigue apuntándole aunque camines para otro lado
+      add(G, Object.assign(B, { t: 'beam', S, el: 'fire', x: m.x, y: m.y, windup: S.windup, fired: false, ang: a.ang, tg }));
       if (!m.tr.beamNoRoot) m.st.root = Math.max(m.st.root, S.windup);
     } else if (k === 'bloom') {
       add(G, Object.assign(B, { t: 'bloom', S, el: 'plant', x: m.x + Math.cos(m.face) * 16, y: m.y + Math.sin(m.face) * 16, r: S.r * Z, life: S.life * (B.gran ? 1.3 : 1), hps: S.hps * P * (m.tr.healMul || 1), P, healMul: m.tr.healMul || 1, next: S.pulse * 0.6 }));
@@ -2505,7 +2509,7 @@ const Spells = (() => {
         case 'beam': {
           const m = G.mages[s.by]; if (!m || !m.alive) { s.dead = true; break; }
           s.x = m.x; s.y = m.y;
-          if (!s.fired) { s.windup -= dt; const a = m.aim(G, s.S.len, 0); s.ang = a.ang; if (s.windup <= 0) { s.fired = true; s.show = 0.28; fireBeam(G, s, m); } }
+          if (!s.fired) { s.windup -= dt; const tg = s.tg; if (s.windup > 0.14 && tg && tg.alive && !(tg.st.hidden > 0) && !(tg.st.sunk > 0)) s.ang = Math.atan2(tg.y - m.y, tg.x - m.x); if (s.windup <= 0) { s.fired = true; s.show = 0.28; fireBeam(G, s, m); } }
           else { s.show -= dt; if (s.show <= 0) s.dead = true; } break;
         }
         case 'bloom': {
@@ -2804,7 +2808,12 @@ const Spells2 = (() => {
       Terrain.forCircle(T, p.tx, p.ty, 46 * Z, i => { const b = T.base[i]; if (!Terrain.solid(T, i) && b !== TT.DEEP && b !== TT.CHASM && b !== TT.LAVA) cells.push(i); });
       add(G, Object.assign(B, { t: 'pit', S, el: 'shadow', x: p.tx, y: p.ty, r: 62 * Z, delay: S.delay, life: S.life * L, cells, open: false, hitSet: new Set() }));
     } else if (k === 'thorns') {
-      add(G, Object.assign(B, { t: 'thorns', S, el: 'shadow', x: m.x, y: m.y, r: S.r * Z, life: S.life * L, dmg: S.dmg * P, last: new Map(), grow: 0 }));
+      // Zarzal: una hilera de espinas que brota en línea recta hacia el rival (hasta el primer muro); en el Gran Sortilegio, tres en abanico
+      const a0 = aimOf(G, m, S.len), p = Spells.aimPoint(G, m, S.len, a0.target ? Math.min(0.45, a0.dist / S.speed) : 0), aa = Math.atan2(p.ty - m.y, p.tx - m.x), n = B.gran ? 3 : 1; // apunta a donde VA a estar
+      for (let j = 0; j < n; j++) { const ang = aa + (j - (n - 1) / 2) * 0.32, dx = Math.cos(ang), dy = Math.sin(ang), x0 = m.x + dx * 26, y0 = m.y + dy * 26;
+        let len = 0; while (len < S.len * Z) { const i = Terrain.idx(T, x0 + dx * (len + 16), y0 + dy * (len + 16)); if (i < 0 || Terrain.solid(T, i)) break; len += 16; }
+        add(G, Object.assign({}, B, { t: 'thorns', S, el: 'shadow', x: x0, y: y0, x0, y0, ang, len, front: 0, life: S.life * L, dmg: S.dmg * P, P, w: S.w * Z, hitE: new Set(), last: new Map() })); }
+      G.events.push({ type: 'thornLine', x: m.x, y: m.y });
     } else if (k === 'blackbolt') {
       const a = aimOf(G, m, S.range), hx = m.x + Math.cos(m.face) * 22, hy = m.y - 20 + Math.sin(m.face) * 12; let x1, y1, tg = null; Object.assign(B, { x: m.x, y: m.y, id: -1 });
       if (a.target && !a.target.spot && a.dist <= S.range * Z + a.target.r) { tg = a.target; x1 = tg.x; y1 = tg.y - 14; } else { x1 = m.x + Math.cos(a.ang) * S.range; y1 = m.y + Math.sin(a.ang) * S.range; }
@@ -2917,8 +2926,14 @@ const Spells2 = (() => {
         s.life -= dt; if (s.life <= 0) s.dead = true; break;
       }
       case 'thorns': {
-        s.grow = Math.min(1, s.grow + dt * 4);
-        for (const u of G.units) { if (!foe(s, u) || u.obj) continue; const d = hypot(u.x - s.x, u.y - s.y); if (Math.abs(d - s.r) > 15 + u.r) continue; const l = s.last.get(u) || -9; if (G.time - l < 1.2) continue; s.last.set(u, G.time); hit(G, s, u, s.dmg, { el: 'plant', root: s.S.root, hex: 1.5, big: true, unavoid: true }); G.fx.push({ type: 'snare', x: u.x, y: u.y }); }
+        // el frente brota a lo largo de la línea; al que alcanza: golpe, enredo y maleficio. Después, cruzar la hilera pincha y enreda
+        const S = s.S, ca = Math.cos(s.ang), sa = Math.sin(s.ang), f0 = s.front; s.front = Math.min(s.len, s.front + S.speed * dt);
+        for (const u of G.units) { if (!foe(s, u) || u.obj) continue;
+          const rx = u.x - s.x0, ry = u.y - s.y0, along = rx * ca + ry * sa, perp = Math.abs(-rx * sa + ry * ca);
+          if (along < -u.r || along > s.front + u.r || perp > s.w / 2 + u.r) continue;
+          if (!s.hitE.has(u) && along >= f0 - u.r - 8) { s.hitE.add(u); s.last.set(u, G.time); hit(G, s, u, s.dmg, { el: 'plant', root: S.root, hex: S.hex, big: true }); G.fx.push({ type: 'thornHit', x: u.x, y: u.y }); continue; }
+          const l = s.last.get(u) || -9; if (G.time - l < 1.2) continue; s.last.set(u, G.time); s.hitE.add(u);
+          hit(G, s, u, S.touch * s.P, { el: 'plant', root: S.troot, unavoid: true }); G.fx.push({ type: 'thornHit', x: u.x, y: u.y, small: 1 }); }
         s.life -= dt; if (s.life <= 0) s.dead = true; break;
       }
       default: Earth.step(G, s, dt);
@@ -3235,7 +3250,7 @@ class Bot {
       if ((s.t === 'strike' || s.t === 'judgment' || s.t === 'nova') && hypot(x - s.x, y - s.y) < s.r + 26) d += 40;
       else if (s.t === 'pit' && hypot(x - s.x, y - s.y) < s.r + 20) d += 45;
       else if (s.t === 'bog' && hypot(x - s.x, y - s.y) < s.r) d += 14;
-      else if (s.t === 'thorns' && Math.abs(hypot(x - s.x, y - s.y) - s.r) < 30) d += 20;
+      else if (s.t === 'thorns' && Spells.segDist(x, y, s.x0, s.y0, s.x0 + Math.cos(s.ang) * s.front, s.y0 + Math.sin(s.ang) * s.front) < s.w / 2 + 18) d += 20;
       else if ((s.t === 'firenado' || s.t === 'vortex') && hypot(x - s.x, y - s.y) < s.r + 40) d += 24;
       else if ((s.t === 'storm' || s.t === 'cloud') && s.dps !== 0 && hypot(x - s.x, y - s.y) < s.r) d += s.t === 'storm' ? 16 : 6;
       else if (s.t === 'magnet' && hypot(x - s.x, y - s.y) < s.pullR) d += 10;
@@ -3480,7 +3495,7 @@ class Bot {
         case 'bog': hi = S.range; lo = 50; dmg = 16 + (m.hp < m.maxHp * 0.7 ? 6 : 0); p = 0.55; break;
         case 'crows': hi = 650; lo = 80; dmg = S.dmg * S.n; p = 0.6; break;
         case 'pit': hi = S.range; lo = 60; dmg = held ? 22 : 10; p = held ? 0.9 : 0.4; break;
-        case 'thorns': dmg = d < 190 ? 14 : 2; p = 1; hi = 9999; break;
+        case 'thorns': hi = S.len * 0.9; lo = 30; dmg = S.dmg + 8; p = 0.65; break;
         case 'blackbolt': hi = S.range; dmg = S.dmg + 6; p = vis ? 0.9 : 0; break;
       }
       if (d > hi || d < lo) p *= 0.08;
@@ -4161,7 +4176,7 @@ const Camp = (() => {
       if (this.boss === 'buziraco' && this.shield > 0) { if (src.el === 'light') { this.shield -= d * 1.15; this.flash = 0.08; G.fx.push({ type: 'dazzle', x: this.x + (Math.random() - 0.5) * 50, y: this.y - 60 - Math.random() * 60 }); if (this.shield <= 0) { this.shield = 0; this.tele = null; this._selfStun = 1; this.stun(3.6); this._selfStun = 0; this.regrow = 14; G.pops.push({ x: this.x, y: this.y - 150, text: '¡Sin coraza!', t: 0, color: '#ffe9a0', big: true }); G.events.push({ type: 'bossExposed', x: this.x, y: this.y }); G.fx.push({ type: 'flashRing', x: this.x, y: this.y, el: 'light', r: 190 }); } } else if (!src.dot && G.time - (this.denyT || -9) > 3) { this.denyT = G.time; G.pops.push({ x: this.x, y: this.y - 150, text: 'La coraza solo cede ante la LUZ', t: 0, color: '#e6b8ff', small: true }); } return 0; }
       this.hp -= d; this.flash = 0.1; if (src.by >= 0 && G.mages[src.by]) { G.mages[src.by].stats.dmg += d; G.mages[src.by].gainEmb(G, d * 0.3); }
       G.events.push({ type: 'hurt', x: this.x, y: this.y - 40, dmg: d, el: src.el, dot: !!src.dot, who: -1, unit: this });
-      if (this.hp <= 0) { this.alive = false; this.hp = 0; G.events.push({ type: 'bossDown', x: this.x, y: this.y }); G.fx.push({ type: 'boom', x: this.x, y: this.y - 30, r: 160, el: this.el }); G.slow = 1.2; }
+      if (this.hp <= 0) { this.alive = false; this.hp = 0; G.events.push({ type: 'bossDown', x: this.x, y: this.y, k: this.boss }); if (this.boss === 'buziraco') G.fx.push({ type: 'demonDown', x: this.x, y: this.y }); G.fx.push({ type: 'boom', x: this.x, y: this.y - 30, r: 160, el: this.el }); G.slow = 1.2; }
       return d;
     };
     const caster = { get x() { return b.x; }, get y() { return b.y; }, idx: -1, team: 9, tr: {}, st: { hidden: 0, blind: 0 }, face: 0,
@@ -4174,7 +4189,11 @@ const Camp = (() => {
     b.warn = (t, el, fn) => { b.tele = { t, max: t, el, fn }; G.events.push({ type: 'bossWarn', x: b.x, y: b.y, el }); };
     b.update = function (G, dt) {
       this.t += dt; this.tickStatus(G, dt); if (!this.alive) return;
-      const f = 1 - this.hp / this.maxHp; this.phase = f > 0.66 ? 2 : f > 0.33 ? 1 : 0;
+      const f = 1 - this.hp / this.maxHp, ph = f > 0.66 ? 2 : f > 0.33 ? 1 : 0;
+      if (this.boss === 'buziraco' && ph > this.phase) { // cambia de fase: ruge, la cámara tiembla y el salón se enciende
+        G.events.push({ type: 'bossRage', x: this.x, y: this.y, ph }); G.fx.push({ type: 'bossRage', x: this.x, y: this.y }); G.slow = Math.max(G.slow, 0.45);
+        G.pops.push({ x: this.x, y: this.y - 210, text: ph === 1 ? '¡Buziraco se enfurece!' : '¡El abismo despierta!', t: 0, color: '#ff9a5a', big: true }); }
+      this.phase = ph;
       let tgt = null, bd = 1e9; for (const m of G.mages) if (m.alive) { const d = hypot(m.x - this.x, m.y - this.y); if (d < bd) { bd = d; tgt = m; } }
       if (this.boss === 'madremonte') {
         if (this.regrow > 0) { this.regrow -= dt; if (this.regrow <= 0) { this.shield = this.maxShield * 0.65; G.pops.push({ x: this.x, y: this.y - 120, text: 'Las lianas vuelven a crecer', t: 0, color: '#9fe07a', small: true }); } }
@@ -4639,7 +4658,17 @@ const Game = (() => {
   /* ---------- bucle ---------- */
   let last = performance.now(), acc = 0, fpsT = 0, fpsN = 0, fps = 60;
   function advance(t) { let n = Math.round(t / DT); while (n-- > 0) step(DT); }
+  // un error en un cuadro no puede detener el juego (antes un color mal escrito lo dejaba congelado): se pide el siguiente
+  // cuadro primero; el error se avisa una vez (las pruebas lo ven) y el lienzo se deja limpio para seguir
+  let frameErr = 0;
   function frame(now) {
+    requestAnimationFrame(frame);
+    try { frameBody(now); } catch (e) {
+      if (!frameErr++) setTimeout(() => { throw e; });
+      try { if (ctx.reset) ctx.reset(); else { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; } } catch (e2) { /* nada */ }
+    }
+  }
+  function frameBody(now) {
     let dt = Math.min(0.1, (now - last) / 1000); last = now;
     fpsT += dt; fpsN++; if (fpsT > 1) { fps = fpsN / fpsT; fpsT = 0; fpsN = 0; }
     watchPerf(dt);
@@ -4657,8 +4686,7 @@ const Game = (() => {
     }
     Cine.step(Math.min(0.05, dt));
     // golpe de cámara de los momentos grandes (Cine): un pelito de acercamiento que se suelta solo
-    if (G.T) { const z0 = cam.z; cam.z = z0 * (1 + Cine.punch); Art.render(G, ctx, cam, sw, sh, dpr); cam.z = z0; }
-    requestAnimationFrame(frame);
+    if (G.T) { const z0 = cam.z; cam.z = z0 * (1 + Cine.punch); try { Art.render(G, ctx, cam, sw, sh, dpr); } finally { cam.z = z0; } }
   }
   requestAnimationFrame(frame);
   // en línea, remoto: arma la ronda nueva igual que el anfitrión (mismo escenario y semilla); lo que cambia lo manda él
@@ -6319,11 +6347,14 @@ const ArtSpells2 = (() => {
           x.restore();
         }
       } else if (s.t === 'thorns') {
-        const fade = Math.min(1, s.life / 0.5), R = s.r * s.grow, N = 30;
-        x.save(); x.globalAlpha = fade; x.lineCap = 'round';
-        x.strokeStyle = '#150a1c'; x.lineWidth = 9; x.beginPath(); x.ellipse(s.x, s.y, R, R * 0.55, 0, 0, TAU); x.stroke();
-        x.strokeStyle = '#3c1c48'; x.lineWidth = 5; x.beginPath(); for (let k = 0; k <= 60; k++) { const a = k / 60 * TAU, w = Math.sin(a * 9 + s.id) * 5; x.lineTo(s.x + Math.cos(a) * (R + w), s.y + Math.sin(a) * (R + w) * 0.55); } x.stroke();
-        for (let k = 0; k < N; k++) { const a = k / N * TAU + s.id * 0.1, px = s.x + Math.cos(a) * R, py = s.y + Math.sin(a) * R * 0.55, out = k % 2 ? 1 : -1, h = 15 + (k % 3) * 5; x.fillStyle = k % 3 ? '#2a1234' : '#5a1e58'; x.beginPath(); x.moveTo(px - 4, py); x.lineTo(px + Math.cos(a) * out * 7, py - h); x.lineTo(px + 4, py); x.fill(); x.fillStyle = '#e06ac8'; x.fillRect(px + Math.cos(a) * out * 7 - 0.8, py - h, 1.6, 2.6); }
+        // la raíz de la hilera: una franja de zarza negra en el suelo y un brillo violeta en el frente que avanza
+        const fade = Math.min(1, s.life / 0.5), ca = Math.cos(s.ang), sa = Math.sin(s.ang), nx = -sa, ny = ca, F = s.front, W = s.w;
+        x.save(); x.globalAlpha = fade; x.lineCap = 'round'; x.lineJoin = 'round';
+        x.fillStyle = 'rgba(14,6,20,0.45)'; x.beginPath(); x.moveTo(s.x0 + nx * W * 0.55, s.y0 + ny * W * 0.55); x.lineTo(s.x0 + ca * F + nx * W * 0.4, s.y0 + sa * F + ny * W * 0.4); x.lineTo(s.x0 + ca * F - nx * W * 0.4, s.y0 + sa * F - ny * W * 0.4); x.lineTo(s.x0 - nx * W * 0.55, s.y0 - ny * W * 0.55); x.closePath(); x.fill();
+        for (const side of [-1, 1]) { x.strokeStyle = side < 0 ? '#1c0c26' : '#3c1c48'; x.lineWidth = 4; x.beginPath();
+          for (let d = 0; d <= F; d += 8) { const w = Math.sin(d * 0.09 + s.id + side) * W * 0.28 + side * 4, px = s.x0 + ca * d + nx * w, py = s.y0 + sa * d + ny * w; d ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke(); }
+        if (F < s.len) { x.globalCompositeOperation = 'lighter'; const fx = s.x0 + ca * F, fy = s.y0 + sa * F, g = x.createRadialGradient(fx, fy, 2, fx, fy, 46); g.addColorStop(0, 'rgba(240,90,220,0.7)'); g.addColorStop(1, 'rgba(160,40,170,0)'); x.fillStyle = g; x.beginPath(); x.ellipse(fx, fy, 46, 26, 0, 0, TAU); x.fill();
+          if (!LOWFX) for (let q = 0; q < 2; q++) FX.P({ x: fx + vr(-10, 10), y: fy + vr(-8, 8), z: 4, vx: ca * vr(40, 140) + vr(-40, 40), vy: sa * vr(40, 140) + vr(-30, 30), vz: vr(80, 200), g: 600, drag: 1, life: vr(0.3, 0.6), size: vr(2, 4), color: Math.random() < 0.5 ? '#2a1a14' : '#4a2a50', kind: 'chunk', add: false }); }
         x.restore();
       } else if (s.t === 'lob' && (s.kind === 'cage' || s.kind === 'bog')) {
         const f = s.tt / s.T, r = s.kind === 'cage' ? 92 : s.S.r * (s.size || 1);
@@ -6334,7 +6365,28 @@ const ArtSpells2 = (() => {
   /* ---------- lo que se ordena con los magos ---------- */
   function items(G, list) {
     for (const s of G.spells) if (s.t === 'wisp') list.push({ y: s.y + 4, draw: x => wisp(x, G, s.x, s.y - 30, s.id, s.arm > 0 ? 0.85 : 1.35) });
+    for (const s of G.spells) if (s.t === 'thorns') thornItems(G, s, list);
     for (const u of G.units) { if (!u.alive) continue; if (u.obj === 'decoy') list.push({ y: u.y, draw: x => decoy(x, G, u) }); else if (u.obj === 'sunflower') list.push({ y: u.y, draw: x => sunflower(x, G, u) }); }
+  }
+  // espinas de la hilera: brotan con un rebote cuando pasa el frente, en dos filas torcidas, y al final se esconden
+  function thornItems(G, s, list) {
+    const S = s.S, ca = Math.cos(s.ang), sa = Math.sin(s.ang), nx = -sa, ny = ca, step = LOWFX ? 24 : 17, end = s.life < 0.45 ? s.life / 0.45 : 1, Z = s.w / (S.w || 36);
+    for (let d = 10, k = 0; d <= s.front; d += step, k++) {
+      const e = clamp((s.front - d) / (S.speed * 0.12), 0, 1), pop = e < 1 ? 1 - Math.pow(1 - e, 3) * Math.cos(e * 9) : 1, h = (30 + hash2(k, s.id) * 30) * Z * pop * end; if (h < 2) continue;
+      const side = k % 2 ? 1 : -1, off = side * s.w * 0.22 + (hash2(s.id, k) - 0.5) * 10, px = s.x0 + ca * d + nx * off, py = s.y0 + sa * d + ny * off, lean = (hash2(k + 7, s.id) - 0.5) * 0.7 + side * 0.15;
+      list.push({ y: py, draw: x => thornSpike(x, px, py, h, lean, 6 + hash2(k, 3) * 4, k) });
+    }
+  }
+  function thornSpike(x, px, py, h, lean, w, k) {
+    const tx = px + lean * h * 0.5, ty = py - h;
+    x.save();
+    x.fillStyle = 'rgba(8,2,12,0.35)'; x.beginPath(); x.ellipse(px, py + 1, w * 1.3, w * 0.5, 0, 0, TAU); x.fill();
+    const g = x.createLinearGradient(px, py, tx, ty); g.addColorStop(0, '#12061a'); g.addColorStop(0.6, '#3a1446'); g.addColorStop(1, '#8a2a86'); x.fillStyle = g;
+    x.beginPath(); x.moveTo(px - w, py); x.quadraticCurveTo(px - w * 0.3 + lean * h * 0.2, py - h * 0.55, tx, ty); x.quadraticCurveTo(px + w * 0.3 + lean * h * 0.25, py - h * 0.5, px + w, py); x.closePath(); x.fill();
+    // espinitas a los lados (zarza)
+    x.fillStyle = '#2a0e34'; for (let j = 1; j <= 2; j++) { const q = j / 3.2, bx = px + (tx - px) * q, by = py + (ty - py) * q, sd = (j + k) % 2 ? 1 : -1; x.beginPath(); x.moveTo(bx, by - 3); x.lineTo(bx + sd * w * 1.1, by - 7); x.lineTo(bx, by + 3); x.fill(); }
+    x.globalCompositeOperation = 'lighter'; x.fillStyle = 'rgba(255,110,230,0.75)'; x.beginPath(); x.arc(tx, ty + 2, 2.2, 0, TAU); x.fill();
+    x.restore();
   }
   function wisp(x, G, X, Y, id, k = 1) {
     const t = G.time + id;
@@ -6486,7 +6538,8 @@ const ArtSpells2 = (() => {
       if (s.t === 'judgment') add(s.x, s.y, s.r * 2, [255, 236, 170], 0.4 + (1 - s.delay / s.S.delay) * 0.6, 0.3);
   
       else if (s.t === 'wisp') add(s.x, s.y - 30, 70, [170, 110, 255], 0.7, 0.3);
-      else if (s.t === 'bog' || s.t === 'thorns') add(s.x, s.y, s.r * 0.9, [210, 70, 175], 0.3, 0.1);
+      else if (s.t === 'bog') add(s.x, s.y, s.r * 0.9, [210, 70, 175], 0.3, 0.1);
+      else if (s.t === 'thorns') add(s.x0 + Math.cos(s.ang) * s.front * 0.5, s.y0 + Math.sin(s.ang) * s.front * 0.5, Math.max(60, s.front * 0.55), [210, 70, 175], 0.25, 0.08);
     }
     for (const u of G.units) if (u.alive && u.obj === 'sunflower') add(u.x, u.y - 40, 170, [255, 226, 130], 0.95, 0.3);
     for (let i = 0; i < G.T.n; i++) if (G.T.crys[i] === 1 && G.T.wall[i] > 0 && i % 2 === 0) add(Terrain.cx(G.T, i), Terrain.cy(G.T, i) - 20, 80, [255, 236, 170], 0.45, 0.1);
@@ -7047,8 +7100,27 @@ const ArtEpic = (() => {
     x.fillStyle = cg; x.fillRect(o.x - cw, o.y - 420, cw * 2, 420);
     x.restore();
   }
+  /* ---------- Buziraco: el círculo del abismo bajo sus pies ---------- */
+  function demonCircle(x, G, B) {
+    const t = G.time, arm = B.shield > 0, rage = B.phase || 0, R = 175 + rage * 12, c = arm ? [210, 80, 235] : [255, 120, 40], pl = 0.7 + 0.3 * Math.sin(t * 3);
+    x.save(); x.translate(B.x, B.y);
+    const g = x.createRadialGradient(0, 0, R * 0.2, 0, 0, R * 1.1); g.addColorStop(0, 'rgba(4,0,8,0.55)'); g.addColorStop(0.8, 'rgba(14,2,14,0.35)'); g.addColorStop(1, 'rgba(14,2,14,0)');
+    x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, R * 1.1, R * 0.6, 0, 0, TAU); x.fill();
+    x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
+    // grietas que salen del centro y laten con lava
+    const nk = LOWFX ? 6 : 10; x.strokeStyle = `rgba(255,${90 + rage * 30},30,${0.35 * pl + rage * 0.1})`; x.lineWidth = 2.4;
+    for (let k = 0; k < nk; k++) { const a = k / nk * TAU + 0.3, L = R * (0.7 + 0.35 * hash2(k, 5)); x.beginPath(); x.moveTo(Math.cos(a) * R * 0.25, Math.sin(a) * R * 0.25 * 0.55);
+      for (let j = 1; j <= 4; j++) { const q = j / 4, w = (hash2(k, j) - 0.5) * 0.35; x.lineTo(Math.cos(a + w) * (R * 0.25 + (L - R * 0.25) * q), Math.sin(a + w) * (R * 0.25 + (L - R * 0.25) * q) * 0.55); } x.stroke(); }
+    // anillos con marcas que giran en sentidos contrarios
+    x.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${0.55 * pl})`; x.lineWidth = 3; x.beginPath(); x.ellipse(0, 0, R, R * 0.55, 0, 0, TAU); x.stroke();
+    x.lineWidth = 1.6; x.beginPath(); x.ellipse(0, 0, R * 0.84, R * 0.84 * 0.55, 0, 0, TAU); x.stroke();
+    const nm = LOWFX ? 16 : 28; for (let k = 0; k < nm; k++) { const a = k / nm * TAU + t * 0.25, ca = Math.cos(a), sa = Math.sin(a); x.beginPath(); x.moveTo(ca * R * 0.86, sa * R * 0.86 * 0.55); x.lineTo(ca * R * (k % 3 ? 0.95 : 0.99), sa * R * (k % 3 ? 0.95 : 0.99) * 0.55); x.stroke(); }
+    x.lineWidth = 2; const nr = LOWFX ? 6 : 9; for (let k = 0; k < nr; k++) { const a = k / nr * TAU - t * 0.4, px = Math.cos(a) * R * 0.66, py = Math.sin(a) * R * 0.66 * 0.55; x.save(); x.translate(px, py); x.scale(1, 0.55); x.rotate(a); x.beginPath(); x.moveTo(-6, -6); x.lineTo(0, 6); x.lineTo(6, -6); x.moveTo(-4, 0); x.lineTo(4, 0); x.stroke(); x.restore(); }
+    x.restore();
+  }
   /* ---------- capas ---------- */
   function under(x, G) {
+    if (G.boss && G.boss.alive && G.boss.boss === 'buziraco') demonCircle(x, G, G.boss);
     for (const s of G.spells) { if (s.t === 'crescent') crescentUnder(x, G, s); else if (s.t === 'comet') cometUnder(x, G, s); else if (s.t === 'bloom') lotusUnder(x, G, s); else if (s.t === 'nova') novaUnder(x, G, s); }
     for (const u of G.units) if (u.cid === 'zuhe' && u.alive !== false && (u.isMage || u.obj === 'decoy')) zuheHalo(x, G, u);
   }
@@ -7065,6 +7137,19 @@ const ArtEpic = (() => {
   function fx(G, f) {
     const P = FX.P, S = FX.S, burst = FX.burst;
     switch (f.type) {
+      case 'thornHit': S({ type: 'ring', x: f.x, y: f.y, r0: f.small ? 30 : 60, r1: 8, el: 'shadow', life: 0.25, w: f.small ? 4 : 8 });
+        burst(f.x, f.y - 16, 'plant', LOWFX ? 5 : f.small ? 6 : 14, 220); if (!f.small) S({ type: 'snare', x: f.x, y: f.y, life: 0.7 }); return true;
+      case 'bossRage': // Buziraco cambia de fase: onda de fuego, anillo de sombra y brasas que saltan
+        S({ type: 'ring', x: f.x, y: f.y, r0: 40, r1: 340, el: 'fire', life: 0.6, w: 18 }); S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: 260, el: 'shadow', life: 0.7, w: 10, delay: 0.1 });
+        S({ type: 'flash', x: f.x, y: f.y, r: 320, el: 'fire', life: 0.35 });
+        for (let k = 0; k < (LOWFX ? 16 : 40); k++) { const a = Math.random() * TAU, v = vr(160, 520); P({ x: f.x, y: f.y, z: vr(10, 60), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(120, 360), g: 520, drag: 1.2, life: vr(0.6, 1.2), size: vr(2, 4.5), color: Math.random() < 0.5 ? '#ffb44a' : '#ff5a24', kind: 'ember' }); }
+        return true;
+      case 'demonDown': // cae el jefe final: rayos de luz, columna, onda doble y una lluvia de brasas
+        S({ type: 'novaRays', x: f.x, y: f.y, r: 260, life: 1.1, seed: Math.random() * 6 }); S({ type: 'star4', x: f.x, y: f.y - 120, r: 160, life: 0.6 });
+        S({ type: 'ring', x: f.x, y: f.y, r0: 30, r1: 420, el: 'light', life: 0.8, w: 16, gold: true }); S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: 340, el: 'shadow', life: 1.0, w: 10, delay: 0.15 });
+        S({ type: 'flash', x: f.x, y: f.y, r: 420, el: 'light', life: 0.5 });
+        for (let k = 0; k < (LOWFX ? 24 : 70); k++) { const a = Math.random() * TAU, v = vr(120, 620); P({ x: f.x, y: f.y, z: vr(20, 120), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(100, 420), g: 420, drag: 1.1, life: vr(0.8, 1.8), size: vr(2, 5), color: ['#ffffff', '#ffe08a', '#ff8a3a', '#c84ad0'][k % 4], kind: 'ember' }); }
+        return true;
       case 'moonFlip': // la luna se voltea: de luz a sombra
         S({ type: 'star4', x: f.x, y: f.y - MZ, r: 54, life: 0.3 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: 70, el: 'shadow', life: 0.35, w: 6 });
         burst(f.x, f.y - MZ, 'light', LOWFX ? 5 : 10, 200); burst(f.x, f.y - MZ, 'shadow', LOWFX ? 5 : 10, 200); return true;
@@ -7862,7 +7947,8 @@ const ArtBeast = (() => {
   const lg = (x, x0, y0, x1, y1, ...st) => { const g = x.createLinearGradient(x0, y0, x1, y1); st.forEach((c, i) => g.addColorStop(i / (st.length - 1), c)); return g; };
   const rg = (x, cx, cy, r0, r1, ...st) => { const g = x.createRadialGradient(cx, cy, r0, cx, cy, r1); st.forEach((c, i) => g.addColorStop(i / (st.length - 1), c)); return g; };
   const fo = (x, fill, lw = 1.4) => { x.fillStyle = fill; x.fill(); x.strokeStyle = OL; x.lineWidth = lw; x.stroke(); };
-  const eye = (x, X, Y, r, col, pupil = true) => { x.save(); x.globalCompositeOperation = 'lighter'; const g = rg(x, X, Y, 0, r * 3, col + 'cc', col + '00'); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r * 3, 0, TAU); x.fill(); x.restore(); x.fillStyle = col; x.beginPath(); x.ellipse(X, Y, r, r * 0.8, 0, 0, TAU); x.fill(); if (pupil) { x.fillStyle = '#fff'; x.beginPath(); x.arc(X - r * 0.25, Y - r * 0.25, r * 0.35, 0, TAU); x.fill(); } };
+  const hex6 = c => /^#[0-9a-f]{3}$/i.test(c) ? '#' + c[1] + c[1] + c[2] + c[2] + c[3] + c[3] : c; // '#888' + 'cc' no es un color: rompía el dibujo (y congelaba el juego) con Buziraco aturdido
+  const eye = (x, X, Y, r, col, pupil = true) => { col = hex6(col); x.save(); x.globalCompositeOperation = 'lighter'; const g = rg(x, X, Y, 0, r * 3, col + 'cc', col + '00'); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r * 3, 0, TAU); x.fill(); x.restore(); x.fillStyle = col; x.beginPath(); x.ellipse(X, Y, r, r * 0.8, 0, 0, TAU); x.fill(); if (pupil) { x.fillStyle = '#fff'; x.beginPath(); x.arc(X - r * 0.25, Y - r * 0.25, r * 0.35, 0, TAU); x.fill(); } };
   const bar = (x, Y, w, f, col) => { x.fillStyle = 'rgba(10,8,25,0.7)'; x.fillRect(-w / 2 - 1, Y - 1, w + 2, 6); x.fillStyle = col; x.fillRect(-w / 2, Y, w * clamp(f, 0, 1), 4); x.fillStyle = 'rgba(255,255,255,0.35)'; x.fillRect(-w / 2, Y, w * clamp(f, 0, 1), 1.3); };
   // ala de plumas o de membrana (se dibuja hacia +x; se voltea con scale)
   function wing(x, L, fl, cols, n = 6, memb = false) {
@@ -8074,8 +8160,15 @@ const ArtBeast = (() => {
       for (let j = 0; j < 3; j++) { x.fillStyle = j < (b.glare | 0) ? '#fff6c0' : 'rgba(20,14,40,0.6)'; x.strokeStyle = '#ffe9a0'; x.lineWidth = 1.2; x.beginPath(); x.arc(-12 + j * 12, -76, 4, 0, TAU); x.fill(); x.stroke(); }
       x.translate(0, H + 26);
     } else if (k === 'buziraco') {
-      const arm = b.shield > 0, sw = Math.sin(t * 1.3) * 3, fl = Math.sin(t * 2.2) * 0.14;
-      glow(x, 0, -70, 150, arm ? 'rgba(160,40,150,0.35)' : 'rgba(255,90,30,0.5)');
+      const arm = b.shield > 0, sw = Math.sin(t * 1.3) * 3, fl = Math.sin(t * 2.2) * 0.14, rage = b.phase || 0;
+      x.save(); x.scale(1.3, 1.3); // es el jefe final: más grande
+      glow(x, 0, -70, 170 + rage * 20, arm ? 'rgba(160,40,150,0.38)' : 'rgba(255,90,30,0.55)');
+      // aura: lenguas de llama detrás del cuerpo (de sombra con la coraza, de fuego sin ella), más altas en cada fase
+      { const n = LOWFX ? 6 : 11; x.save(); if (!arm) x.globalCompositeOperation = 'lighter';
+        for (let j = 0; j < n; j++) { const q = j / (n - 1) - 0.5, bx = q * 120, by = -40 - Math.abs(q) * 70, fh = (60 + 46 * Math.abs(Math.sin(t * 3.1 + j * 1.7)) + (1 - Math.abs(q) * 1.6) * 50) * (1 + rage * 0.18), w = 15 + 6 * Math.sin(t * 4 + j), swy = Math.sin(t * 5 + j * 2.3) * 10;
+          const g = x.createLinearGradient(bx, by + 20, bx + swy, by - fh); if (arm) { g.addColorStop(0, 'rgba(18,4,28,0)'); g.addColorStop(0.25, 'rgba(18,4,28,0.8)'); g.addColorStop(0.65, 'rgba(76,18,98,0.5)'); g.addColorStop(1, 'rgba(210,70,230,0)'); } else { g.addColorStop(0, 'rgba(255,206,100,0)'); g.addColorStop(0.25, 'rgba(255,206,100,0.65)'); g.addColorStop(0.6, 'rgba(255,96,32,0.45)'); g.addColorStop(1, 'rgba(160,20,10,0)'); }
+          x.fillStyle = g; x.beginPath(); x.moveTo(bx - w, by + 20); x.quadraticCurveTo(bx - w * 0.6 + swy * 0.5, by - fh * 0.5, bx + swy, by - fh); x.quadraticCurveTo(bx + w * 0.6 + swy * 0.5, by - fh * 0.5, bx + w, by + 20); x.closePath(); x.fill(); }
+        x.restore(); }
       for (const s of [-1, 1]) { x.save(); x.translate(s * 26, -104 + br); x.scale(s, 1); wing(x, 118, 0.35 + fl, ['#3a0c18', '#12040a', 'rgba(255,110,60,0.55)'], 5, true); x.restore(); }
       x.strokeStyle = '#2a0a10'; x.lineWidth = 10; x.lineCap = 'round'; x.beginPath(); x.moveTo(-18, -14); x.bezierCurveTo(-70, 6, -86, -30, -74 + sw, -52); x.stroke(); x.fillStyle = '#e8482a'; x.beginPath(); x.moveTo(-74 + sw, -70); x.lineTo(-64 + sw, -50); x.lineTo(-84 + sw, -50); x.fill();
       for (const s of [-1, 1]) { x.beginPath(); x.moveTo(s * 8, -30); x.lineTo(s * 30, -26); x.lineTo(s * 34, 2); x.lineTo(s * 12, 4); x.closePath(); fo(x, lg(x, 0, -30, 0, 4, '#5a1820', '#1c060a'), 1.8); x.beginPath(); x.ellipse(s * 24, 4, 14, 6, 0, 0, TAU); fo(x, '#14060a', 1.4); }
@@ -8083,11 +8176,28 @@ const ArtBeast = (() => {
       if (!arm) { const p = 0.5 + 0.5 * Math.sin(t * 8); glow(x, 0, -76, 50, `rgba(255,${150 + p * 80},60,0.9)`); x.beginPath(); x.moveTo(-14, -92); x.lineTo(0, -98); x.lineTo(14, -92); x.lineTo(10, -62); x.lineTo(0, -54); x.lineTo(-10, -62); x.closePath(); fo(x, rg(x, 0, -78, 2, 24, '#fff6c0', '#ffa030', '#c8301a'), 1.5); }
       else { const f = b.shield / b.maxShield; for (const [px, py, w, h] of [[-30, -100, 26, 30], [4, -100, 26, 30], [-26, -68, 22, 28], [4, -68, 22, 28], [-16, -40, 32, 14]]) { x.beginPath(); x.moveTo(px, py + br); x.lineTo(px + w, py + br); x.lineTo(px + w - 3, py + h + br); x.lineTo(px + 3, py + h + br); x.closePath(); fo(x, lg(x, px, py, px + w, py + h, '#3a1c48', '#16081e'), 1.5); x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = `rgba(214,84,180,${(0.4 + 0.4 * Math.sin(t * 3 + px)) * (0.4 + f * 0.6)})`; x.lineWidth = 1.4; x.beginPath(); x.moveTo(px + w / 2, py + 5 + br); x.lineTo(px + w / 2 - 5, py + h / 2 + br); x.lineTo(px + w / 2 + 5, py + h / 2 + br); x.lineTo(px + w / 2, py + h - 5 + br); x.stroke(); x.restore(); } }
       for (const s of [-1, 1]) { const up = b.tele ? 1 - b.tele.t / b.tele.max : 0, hx = s * (72 - up * 20), hy = -62 - up * 74 + Math.sin(t * 2 + s) * 4; x.strokeStyle = '#1c060a'; x.lineWidth = 22; x.lineCap = 'round'; x.beginPath(); x.moveTo(s * 44, -102 + br); x.quadraticCurveTo(s * 76, -96 - up * 30, hx, hy); x.stroke(); x.strokeStyle = arm ? '#3a1c48' : '#8a2428'; x.lineWidth = 16; x.stroke(); x.beginPath(); x.arc(hx, hy, 12, 0, TAU); fo(x, '#6a1820', 1.6); x.strokeStyle = '#f2e6c8'; x.lineWidth = 3; for (let f2 = -1; f2 <= 1; f2++) { x.beginPath(); x.moveTo(hx + f2 * 5, hy + 8); x.lineTo(hx + f2 * 8, hy + 20); x.stroke(); } if (b.tele) glow(x, hx, hy, 26 + up * 24, (ELEMENTS[b.tele.el] || ELEMENTS.fire).c1 + 'ee'); }
+      // corona de fuego detrás de la cabeza
+      { x.save(); x.globalCompositeOperation = 'lighter'; const cr = 30 + 3 * Math.sin(t * 6), nC = LOWFX ? 5 : 9; x.strokeStyle = arm ? 'rgba(210,80,235,0.6)' : 'rgba(255,160,60,0.8)'; x.lineWidth = 3.5; x.lineCap = 'round';
+        x.beginPath(); x.arc(0, -124 + br, cr, Math.PI * 0.95, Math.PI * 2.05); x.stroke();
+        for (let j = 0; j < nC; j++) { const a = Math.PI + (j + 0.5) / nC * Math.PI, L = 10 + 10 * Math.abs(Math.sin(t * 7 + j)); x.beginPath(); x.moveTo(Math.cos(a) * cr, -124 + br + Math.sin(a) * cr); x.lineTo(Math.cos(a) * (cr + L), -124 + br + Math.sin(a) * (cr + L)); x.stroke(); }
+        x.restore(); }
       x.beginPath(); x.moveTo(-18, -112 + br); x.bezierCurveTo(-22, -140, 22, -140, 18, -112 + br); x.quadraticCurveTo(12, -100 + br, 0, -98 + br); x.quadraticCurveTo(-12, -100 + br, -18, -112 + br); fo(x, lg(x, -18, -140, 18, -98, '#b83a40', '#5a1418'), 1.8);
       for (const s of [-1, 1]) { x.beginPath(); x.moveTo(s * 10, -132 + br); x.bezierCurveTo(s * 34, -140, s * 44, -164, s * 30, -184 + br); x.bezierCurveTo(s * 34, -162, s * 24, -146, s * 4, -138 + br); x.closePath(); fo(x, lg(x, 0, -132, s * 34, -184, '#3a2a22', '#f2e6c8'), 1.5); }
       x.save(); x.globalCompositeOperation = 'lighter'; for (let j = 0; j < 7; j++) { const p = (t * 1.5 + j / 7) % 1, px = (j - 3) * 6; x.fillStyle = `rgba(255,${110 + j * 16},40,${(1 - p) * 0.85})`; x.beginPath(); x.ellipse(px + Math.sin(t * 7 + j) * 3, -138 + br - p * 34, 6 * (1 - p) + 1, 11 * (1 - p) + 2, 0, 0, TAU); x.fill(); } x.restore();
-      eye(x, -7, -120 + br, 3, stn ? '#888' : '#ffe07a', false); eye(x, 7, -120 + br, 3, stn ? '#888' : '#ffe07a', false); x.strokeStyle = '#1c060a'; x.lineWidth = 2.4; x.beginPath(); x.moveTo(-13, -127 + br); x.lineTo(-3, -123 + br); x.moveTo(13, -127 + br); x.lineTo(3, -123 + br); x.stroke();
+      eye(x, -7, -120 + br, 3, stn ? '#888888' : '#ffe07a', false); eye(x, 7, -120 + br, 3, stn ? '#888888' : '#ffe07a', false); x.strokeStyle = '#1c060a'; x.lineWidth = 2.4; x.beginPath(); x.moveTo(-13, -127 + br); x.lineTo(-3, -123 + br); x.moveTo(13, -127 + br); x.lineTo(3, -123 + br); x.stroke();
       x.fillStyle = '#12040a'; x.beginPath(); x.ellipse(0, -107 + br, 9, 4.5, 0, 0, Math.PI); x.fill(); x.fillStyle = '#f2e6c8'; for (let j = -2; j <= 2; j++) { x.beginPath(); x.moveTo(j * 3.4 - 1.5, -107 + br); x.lineTo(j * 3.4, -102 + br); x.lineTo(j * 3.4 + 1.5, -107 + br); x.fill(); }
+      // la coraza de sombra: esquirlas que giran a su alrededor (quedan menos a medida que la luz la rompe)
+      if (arm) { const f = b.shield / b.maxShield, n = Math.max(1, Math.ceil((LOWFX ? 6 : 11) * f)); x.save();
+        for (let j = 0; j < n; j++) { const a = t * 1.3 + j / n * TAU, px = Math.cos(a) * 92, py = -76 + Math.sin(a) * 28, sc = 0.75 + 0.3 * Math.sin(a);
+          x.save(); x.translate(px, py); x.rotate(a * 2 + j); x.scale(sc, sc); x.beginPath(); x.moveTo(0, -13); x.lineTo(6, -2); x.lineTo(2, 12); x.lineTo(-6, 1); x.closePath(); x.fillStyle = '#1c0828'; x.fill(); x.strokeStyle = 'rgba(225,95,245,0.9)'; x.lineWidth = 1.4; x.stroke(); x.restore(); }
+        x.restore(); }
+      // aviso de ataque: un sello del color del ataque que crece sobre su cabeza
+      if (b.tele) { const f = 1 - b.tele.t / b.tele.max, E = ELEMENTS[b.tele.el] || ELEMENTS.fire, rr = 14 + 24 * f; x.save(); x.globalCompositeOperation = 'lighter'; x.translate(0, -200 + br); x.strokeStyle = E.c1; x.globalAlpha = 0.45 + 0.55 * f; x.lineWidth = 2.5;
+        x.beginPath(); x.arc(0, 0, rr, 0, TAU); x.stroke(); x.beginPath(); x.arc(0, 0, rr * 0.62, 0, TAU); x.stroke();
+        x.rotate(t * 2.4); for (let j = 0; j < 12; j++) { const a = j / 12 * TAU; x.beginPath(); x.moveTo(Math.cos(a) * rr * 0.68, Math.sin(a) * rr * 0.68); x.lineTo(Math.cos(a) * rr * 0.94, Math.sin(a) * rr * 0.94); x.stroke(); }
+        x.rotate(-t * 4.8); x.beginPath(); for (let j = 0; j <= 3; j++) { const a = j / 3 * TAU - Math.PI / 2; j ? x.lineTo(Math.cos(a) * rr * 0.56, Math.sin(a) * rr * 0.56) : x.moveTo(Math.cos(a) * rr * 0.56, Math.sin(a) * rr * 0.56); } x.stroke();
+        glow(x, 0, 0, rr * 1.6, E.c1 + '88'); x.restore(); }
+      x.restore();
     }
     if (stn && k !== 'condor') for (let j = 0; j < 4; j++) { const a = t * 6 + j / 4 * TAU; ArtSpells2.star4(x, Math.cos(a) * R * 0.6, -R * 2.9 + Math.sin(a) * 7, 7, '#fff6c0', a); }
     if (b.st.hex > 0) { x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = 'rgba(214,84,180,0.85)'; x.lineWidth = 2; x.beginPath(); x.ellipse(0, -R * 3.2, 16, 8, 0, 0, TAU); x.stroke(); x.restore(); }
@@ -8190,6 +8300,8 @@ const Cine = (() => {
       case 'cast': if (!e.fusion && e.level === 2) { sigil(e.x, e.y, [e.el], false); punch(0.012); } break;
       case 'cometBurst': punch(0.022); break;
       case 'mawSpit': punch(0.035); decal('crack', e.x, e.y, 70); break;
+      case 'bossRage': punch(0.06); edge([255, 70, 30], 0.4, 0.7); decal('crack', e.x, e.y, 130); break;
+      case 'bossDown': if (e.k === 'buziraco') { punch(0.08); edge([255, 240, 220], 0.5, 0.6); decal('scorch', e.x, e.y, 150); } break;
       case 'sunBlast': punch(0.045); edge([255, 200, 110], 0.26, 0.35); decal('scorch', e.x, e.y, e.r * 0.6); break;
       case 'hurt': {
         if (e.dot || !(e.dmg >= 6)) break; const u = e.unit, dx = u && u.vx ? u.vx : (Math.random() - 0.5), dy = u && u.vy ? u.vy : (Math.random() - 0.5);
@@ -8380,6 +8492,8 @@ const Sound = (() => {
       case 'podHop': tone(300, 0.18, 0.06, 'triangle', 700); noise(1500, 1, 0.15, 0.05, 'bandpass', 1); break;
       case 'sunForm': tone(220, 0.6, 0.07, 'sawtooth', 660); tone(440, 0.6, 0.05, 'sine', 1320, 0.05); noise(1800, 0.8, 0.6, 0.05, 'bandpass', 1.8); break;
       case 'sunBlast': chime([1568, 2093, 2637], 0.08, 0.03, 'sine'); tone(70, 0.9, 0.3, 'sine', 35); noise(1400, 0.6, 0.8, 0.12, 'lowpass', 0.25); break;
+      case 'bossRage': tone(70, 1.3, 0.34, 'sawtooth', 38); tone(140, 1.0, 0.14, 'square', 70, 0.05); noise(300, 0.5, 1.3, 0.3, 'lowpass', 0.4); break;
+      case 'thornLine': noise(500, 0.9, 0.55, 0.16, 'bandpass', 2.2); tone(120, 0.4, 0.12, 'sawtooth', 60); for (let k = 0; k < 4; k++) noise(2500, 3, 0.05, 0.06, 'highpass', 1, 0.08 + k * 0.07); break;
       case 'moonThrow': noise(1600, 1.4, 0.5, 0.07, 'bandpass', 1.8); chime([1319, 1760], 0.06, 0.05, 'sine'); break;
       case 'moonFlip': tone(880, 0.3, 0.06, 'sine', 330); tone(110, 0.35, 0.1, 'triangle', 82); noise(500, 1, 0.3, 0.05, 'bandpass', 0.5); break;
       case 'moonCatch': chime([2093, 1568], 0.04, 0.05, 'sine'); break;
@@ -8419,7 +8533,7 @@ const Sound = (() => {
       case 'wall': play('wall'); break; case 'wallBreak': play('wallBreak'); break; case 'electrify': play('electrify'); break; case 'reflect': play('reflect'); break;
       case 'clash': play(e.kind === 'vapor' ? 'steam' : 'clash'); break; case 'beam': play('beam'); break; case 'tzap': play('tzap'); break; case 'bounce': play('bounce'); break;
       case 'round': play('round'); break; case 'go': play('go'); break; case 'roundWin': play('roundWin'); break; case 'matchWin': play('matchWin'); break; case 'mist': play('mist'); break;
-      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'lotusOpen': case 'lotusPulse': case 'lotusEnd': case 'crows': case 'blizzard': case 'podHop': case 'sunForm': case 'sunBlast': case 'moonThrow': case 'moonFlip': case 'moonCatch': case 'cometGo': case 'cometBurst': case 'mawSpit': case 'mawMiss': play(e.type); break;
+      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': case 'lotusOpen': case 'lotusPulse': case 'lotusEnd': case 'crows': case 'blizzard': case 'podHop': case 'sunForm': case 'sunBlast': case 'bossRage': case 'thornLine': case 'moonThrow': case 'moonFlip': case 'moonCatch': case 'cometGo': case 'cometBurst': case 'mawSpit': case 'mawMiss': play(e.type); break;
       case 'fall': play('fall'); break; case 'counter': play('counter'); break; case 'ram': play('ram'); break; case 'rune': play('rune'); break; case 'runeSpawn': play('runeSpawn'); break; case 'shieldHit': play('shieldHit'); break; case 'arenaEvent': play('mist'); break; case 'statueShot': cast('earth', 1.4); break; case 'bushGone': play('bushGone'); break; case 'quake': play('boom'); break; case 'intro': play('vs'); break; case 'retarget': if (!G.attract) play('retarget'); break; case 'ray': play('ray', e); break; case 'blink': play('blink'); break; case 'mirage': play('mirage'); break; case 'decoyPop': play('decoyPop'); break; case 'wispGo': play('wispGo'); break; case 'bossWarn': play('bossWarn'); break; case 'bossExposed': play('bossExposed'); break;
     }
   }

@@ -101,8 +101,8 @@ const Spells2 = (() => {
       add(G, Object.assign(B, { t: 'pit', S, el: 'shadow', x: p.tx, y: p.ty, r: 62 * Z, delay: S.delay, life: S.life * L, cells, open: false, hitSet: new Set() }));
     } else if (k === 'thorns') {
       // Zarzal: una hilera de espinas que brota en línea recta hacia el rival (hasta el primer muro); en el Gran Sortilegio, tres en abanico
-      const a = aimOf(G, m, S.len), n = B.gran ? 3 : 1;
-      for (let j = 0; j < n; j++) { const ang = a.ang + (j - (n - 1) / 2) * 0.32, dx = Math.cos(ang), dy = Math.sin(ang), x0 = m.x + dx * 26, y0 = m.y + dy * 26;
+      const a0 = aimOf(G, m, S.len), p = Spells.aimPoint(G, m, S.len, a0.target ? Math.min(0.45, a0.dist / S.speed) : 0), aa = Math.atan2(p.ty - m.y, p.tx - m.x), n = B.gran ? 3 : 1; // apunta a donde VA a estar
+      for (let j = 0; j < n; j++) { const ang = aa + (j - (n - 1) / 2) * 0.32, dx = Math.cos(ang), dy = Math.sin(ang), x0 = m.x + dx * 26, y0 = m.y + dy * 26;
         let len = 0; while (len < S.len * Z) { const i = Terrain.idx(T, x0 + dx * (len + 16), y0 + dy * (len + 16)); if (i < 0 || Terrain.solid(T, i)) break; len += 16; }
         add(G, Object.assign({}, B, { t: 'thorns', S, el: 'shadow', x: x0, y: y0, x0, y0, ang, len, front: 0, life: S.life * L, dmg: S.dmg * P, P, w: S.w * Z, hitE: new Set(), last: new Map() })); }
       G.events.push({ type: 'thornLine', x: m.x, y: m.y });

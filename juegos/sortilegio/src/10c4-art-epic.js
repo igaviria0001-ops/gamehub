@@ -215,8 +215,27 @@ const ArtEpic = (() => {
     x.fillStyle = cg; x.fillRect(o.x - cw, o.y - 420, cw * 2, 420);
     x.restore();
   }
+  /* ---------- Buziraco: el círculo del abismo bajo sus pies ---------- */
+  function demonCircle(x, G, B) {
+    const t = G.time, arm = B.shield > 0, rage = B.phase || 0, R = 175 + rage * 12, c = arm ? [210, 80, 235] : [255, 120, 40], pl = 0.7 + 0.3 * Math.sin(t * 3);
+    x.save(); x.translate(B.x, B.y);
+    const g = x.createRadialGradient(0, 0, R * 0.2, 0, 0, R * 1.1); g.addColorStop(0, 'rgba(4,0,8,0.55)'); g.addColorStop(0.8, 'rgba(14,2,14,0.35)'); g.addColorStop(1, 'rgba(14,2,14,0)');
+    x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, R * 1.1, R * 0.6, 0, 0, TAU); x.fill();
+    x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
+    // grietas que salen del centro y laten con lava
+    const nk = LOWFX ? 6 : 10; x.strokeStyle = `rgba(255,${90 + rage * 30},30,${0.35 * pl + rage * 0.1})`; x.lineWidth = 2.4;
+    for (let k = 0; k < nk; k++) { const a = k / nk * TAU + 0.3, L = R * (0.7 + 0.35 * hash2(k, 5)); x.beginPath(); x.moveTo(Math.cos(a) * R * 0.25, Math.sin(a) * R * 0.25 * 0.55);
+      for (let j = 1; j <= 4; j++) { const q = j / 4, w = (hash2(k, j) - 0.5) * 0.35; x.lineTo(Math.cos(a + w) * (R * 0.25 + (L - R * 0.25) * q), Math.sin(a + w) * (R * 0.25 + (L - R * 0.25) * q) * 0.55); } x.stroke(); }
+    // anillos con marcas que giran en sentidos contrarios
+    x.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${0.55 * pl})`; x.lineWidth = 3; x.beginPath(); x.ellipse(0, 0, R, R * 0.55, 0, 0, TAU); x.stroke();
+    x.lineWidth = 1.6; x.beginPath(); x.ellipse(0, 0, R * 0.84, R * 0.84 * 0.55, 0, 0, TAU); x.stroke();
+    const nm = LOWFX ? 16 : 28; for (let k = 0; k < nm; k++) { const a = k / nm * TAU + t * 0.25, ca = Math.cos(a), sa = Math.sin(a); x.beginPath(); x.moveTo(ca * R * 0.86, sa * R * 0.86 * 0.55); x.lineTo(ca * R * (k % 3 ? 0.95 : 0.99), sa * R * (k % 3 ? 0.95 : 0.99) * 0.55); x.stroke(); }
+    x.lineWidth = 2; const nr = LOWFX ? 6 : 9; for (let k = 0; k < nr; k++) { const a = k / nr * TAU - t * 0.4, px = Math.cos(a) * R * 0.66, py = Math.sin(a) * R * 0.66 * 0.55; x.save(); x.translate(px, py); x.scale(1, 0.55); x.rotate(a); x.beginPath(); x.moveTo(-6, -6); x.lineTo(0, 6); x.lineTo(6, -6); x.moveTo(-4, 0); x.lineTo(4, 0); x.stroke(); x.restore(); }
+    x.restore();
+  }
   /* ---------- capas ---------- */
   function under(x, G) {
+    if (G.boss && G.boss.alive && G.boss.boss === 'buziraco') demonCircle(x, G, G.boss);
     for (const s of G.spells) { if (s.t === 'crescent') crescentUnder(x, G, s); else if (s.t === 'comet') cometUnder(x, G, s); else if (s.t === 'bloom') lotusUnder(x, G, s); else if (s.t === 'nova') novaUnder(x, G, s); }
     for (const u of G.units) if (u.cid === 'zuhe' && u.alive !== false && (u.isMage || u.obj === 'decoy')) zuheHalo(x, G, u);
   }
@@ -235,6 +254,17 @@ const ArtEpic = (() => {
     switch (f.type) {
       case 'thornHit': S({ type: 'ring', x: f.x, y: f.y, r0: f.small ? 30 : 60, r1: 8, el: 'shadow', life: 0.25, w: f.small ? 4 : 8 });
         burst(f.x, f.y - 16, 'plant', LOWFX ? 5 : f.small ? 6 : 14, 220); if (!f.small) S({ type: 'snare', x: f.x, y: f.y, life: 0.7 }); return true;
+      case 'bossRage': // Buziraco cambia de fase: onda de fuego, anillo de sombra y brasas que saltan
+        S({ type: 'ring', x: f.x, y: f.y, r0: 40, r1: 340, el: 'fire', life: 0.6, w: 18 }); S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: 260, el: 'shadow', life: 0.7, w: 10, delay: 0.1 });
+        S({ type: 'flash', x: f.x, y: f.y, r: 320, el: 'fire', life: 0.35 });
+        for (let k = 0; k < (LOWFX ? 16 : 40); k++) { const a = Math.random() * TAU, v = vr(160, 520); P({ x: f.x, y: f.y, z: vr(10, 60), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(120, 360), g: 520, drag: 1.2, life: vr(0.6, 1.2), size: vr(2, 4.5), color: Math.random() < 0.5 ? '#ffb44a' : '#ff5a24', kind: 'ember' }); }
+        return true;
+      case 'demonDown': // cae el jefe final: rayos de luz, columna, onda doble y una lluvia de brasas
+        S({ type: 'novaRays', x: f.x, y: f.y, r: 260, life: 1.1, seed: Math.random() * 6 }); S({ type: 'star4', x: f.x, y: f.y - 120, r: 160, life: 0.6 });
+        S({ type: 'ring', x: f.x, y: f.y, r0: 30, r1: 420, el: 'light', life: 0.8, w: 16, gold: true }); S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: 340, el: 'shadow', life: 1.0, w: 10, delay: 0.15 });
+        S({ type: 'flash', x: f.x, y: f.y, r: 420, el: 'light', life: 0.5 });
+        for (let k = 0; k < (LOWFX ? 24 : 70); k++) { const a = Math.random() * TAU, v = vr(120, 620); P({ x: f.x, y: f.y, z: vr(20, 120), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(100, 420), g: 420, drag: 1.1, life: vr(0.8, 1.8), size: vr(2, 5), color: ['#ffffff', '#ffe08a', '#ff8a3a', '#c84ad0'][k % 4], kind: 'ember' }); }
+        return true;
       case 'moonFlip': // la luna se voltea: de luz a sombra
         S({ type: 'star4', x: f.x, y: f.y - MZ, r: 54, life: 0.3 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: 70, el: 'shadow', life: 0.35, w: 6 });
         burst(f.x, f.y - MZ, 'light', LOWFX ? 5 : 10, 200); burst(f.x, f.y - MZ, 'shadow', LOWFX ? 5 : 10, 200); return true;

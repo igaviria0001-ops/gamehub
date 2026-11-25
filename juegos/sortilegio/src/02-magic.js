@@ -65,7 +65,7 @@ const FUSIONS = {
   'fire+wind':   { name: 'Torbellino de fuego', kind: 'firenado', cd: 4.5, speed: 270, r: 58, life: 3.3, dps: 20, turn: 2.3, pull: 330, tip: 'Persigue despacio y quema todo a su paso.' },
   'fire+earth':  { name: 'Magma', kind: 'meteor', cd: 4.5, range: 340, flight: 0.6, r: 80, dmg: 20, knock: 340, pool: { r: 62, life: 4, dps: 10 }, frags: 3, tip: 'Un meteoro de lava cae en arco, rompe muros y se parte: tres fragmentos más llueven alrededor.' },
   'fire+plant':  { name: 'Vainas de fuego', kind: 'mines', cd: 4.0, n: 3, arm: 0.6, trig: 64, hop: 150, r: 80, dmg: 15, life: 10, tip: 'Tres vainas de fuego: si el rival pasa cerca, saltan hacia él y estallan.' },
-  'fire+bolt':   { name: 'Plasma', kind: 'beam', cd: 4.5, windup: 0.3, len: 660, w: 38, dmg: 31, tip: 'Rayo recto que rompe muros. Apunta bien.' },
+  'fire+bolt':   { name: 'Plasma', kind: 'beam', cd: 4.5, windup: 0.36, len: 660, w: 30, dmg: 27, tip: 'Rayo recto que rompe muros. Apunta bien.' },
   'water+wind':  { name: 'Ventisca', kind: 'frost', cd: 4.0, range: 295, half: 0.68, dmg: 10, chill: 2.0, freeze: 1.3, tip: 'Congela al mojado y vuelve hielo los charcos.' },
   'water+earth': { name: 'Alud de lodo', kind: 'mudslide', cd: 4.0, speed: 440, range: 340, half: 0.55, dmg: 15, stun: 0.3, knock: 420, wet: 2.5, slow: 0.55, life: 6, tip: 'Una avalancha de barro avanza y arrastra: tumba, empuja, moja, deshace proyectiles y deja lodo que frena y no deja esquivar.' },
   'water+plant': { name: 'Flor de vida', kind: 'bloom', cd: 5.0, r: 104, life: 5, hps: 6.5, pollen: 2.5, pulse: 1.5, pulseDmg: 4, end: 7, endRoot: 0.8, endHeal: 6, tip: 'Un loto gigante: cura a los tuyos y les quita quemaduras, maleficios y enredos; al rival lo frena y lo quema con polen, cada latido lo empuja afuera y al cerrarse lo enreda.' },
@@ -89,7 +89,7 @@ Object.assign(FUSIONS, {
   'water+shadow': { name: 'Marea negra', kind: 'bog', cd: 4.5, range: 290, flight: 0.45, r: 118, life: 5, dps: 6.5, slow: 0.68, drain: 0.55, tip: 'Charco oscuro que frena, hace daño y te devuelve vida.' },
   'wind+shadow':  { name: 'Cuervos', kind: 'crows', cd: 4.0, n: 5, speed: 380, turn: 3.4, dmg: 5, life: 3.0, r: 11, dazzle: 0.5, hex: 2, tip: 'Una bandada de cinco cuervos que persigue, ciega y deja maleficio.' },
   'earth+shadow': { name: 'Fosa', kind: 'maw', cd: 5.0, range: 340, chase: 1.1, speed: 265, r: 50, grab: 0.22, sink: 0.85, bite: 9, spit: 11, hex: 1.8, tip: 'Una sombra con manos corre a los pies del rival; si lo agarra, la tierra se lo traga (no se mueve ni lo pueden tocar) y lo escupe con daño y maleficio. ¡Esquiva para soltarte!' },
-  'plant+shadow': { name: 'Zarzal', kind: 'thorns', cd: 4.5, len: 400, speed: 900, w: 36, life: 3.4, dmg: 13, root: 0.9, hex: 1.5, touch: 5, troot: 0.5, tip: 'Una hilera de espinas negras brota del suelo en línea recta hacia el rival: al que alcanza lo hiere, lo enreda y le deja maleficio. La hilera se queda un rato y cruzarla pincha y enreda.' },
+  'plant+shadow': { name: 'Zarzal', kind: 'thorns', cd: 4.5, len: 400, speed: 1000, w: 44, life: 3.4, dmg: 13, root: 0.9, hex: 1.5, touch: 5, troot: 0.5, tip: 'Una hilera de espinas negras brota del suelo en línea recta hacia el rival: al que alcanza lo hiere, lo enreda y le deja maleficio. La hilera se queda un rato y cruzarla pincha y enreda.' },
   'bolt+shadow':  { name: 'Rayo negro', kind: 'blackbolt', cd: 4.0, range: 330, dmg: 15, hex: 3.2, silence: 0.7, chain: 190, tip: 'Rayo que maldice, salta a otro rival y lo silencia un instante.' },
 });
 const FUSION_ORDER = Object.keys(FUSIONS);
@@ -105,7 +105,7 @@ const CHARS = {
   // 2.0 — más magos de los seis elementos de siempre
   cocuy:     { name: 'Cocuy', title: 'ermitaño del nevado', hands: ['water', 'wind'], hp: 136, speed: 1.0, sig: 'water+wind', trait: 'Congela 40 % más tiempo, no resbala en el hielo y el frío no lo frena.', look: 'cocuy' },
   tatacoa:   { name: 'Tatacoa', title: 'caminante del desierto', hands: ['wind', 'earth'], hp: 136, speed: 0.98, sig: 'wind+earth', trait: 'Dentro de su tormenta de arena se cura; sus muros aguantan más.', look: 'tatacoa' },
-  galeras:   { name: 'Galeras', title: 'forjador de tormentas', hands: ['fire', 'bolt'], hp: 178, speed: 1.06, sig: 'fire+bolt', trait: 'Carga los hechizos 30 % más rápido y camina mientras prepara el Plasma.', look: 'galeras' },
+  galeras:   { name: 'Galeras', title: 'forjador de tormentas', hands: ['fire', 'bolt'], hp: 146, speed: 1.06, sig: 'fire+bolt', trait: 'Carga los hechizos 30 % más rápido y camina mientras prepara el Plasma.', look: 'galeras' },
   // 2.0 — magos de Luz y Sombra
   zuhe:      { name: 'Zuhé', title: 'hijo del sol', hands: ['light', 'fire'], hp: 106, speed: 1.02, sig: 'fire+light', trait: 'Encandila 40 % más tiempo y cada golpe de luz lo cura; lo rodea un halo de sol.', look: 'zuhe' },
   chia:      { name: 'Chía', title: 'señora de la luna', hands: ['light', 'shadow'], hp: 114, speed: 1.08, sig: 'light+shadow', trait: 'Sus maleficios duran más y pegan más fuerte; escondida o en la oscuridad se regenera.', look: 'chia' },

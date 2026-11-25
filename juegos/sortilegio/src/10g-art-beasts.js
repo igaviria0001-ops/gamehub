@@ -9,7 +9,8 @@ const ArtBeast = (() => {
   const lg = (x, x0, y0, x1, y1, ...st) => { const g = x.createLinearGradient(x0, y0, x1, y1); st.forEach((c, i) => g.addColorStop(i / (st.length - 1), c)); return g; };
   const rg = (x, cx, cy, r0, r1, ...st) => { const g = x.createRadialGradient(cx, cy, r0, cx, cy, r1); st.forEach((c, i) => g.addColorStop(i / (st.length - 1), c)); return g; };
   const fo = (x, fill, lw = 1.4) => { x.fillStyle = fill; x.fill(); x.strokeStyle = OL; x.lineWidth = lw; x.stroke(); };
-  const eye = (x, X, Y, r, col, pupil = true) => { x.save(); x.globalCompositeOperation = 'lighter'; const g = rg(x, X, Y, 0, r * 3, col + 'cc', col + '00'); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r * 3, 0, TAU); x.fill(); x.restore(); x.fillStyle = col; x.beginPath(); x.ellipse(X, Y, r, r * 0.8, 0, 0, TAU); x.fill(); if (pupil) { x.fillStyle = '#fff'; x.beginPath(); x.arc(X - r * 0.25, Y - r * 0.25, r * 0.35, 0, TAU); x.fill(); } };
+  const hex6 = c => /^#[0-9a-f]{3}$/i.test(c) ? '#' + c[1] + c[1] + c[2] + c[2] + c[3] + c[3] : c; // '#888' + 'cc' no es un color: rompía el dibujo (y congelaba el juego) con Buziraco aturdido
+  const eye = (x, X, Y, r, col, pupil = true) => { col = hex6(col); x.save(); x.globalCompositeOperation = 'lighter'; const g = rg(x, X, Y, 0, r * 3, col + 'cc', col + '00'); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r * 3, 0, TAU); x.fill(); x.restore(); x.fillStyle = col; x.beginPath(); x.ellipse(X, Y, r, r * 0.8, 0, 0, TAU); x.fill(); if (pupil) { x.fillStyle = '#fff'; x.beginPath(); x.arc(X - r * 0.25, Y - r * 0.25, r * 0.35, 0, TAU); x.fill(); } };
   const bar = (x, Y, w, f, col) => { x.fillStyle = 'rgba(10,8,25,0.7)'; x.fillRect(-w / 2 - 1, Y - 1, w + 2, 6); x.fillStyle = col; x.fillRect(-w / 2, Y, w * clamp(f, 0, 1), 4); x.fillStyle = 'rgba(255,255,255,0.35)'; x.fillRect(-w / 2, Y, w * clamp(f, 0, 1), 1.3); };
   // ala de plumas o de membrana (se dibuja hacia +x; se voltea con scale)
   function wing(x, L, fl, cols, n = 6, memb = false) {
@@ -221,8 +222,15 @@ const ArtBeast = (() => {
       for (let j = 0; j < 3; j++) { x.fillStyle = j < (b.glare | 0) ? '#fff6c0' : 'rgba(20,14,40,0.6)'; x.strokeStyle = '#ffe9a0'; x.lineWidth = 1.2; x.beginPath(); x.arc(-12 + j * 12, -76, 4, 0, TAU); x.fill(); x.stroke(); }
       x.translate(0, H + 26);
     } else if (k === 'buziraco') {
-      const arm = b.shield > 0, sw = Math.sin(t * 1.3) * 3, fl = Math.sin(t * 2.2) * 0.14;
-      glow(x, 0, -70, 150, arm ? 'rgba(160,40,150,0.35)' : 'rgba(255,90,30,0.5)');
+      const arm = b.shield > 0, sw = Math.sin(t * 1.3) * 3, fl = Math.sin(t * 2.2) * 0.14, rage = b.phase || 0;
+      x.save(); x.scale(1.3, 1.3); // es el jefe final: más grande
+      glow(x, 0, -70, 170 + rage * 20, arm ? 'rgba(160,40,150,0.38)' : 'rgba(255,90,30,0.55)');
+      // aura: lenguas de llama detrás del cuerpo (de sombra con la coraza, de fuego sin ella), más altas en cada fase
+      { const n = LOWFX ? 6 : 11; x.save(); if (!arm) x.globalCompositeOperation = 'lighter';
+        for (let j = 0; j < n; j++) { const q = j / (n - 1) - 0.5, bx = q * 120, by = -40 - Math.abs(q) * 70, fh = (60 + 46 * Math.abs(Math.sin(t * 3.1 + j * 1.7)) + (1 - Math.abs(q) * 1.6) * 50) * (1 + rage * 0.18), w = 15 + 6 * Math.sin(t * 4 + j), swy = Math.sin(t * 5 + j * 2.3) * 10;
+          const g = x.createLinearGradient(bx, by + 20, bx + swy, by - fh); if (arm) { g.addColorStop(0, 'rgba(18,4,28,0)'); g.addColorStop(0.25, 'rgba(18,4,28,0.8)'); g.addColorStop(0.65, 'rgba(76,18,98,0.5)'); g.addColorStop(1, 'rgba(210,70,230,0)'); } else { g.addColorStop(0, 'rgba(255,206,100,0)'); g.addColorStop(0.25, 'rgba(255,206,100,0.65)'); g.addColorStop(0.6, 'rgba(255,96,32,0.45)'); g.addColorStop(1, 'rgba(160,20,10,0)'); }
+          x.fillStyle = g; x.beginPath(); x.moveTo(bx - w, by + 20); x.quadraticCurveTo(bx - w * 0.6 + swy * 0.5, by - fh * 0.5, bx + swy, by - fh); x.quadraticCurveTo(bx + w * 0.6 + swy * 0.5, by - fh * 0.5, bx + w, by + 20); x.closePath(); x.fill(); }
+        x.restore(); }
       for (const s of [-1, 1]) { x.save(); x.translate(s * 26, -104 + br); x.scale(s, 1); wing(x, 118, 0.35 + fl, ['#3a0c18', '#12040a', 'rgba(255,110,60,0.55)'], 5, true); x.restore(); }
       x.strokeStyle = '#2a0a10'; x.lineWidth = 10; x.lineCap = 'round'; x.beginPath(); x.moveTo(-18, -14); x.bezierCurveTo(-70, 6, -86, -30, -74 + sw, -52); x.stroke(); x.fillStyle = '#e8482a'; x.beginPath(); x.moveTo(-74 + sw, -70); x.lineTo(-64 + sw, -50); x.lineTo(-84 + sw, -50); x.fill();
       for (const s of [-1, 1]) { x.beginPath(); x.moveTo(s * 8, -30); x.lineTo(s * 30, -26); x.lineTo(s * 34, 2); x.lineTo(s * 12, 4); x.closePath(); fo(x, lg(x, 0, -30, 0, 4, '#5a1820', '#1c060a'), 1.8); x.beginPath(); x.ellipse(s * 24, 4, 14, 6, 0, 0, TAU); fo(x, '#14060a', 1.4); }
@@ -230,11 +238,28 @@ const ArtBeast = (() => {
       if (!arm) { const p = 0.5 + 0.5 * Math.sin(t * 8); glow(x, 0, -76, 50, `rgba(255,${150 + p * 80},60,0.9)`); x.beginPath(); x.moveTo(-14, -92); x.lineTo(0, -98); x.lineTo(14, -92); x.lineTo(10, -62); x.lineTo(0, -54); x.lineTo(-10, -62); x.closePath(); fo(x, rg(x, 0, -78, 2, 24, '#fff6c0', '#ffa030', '#c8301a'), 1.5); }
       else { const f = b.shield / b.maxShield; for (const [px, py, w, h] of [[-30, -100, 26, 30], [4, -100, 26, 30], [-26, -68, 22, 28], [4, -68, 22, 28], [-16, -40, 32, 14]]) { x.beginPath(); x.moveTo(px, py + br); x.lineTo(px + w, py + br); x.lineTo(px + w - 3, py + h + br); x.lineTo(px + 3, py + h + br); x.closePath(); fo(x, lg(x, px, py, px + w, py + h, '#3a1c48', '#16081e'), 1.5); x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = `rgba(214,84,180,${(0.4 + 0.4 * Math.sin(t * 3 + px)) * (0.4 + f * 0.6)})`; x.lineWidth = 1.4; x.beginPath(); x.moveTo(px + w / 2, py + 5 + br); x.lineTo(px + w / 2 - 5, py + h / 2 + br); x.lineTo(px + w / 2 + 5, py + h / 2 + br); x.lineTo(px + w / 2, py + h - 5 + br); x.stroke(); x.restore(); } }
       for (const s of [-1, 1]) { const up = b.tele ? 1 - b.tele.t / b.tele.max : 0, hx = s * (72 - up * 20), hy = -62 - up * 74 + Math.sin(t * 2 + s) * 4; x.strokeStyle = '#1c060a'; x.lineWidth = 22; x.lineCap = 'round'; x.beginPath(); x.moveTo(s * 44, -102 + br); x.quadraticCurveTo(s * 76, -96 - up * 30, hx, hy); x.stroke(); x.strokeStyle = arm ? '#3a1c48' : '#8a2428'; x.lineWidth = 16; x.stroke(); x.beginPath(); x.arc(hx, hy, 12, 0, TAU); fo(x, '#6a1820', 1.6); x.strokeStyle = '#f2e6c8'; x.lineWidth = 3; for (let f2 = -1; f2 <= 1; f2++) { x.beginPath(); x.moveTo(hx + f2 * 5, hy + 8); x.lineTo(hx + f2 * 8, hy + 20); x.stroke(); } if (b.tele) glow(x, hx, hy, 26 + up * 24, (ELEMENTS[b.tele.el] || ELEMENTS.fire).c1 + 'ee'); }
+      // corona de fuego detrás de la cabeza
+      { x.save(); x.globalCompositeOperation = 'lighter'; const cr = 30 + 3 * Math.sin(t * 6), nC = LOWFX ? 5 : 9; x.strokeStyle = arm ? 'rgba(210,80,235,0.6)' : 'rgba(255,160,60,0.8)'; x.lineWidth = 3.5; x.lineCap = 'round';
+        x.beginPath(); x.arc(0, -124 + br, cr, Math.PI * 0.95, Math.PI * 2.05); x.stroke();
+        for (let j = 0; j < nC; j++) { const a = Math.PI + (j + 0.5) / nC * Math.PI, L = 10 + 10 * Math.abs(Math.sin(t * 7 + j)); x.beginPath(); x.moveTo(Math.cos(a) * cr, -124 + br + Math.sin(a) * cr); x.lineTo(Math.cos(a) * (cr + L), -124 + br + Math.sin(a) * (cr + L)); x.stroke(); }
+        x.restore(); }
       x.beginPath(); x.moveTo(-18, -112 + br); x.bezierCurveTo(-22, -140, 22, -140, 18, -112 + br); x.quadraticCurveTo(12, -100 + br, 0, -98 + br); x.quadraticCurveTo(-12, -100 + br, -18, -112 + br); fo(x, lg(x, -18, -140, 18, -98, '#b83a40', '#5a1418'), 1.8);
       for (const s of [-1, 1]) { x.beginPath(); x.moveTo(s * 10, -132 + br); x.bezierCurveTo(s * 34, -140, s * 44, -164, s * 30, -184 + br); x.bezierCurveTo(s * 34, -162, s * 24, -146, s * 4, -138 + br); x.closePath(); fo(x, lg(x, 0, -132, s * 34, -184, '#3a2a22', '#f2e6c8'), 1.5); }
       x.save(); x.globalCompositeOperation = 'lighter'; for (let j = 0; j < 7; j++) { const p = (t * 1.5 + j / 7) % 1, px = (j - 3) * 6; x.fillStyle = `rgba(255,${110 + j * 16},40,${(1 - p) * 0.85})`; x.beginPath(); x.ellipse(px + Math.sin(t * 7 + j) * 3, -138 + br - p * 34, 6 * (1 - p) + 1, 11 * (1 - p) + 2, 0, 0, TAU); x.fill(); } x.restore();
-      eye(x, -7, -120 + br, 3, stn ? '#888' : '#ffe07a', false); eye(x, 7, -120 + br, 3, stn ? '#888' : '#ffe07a', false); x.strokeStyle = '#1c060a'; x.lineWidth = 2.4; x.beginPath(); x.moveTo(-13, -127 + br); x.lineTo(-3, -123 + br); x.moveTo(13, -127 + br); x.lineTo(3, -123 + br); x.stroke();
+      eye(x, -7, -120 + br, 3, stn ? '#888888' : '#ffe07a', false); eye(x, 7, -120 + br, 3, stn ? '#888888' : '#ffe07a', false); x.strokeStyle = '#1c060a'; x.lineWidth = 2.4; x.beginPath(); x.moveTo(-13, -127 + br); x.lineTo(-3, -123 + br); x.moveTo(13, -127 + br); x.lineTo(3, -123 + br); x.stroke();
       x.fillStyle = '#12040a'; x.beginPath(); x.ellipse(0, -107 + br, 9, 4.5, 0, 0, Math.PI); x.fill(); x.fillStyle = '#f2e6c8'; for (let j = -2; j <= 2; j++) { x.beginPath(); x.moveTo(j * 3.4 - 1.5, -107 + br); x.lineTo(j * 3.4, -102 + br); x.lineTo(j * 3.4 + 1.5, -107 + br); x.fill(); }
+      // la coraza de sombra: esquirlas que giran a su alrededor (quedan menos a medida que la luz la rompe)
+      if (arm) { const f = b.shield / b.maxShield, n = Math.max(1, Math.ceil((LOWFX ? 6 : 11) * f)); x.save();
+        for (let j = 0; j < n; j++) { const a = t * 1.3 + j / n * TAU, px = Math.cos(a) * 92, py = -76 + Math.sin(a) * 28, sc = 0.75 + 0.3 * Math.sin(a);
+          x.save(); x.translate(px, py); x.rotate(a * 2 + j); x.scale(sc, sc); x.beginPath(); x.moveTo(0, -13); x.lineTo(6, -2); x.lineTo(2, 12); x.lineTo(-6, 1); x.closePath(); x.fillStyle = '#1c0828'; x.fill(); x.strokeStyle = 'rgba(225,95,245,0.9)'; x.lineWidth = 1.4; x.stroke(); x.restore(); }
+        x.restore(); }
+      // aviso de ataque: un sello del color del ataque que crece sobre su cabeza
+      if (b.tele) { const f = 1 - b.tele.t / b.tele.max, E = ELEMENTS[b.tele.el] || ELEMENTS.fire, rr = 14 + 24 * f; x.save(); x.globalCompositeOperation = 'lighter'; x.translate(0, -200 + br); x.strokeStyle = E.c1; x.globalAlpha = 0.45 + 0.55 * f; x.lineWidth = 2.5;
+        x.beginPath(); x.arc(0, 0, rr, 0, TAU); x.stroke(); x.beginPath(); x.arc(0, 0, rr * 0.62, 0, TAU); x.stroke();
+        x.rotate(t * 2.4); for (let j = 0; j < 12; j++) { const a = j / 12 * TAU; x.beginPath(); x.moveTo(Math.cos(a) * rr * 0.68, Math.sin(a) * rr * 0.68); x.lineTo(Math.cos(a) * rr * 0.94, Math.sin(a) * rr * 0.94); x.stroke(); }
+        x.rotate(-t * 4.8); x.beginPath(); for (let j = 0; j <= 3; j++) { const a = j / 3 * TAU - Math.PI / 2; j ? x.lineTo(Math.cos(a) * rr * 0.56, Math.sin(a) * rr * 0.56) : x.moveTo(Math.cos(a) * rr * 0.56, Math.sin(a) * rr * 0.56); } x.stroke();
+        glow(x, 0, 0, rr * 1.6, E.c1 + '88'); x.restore(); }
+      x.restore();
     }
     if (stn && k !== 'condor') for (let j = 0; j < 4; j++) { const a = t * 6 + j / 4 * TAU; ArtSpells2.star4(x, Math.cos(a) * R * 0.6, -R * 2.9 + Math.sin(a) * 7, 7, '#fff6c0', a); }
     if (b.st.hex > 0) { x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = 'rgba(214,84,180,0.85)'; x.lineWidth = 2; x.beginPath(); x.ellipse(0, -R * 3.2, 16, 8, 0, 0, TAU); x.stroke(); x.restore(); }

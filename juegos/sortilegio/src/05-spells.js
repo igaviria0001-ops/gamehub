@@ -280,7 +280,7 @@ const Spells = (() => {
         case 'beam': {
           const m = G.mages[s.by]; if (!m || !m.alive) { s.dead = true; break; }
           s.x = m.x; s.y = m.y;
-          if (!s.fired) { s.windup -= dt; const tg = s.tg; if (tg && tg.alive && !(tg.st.hidden > 0) && !(tg.st.sunk > 0)) s.ang = Math.atan2(tg.y - m.y, tg.x - m.x); if (s.windup <= 0) { s.fired = true; s.show = 0.28; fireBeam(G, s, m); } }
+          if (!s.fired) { s.windup -= dt; const tg = s.tg; if (s.windup > 0.14 && tg && tg.alive && !(tg.st.hidden > 0) && !(tg.st.sunk > 0)) s.ang = Math.atan2(tg.y - m.y, tg.x - m.x); if (s.windup <= 0) { s.fired = true; s.show = 0.28; fireBeam(G, s, m); } }
           else { s.show -= dt; if (s.show <= 0) s.dead = true; } break;
         }
         case 'bloom': {
