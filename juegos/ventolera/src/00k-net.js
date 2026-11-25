@@ -146,7 +146,9 @@ const NetPlay = (() => {
       seats.forEach((s, i) => { const li = document.createElement('li'), ok = ready.includes(i); li.className = ok ? 'ok' : ''; li.innerHTML = '<i></i><span></span><b></b>'; li.querySelector('i').style.background = /^#[0-9a-f]{3,8}$/i.test(s.color || '') ? s.color : '#fff'; li.querySelector('span').textContent = s.name || 'J' + (i + 1); li.querySelector('b').textContent = ok ? 'listo ✓' : 'cargando…'; e.querySelector('ul').appendChild(li); });
       e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = !canGo;
     }
-    return { list, hide() { if (el) { el.remove(); el = null; } } };
+    // aviso sin lista: «El anfitrión elige el nivel…» (se quita solo cuando llega la partida)
+    function msg(title, note) { const e = show(); e.querySelector('h2').textContent = title || ''; e.querySelector('ul').innerHTML = ''; e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = true; }
+    return { list, msg, hide() { if (el) { el.remove(); el = null; } } };
   })();
   // aviso suave si el anfitrión deja de mandar (salió de la app, se le fue la señal): se quita solo al volver
   const Lost = (() => {
@@ -206,6 +208,7 @@ const NetPlay = (() => {
   function slow(k, v, ms = 1000) { if (v === undefined) return undefined; const j = JSON.stringify(v), now = performance.now(), L = slowLast[k]; if (L && L.j === j && now - L.t < ms) return undefined; slowLast[k] = { j, t: now }; return v; }
   return {
     gate(o) { gateO = o; }, again, get cfg() { return gcfg; }, okId, slow,
+    notice(title, note) { if (on) Wait.msg(title, note); }, noticeOff() { Wait.hide(); },
     get on() { return on; }, get role() { return role; }, get isHost() { return on && role === 'host'; }, get isClient() { return on && role === 'client'; },
     get seats() { return seats; }, get mine() { return mine; }, get sid() { return sid; }, get ev() { return ev; },
     // ¿este puesto se juega en este aparato? y con qué jugador local (0 o 1)

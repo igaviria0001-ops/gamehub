@@ -8,7 +8,7 @@
    ========================================================================= */
 const NetGame = (() => {
   const NEUTRAL = { dx: 0, dy: 0, roll: false, rdx: 0, rdy: 0, fire: false, boost: false, missile: false };
-  const MODES_NET = ['duel', 'targets', 'case', 'race', 'boss'], ST = ['countdown', 'play', 'roundEnd', 'matchEnd'];
+  const MODES_NET = ['duel', 'targets', 'case', 'race', 'boss', 'trav'], ST = ['countdown', 'play', 'roundEnd', 'matchEnd'];
   const r1 = v => Math.round((+v || 0) * 10) / 10, r2 = v => Math.round((+v || 0) * 100) / 100, ri = v => Math.round(+v || 0);
   const _read = Input.read;
 
@@ -43,11 +43,12 @@ const NetGame = (() => {
       const S = NetPlay.seats, mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel';
       const arena = ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
       const species = S.map((s, i) => { const w = want[i] || {}; return SPECIES[w.sp] ? w.sp : ['guacamaya', 'condor', 'colibri', 'halcon'].find(k => SPECIES[k]) || Object.keys(SPECIES)[i % Object.keys(SPECIES).length]; });
-      return { mode, arena, species, looks: S.map((s, i) => okLook((want[i] || {}).look)), trails: S.map((s, i) => NetPlay.okId((want[i] || {}).trail) || 't.ninguna'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), seed: 1 + Math.floor(Math.random() * 60000) };
+      // Travesía para dos: primero el anfitrión elige la etapa (stage −1) entre las que él tiene abiertas
+      return { mode: mode === 'trav' && S.length !== 2 ? 'duel' : mode, arena, species, looks: S.map((s, i) => okLook((want[i] || {}).look)), trails: S.map((s, i) => NetPlay.okId((want[i] || {}).trail) || 't.ninguna'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), seed: 1 + Math.floor(Math.random() * 60000), stage: mode === 'trav' ? -1 : undefined };
     },
-    apply(c) { snaps0(); UI.netStart(c); },
+    apply(c) { snaps0(); if (c.mode === 'trav' && !STAGES[c.stage]) UI.netTravPick(c); else UI.netStart(c); },
   });
-  function again() { NetPlay.again(c => Object.assign({}, c, { seed: 1 + Math.floor(Math.random() * 60000) })); }
+  function again(stage) { NetPlay.again(c => Object.assign({}, c, { seed: 1 + Math.floor(Math.random() * 60000) }, stage !== undefined ? { stage } : {})); }
 
   /* ---------- instantánea (anfitrión) ---------- */
   // del piloto, lo que se ve: posición, rumbo, estado y barras (en el orden de BF)
@@ -84,6 +85,7 @@ const NetGame = (() => {
     if (G.case) sn.cs = prim(G.case);
     if (G.gates) sn.gf = G.gates.map(g => g.flash.map(r2));
     // Jefe en pareja: el dirigible (posición, fase, caída) y sus partes (dónde, vida, golpes, a punto de disparar); vidas del equipo
+    if (G.tm) { sn.tm = prim(G.tm); sn.lv = G.lives; }
     if (G.boss) { const B = G.boss; sn.bo = { s: [ri(B.x), ri(B.y), B.dir, r2(B.flip), B.phase, B.dead ? 1 : 0, r2(B.fallT), r2(B.hitT), r2(B.t), B.lastHit], p: B.parts.map(p => [ri(p.x), ri(p.y), r1(p.hp), p.alive ? 1 : 0, r2(p.hitT || 0), r2(p.fireT || 0), r2(p.aim || 0)]) }; sn.lv = G.lives; }
     return sn;
   }
@@ -132,6 +134,7 @@ const NetGame = (() => {
     if (B.bo && G.boss) { const O = G.boss, a = A.bo, s = B.bo.s, sa = a ? a.s : s; O.x = lerp(sa[0], s[0], k); O.y = lerp(sa[1], s[1], k); O.dir = s[2]; O.flip = s[3]; O.phase = s[4]; O.dead = !!s[5]; O.fallT = s[6]; O.hitT = s[7]; O.t = s[8]; O.lastHit = s[9];
       B.bo.p.forEach((q, i) => { const P = O.parts[i], qa = a && a.p[i]; if (!P) return; P.x = qa ? lerp(qa[0], q[0], k) : q[0]; P.y = qa ? lerp(qa[1], q[1], k) : q[1]; P.hp = q[2]; P.alive = !!q[3]; P.hitT = q[4]; P.fireT = q[5]; P.aim = q[6]; }); }
     if (B.lv != null) G.lives = B.lv;
+    if (B.tm) { if (!G.tm) G.tm = {}; deepSet(G.tm, B.tm); if (B.tm.zone && G.tm.zone) Object.assign(G.tm.zone, B.tm.zone); } else if (G.tm && !G.duo) G.tm = null;
     // escenario: solo cuando llega una instantánea nueva (entre medio se anima solo)
     if (B !== lastSN && B.wd) { lastSN = B; const W = G.world, D = B.wd; W.time = D.t; if (D.train && W.train) deepSet(W.train, D.train); if (D.ship && W.ship) deepSet(W.ship, D.ship); if (D.hot && W.hotair) D.hot.forEach((h, i) => { if (W.hotair[i]) deepSet(W.hotair[i], h); }); if (D.storm && W.storm) deepSet(W.storm, D.storm); if (D.coast && W.coast) deepSet(W.coast, D.coast); }
   }

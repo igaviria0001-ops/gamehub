@@ -660,6 +660,7 @@ const Game = (() => {
 
   // en línea: todos los pilotos de la sala (2 a 4), sin máquina; el anfitrión simula, los remotos dibujan
   function startNet(o) {
+    if (o.mode === 'trav' && STAGES[o.stage]) return startNetTrav(o);
     lastOver = null; G.net = true; G.players = o.species.length; G.mode = o.mode; G.arena = o.arena;
     setup({ species: o.species, looks: o.looks, trails: o.trails, seed: o.seed || 1, arena: o.arena });
     G.trav = null; G.playT = 0; G.lvl = 1; G.copa = null; G.duo = false; G.coop = false; G.coopGoal = null; G.tm = null; G.boss = null;
@@ -673,6 +674,17 @@ const Game = (() => {
       G.boss.dmg = G.birds.map(() => 0);
     }
     else { startRound(); Modes.setup(G); G.cratesOn = o.mode === 'case'; snapCamera(); }
+  }
+  // en línea: una etapa de la Travesía para dos (el anfitrión la eligió; todos la arman igual y él manda cómo va)
+  function startNetTrav(o) {
+    const S = STAGES[o.stage], D = S.duo; lastOver = null; G.net = true; G.players = 2; G.mode = D.mode; G.arena = D.arena || S.arena;
+    setup({ species: o.species, looks: o.looks, trails: o.trails, seed: o.seed || 1, arena: G.arena });
+    G.trav = S.id; G.playT = 0; G.lvl = 1; G.copa = null; G.duo = true; G.coop = !!D.team; G.coopGoal = D.team || null; G.tm = null; G.boss = null;
+    G.adv = G.birds.map(() => 0); G.wins = G.birds.map(() => 0); G.round = 1; G.cratesOn = true; G.winsNeeded = 1; G.score = G.birds.map(() => 0); G.coopWin = false;
+    G.hintT = 8; G.paused = false; acc = 0;
+    if (D.mode === 'boss') { startRound(); Boss.setup(G, !!D.hard); G.roundT = 999; }
+    else if (Team.is(D.mode)) { startRound(); Team.setup(G, D); G.cratesOn = D.mode !== 'relay'; snapCamera(); }
+    else { startRound(); Modes.setup(G); G.cratesOn = D.mode === 'case'; snapCamera(); }
   }
   function netEnd() { G.net = false; }
   function advance(dt) { let n = Math.max(1, Math.round(dt / DT)); while (n--) { step(DT); updateRounds(DT); updateCamera(DT); } }
