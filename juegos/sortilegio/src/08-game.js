@@ -55,6 +55,7 @@ const Game = (() => {
     G.round++; G.seed = seed != null ? seed : (Math.random() * 1e9) | 0; G.rng = makeRng(G.seed);
     if (G.mode === 'camp') Camp.build(G, Camp.LEVELS[G.campLevel]); else Arena.build(G, G.arenaId);
     G.spells = []; G.fx = []; G.events = []; G.pops = []; G.time = 0; G.frame = 0; G.slow = 0; G.ring = null; G.mistWarned = false;
+    if (typeof Cine !== 'undefined') Cine.clear();
     G.wind = null; G.current = null; G.rain = false; G.embMul = 1;
     const prev = G.mages;
     G.mages = G.chars.map((cid, i) => {
@@ -92,7 +93,7 @@ const Game = (() => {
     const done = winner >= 0 && G.wins[winner] >= G.winsNeeded;
     const name = winner >= 0 ? who(winner) : '';
     if (G.mode === 'school') { G.state = 'matchEnd'; if (onMatchEnd) onMatchEnd(results()); return; }
-    if (G.mode === 'camp') { G.wins = [winner === 0 ? 1 : 0, 0]; G.campWin = why === 'win'; G.campStars = G.campWin ? Camp.stars(G) : 0; G.banner = { text: G.campWin ? '¡Nivel superado!' : 'Esta vez no se pudo', sub: { lives: 'Se acabaron las vidas', timeout: 'El volcán se desbordó', lost: 'Perdieron lo que había que proteger' }[why] || '', t: 0, color: G.campWin ? '#ffe9a0' : '#ff9a8a' }; G.events.push({ type: G.campWin ? 'matchWin' : 'roundWin', who: 0 }); setTimeout(() => { if (G.state !== 'roundEnd') return; G.state = 'matchEnd'; G.banner = null; const r = results(); Progress.onMatchEnd(G, r); if (onMatchEnd) onMatchEnd(r); }, 2600); return; }
+    if (G.mode === 'camp') { G.wins = [winner === 0 ? 1 : 0, 0]; G.campWin = why === 'win'; G.campStars = G.campWin ? Camp.stars(G) : 0; G.banner = { text: G.campWin ? '¡Nivel superado!' : 'Esta vez no se pudo', sub: { lives: 'Se acabaron las vidas', timeout: 'El volcán se desbordó', lost: 'Perdieron lo que había que proteger' }[why] || '', t: 0, color: G.campWin ? '#ffe9a0' : '#ff9a8a' }; G.events.push({ type: G.campWin ? 'matchWin' : 'roundWin', who: 0 }); setTimeout(() => { if (G.state !== 'roundEnd') return; G.state = 'matchEnd'; G.banner = null; const r = results(); Progress.onMatchEnd(G, r); if (netOn() && NetPlay.isHost) NetGame.results(r); if (onMatchEnd) onMatchEnd(r); }, 2600); return; }
     G.banner = { text: winner < 0 ? '¡Empate!' : done ? `¡${name} gana!` : `Ronda para ${name}`, sub: why === 'time' ? (G.mode === 'duel' ? 'Se acabó el tiempo: gana quien tenga más vida' : 'Se acabó el tiempo') : '', t: 0, color: winner >= 0 ? PLAYER_COLORS[winner].main : '#e8e0ff' };
     G.events.push({ type: done ? 'matchWin' : 'roundWin', who: winner });
     setTimeout(() => {
@@ -153,6 +154,7 @@ const Game = (() => {
   }
   // cámara y letreros de un evento (en línea, los remotos hacen esto más efectos, sonidos y logros)
   function visual(e) {
+      Cine.onEvent(G, e);
       if (e.type === 'goal') { cam.shake = Math.max(cam.shake, 18); G.slow = Math.max(G.slow, 0.5); }
       if (e.type === 'down') { const m = G.mages[e.who]; G.slow = Math.max(G.slow, 0.9); cam.shake = Math.max(cam.shake, 16); if (m && G.mode === 'duel') G.koCam = { x: m.x, y: m.y, until: G.time + 1.1 }; }
       if (e.type === 'combo' && !G.attract && e.n < 3) G.pops.push({ x: e.x, y: e.y - 70, text: e.name, t: 0, color: PLAYER_COLORS[e.who] ? PLAYER_COLORS[e.who].main : '#fff', big: true });
@@ -220,7 +222,9 @@ const Game = (() => {
       if (G.banner) G.banner.t += dt;
       updateCamera(dt);
     }
-    if (G.T) Art.render(G, ctx, cam, sw, sh, dpr);
+    Cine.step(Math.min(0.05, dt));
+    // golpe de cámara de los momentos grandes (Cine): un pelito de acercamiento que se suelta solo
+    if (G.T) { const z0 = cam.z; cam.z = z0 * (1 + Cine.punch); Art.render(G, ctx, cam, sw, sh, dpr); cam.z = z0; }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

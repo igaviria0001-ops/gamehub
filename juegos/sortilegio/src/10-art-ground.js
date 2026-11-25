@@ -402,6 +402,7 @@ const ArtGround = (() => {
     if (g > 0.05) ArtSpells.glow(x, s.x, s.y - 50, 50, `rgba(255,170,80,${g * 0.6})`);
   }
   function wall(x, G, i) {
+    if (G.T.crys[i] === 2) return ArtEarth.pylon(x, G, i);
     if (G.T.crys[i]) return ArtSpells2.crystal(x, G, i);
     const T = G.T, px = Terrain.cx(T, i), py = Terrain.cy(T, i), a = Math.min(1, T.wallT[i] / 0.4), hp = T.wall[i], h = 44 * Math.min(1, (6 - Math.max(0, T.wallT[i] - 0)) > 0 ? 1 : 1);
     x.save(); x.globalAlpha = a;

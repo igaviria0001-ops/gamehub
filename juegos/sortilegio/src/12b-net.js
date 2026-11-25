@@ -85,19 +85,20 @@ const NetGame = (() => {
 
   /* ---------- arranque (sala de espera común) ---------- */
   NetPlay.onStart(o => { o.seats.forEach((s, i) => { if (s && /^#[0-9a-f]{6}$/i.test(s.color)) { const n = parseInt(s.color.slice(1), 16), dk = '#' + [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => Math.round(v * 0.55).toString(16).padStart(2, '0')).join(''); PLAYER_COLORS[i] = { main: s.color, dark: dk, name: s.name }; } }); });
-  const MODES_NET = ['duel', 'altar', 'hunt', 'tejo'];
+  const MODES_NET = ['duel', 'altar', 'hunt', 'tejo', 'camp'];
   NetPlay.gate({
     me(li) { const c = Game.cfg.chars[li] || CHAR_ORDER[li % CHAR_ORDER.length]; let skin = 0; try { skin = Vestidor.V.eq(li, 'skin', c); } catch (e) { /* nada */ } return { cid: c, skin }; },
     make(want, ev) {
-      const S = NetPlay.seats, n = S.length; let mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel'; if (mode === 'tejo' && n !== 2) mode = 'duel';
+      const S = NetPlay.seats, n = S.length; let mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel'; if ((mode === 'tejo' || mode === 'camp') && n !== 2) mode = 'duel';
       const arena = ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
       const chars = S.map((s, i) => { const w = want[i] || {}; return CHARS[w.cid] ? w.cid : CHAR_ORDER[i % CHAR_ORDER.length]; });
       const skins = S.map((s, i) => { const k = (want[i] || {}).skin; return typeof k === 'number' && k >= 0 && k < 9 ? k : NetPlay.okId(k) || 0; });
-      return { mode, arena, chars, skins, wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 2)) };
+      // campaña en equipo: primero el anfitrión elige el nivel (level −1) entre los que él tiene abiertos
+      return { mode, arena, chars, skins, wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 2)), level: mode === 'camp' ? -1 : undefined };
     },
-    apply(c) { reset(); UI.netStart(c); },
+    apply(c) { reset(); if (c.mode === 'camp' && !(c.level >= 0 && c.level < Camp.LEVELS.length)) UI.netCampPick(c); else UI.netStart(c); },
   });
-  function again() { NetPlay.again(c => Object.assign({}, c)); }
+  function again(level) { NetPlay.again(c => Object.assign({}, c, level !== undefined ? { level } : {})); }
 
   /* ---------- terreno ---------- */
   const SY = Terrain.SYNC, INT = new Set(['base', 'fireO', 'vineO', 'elecO', 'pitO', 'crys']);
@@ -138,7 +139,7 @@ const NetGame = (() => {
   }
 
   /* ---------- instantánea (anfitrión) ---------- */
-  const GF = ['countT', 'introT', 'introMax', 'roundT', 'winsNeeded', 'wins', 'score', 'respawn', 'presage', 'mist', 'rain', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'ring', 'altar', 'goals', 'tejoWait', 'huntWait', 'huntN', 'runeT', 'runes', 'statues', 'banner', 'ev', 'mistWarned', 'roundWinner', 'roundWhy', 'granFx', 'koCam'];
+  const GF = ['lives', 'cs', 'checkpoint', 'countT', 'introT', 'introMax', 'roundT', 'winsNeeded', 'wins', 'score', 'respawn', 'presage', 'mist', 'rain', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'ring', 'altar', 'goals', 'tejoWait', 'huntWait', 'huntN', 'runeT', 'runes', 'statues', 'banner', 'ev', 'mistWarned', 'roundWinner', 'roundWhy', 'granFx', 'koCam'];
   // lo que casi nunca cambia viaja aparte y solo cuando cambia (y una vez por segundo): la instantánea cabe en un paquete
   const GS = new Set(['introMax', 'winsNeeded', 'wins', 'score', 'presage', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'statues', 'mistWarned', 'roundWinner', 'roundWhy', 'goals', 'huntN']);
   const MF = ['x', 'y', 'vx', 'vy', 'face', 'hp', 'maxHp', 'alive', 'emb', 'embFlash', 'flash', 'walk', 'moving', 'castT', 'castHand', 'castEl', 'fuse', 'granCharge', 'granGlow', 'granEls', 'absorbing', 'racha', 'rachaT', 'iframes', 'hitT', 'impulse', 'lockOn', 'pin', 'hands', 'st', 'buff', 'dash', 'stillT', 'invuln', 'lock', 'kt', 'dmgMul']; // (el atuendo viene en la cfg)
@@ -161,9 +162,13 @@ const NetGame = (() => {
       u: G.units.filter(u => !u.isMage).map(u => { const o = encUnit(u, now); o.$c = codeOf(u); if (u instanceof Creature) o.$k = u.kind; return o; }),
       s: G.spells.map(s => encUnit(s, now, SKEEP)), // hechizos: igual (id y posición siempre; lo demás si cambió)
       so: G.sources.map(s => [r2(s.cd), r2(s.glow)]),
+      ob: G.objs ? G.objs.map(encObj) : undefined, bs: G.boss ? codeOf(G.boss) : undefined,
     };
   }
 
+  // objetos de la campaña: solo lo que cambia (lo demás lo arma el remoto con el mismo nivel)
+  const OBJ_DYN = ['lit', 'pressed', 'open', 'power', 'grown', 'done', 'blocked', 'moving', 'x', 'y', 'hp', 'wet', 'wetT', 'zapped', 'sp', 'hitT', 'glow'];
+  function encObj(o) { const q = {}; for (const k of OBJ_DYN) { const v = o[k]; if (v === undefined || v === null) continue; q[k] = typeof v === 'number' ? r2(v) : typeof v === 'boolean' ? (v ? 1 : 0) : undefined; if (q[k] === undefined) delete q[k]; } if (o.u) q.u = codeOf(o.u); return q; }
   /* ---------- aplicar (remoto) ---------- */
   const lerp = (a, b, k) => a + (b - a) * k;
   const lerpA = (a, b, k) => { let d = b - a; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return a + d * k; };
@@ -202,6 +207,8 @@ const NetGame = (() => {
     G.spells = B.s.map(o => { seenS.add(o.id); let c = sMap.get(o.id); if (!c) sMap.set(o.id, (c = {})); Object.assign(c, dec(o)); const s = Object.assign({}, c), a = A.s.find(x => x.id === o.id); if (a && typeof a.x === 'number' && typeof s.x === 'number' && Math.abs(a.x - s.x) < 400) { s.x = lerp(a.x, s.x, k); s.y = lerp(a.y, s.y, k); } return s; });
     for (const id of [...sMap.keys()]) if (!seenS.has(id) && !A.s.some(x => x.id === id)) sMap.delete(id);
     B.so.forEach((v, i) => { if (G.sources[i]) { G.sources[i].cd = v[0]; G.sources[i].glow = v[1]; } });
+    if (B.ob && G.objs) B.ob.forEach((q, i) => { const o = G.objs[i]; if (!o) return; const a = A.ob && A.ob[i]; for (const k in q) { if (k === 'u') { o.u = unitOf(q.u) || o.u; continue; } o[k] = typeof o[k] === 'boolean' ? !!q[k] : q[k]; } if (a && typeof a.x === 'number' && typeof q.x === 'number' && Math.abs(a.x - q.x) < 300) { o.x = lerp(a.x, q.x, k); if (typeof a.y === 'number' && typeof q.y === 'number') o.y = lerp(a.y, q.y, k); } });
+    if (B.bs !== undefined) { const b = unitOf(B.bs); if (b) { if (!b.D && b.boss && Camp.BOSS[b.boss]) b.D = Camp.BOSS[b.boss]; G.boss = b; } } else if (G.mode === 'camp') G.boss = null;
   }
 
   /* ---------- predicción del mago propio (remoto) ----------

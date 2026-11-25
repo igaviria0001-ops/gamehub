@@ -22,7 +22,7 @@ const ArtSpells = (() => {
         x.fillStyle = `rgba(160,120,255,${f * 0.35})`; x.beginPath(); x.ellipse(s.x, s.y, r * f, r * 0.5 * f, 0, 0, TAU); x.fill();
         for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + t * 2; x.fillStyle = '#efe6ff'; x.fillRect(s.x + Math.cos(a) * r * 0.85 - 2, s.y + Math.sin(a) * r * 0.42 - 2, 4, 4); }
         x.restore();
-      } else if (s.t === 'lob') {
+      } else if (s.t === 'lob' && s.kind !== 'meteor' && s.kind !== 'frag') {
         const f = s.tt / s.T, r = (s.kind === 'meteor' ? s.S.r : s.kind === 'mud' ? s.S.r : 26) * (s.size || 1);
         x.strokeStyle = s.kind === 'meteor' ? `rgba(255,140,60,${0.3 + f * 0.6})` : s.kind === 'mud' ? `rgba(160,110,60,${0.3 + f * 0.5})` : `rgba(140,230,110,${0.3 + f * 0.5})`;
         x.lineWidth = 2; x.setLineDash([6, 6]); x.beginPath(); x.ellipse(s.tx, s.ty, r, r * 0.5, 0, 0, TAU); x.stroke(); x.setLineDash([]);

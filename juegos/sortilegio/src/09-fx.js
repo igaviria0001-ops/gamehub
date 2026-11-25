@@ -46,6 +46,7 @@ const FX = (() => {
       case 'splat': S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: f.r, el: 'earth', life: 0.35, w: 14, mud: true }); for (let k = 0; k < 16; k++) { const a = Math.random() * TAU, v = vr(100, 300); P({ x: f.x, y: f.y, z: 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.7, vz: vr(80, 200), g: 700, life: vr(0.4, 0.8), size: vr(3, 6), color: f.el === 'shadow' ? '#1c0826' : '#6b4a2a', kind: 'blob', add: false }); } break;
       case 'clash': S({ type: 'flash', x: f.x, y: f.y, r: 50, el: 'wind', life: 0.15 }); burst(f.x, f.y, 'wind', 10, 220); break;
       case 'gust': for (let k = 0; k < 2; k++) P({ x: f.x + vr(-12, 12), y: f.y + vr(-10, 10), z: 16, vx: f.vx * 0.3 + vr(-30, 30), vy: f.vy * 0.3 + vr(-30, 30), life: vr(0.2, 0.35), size: vr(1.5, 2.5), color: '#e6fff6', kind: 'streak', drag: 3 }); break;
+      default: ArtEarth.fx(G, f); break;
       case 'rootTrail': P({ x: f.x + vr(-8, 8), y: f.y + vr(-6, 6), z: 0, vz: vr(40, 90), g: 400, life: vr(0.25, 0.5), size: vr(2, 4), color: '#7a5a34', kind: 'chunk', add: false }); break;
     }
   }

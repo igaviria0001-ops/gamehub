@@ -585,6 +585,14 @@ const ArtMage = (() => {
       if (['lob', 'meteor', 'mud', 'strike', 'cloud', 'storm', 'magnet', 'turret'].includes(Sp.kind) && (m.fuse || m.hands[k].hold > 0.15)) {
         const range = Sp.range || 300, d = tg ? Math.min(range, hypot(tg.x - m.x, tg.y - m.y)) : range * 0.85, ang = ai.ang, px = m.x + Math.cos(ang) * d, py = m.y + Math.sin(ang) * d, R = Sp.r || (Sp.trap && Sp.trap.r) || 40;
         x.save(); x.strokeStyle = col; x.globalAlpha = 0.7; x.lineWidth = 2 / Math.max(0.6, z); x.setLineDash([8, 6]); x.lineDashOffset = -G.time * 30; x.beginPath(); x.ellipse(px, py, R, R * 0.5, 0, 0, TAU); x.stroke(); x.restore();
+      } else if (m.fuse && ['tesla', 'crystal', 'maw', 'mudslide', 'sandstorm'].includes(Sp.kind)) {
+        // vista previa de las de tierra: dónde quedan las torres, a quién persigue la jaula o la sombra, el frente del alud, el radio de la tormenta
+        x.save(); x.strokeStyle = col; x.globalAlpha = 0.6; x.lineWidth = 2 / Math.max(0.6, z); x.setLineDash([8, 6]); x.lineDashOffset = -G.time * 30; const ca = Math.cos(ai.ang), sa = Math.sin(ai.ang);
+        if (Sp.kind === 'tesla') { const D = clamp(tg ? hypot(tg.x - m.x, tg.y - m.y) + 90 : Sp.range * 0.8, 170, Sp.range); x.beginPath(); x.moveTo(m.x + ca * 66, m.y + sa * 66); x.lineTo(m.x + ca * D, m.y + sa * D); x.stroke(); x.setLineDash([]); for (const d of [66, D]) { x.beginPath(); x.arc(m.x + ca * d, m.y + sa * d, 10, 0, TAU); x.stroke(); } }
+        else if (Sp.kind === 'mudslide') { x.beginPath(); x.arc(m.x, m.y, Sp.range, ai.ang - Sp.half, ai.ang + Sp.half); x.stroke(); x.beginPath(); x.moveTo(m.x, m.y); x.lineTo(m.x + Math.cos(ai.ang - Sp.half) * Sp.range, m.y + Math.sin(ai.ang - Sp.half) * Sp.range); x.moveTo(m.x, m.y); x.lineTo(m.x + Math.cos(ai.ang + Sp.half) * Sp.range, m.y + Math.sin(ai.ang + Sp.half) * Sp.range); x.stroke(); }
+        else if (Sp.kind === 'sandstorm') { x.beginPath(); x.arc(m.x, m.y, Sp.r, 0, TAU); x.stroke(); }
+        else if (tg && hypot(tg.x - m.x, tg.y - m.y) <= Sp.range * 1.15) { x.beginPath(); x.arc(tg.x, tg.y, Sp.kind === 'maw' ? Sp.r : 80, 0, TAU); x.stroke(); }
+        x.restore();
       }
     }
   }

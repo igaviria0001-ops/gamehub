@@ -174,7 +174,10 @@ const Spells = (() => {
       }
     } else if (k === 'roots') {
       const a = m.aim(G, S.range, S.speed);
-      add(G, Object.assign(B, { t: 'proj', S, el: 'plant', ground: true, x: m.x + Math.cos(a.ang) * 20, y: m.y + Math.sin(a.ang) * 20, vx: Math.cos(a.ang) * S.speed, vy: Math.sin(a.ang) * S.speed, r: S.r * Z, life: S.range * Z / S.speed, dmg: S.dmg * P, root: S.root * (B.gran ? 1.3 : 1), fusion: o.fusion, big: true }));
+      // tres raíces en abanico: la del centro pega e inmoviliza fuerte; las de los lados, menos (más fácil acertar)
+      const grp = { hit: new Set() };
+      for (const off of S.fan ? [0, -S.fan, S.fan] : [0]) { const side = off !== 0, an = a.ang + off;
+        add(G, Object.assign({}, B, { t: 'proj', S, el: 'plant', ground: true, root3: 1, grp, x0: m.x, y0: m.y, x: m.x + Math.cos(an) * 20, y: m.y + Math.sin(an) * 20, vx: Math.cos(an) * S.speed * (side ? 0.93 : 1), vy: Math.sin(an) * S.speed * (side ? 0.93 : 1), r: S.r * Z * (side ? 0.8 : 1), life: S.range * Z / S.speed, dmg: S.dmg * P * (side ? 0.6 : 1), root: S.root * (B.gran ? 1.3 : 1) * (side ? 0.7 : 1), fusion: o.fusion, big: true })); }
     } else if (k === 'magnet') {
       const p = aimPoint(G, m, S.range, 0.3);
       const u = add(G, Object.assign(B, { t: 'magnet', S, el: 'bolt', x: p.tx, y: p.ty, life: S.life * (B.gran ? 1.3 : 1), pullR: S.pullR * Z, pull: S.pull, dps: S.dps * P }));
@@ -273,7 +276,10 @@ const Spells = (() => {
           else { s.show -= dt; if (s.show <= 0) s.dead = true; } break;
         }
         case 'bloom': {
-          for (const u of G.units) if (u.alive && !u.obj && hypot(u.x - s.x, u.y - s.y) < s.r + u.r) { const h = u.heal(G, s.hps * dt); if (h > 0 && u.isMage) u._healT = 0.3; }
+          // cura solo a los del equipo de quien la lanzó y les quita lo malo (quemadura, maleficio, enredo, frío, lentitud); al rival lo frena el polen
+          for (const u of G.units) { if (!u.alive || u.obj || hypot(u.x - s.x, u.y - s.y) >= s.r + u.r) continue;
+            if (foe(s, u)) { u.slow(0.2, 0.8); continue; }
+            const h = u.heal(G, s.hps * dt); if (h > 0 && u.isMage) u._healT = 0.3; const st = u.st; if (st.burn > 0) st.burn = 0; if (st.hex > 0) st.hex = 0; if (st.root > 0) st.root = Math.min(st.root, 0.1); if (st.chill > 0) st.chill = 0; if (st.slow > 0) { st.slow = 0; st.slowF = 1; } }
           s.life -= dt; if (s.life <= 0) s.dead = true; break;
         }
         case 'storm': {
@@ -360,7 +366,7 @@ const Spells = (() => {
     if (s.ground) { const b = T.base[i]; if ((b === TT.DEEP && T.ice[i] <= 0) || b === TT.CHASM || Terrain.isLava(T, i)) { endProj(G, s, false); return; } if (G.frame % 2 === 0) G.fx.push({ type: 'rootTrail', x: s.x, y: s.y }); }
     if (s.el === 'fire' && G.frame % 3 === 0) for (const v of G.spells) if (v.t === 'vortex' && !v.dead && hypot(v.x - s.x, v.y - s.y) < v.r) { toFirenado(G, v, v.by); endProj(G, s, true); return; }
     for (const u of G.units) {
-      if (!foe(s, u)) continue;
+      if (!foe(s, u) || (s.grp && s.grp.hit.has(u))) continue;
       if (hypot(u.x - s.x, (u.y - 14) - s.y) < u.r + s.r + 2 || hypot(u.x - s.x, u.y - s.y) < u.r + s.r) {
         if (u.iframes > 0 && !u.obj) {
           // CONTRACONJURO: esquivar en el último instante devuelve el hechizo
@@ -373,6 +379,7 @@ const Spells = (() => {
           }
           hit(G, s, u, 0, {}); continue;
         }
+        if (s.grp) s.grp.hit.add(u); // (las raíces en abanico: cada rival, una sola vez)
         if (u.pushable) { const sp = hypot(s.vx, s.vy) || 1, f = (210 + s.dmg * 32 + ((s.S && s.S.knock) || 0) * 0.6) * u.knockMul; u.vx += s.vx / sp * f; u.vy += s.vy / sp * f; u.flash = 0.12; G.events.push({ type: 'tejoHit', x: u.x, y: u.y, by: s.by }); u.lastBy = s.by; endProj(G, s, true); return; }
         if (u.obj) { u.hurt(G, s.dmg, { by: s.by, el: s.el }); endProj(G, s, true); return; }
         const S = s.S, el = s.el;
@@ -409,7 +416,8 @@ const Spells = (() => {
     } else if (s.kind === 'meteor') {
       boom(G, s, s.tx, s.ty, S.r * s.size, S.dmg * s.power, 'fire', { burn: 2.4, knock: S.knock, ignite: true, walls: 999 });
       Terrain.forCircle(T, s.tx, s.ty, S.pool.r * s.size, i => { const b = T.base[i]; if (b !== TT.ROCK && b !== TT.CHASM && !(b === TT.DEEP && T.ice[i] <= 0)) { T.lava[i] = S.pool.life * (s.gran ? 1.3 : 1); T.wet[i] = 0; T.ice[i] = 0; T.ver++; } });
-      G.events.push({ type: 'quake', x: s.tx, y: s.ty });
+      G.events.push({ type: 'quake', x: s.tx, y: s.ty }); G.fx.push({ type: 'crater', x: s.tx, y: s.ty, r: S.r * s.size });
+      if (S.frags) Earth.frags(G, s);
     } else if (s.kind === 'mud') {
       for (const u of G.units) if (foe(s, u) && !u.obj && hypot(u.x - s.tx, u.y - s.ty) < S.r * s.size + u.r) hit(G, s, u, S.dmg * s.power, { el: 'earth', wet: 2 });
       Terrain.forCircle(T, s.tx, s.ty, S.r * s.size, i => { const b = T.base[i]; if (b !== TT.ROCK && b !== TT.CHASM && b !== TT.DEEP) { T.mud[i] = S.life * (s.gran ? 1.3 : 1); T.fire[i] = 0; } });

@@ -145,6 +145,7 @@ const ArtSpells2 = (() => {
     return false;
   }
   function lob(x, G, s, Y) {
+    if (ArtEarth.lob(x, G, s, Y)) return true;
     const t = G.time;
     if (s.kind === 'cage') { glow(x, s.x, Y, 30, 'rgba(255,236,170,0.9)'); x.save(); x.translate(s.x, Y); x.rotate(t * 5); const g = x.createLinearGradient(-8, -12, 8, 12); g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#ffe9a0'); g.addColorStop(1, '#c88a2a'); x.fillStyle = g; x.beginPath(); x.moveTo(0, -13); x.lineTo(7, 0); x.lineTo(0, 13); x.lineTo(-7, 0); x.closePath(); x.fill(); x.strokeStyle = 'rgba(255,255,255,0.9)'; x.lineWidth = 1; x.beginPath(); x.moveTo(0, -13); x.lineTo(0, 13); x.stroke(); x.restore(); return true; }
     if (s.kind === 'bog') { glow(x, s.x, Y, 22, 'rgba(196,67,166,0.6)'); x.fillStyle = '#0c0412'; x.beginPath(); x.ellipse(s.x, Y, 13, 11, t * 3, 0, TAU); x.fill(); x.fillStyle = '#5a2470'; x.beginPath(); x.arc(s.x - 3, Y - 3, 4.5, 0, TAU); x.fill(); return true; }
@@ -205,6 +206,7 @@ const ArtSpells2 = (() => {
         x.globalAlpha = A * 0.7; x.fillStyle = '#12061a'; x.beginPath(); x.ellipse(o.x, o.y - 40, 15, 40, 0, 0, TAU); x.fill(); break;
       }
       case 'star4': x.globalCompositeOperation = 'lighter'; star4(x, o.x, o.y, (o.r || 30) * (0.4 + 0.6 * Math.sin(Math.min(1, f * 2) * Math.PI / 2)) * (0.4 + A * 0.6), `rgba(255,252,225,${A})`, o.t * 5); break;
+      default: ArtEarth.shape(x, o, f, A);
     }
   }
   // muro de cristal (Jaula de cristal)
@@ -213,12 +215,12 @@ const ArtSpells2 = (() => {
     x.save(); x.globalAlpha = a; x.fillStyle = 'rgba(10,8,20,0.35)'; x.beginPath(); x.ellipse(px, py + 12, 21, 7, 0, 0, TAU); x.fill();
     for (const [ox, h, w, tilt] of [[-10, 40, 9, -0.16], [9, 46, 10, 0.12], [0, 58, 11, 0.02]]) {
       x.save(); x.translate(px + ox, py + 14); x.rotate(tilt);
-      const g = x.createLinearGradient(-w, 0, w, 0); g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(0.35, 'rgba(255,236,170,0.75)'); g.addColorStop(1, 'rgba(210,150,60,0.75)');
+      const g = x.createLinearGradient(-w, 0, w, 0); g.addColorStop(0, 'rgba(255,255,255,0.62)'); g.addColorStop(0.35, 'rgba(255,236,170,0.4)'); g.addColorStop(1, 'rgba(210,150,60,0.5)'); // vidrio: se ve quien quedó adentro
       x.fillStyle = g; x.beginPath(); x.moveTo(-w, 0); x.lineTo(-w, -h + 10); x.lineTo(0, -h); x.lineTo(w, -h + 10); x.lineTo(w, 0); x.closePath(); x.fill();
       x.strokeStyle = 'rgba(255,255,255,0.85)'; x.lineWidth = 1; x.stroke(); x.beginPath(); x.moveTo(-w * 0.2, 0); x.lineTo(-w * 0.2, -h + 9); x.lineTo(0, -h); x.stroke();
       x.restore();
     }
-    x.globalCompositeOperation = 'lighter'; glow(x, px, py - 18, 40, `rgba(255,230,150,${0.35 + 0.15 * Math.sin(t * 4 + i)})`);
+    x.globalCompositeOperation = 'lighter'; glow(x, px, py - 18, 30, `rgba(255,230,150,${0.14 + 0.08 * Math.sin(t * 4 + i)})`);
     if (((t * 1.3 + i * 0.37) % 2) < 0.15) star4(x, px + ((i * 13) % 17) - 8, py - 30 - ((i * 7) % 20), 7, '#ffffff', t * 3);
     x.restore();
   }
@@ -231,7 +233,7 @@ const ArtSpells2 = (() => {
       else if (s.t === 'bog' || s.t === 'thorns') add(s.x, s.y, s.r * 0.9, [210, 70, 175], 0.3, 0.1);
     }
     for (const u of G.units) if (u.alive && u.obj === 'sunflower') add(u.x, u.y - 40, 170, [255, 226, 130], 0.95, 0.3);
-    for (let i = 0; i < G.T.n; i++) if (G.T.crys[i] && G.T.wall[i] > 0) add(Terrain.cx(G.T, i), Terrain.cy(G.T, i) - 20, 90, [255, 236, 170], 0.7, 0.3);
+    for (let i = 0; i < G.T.n; i++) if (G.T.crys[i] === 1 && G.T.wall[i] > 0 && i % 2 === 0) add(Terrain.cx(G.T, i), Terrain.cy(G.T, i) - 20, 80, [255, 236, 170], 0.45, 0.1);
     for (const o of FX.shapes) { const f = 1 - o.t / o.life; if (o.type === 'sunray') { for (const [ax, ay, bx, by] of o.segs) for (let k = 0; k <= 3; k++) add(lerp(ax, bx, k / 3), lerp(ay, by, k / 3), 120, [255, 236, 170], f, 0.3); } else if (o.type === 'nova' || o.type === 'pillar') add(o.x, o.y, o.r * 2.6, [255, 236, 170], f, 0.15); }
   }
   return { under, items, over, proj, lob, shape, crystal, lights, wisp, star4 };

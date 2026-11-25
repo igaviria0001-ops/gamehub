@@ -33,7 +33,7 @@ const Art = (() => {
       }
     }
     for (const u of G.units) { if (u.obj === 'turret' && u.alive) add(u.x, u.y - 32, 100, [200, 170, 255], 0.8, 0.3); else if (u.obj === 'tejo') add(u.x, u.y, 120, [255, 210, 120], 0.8, 0.2); else if (u instanceof Creature && u.alive) add(u.x, u.y - 24, 90, ELEMENTS[u.D.el].light, 0.7, 0.3); }
-    ArtSpells2.lights(G, add);
+    ArtSpells2.lights(G, add); ArtEarth.lights(G, add); Cine.lights(G, add);
     if (G.altar) add(G.altar.x, G.altar.y, G.altar.r * 1.6, [255, 220, 140], 0.75, 0.15);
     for (const r of G.runes || []) add(r.x, r.y - 30, 150, [255, 230, 180], 0.9, 0.2);
     if (G.dummy && G.mode === 'school') add(G.dummy.x, G.dummy.y - 30, 180, [255, 230, 180], 0.9, 0.1);
@@ -64,7 +64,8 @@ const Art = (() => {
     Post.water(ctx, G, cam, sw, sh, dpr, img); wt();
     ArtGround.overlays(ctx, G, view, G.time);
     Modes.drawUnder(ctx, G);
-    ArtSpells.under(ctx, G); ArtSpells2.under(ctx, G);
+    Cine.under(ctx, G);
+    ArtSpells.under(ctx, G); ArtSpells2.under(ctx, G); ArtEarth.under(ctx, G);
     // lo alto, ordenado por profundidad
     const list = [];
     for (const s of G.sources) list.push({ y: s.y + 4, draw: x => source(x, G, s) });
@@ -74,11 +75,11 @@ const Art = (() => {
     ArtGround.tallItems(G, view, list);
     Modes.drawRunes(G, list);
     if (G.mode === 'camp') Camp.draw(ctx, G, list);
-    ArtSpells.items(G, list); ArtSpells2.items(G, list);
+    ArtSpells.items(G, list); ArtSpells2.items(G, list); ArtEarth.items(G, list);
     list.sort((a, b) => a.y - b.y);
     Post.shadows(ctx, G, th);
     for (const it of list) it.draw(ctx);
-    ArtSpells.over(ctx, G); ArtSpells2.over(ctx, G);
+    ArtSpells.over(ctx, G); ArtSpells2.over(ctx, G); ArtEarth.over(ctx, G); Cine.over(ctx, G);
     ArtSpells.shapes(ctx, G);
     ArtSpells.parts(ctx);
     // niebla que se mueve
@@ -142,6 +143,7 @@ const Art = (() => {
       ctx.globalAlpha = 1;
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    Cine.screen(ctx, G, sw, sh, W);
     HUD.draw(ctx, G, sw, sh);
   }
   // espantapájaros de la Escuela

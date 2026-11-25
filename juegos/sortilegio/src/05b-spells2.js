@@ -96,7 +96,7 @@ const Spells2 = (() => {
       if (tg) { hit(G, B, tg, S.dmg * P, { el: 'shadow', hex: S.hex, silence: S.silence * L, big: true });
         let n2 = null, bd = S.chain; for (const u of G.units) if (u !== tg && foe(B, u) && !u.untargetable) { const d = hypot(u.x - tg.x, u.y - tg.y); if (d < bd) { bd = d; n2 = u; } }
         if (n2) { hit(G, B, n2, S.dmg * 0.6 * P, { el: 'shadow', hex: S.hex }); G.fx.push({ type: 'zap', x0: tg.x, y0: tg.y - 14, x1: n2.x, y1: n2.y - 14, el: 'shadow' }); } }
-    }
+    } else Earth.cast(G, m, S, el, o, B);
   }
   /* ---------- reflejos (Espejismo) y girasol: unidades con vida propia ---------- */
   function decoyStep(G, dt) {
@@ -171,6 +171,7 @@ const Spells2 = (() => {
         for (const u of G.units) { if (!foe(s, u) || u.obj) continue; const d = hypot(u.x - s.x, u.y - s.y); if (Math.abs(d - s.r) > 15 + u.r) continue; const l = s.last.get(u) || -9; if (G.time - l < 1.2) continue; s.last.set(u, G.time); hit(G, s, u, s.dmg, { el: 'plant', root: s.S.root, hex: 1.5, big: true, unavoid: true }); G.fx.push({ type: 'snare', x: u.x, y: u.y }); }
         s.life -= dt; if (s.life <= 0) s.dead = true; break;
       }
+      default: Earth.step(G, s, dt);
     }
   }
   // lo que cae del cielo: jaula de cristal y marea negra
@@ -189,7 +190,7 @@ const Spells2 = (() => {
     } else if (s.kind === 'bog') {
       Spells.add(G, Object.assign({}, s, { t: 'bog', x: s.tx, y: s.ty, r: S.r * s.size, life: S.life * (s.gran ? 1.3 : 1), dps: S.dps * s.power, dead: false }));
       G.fx.push({ type: 'splat', x: s.tx, y: s.ty, r: S.r * s.size, el: 'shadow' });
-    }
+    } else Earth.land(G, s);
   }
   return { cast, step, land, trace };
 })();

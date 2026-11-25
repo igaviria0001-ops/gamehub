@@ -495,7 +495,9 @@ const Camp = (() => {
   function stars(G) { const lost = (G.L.boss ? 6 : 5) - Math.max(0, G.lives); return 1 + (lost <= 1 ? 1 : 0) + (G.roundT <= G.L.par ? 1 : 0); }
   const save = () => Store.get('camp', {});
   function record(G) { const D = save(), id = G.L.id, s = stars(G), prev = D[id] || 0; if (s > prev) { D[id] = s; Store.set('camp', D); } return { stars: s, best: Math.max(s, prev), newBest: s > prev }; }
+  // en línea: cada aparato guarda lo que ganaron sus jugadores (sin el estado de la partida)
+  function recordStars(i, s) { const L = LEVELS[i]; if (!L) return null; const D = save(), prev = D[L.id] || 0; s = Math.max(0, Math.min(3, s | 0)); if (s > prev) { D[L.id] = s; Store.set('camp', D); } return { stars: s, best: Math.max(s, prev), newBest: s > prev }; }
   const unlocked = i => i === 0 || (save()[LEVELS[i - 1].id] || 0) > 0;
   const total = () => LEVELS.reduce((a, L) => a + (save()[L.id] || 0), 0);
-  return { LEVELS, BOSS, bossPlan, levelPlan, foeCast, build, setup, update, onEvent, resonance, draw, hud, stars, record, unlocked, total, best: id => save()[id] || 0 };
+  return { LEVELS, BOSS, bossPlan, levelPlan, foeCast, build, setup, update, onEvent, resonance, draw, hud, stars, record, recordStars, unlocked, total, best: id => save()[id] || 0 };
 })();

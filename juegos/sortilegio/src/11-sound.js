@@ -98,6 +98,12 @@ const Sound = (() => {
       case 'runeSpawn': chime([523, 659], 0.12, 0.05, 'sine'); break;
       case 'shieldHit': tone(1600, 0.12, 0.06, 'sine', 2400); break;
       case 'bushGone': noise(600, 0.5, 0.5, 0.1, 'lowpass', 0.4); break;
+      // tierra 3.0
+      case 'teslaOn': tone(110, 0.5, 0.12, 'sawtooth', 220); noise(5200, 0.7, 0.5, 0.14, 'highpass'); tone(60, 0.4, 0.16, 'square', 60, 0.02); break;
+      case 'cageShut': chime([1568, 2093, 2637, 3136], 0.025, 0.07, 'sine'); tone(140, 0.3, 0.2, 'sine', 70); noise(4000, 1.5, 0.2, 0.1, 'highpass'); break;
+      case 'cageBurst': noise(6000, 0.8, 0.45, 0.22, 'highpass'); chime([2637, 2093, 1760, 1319], 0.03, 0.06, 'triangle'); tone(90, 0.5, 0.3, 'sine', 40); break;
+      case 'mawOpen': tone(55, 0.9, 0.45, 'sine', 28); noise(260, 0.6, 0.8, 0.35, 'lowpass', 0.3); tone(180, 0.25, 0.12, 'sawtooth', 60, 0.05); break;
+      case 'sandstorm': noise(700, 0.8, 1.1, 0.3, 'bandpass', 2.5, 0, 0.15); tone(90, 0.6, 0.18, 'sine', 50); break;
       case 'beat': tone(62, 0.12, 0.22, 'sine', 45); tone(58, 0.12, 0.16, 'sine', 42, 0.17); break;
       case 'vs': noise(900, 0.6, 0.5, 0.18, 'bandpass', 3, 0, 0.05); tone(70, 1.1, 0.42, 'sine', 32, 0.42); noise(500, 0.5, 1, 0.28, 'lowpass', 0.3, 0.42); chime([392, 523, 784, 1047], 0.08, 0.07, 'triangle'); break;
     }
@@ -105,7 +111,7 @@ const Sound = (() => {
   function onEvent(G, e) {
     if (!ac || !on) return;
     switch (e.type) {
-      case 'cast': if (e.fusion) play('fusion'); else cast(e.el, e.level === 2 ? 1.6 : 1); if (e.fusion) cast(e.fusion.split('+')[1], 1.3); break;
+      case 'cast': if (e.fusion === 'wind+earth') play('sandstorm'); if (e.fusion) play('fusion'); else cast(e.el, e.level === 2 ? 1.6 : 1); if (e.fusion) cast(e.fusion.split('+')[1], 1.3); break;
       case 'hurt': if (!e.dot) play('hurt'); break;
       case 'boom': play('boom'); break; case 'thunder': play('thunder', e); break; case 'down': play('down'); break; case 'dash': play('dash'); break;
       case 'absorb': play('absorb'); break; case 'gran': play('gran'); break; case 'granStart': play('granStart'); break; case 'embReady': play('embReady'); break;
@@ -113,6 +119,7 @@ const Sound = (() => {
       case 'wall': play('wall'); break; case 'wallBreak': play('wallBreak'); break; case 'electrify': play('electrify'); break; case 'reflect': play('reflect'); break;
       case 'clash': play(e.kind === 'vapor' ? 'steam' : 'clash'); break; case 'beam': play('beam'); break; case 'tzap': play('tzap'); break; case 'bounce': play('bounce'); break;
       case 'round': play('round'); break; case 'go': play('go'); break; case 'roundWin': play('roundWin'); break; case 'matchWin': play('matchWin'); break; case 'mist': play('mist'); break;
+      case 'teslaOn': case 'cageShut': case 'cageBurst': case 'mawOpen': play(e.type); break;
       case 'fall': play('fall'); break; case 'counter': play('counter'); break; case 'ram': play('ram'); break; case 'rune': play('rune'); break; case 'runeSpawn': play('runeSpawn'); break; case 'shieldHit': play('shieldHit'); break; case 'arenaEvent': play('mist'); break; case 'statueShot': cast('earth', 1.4); break; case 'bushGone': play('bushGone'); break; case 'quake': play('boom'); break; case 'intro': play('vs'); break; case 'retarget': if (!G.attract) play('retarget'); break; case 'ray': play('ray', e); break; case 'blink': play('blink'); break; case 'mirage': play('mirage'); break; case 'decoyPop': play('decoyPop'); break; case 'wispGo': play('wispGo'); break; case 'bossWarn': play('bossWarn'); break; case 'bossExposed': play('bossExposed'); break;
     }
   }

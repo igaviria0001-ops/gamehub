@@ -48,6 +48,10 @@ class Bot {
       else if ((s.t === 'firenado' || s.t === 'vortex') && hypot(x - s.x, y - s.y) < s.r + 40) d += 24;
       else if ((s.t === 'storm' || s.t === 'cloud') && s.dps !== 0 && hypot(x - s.x, y - s.y) < s.r) d += s.t === 'storm' ? 16 : 6;
       else if (s.t === 'magnet' && hypot(x - s.x, y - s.y) < s.pullR) d += 10;
+      else if (s.t === 'tesla') { if (Spells.segDist(x, y, s.x0, s.y0, s.x1, s.y1) < 42) d += 34; else if (hypot(x - s.x0, y - s.y0) < s.S.zapR || hypot(x - s.x1, y - s.y1) < s.S.zapR) d += 5; }
+      else if (s.t === 'maw' && hypot(x - s.x, y - s.y) < s.r + 30) d += s.phase ? 60 : 40;
+      else if (s.t === 'crystal' && s.phase === 0 && hypot(x - s.x, y - s.y) < 90) d += 30;
+      else if (s.t === 'sandstorm' && hypot(x - s.x, y - s.y) < s.r) d += 16;
       else if ((s.t === 'mine' || s.t === 'trap') && hypot(x - s.x, y - s.y) < 60) d += this.P.mines ? 18 : 4;
       else if (s.t === 'lob' && hypot(x - s.tx, y - s.ty) < (s.S.r || 40) + 30) d += 30;
       else if (s.t === 'beam' && !s.fired) { const dx = x - s.x, dy = y - s.y; if (Math.abs(angDiff(s.ang, Math.atan2(dy, dx))) < 0.25 && hypot(dx, dy) < 660) d += 35; }
@@ -97,6 +101,15 @@ class Bot {
         else if (!drop(40) && !drop(80)) { this.dir = [sx, sy]; this.thinkT = 0.3; }
       }
     }
+    // ---- soltarse: la sombra de la Fosa o el anillo de la jaula encima → esquivar hacia afuera ----
+    if (!I.dash && m.dash.charges > 0) for (const s of G.spells) {
+      if (s.team === m.team || s.dead || !((s.t === 'maw' && s.phase === 0) || (s.t === 'crystal' && s.phase === 0)) || this.dodged.has(s.id)) continue;
+      const d = hypot(m.x - s.x, m.y - s.y), soon = s.t === 'maw' ? s.chase < 0.55 : s.lock < 0.22; if (d > 70 || !soon) continue;
+      this.dodged.add(s.id); if (G.rng() > P.dodge * P.dash * 1.1) continue;
+      let ax = m.x - s.x, ay = m.y - s.y; if (d < 4) { ax = Math.cos(G.rng() * TAU); ay = Math.sin(G.rng() * TAU); } const l = hypot(ax, ay) || 1;
+      if (this.danger(G, m.x + ax / l * 150, m.y + ay / l * 150, m) < 50) { I.mx = ax / l; I.my = ay / l; I.dash = true; this.dir = [ax / l, ay / l]; this.thinkT = 0.25; }
+      break;
+    }
     // ---- moverse ----
     if (this.thinkT <= 0) {
       this.thinkT = P.think * (0.7 + G.rng() * 0.6);
@@ -106,7 +119,7 @@ class Bot {
       else if (this.absorbT <= 0) { this.absorbT = 3 + G.rng() * 3; if (G.rng() < P.absorb && m.hp > m.maxHp * 0.35) this.pickSource(G, m, f); }
       // en la campaña: camino de verdad (rodear ríos de lava, vacíos y rocas) hacia la meta lejana
       if (G.mode === 'camp') { if (goalX != null) { const w = this.nav(G, m, goalX, goalY); if (w) { goalX = w[0]; goalY = w[1]; } } else if (modeGoal) { const w = this.nav(G, m, modeGoal[0], modeGoal[1]); if (w) modeGoal = w; } }
-      const want = this.bestRange(m) * (m.emb >= 100 ? 0.8 : 1);
+      const want = G.spells.some(s => s.t === 'sandstorm' && s.by === m.idx && !s.dead) ? 70 : this.bestRange(m) * (m.emb >= 100 ? 0.8 : 1); // con su tormenta de arena, encima del rival
       let best = [0, 0], bs = -1e9;
       for (const [dx, dy] of [[0, 0], ...DIRS16]) {
         const nx = m.x + dx * 70, ny = m.y + dy * 70;
@@ -254,6 +267,11 @@ class Bot {
         case 'bloom': dmg = m.hp < m.maxHp * 0.6 && d > 230 ? 26 : 0; p = 1; hi = 9999; break;
         case 'storm': hi = S.range + 40; lo = 60; dmg = 18; p = 0.6; break;
         case 'sand': dmg = d < 190 ? 14 : 0; p = 1; hi = 9999; break;
+        case 'sandstorm': dmg = d < S.r * 1.05 ? 22 : incoming ? 14 : d < 300 ? 5 : 0; p = 1; hi = 9999; break;
+        case 'tesla': hi = S.range + 40; lo = 90; dmg = 18 + (wet ? 8 : 0); p = vis ? 0.7 : 0.4; break;
+        case 'crystal': hi = S.range * 1.05; lo = 40; dmg = 22 + (held ? 6 : 0); p = 0.7; break;
+        case 'maw': hi = S.range * 1.05; lo = 40; dmg = held ? 30 : 22; p = held ? 0.9 : 0.6 - fm * 0.1; break;
+        case 'mudslide': hi = S.range * 0.95; dmg = S.dmg + 9 + (incoming ? 6 : 0); p = 0.75; break;
         case 'petals': hi = 650; lo = 90; dmg = S.dmg * S.n; p = 0.6; break;
         case 'roots': hi = S.range; lo = 50; dmg = S.dmg + 8; p = vis ? 0.6 : 0.1; break;
         case 'magnet': hi = S.range + 30; lo = 70; dmg = 16; p = 0.65; break;

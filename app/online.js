@@ -125,7 +125,7 @@ const Online = (() => {
   const lenTxt = (g, m, n) => (g.net && g.net.lenTxt && g.net.lenTxt[m.id] ? g.net.lenTxt[m.id](n) : m.lenTxt(n));
   function evText(g, ev) {
     if (!g || !ev) return ''; const m = allModes(g).find(x => x.id === ev.mode), mp = (Array.isArray(m && m.maps) ? m.maps : g.maps.concat(g.arenas || [])).find(x => x[0] === ev.map);
-    return [g.name, m && m.name, mp ? mp[1] : 'escenario al azar', m && m.len && ev.len ? lenTxt(g, m, ev.len) : '', ...netOpts(g).filter(o => ev.opts && ev.opts[o.id]).map(o => o.name)].filter(Boolean).join(' · ');
+    return [g.name, m && m.name, mp ? mp[1] : m && Array.isArray(m.maps) && !m.maps.length ? '' : 'escenario al azar', m && m.len && ev.len ? lenTxt(g, m, ev.len) : '', ...netOpts(g).filter(o => ev.opts && ev.opts[o.id]).map(o => o.name)].filter(Boolean).join(' · ');
   }
   function hostPlayHTML(ps) {
     const gs = GAMES(), g = pick && gs.find(x => x.id === pick);
@@ -133,7 +133,8 @@ const Online = (() => {
     const tourBtn = ps.length >= 2 ? `<div class="row" style="margin-top:12px"><button class="btn gold" id="on-tour">🏆 ${GAMEHUB.Tour.T && GAMEHUB.Tour.T.online && !GAMEHUB.Tour.T.done ? 'Seguir el torneo' : 'Torneo con todos'}</button><span class="note" style="margin:0">liga, eliminatoria, rey de la pista… con los ${ps.length} de la sala</span></div>` : '';
     if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: elige un juego.`}</p>${cards}${tourBtn}`;
     const ms = netModes(g), m = ms.find(x => x.id === pickEv.mode) || ms[0], maps = mapsFor(g, m), seg = (k, items, v) => `<div class="seg" data-onseg="${k}">${items.map(([id, t]) => `<button data-v="${esc(id)}" aria-pressed="${String(id) === String(v)}">${esc(t)}</button>`).join('')}</div>`;
-    const over = ps.length > g.net.seats ? `<p class="note warn">Este juego es de ${g.net.watch ? '' : 'hasta '}${g.net.seats}: juegan ${ps.slice(0, g.net.seats).map(p => esc(p.name)).join(' y ')}; ${g.net.watch ? 'los demás miran en vivo' : 'los demás esperan'}.</p>` : '';
+    const nS = m.seats || g.net.seats, watch = m.watch || g.net.watch;
+    const over = ps.length > nS ? `<p class="note warn">${m.seats ? 'Este modo' : 'Este juego'} es de ${watch ? '' : 'hasta '}${nS}: juegan ${ps.slice(0, nS).map(p => esc(p.name)).join(' y ')}; ${watch ? 'los demás miran en vivo' : 'los demás esperan'}.</p>` : '';
     return `<p class="note">Con ${ps.length} jugadores.</p>${cards}
       <div class="on-cfg" style="--c1:${g.c1};--c2:${g.c2}">
         <div class="lbl">Modo</div>${seg('mode', ms.map(x => [x.id, x.name]), m.id)}<p class="on-desc">${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</p>
@@ -158,7 +159,7 @@ const Online = (() => {
   function sendPick() { Net.send('*', { $: 'pick', game: pick, ev: pickEv }, true); if (pick) GAMEHUB.Launcher.preload(pick); }
   // el anfitrión arranca una partida: puestos con los jugadores de la sala (en orden), y todos abren el juego
   function startGame(g, ev, only, tour) {
-    const ps = (only || players(Net.room)).slice(0, g.net.seats), sid = Math.random().toString(36).slice(2, 10);
+    const M = allModes(g).find(m => ev && m.id === ev.mode), ps = (only || players(Net.room)).slice(0, (M && M.seats) || g.net.seats), sid = Math.random().toString(36).slice(2, 10);
     const seats = ps.map(p => ({ dev: p.dev, local: devLocal(p), name: p.name, color: p.color }));
     // que nadie se repita: colores (el siguiente libre de la paleta) y nombres (con número)
     const usedC = new Set(), usedN = {};

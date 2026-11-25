@@ -247,7 +247,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
 
 <section class="screen veil" id="s-camp" hidden>
   <div class="panel" style="width:min(940px,100%)">
-    <div class="row" style="justify-content:space-between"><h2 id="c-title">La Travesía de los Tunjos</h2><span class="row" style="gap:8px"><span class="seg" id="c-players"><button data-v="2">2 jugadores</button><button data-v="1">1 + compañero</button></span><button class="btn small" data-act="back">Volver</button></span></div>
+    <div class="row" style="justify-content:space-between"><h2 id="c-title">La Travesía de los Tunjos</h2><span class="row" style="gap:8px"><span class="seg" id="c-players"><button data-v="2">2 jugadores</button><button data-v="1">1 + compañero</button></span><button id="c-back" class="btn small" data-act="back">Volver</button></span></div>
     <div class="row" id="c-picks" style="justify-content:flex-start;gap:14px;margin:6px 0 2px;font-size:13.5px"></div>
     <div class="seg" id="c-world" style="margin:2px 0 4px"></div>
     <div class="cgrid" id="c-grid"></div>
@@ -329,6 +329,7 @@ html.in-hub .hub-home:hover, html.in-hub .hub-home:focus-visible { background: r
       <button class="btn gold" data-act="hubback" id="r-hub" hidden>Continuar torneo ▸</button>
       <button class="btn gold" data-act="copaNext" id="r-copaNext" hidden>Siguiente prueba</button>
       <button class="btn gold" data-act="rematch" id="r-rematch">Revancha</button>
+      <button class="btn" data-act="netPick" id="r-netpick" hidden>Elegir nivel</button>
       <button class="btn" data-act="setupAgain">Cambiar magos</button>
       <button class="btn" data-act="toTitle">Inicio</button>
     </div>
