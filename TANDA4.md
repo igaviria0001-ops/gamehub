@@ -68,8 +68,13 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
      grandes y al contraconjuro, y anillo de onda en el suelo.
   3. **Textos**: ya se apilan (`10d-art.js`), pero en una misma jugada salen 3 seguidos («¡Doble golpe! ¡Rebote!
      ¡CONTRACONJURO!») muy pegados: unirlos en un solo cartel de combo con más aire.
-  4. **Lava del volcán** se ve como mancha amarilla plana (sobre todo en calidad media): costra oscura, grietas que
-     laten, borde que humea.
+  4. **Lava del volcán**: el río y el pozo se ven en escalera (cuadros de 40 px) con un borde punteado. Diagnóstico
+     (`/tmp/lava0.js` → foto al empezar en `volcan`, calidad alta): el campo base de `prerender` (`10-art-ground.js`)
+     ya tuerce los bordes (±23 px), pero encima se dibujan por celda los ladrillos de piedra y el brillo vivo de
+     `lavaCell` (centrado en cada celda), y eso deja la escalera. Arreglo propuesto: bordes de lava por «mayoría en un
+     radio» + torcido de ruido (cortar las esquinas de la escalera), ladrillos recortados con la misma máscara, y el
+     brillo vivo dibujado con la máscara suave en vez de por celda; costra oscura que deriva, grietas que laten, humo
+     en la orilla. Ojo: el daño sigue por celda (diferencia ≤ 12 px en las esquinas, aceptable).
   5. **Entrada de ronda de película**: cartel con los dos magos frente a frente, nombre de la arena, barras de cine.
   6. Clima propio de cada arena (ceniza, nieve, pétalos, brisa) solo donde luce. Todo con versión ligera en celular.
   Después medir que no cambie el equilibrio (`LV=4 node juegos/sortilegio/test/balance.js`) y revisar Candela con
