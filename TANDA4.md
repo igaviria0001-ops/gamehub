@@ -83,3 +83,22 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
   `/ice`, medir con `test/netmovil.js` y publicar. Mientras tanto el en línea funciona como antes (MQTT + TURN público).
 - Ojo al probar juegos sueltos: `git checkout -- juegos/*/test/index.html` deja la página de prueba VIEJA; volver a
   correr `node juegos/<juego>/build.js` antes de mirar fotos.
+- **25 nov mañana — pedido nuevo de Ignacio** (Llamarada quita poco; Eclipse épico y útil; todas las fusiones más
+  épicas «como la tormenta de arena»; nivelar subiendo a los flojos, sin bajar a los buenos). Hecho:
+  - **Eclipse** (Chía) rehecho: la luna tapa el sol donde VA a estar el rival (aviso 0,36 s); adentro no lanza, la
+    oscuridad atrae y quema; salir por el anillo de luz quema y calla 1,1 s; al final el anillo de diamante (17, encandila,
+    maleficio; cura a los aliados). Sol negro con corona, noche con estrellas, runas (`10c4-art-epic.js`, módulo nuevo
+    para las fusiones épicas; se engancha en `10d-art.js` y por `ArtEarth.fx/shape`).
+  - **Llamarada** 11 + 14 (antes 8 + 12), más rápida.
+  - Más épicas: Flor de vida (loto gigante; polen, latidos que empujan, cierre que enreda), Cuervos (5, grandes, nube de
+    plumas), Bola de rayo (esfera que suelta rayos al pasar), Torbellino de fuego (anillos de llama, más alto, menos
+    encandilante), Ventisca (abanico de cristales; hielo como placas), Vapor, Tormenta (nubarrón que relampaguea),
+    Pétalos, Vainas de fuego (saltan hacia el rival), Rayo negro (relámpago oscuro del cielo), Fuegos fatuos (5, más
+    grandes). Sonidos nuevos.
+  - Nivelación solo subiendo: Raíces 15, Tormenta 6,5 cada 0,5 s, Plasma 27, Ventisca 10, Marea negra 6,5, Frailejón
+    plantas +40 % y más vida, Yuma/Chía/Tota/Cocuy/Tatacoa más vida, Yuma más rápido. (Se recortó solo lo que yo mismo había
+    subido de más en esta tanda: loto, cuervos y bola.) Resultado (R=20, 3120 peleas por nivel): Maestro 47–55 %,
+    Normal 41–60 %.
+  - Arreglo: los reflejos del Espejismo podían salirse del mapa.
+  - `test/powerstat.js`: daño por lanzamiento de cada poder (también los de un elemento y lo que hacen sus piezas).
+

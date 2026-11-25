@@ -34,10 +34,15 @@ const ArtSpells = (() => {
         x.fillStyle = col; x.globalAlpha = s.arm > 0 ? 0.4 : p; x.beginPath(); x.arc(s.x, s.y - 2, 3.2, 0, TAU); x.fill(); x.globalAlpha = 1;
       } else if (s.t === 'mine') {
         const p = s.arm > 0 ? 0.3 : 0.6 + 0.4 * Math.sin(t * 8 + s.id);
-        x.fillStyle = '#5a2a14'; x.beginPath(); x.ellipse(s.x, s.y, 11, 7, 0, 0, TAU); x.fill();
-        x.fillStyle = '#c8501e'; x.beginPath(); x.ellipse(s.x, s.y - 3, 9, 7, 0, 0, TAU); x.fill();
-        x.strokeStyle = '#3a6a2a'; x.lineWidth = 2; x.beginPath(); x.moveTo(s.x, s.y - 9); x.quadraticCurveTo(s.x + 4, s.y - 15, s.x + 7, s.y - 14); x.stroke();
-        glow(x, s.x, s.y - 4, 16, `rgba(255,150,60,${p})`);
+        // vaina de fuego: cápsula verde que se abre y deja ver brasas que laten; armada, un anillo de aviso (y salta)
+        if (s.z) { x.save(); x.translate(0, -s.z); }
+        x.fillStyle = 'rgba(10,6,4,0.35)'; x.beginPath(); x.ellipse(s.x, s.y + 2, 15, 6, 0, 0, TAU); x.fill();
+        x.fillStyle = '#2f5a24'; x.beginPath(); x.ellipse(s.x - 6, s.y - 5, 7, 11, -0.5, 0, TAU); x.fill(); x.beginPath(); x.ellipse(s.x + 6, s.y - 5, 7, 11, 0.5, 0, TAU); x.fill();
+        const cg = x.createRadialGradient(s.x, s.y - 6, 1, s.x, s.y - 6, 10); cg.addColorStop(0, `rgba(255,240,170,${0.6 + 0.4 * p})`); cg.addColorStop(0.5, '#ff8a2a'); cg.addColorStop(1, '#a8320e'); x.fillStyle = cg; x.beginPath(); x.ellipse(s.x, s.y - 6, 6, 9, 0, 0, TAU); x.fill();
+        x.strokeStyle = '#4f8a3a'; x.lineWidth = 2; x.beginPath(); x.moveTo(s.x, s.y - 15); x.quadraticCurveTo(s.x + 5, s.y - 22, s.x + 9, s.y - 20); x.stroke();
+        glow(x, s.x, s.y - 6, 22, `rgba(255,150,60,${p})`);
+        if (s.z) x.restore();
+        if (s.arm <= 0 && s.hopT == null) { x.strokeStyle = `rgba(255,140,60,${0.25 + 0.25 * Math.sin(t * 6 + s.id)})`; x.lineWidth = 1.5; x.setLineDash([4, 6]); x.lineDashOffset = -t * 20; x.beginPath(); x.ellipse(s.x, s.y, s.S.trig, s.S.trig * 0.5, 0, 0, TAU); x.stroke(); x.setLineDash([]); }
       } else if (s.t === 'magnet') {
         x.save(); x.globalAlpha = Math.min(1, s.life / 0.3);
         x.strokeStyle = 'rgba(190,150,255,0.35)'; x.lineWidth = 1.5; x.setLineDash([4, 8]); x.lineDashOffset = -t * 40; x.beginPath(); x.ellipse(s.x, s.y, s.pullR, s.pullR * 0.5, 0, 0, TAU); x.stroke(); x.setLineDash([]);
@@ -70,7 +75,7 @@ const ArtSpells = (() => {
         return;
       }
       if (s.gust) { const f = Math.min(1, s.life / 0.15); x.save(); x.globalAlpha = 0.85 * f; x.translate(s.x, Y); x.rotate(a); x.strokeStyle = '#e8fff6'; x.lineWidth = 3; for (let k = 0; k < 3; k++) { x.beginPath(); x.arc(-k * 9, 0, s.r * (0.9 - k * 0.15), -1.1, 1.1); x.stroke(); } x.strokeStyle = 'rgba(160,250,215,0.6)'; x.lineWidth = 7; x.beginPath(); x.arc(0, 0, s.r, -0.9, 0.9); x.stroke(); x.restore(); return; }
-      if (s.petal) { x.save(); x.translate(s.x, Y); x.rotate(t * 10 + s.id); x.fillStyle = s.id % 2 ? '#ffc6e0' : '#d8ff9a'; x.beginPath(); x.ellipse(0, 0, 7, 3.5, 0, 0, TAU); x.fill(); x.restore(); glow(x, s.x, Y, 14, 'rgba(255,190,230,0.5)'); return; }
+      if (s.petal) { x.save(); x.translate(s.x, Y); x.rotate(t * 10 + s.id); x.fillStyle = s.id % 2 ? '#ffc6e0' : '#e6ffb0'; x.beginPath(); x.ellipse(0, 0, 11, 5, 0, 0, TAU); x.fill(); x.fillStyle = 'rgba(255,255,255,0.6)'; x.beginPath(); x.ellipse(-2, -1, 5, 1.6, 0, 0, TAU); x.fill(); x.restore(); glow(x, s.x, Y, 22, 'rgba(255,190,230,0.55)'); if (Math.random() < 0.25) FX.P({ x: s.x, y: s.y, z: 18, vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 30, life: 0.3, size: 1.4, color: '#fff0f8', kind: 'ember' }); return; }
       // rastro de posiciones (solo para la vista)
       const tr = s._tr || (s._tr = []); const last = tr[tr.length - 1];
       if (!last || hypot(last[0] - s.x, last[1] - Y) > 3) { tr.push([s.x, Y]); if (tr.length > 16) tr.shift(); }
@@ -233,14 +238,27 @@ const ArtSpells = (() => {
     const t = G.time;
     for (const s of G.spells) {
       if (s.t === 'cloud') {
-        const fade = Math.min(1, s.life / 0.6, s.age * 4);
-        for (let k = 0; k < 9; k++) { const a = k / 9 * TAU + s.id, d = (k % 3) * s.r * 0.28, px = s.x + Math.cos(a + t * 0.2) * d, py = s.y - 20 + Math.sin(a + t * 0.2) * d * 0.55, r = s.r * (0.42 + 0.1 * Math.sin(t + k)); x.globalAlpha = 0.6 * fade; sdot(x, 'rgb(236,242,252)', px, py, r * 1.35); } x.globalAlpha = 1;
+        const fade = Math.min(1, s.life / 0.6, s.age * 4), grow = Math.min(1, s.age * 3);
+        // vapor que hierve: bocanadas que ruedan y suben, sombreadas abajo y brillantes arriba, y hilos de vapor
+        const n = LOWFX ? 9 : 16;
+        for (let k = 0; k < n; k++) { const a = k / n * TAU + s.id + t * (0.25 + (k % 3) * 0.08), ring = (k % 3) / 2, d = s.r * (0.12 + ring * 0.62) * grow, rise = ((t * 0.35 + k * 0.17) % 1);
+          const px = s.x + Math.cos(a) * d, py = s.y - 18 - rise * 30 - ring * 6 + Math.sin(a) * d * 0.5, r = s.r * (0.36 + 0.08 * Math.sin(t * 1.3 + k)) * grow * (1 - rise * 0.3);
+          x.globalAlpha = 0.42 * fade * (1 - rise * 0.5); sdot(x, 'rgb(150,170,196)', px, py + r * 0.25, r * 1.25); x.globalAlpha = 0.6 * fade * (1 - rise * 0.6); sdot(x, 'rgb(244,248,255)', px, py - r * 0.15, r * 1.05); }
+        x.strokeStyle = `rgba(255,255,255,${0.35 * fade})`; x.lineWidth = 2; x.lineCap = 'round';
+        for (let k = 0; k < (LOWFX ? 3 : 7); k++) { const px = s.x + (hash2(k, s.id) - 0.5) * s.r * 1.2, p = (t * 0.6 + hash2(s.id, k)) % 1, py = s.y - 40 - p * 90; x.globalAlpha = fade * Math.sin(p * Math.PI) * 0.8; x.beginPath(); x.moveTo(px, py + 24); x.bezierCurveTo(px + 8, py + 14, px - 8, py + 6, px + Math.sin(t * 2 + k) * 6, py); x.stroke(); }
+        x.globalAlpha = 1;
       } else if (s.t === 'storm') {
         const fade = Math.min(1, s.life / 0.6, s.age * 4);
         x.save(); x.globalAlpha = fade;
         x.strokeStyle = 'rgba(160,200,255,0.5)'; x.lineWidth = 1.2; x.beginPath();
         for (let k = 0; k < 26; k++) { const px = s.x + (hash2(k, s.id) - 0.5) * s.r * 1.8, py0 = s.y - 100 + ((t * 500 + k * 37) % 120); if (hypot(px - s.x, (py0 - s.y + 60) * 0.5) > s.r) continue; x.moveTo(px, py0); x.lineTo(px - 3, py0 + 14); } x.stroke();
-        for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + s.id, d = (k % 2) * s.r * 0.4, px = s.x + Math.cos(a + t * 0.3) * d, py = s.y - 110 + Math.sin(a + t * 0.3) * d * 0.3; x.globalAlpha = fade * 0.95; sdot(x, k % 2 ? 'rgb(52,56,84)' : 'rgb(72,78,110)', px, py, s.r * 0.6); x.globalAlpha = fade; } { const fl = Math.sin(t * 13 + s.id) > 0.93; if (fl) glow(x, s.x, s.y - 110, s.r * 1.1, 'rgba(190,170,255,0.6)'); }
+        // nubarrón de tormenta: capas de nubes oscuras con el borde de arriba iluminado; por dentro relampaguea y lo alumbra
+        const fl = Math.max(0, Math.sin(t * 9 + s.id * 3) - 0.7) / 0.3 + Math.max(0, Math.sin(t * 23 + s.id) - 0.92) / 0.08, n = LOWFX ? 8 : 14;
+        for (let k = 0; k < n; k++) { const a = k / n * TAU + s.id + t * 0.25 * (k % 2 ? 1 : -1), d = (0.15 + 0.55 * ((k * 7) % 5) / 4) * s.r, px = s.x + Math.cos(a) * d, py = s.y - 112 + Math.sin(a) * d * 0.32, r = s.r * (0.42 + 0.1 * Math.sin(t * 0.9 + k));
+          x.globalAlpha = fade * 0.95; sdot(x, k % 3 ? 'rgb(44,48,74)' : 'rgb(60,64,96)', px, py + r * 0.2, r * 1.1); x.globalAlpha = fade * 0.55; sdot(x, 'rgb(120,130,170)', px, py - r * 0.35, r * 0.7); }
+        if (fl > 0) { x.save(); x.globalCompositeOperation = 'lighter'; glow(x, s.x + Math.sin(t * 5) * s.r * 0.3, s.y - 112, s.r * 1.2, `rgba(200,180,255,${Math.min(1, fl) * 0.7})`);
+          x.strokeStyle = `rgba(240,230,255,${Math.min(1, fl)})`; x.lineWidth = 1.6; const sx = s.x + (hash2(Math.floor(t * 9), s.id) - 0.5) * s.r; x.beginPath(); x.moveTo(sx, s.y - 120); for (let q = 1; q <= 4; q++) x.lineTo(sx + (hash2(q, Math.floor(t * 9)) - 0.5) * 40, s.y - 120 + q * 8); x.stroke(); x.restore(); }
+        x.globalAlpha = fade;
         x.restore();
       } else if (s.t === 'sand') {
         const fade = Math.min(1, s.life / 0.5, s.age * 4);

@@ -34,6 +34,7 @@ const Spells = (() => {
     const bm = by >= 0 ? G.mages[by] : null; if (bm && !o.tick && bm.racha > 0 && G.time - bm.rachaT < 2.4) d *= 1 + 0.06 * Math.min(5, bm.racha);
     const wasHeld = u.st.root > 0 || u.st.stun > 0 || u.st.frozen > 0;
     if (el === 'bolt' && by >= 0 && G.mages[by] && G.mages[by].tr.boltMul) d *= G.mages[by].tr.boltMul;
+    if (el === 'plant' && bm && bm.tr.plantMul) d *= bm.tr.plantMul;
     if (el === 'bolt' && u.st.wet > 0) { d *= o.noWet ? 1.25 : 1.6; Combos.add(G, by, 'electrocutado', u); }
     if (!o.tick && u.lastSpell && u.lastSpell.by === by && u.lastSpell.id !== s.id && G.time - u.lastSpell.t < 0.35 && by >= 0) Combos.add(G, by, 'doblegolpe', u);
     if (!o.tick) u.lastSpell = { by, id: s.id, t: G.time };
@@ -256,7 +257,11 @@ const Spells = (() => {
         case 'mine': {
           if (s.arm > 0) s.arm -= dt; s.life -= dt; const i = Terrain.idx(T, s.x, s.y);
           if (i >= 0 && (T.wet[i] > 0 || Terrain.isWater(T, i))) { s.dead = true; G.fx.push({ type: 'steam', x: s.x, y: s.y, r: 24 }); break; }
-          if (s.arm <= 0) for (const u of G.units) if (foe(s, u) && !u.obj && hypot(u.x - s.x, u.y - s.y) < s.S.trig + u.r) { s.dead = true; boom(G, s, s.x, s.y, s.r, s.dmg, 'fire', { burn: 2.2, ignite: true }); break; }
+          // la vaina salta hacia el rival que pase cerca y estalla al caer
+          if (s.hopT != null) { s.hopT += dt; const k = Math.min(1, s.hopT / 0.28); s.x = lerp(s.hx0, s.hx1, k); s.y = lerp(s.hy0, s.hy1, k); s.z = Math.sin(k * Math.PI) * 34; if (k >= 1 && !s.dead) { s.dead = true; boom(G, s, s.x, s.y, s.r, s.dmg, 'fire', { burn: 2.2, ignite: true }); } break; }
+          if (s.arm <= 0) for (const u of G.units) { if (!foe(s, u) || u.obj) continue; const d = hypot(u.x - s.x, u.y - s.y);
+            if (d < s.S.trig + u.r) { s.dead = true; boom(G, s, s.x, s.y, s.r, s.dmg, 'fire', { burn: 2.2, ignite: true }); break; }
+            if (s.S.hop && d < s.S.hop + u.r && !u.untargetable && u.st.hidden <= 0) { s.hopT = 0; s.hx0 = s.x; s.hy0 = s.y; s.hx1 = u.x + (u.vx || 0) * 0.28; s.hy1 = u.y + (u.vy || 0) * 0.28; G.events.push({ type: 'podHop', x: s.x, y: s.y }); break; } }
           if (s.life <= 0 && !s.dead) { s.dead = true; boom(G, s, s.x, s.y, s.r * 0.8, s.dmg * 0.6, 'fire', { burn: 1.5, ignite: true }); } break;
         }
         case 'strike': {
@@ -286,7 +291,7 @@ const Spells = (() => {
           const S = s.S, P = s.P || 1; s.next -= dt;
           if (s.next <= 0 && s.life > 0.4) { s.next = S.pulse;
             for (const u of G.units) { if (!u.alive || u.obj || hypot(u.x - s.x, u.y - s.y) >= s.r + u.r) continue;
-              if (foe(s, u)) hit(G, s, u, S.pulseDmg * P, { el: 'water', knock: 300, kx: u.x - s.x, ky: u.y - s.y }); else if (u.isMage) { u.heal(G, 3 * P * (s.healMul || 1)); u._healT = 0.3; } }
+              if (foe(s, u)) hit(G, s, u, S.pulseDmg * P, { el: 'water', knock: 300, kx: u.x - s.x, ky: u.y - s.y }); else if (u.isMage) { u.heal(G, 2 * P * (s.healMul || 1)); u._healT = 0.3; } }
             G.fx.push({ type: 'lotusPulse', x: s.x, y: s.y, r: s.r }); G.events.push({ type: 'lotusPulse', x: s.x, y: s.y }); }
           s.life -= dt;
           if (s.life <= 0) { s.dead = true;
@@ -304,7 +309,7 @@ const Spells = (() => {
             s.next = s.S.every; let px, py; const inside = G.units.filter(u => foe(s, u) && !u.obj && hypot(u.x - s.x, u.y - s.y) < s.r + 10);
             if (inside.length && G.rng() < 0.7) { const u = inside[G.rng.int(inside.length)]; px = u.x + (G.rng() - 0.5) * 40; py = u.y + (G.rng() - 0.5) * 40; }
             else { const a = G.rng() * TAU, d = Math.sqrt(G.rng()) * s.r * 0.85; px = s.x + Math.cos(a) * d; py = s.y + Math.sin(a) * d; }
-            add(G, { t: 'strike', S: { delay: 0.38 }, by: s.by, team: s.team, el: 'bolt', x: px, y: py, delay: 0.38, r: s.S.sr, dmg: s.dmg, stun: 0.12, small: true, noWet: true, power: 1, size: 1 });
+            add(G, { t: 'strike', S: { delay: 0.38 }, by: s.by, team: s.team, el: 'bolt', x: px, y: py, delay: 0.38, r: s.S.sr, dmg: s.dmg, stun: 0.12, small: true, noWet: true, power: 1, size: 1, sk: s.sk });
           }
           s.life -= dt; if (s.life <= 0) s.dead = true; break;
         }
@@ -331,7 +336,7 @@ const Spells = (() => {
       t.life -= dt; if (t.life <= 0) { t.alive = false; G.fx.push({ type: 'pop', x: t.x, y: t.y, el: 'plant', r: 20 }); continue; }
       t.next -= dt; if (t.next > 0) continue;
       let best = null, bd = t.reach; for (const u of G.units) if (u.alive && u.team !== t.team && !u.obj && u.st.hidden <= 0) { const d = hypot(u.x - t.x, u.y - t.y); if (d < bd) { bd = d; best = u; } }
-      if (best) { t.next = t.every; hit(G, { by: t.by, team: t.team, el: 'bolt', id: -t.by - 10, x: t.x, y: t.y }, best, t.dmg, { el: 'bolt' }); G.fx.push({ type: 'zap', x0: t.x, y0: t.y - 30, x1: best.x, y1: best.y - 14, el: 'bolt' }); G.events.push({ type: 'tzap', x: t.x, y: t.y }); }
+      if (best) { t.next = t.every; hit(G, { by: t.by, team: t.team, el: 'bolt', id: -t.by - 10, x: t.x, y: t.y, sk: 'plant+bolt' }, best, t.dmg, { el: 'bolt' }); G.fx.push({ type: 'zap', x0: t.x, y0: t.y - 30, x1: best.x, y1: best.y - 14, el: 'bolt' }); G.events.push({ type: 'tzap', x: t.x, y: t.y }); }
       else t.next = 0.15;
     }
     clash(G);

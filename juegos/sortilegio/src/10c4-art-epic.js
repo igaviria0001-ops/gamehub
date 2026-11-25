@@ -173,6 +173,10 @@ const ArtEpic = (() => {
         for (let k = 0; k < (LOWFX ? 18 : 46); k++) { const a = f.ang + vr(-f.half, f.half), v = vr(380, 760); P({ x: f.x, y: f.y, z: vr(10, 40), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.62, vz: vr(-20, 60), g: 40, drag: 1.6, life: f.range / v * vr(0.8, 1.2), size: vr(1.5, 3.2), color: Math.random() < 0.7 ? '#ffffff' : '#bfe8ff', kind: 'flake', add: false }); }
         for (let k = 0; k < (LOWFX ? 3 : 6); k++) { const a = f.ang + vr(-f.half, f.half), d = f.range * vr(0.3, 0.95); P({ x: f.x + Math.cos(a) * d, y: f.y + Math.sin(a) * d * 0.62, z: vr(4, 20), vx: Math.cos(a) * 40, vy: Math.sin(a) * 30, vz: vr(10, 40), g: 0, drag: 1, life: vr(0.8, 1.4), size: vr(12, 20), color: 'rgba(200,235,255,0.16)', kind: 'smoke', add: false }); }
         return true; }
+      case 'blackStrike': // Rayo negro: un relámpago oscuro cae del cielo sobre el rival, con borde magenta, y deja la marca
+        S({ type: 'blackPillar', x: f.x, y: f.y, life: 0.5, seed: Math.random() * 1000 }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: 110, el: 'shadow', life: 0.4, w: 12 });
+        for (let k = 0; k < (LOWFX ? 10 : 24); k++) { const a = Math.random() * TAU, v = vr(160, 420); P({ x: f.x, y: f.y, z: vr(4, 30), vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, vz: vr(60, 200), g: 500, drag: 1.3, life: vr(0.4, 0.8), size: vr(2, 4), color: Math.random() < 0.6 ? '#1a0822' : '#ff5ad0', kind: 'shard', add: false }); }
+        return true;
       case 'diamond': // el anillo de diamante: luz que estalla desde el centro del eclipse
         S({ type: 'diamond', x: f.x, y: f.y, r: f.r, life: 0.75 });
         S({ type: 'ring', x: f.x, y: f.y, r0: 20, r1: f.r * 1.5, el: 'light', life: 0.45, w: 12, gold: true }); S({ type: 'ring', x: f.x, y: f.y, r0: 10, r1: f.r * 2.1, el: 'shadow', life: 0.6, w: 6, delay: 0.08 });
@@ -195,8 +199,20 @@ const ArtEpic = (() => {
       if (g >= 1 && Math.sin(o.t * 20 + sp.x) > 0.8) { x.globalCompositeOperation = 'lighter'; star4(x, tx, ty, 6, 'rgba(255,255,255,0.9)', o.t * 4); x.globalCompositeOperation = 'source-over'; } }
     x.restore();
   }
+  function blackPillar(x, o, f, A) {
+    const top = o.y - 300, seg = 9, fl = Math.floor(o.t * 28), pts = [];
+    for (let k = 0; k <= seg; k++) { const q = k / seg; pts.push([o.x + (k && k < seg ? (hash2(k, o.seed + fl) - 0.5) * 46 * (1 - q * 0.4) : 0), top + (o.y - top) * q]); }
+    const path = () => { x.beginPath(); pts.forEach(([px, py], i) => i ? x.lineTo(px, py) : x.moveTo(px, py)); };
+    x.save(); x.lineCap = 'round'; x.lineJoin = 'round';
+    x.globalCompositeOperation = 'lighter'; path(); x.strokeStyle = `rgba(255,70,200,${0.6 * A})`; x.lineWidth = 44 * A + 6; x.stroke();
+    x.globalCompositeOperation = 'source-over'; path(); x.strokeStyle = `rgba(14,2,20,${0.95 * A})`; x.lineWidth = 17 * A + 4; x.stroke();
+    x.globalCompositeOperation = 'lighter'; path(); x.strokeStyle = `rgba(255,190,240,${A})`; x.lineWidth = 2.4; x.stroke();
+    glow(x, o.x, o.y - 10, 70 * A + 10, `rgba(255,80,210,${0.6 * A})`);
+    x.restore();
+  }
   function shape(x, o, f, A) {
     if (o.type === 'iceFan') { iceFan(x, o, f); return true; }
+    if (o.type === 'blackPillar') { blackPillar(x, o, f, A); return true; }
     if (o.type !== 'diamond') return false;
     // rayos de luz que salen del centro y se abren hacia el cielo
     x.save(); x.globalCompositeOperation = 'lighter';

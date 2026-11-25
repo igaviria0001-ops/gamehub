@@ -60,7 +60,7 @@ const ArtSpells2 = (() => {
   }
   /* ---------- lo que se ordena con los magos ---------- */
   function items(G, list) {
-    for (const s of G.spells) if (s.t === 'wisp') list.push({ y: s.y + 4, draw: x => wisp(x, G, s.x, s.y - 30, s.id, s.arm > 0 ? 0.6 : 1) });
+    for (const s of G.spells) if (s.t === 'wisp') list.push({ y: s.y + 4, draw: x => wisp(x, G, s.x, s.y - 30, s.id, s.arm > 0 ? 0.85 : 1.35) });
     for (const u of G.units) { if (!u.alive) continue; if (u.obj === 'decoy') list.push({ y: u.y, draw: x => decoy(x, G, u) }); else if (u.obj === 'sunflower') list.push({ y: u.y, draw: x => sunflower(x, G, u) }); }
   }
   function wisp(x, G, X, Y, id, k = 1) {
@@ -101,7 +101,7 @@ const ArtSpells2 = (() => {
   /* ---------- proyectiles de luz, sombra, cuervos y fuegos fatuos ---------- */
   function proj(x, G, s, Y, a, ribbon) {
     const t = G.time, rnd = Math.random;
-    if (s.wisp) { wisp(x, G, s.x, Y - 6, s.id, 0.9); return true; }
+    if (s.wisp) { wisp(x, G, s.x, Y - 6, s.id, 1.3); if (Math.random() < 0.5) FX.P({ x: s.x, y: s.y, z: 16, vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 30, vz: 30, g: -20, life: 0.4, size: 2.2, color: Math.random() < 0.5 ? '#ff7ad8' : '#ffd27a', kind: 'ember' }); return true; }
     if (s.crow) {
       ribbon(9, 'rgba(70,20,90,0.6)', 'rgba(20,6,30,0)', false);
       // humo de sombra alrededor del cuervo y ojos que brillan

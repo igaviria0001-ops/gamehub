@@ -62,18 +62,18 @@ const GRAN_CHARGE = 0.3, GRAN_WAVE = 170; // Gran Sortilegio: concentración (s 
 /* ---------- fusiones (las dos manos) ---------- */
 const FUSIONS = {
   'fire+water':  { name: 'Vapor', kind: 'cloud', cd: 4.0, range: 260, r: 112, life: 4.5, dps: 6, hide: 1, tip: 'Nube que escalda al rival, esconde a quien esté adentro y apaga el fuego.' },
-  'fire+wind':   { name: 'Torbellino de fuego', kind: 'firenado', cd: 4.5, speed: 235, r: 58, life: 3.3, dps: 17, turn: 2.0, pull: 330, tip: 'Persigue despacio y quema todo a su paso.' },
+  'fire+wind':   { name: 'Torbellino de fuego', kind: 'firenado', cd: 4.5, speed: 255, r: 58, life: 3.3, dps: 17, turn: 2.3, pull: 330, tip: 'Persigue despacio y quema todo a su paso.' },
   'fire+earth':  { name: 'Magma', kind: 'meteor', cd: 4.5, range: 340, flight: 0.6, r: 80, dmg: 20, knock: 340, pool: { r: 62, life: 4, dps: 10 }, frags: 3, tip: 'Un meteoro de lava cae en arco, rompe muros y se parte: tres fragmentos más llueven alrededor.' },
-  'fire+plant':  { name: 'Vainas de fuego', kind: 'mines', cd: 4.0, n: 3, arm: 0.6, trig: 56, r: 72, dmg: 13, life: 10, tip: 'Tres minas que estallan si el rival se acerca.' },
-  'fire+bolt':   { name: 'Plasma', kind: 'beam', cd: 4.5, windup: 0.36, len: 660, w: 26, dmg: 24, tip: 'Rayo recto que rompe muros. Apunta bien.' },
-  'water+wind':  { name: 'Ventisca', kind: 'frost', cd: 4.0, range: 285, half: 0.66, dmg: 8, chill: 2.0, freeze: 1.3, tip: 'Congela al mojado y vuelve hielo los charcos.' },
+  'fire+plant':  { name: 'Vainas de fuego', kind: 'mines', cd: 4.0, n: 3, arm: 0.6, trig: 64, hop: 150, r: 80, dmg: 15, life: 10, tip: 'Tres vainas de fuego: si el rival pasa cerca, saltan hacia él y estallan.' },
+  'fire+bolt':   { name: 'Plasma', kind: 'beam', cd: 4.5, windup: 0.36, len: 660, w: 30, dmg: 27, tip: 'Rayo recto que rompe muros. Apunta bien.' },
+  'water+wind':  { name: 'Ventisca', kind: 'frost', cd: 4.0, range: 295, half: 0.68, dmg: 10, chill: 2.0, freeze: 1.3, tip: 'Congela al mojado y vuelve hielo los charcos.' },
   'water+earth': { name: 'Alud de lodo', kind: 'mudslide', cd: 4.0, speed: 440, range: 340, half: 0.55, dmg: 11, knock: 420, wet: 2.5, slow: 0.55, life: 6, tip: 'Una avalancha de barro avanza y arrastra: empuja, moja, deshace proyectiles y deja lodo que frena y no deja esquivar.' },
-  'water+plant': { name: 'Flor de vida', kind: 'bloom', cd: 5.0, r: 112, life: 5, hps: 6.5, pollen: 3, pulse: 1.5, pulseDmg: 5, end: 8, endRoot: 0.8, endHeal: 10, tip: 'Un loto gigante: cura a los tuyos y les quita quemaduras, maleficios y enredos; al rival lo frena y lo quema con polen, cada latido lo empuja afuera y al cerrarse lo enreda.' },
-  'water+bolt':  { name: 'Tormenta', kind: 'storm', cd: 4.5, range: 300, r: 122, life: 4.5, every: 0.6, sr: 42, dmg: 5, tip: 'Nube que moja y suelta rayos.' },
+  'water+plant': { name: 'Flor de vida', kind: 'bloom', cd: 5.0, r: 104, life: 5, hps: 6.5, pollen: 2.5, pulse: 1.5, pulseDmg: 4, end: 7, endRoot: 0.8, endHeal: 6, tip: 'Un loto gigante: cura a los tuyos y les quita quemaduras, maleficios y enredos; al rival lo frena y lo quema con polen, cada latido lo empuja afuera y al cerrarse lo enreda.' },
+  'water+bolt':  { name: 'Tormenta', kind: 'storm', cd: 4.5, range: 300, r: 122, life: 4.5, every: 0.5, sr: 48, dmg: 6.5, tip: 'Nube que moja y suelta rayos.' },
   'wind+earth':  { name: 'Tormenta de arena', kind: 'sandstorm', cd: 5.0, r: 160, life: 3.8, dps: 2, rocks: 4, rockDmg: 5, burst: 320, burstDmg: 4, tip: 'Un torbellino de arena y piedras te envuelve: las piedras golpean, las balas se deshacen y adentro nadie te puede apuntar.' },
   'wind+plant':  { name: 'Pétalos', kind: 'petals', cd: 4.0, n: 8, speed: 390, turn: 4.2, dmg: 3.2, life: 2.6, r: 8, tip: 'Enjambre que busca al rival.' },
-  'wind+bolt':   { name: 'Bola de rayo', kind: 'proj', cd: 4.0, speed: 720, r: 18, life: 2.4, dmg: 15, stun: 0.35, bounce: 3, chain: 150, arc: 170, arcDmg: 4, arcEvery: 0.4, tip: 'Una bola de relámpago que rebota hasta tres veces y suelta rayos a quien pase cerca.' },
-  'earth+plant': { name: 'Raíces', kind: 'roots', cd: 4.0, speed: 640, range: 430, r: 20, dmg: 10, root: 1.5, fan: 0.2, tip: 'Tres raíces corren por el suelo y revientan hacia arriba: la que toque primero, inmoviliza.' },
+  'wind+bolt':   { name: 'Bola de rayo', kind: 'proj', cd: 4.0, speed: 720, r: 18, life: 2.4, dmg: 15, stun: 0.35, bounce: 3, chain: 150, arc: 150, arcDmg: 3, arcEvery: 0.45, tip: 'Una bola de relámpago que rebota hasta tres veces y suelta rayos a quien pase cerca.' },
+  'earth+plant': { name: 'Raíces', kind: 'roots', cd: 4.0, speed: 640, range: 430, r: 20, dmg: 15, root: 1.7, fan: 0.2, tip: 'Tres raíces corren por el suelo y revientan hacia arriba: la que toque primero, inmoviliza.' },
   'earth+bolt':  { name: 'Torres de rayo', kind: 'tesla', cd: 5.0, range: 340, life: 4.6, hp: 34, dmg: 10, stun: 0.45, zapR: 180, zap: 5, every: 1.1, tip: 'Dos torres de piedra unidas por un rayo: cruzarlo electrocuta, las torres le disparan al que se acerque y la corriente pasa al agua.' },
   'plant+bolt':  { name: 'Flor eléctrica', kind: 'turret', cd: 5.0, range: 210, hp: 30, life: 6.5, every: 0.7, reach: 285, dmg: 5, tip: 'Torreta que dispara chispas.' },
 };
@@ -84,10 +84,10 @@ Object.assign(FUSIONS, {
   'earth+light':  { name: 'Jaula de cristal', kind: 'crystal', cd: 5.0, range: 360, lock: 0.34, hp: 30, life: 3.2, dps: 4.5, burst: 11, tip: 'Un anillo de luz persigue al rival y la jaula brota a su alrededor: adentro la luz quema y al final estalla hacia adentro.' },
   'plant+light':  { name: 'Girasol', kind: 'sunflower', cd: 5.0, range: 200, hp: 34, life: 7, every: 1.25, reach: 380, dmg: 7, heal: 3.5, healR: 95, tip: 'Dispara rayos de sol y cura a quien esté a su lado.' },
   'bolt+light':   { name: 'Juicio', kind: 'judgment', cd: 4.5, range: 520, delay: 0.95, lockAt: 0.28, r: 58, dmg: 26, stun: 0.55, tip: 'Marca al rival y le cae una columna de luz. ¡Hay que salir a tiempo!' },
-  'light+shadow': { name: 'Eclipse', kind: 'eclipse', cd: 5.5, range: 320, r: 128, warn: 0.42, life: 3.2, dps: 5, pull: 170, ring: 9, ringSil: 1.1, burst: 15, hex: 2.2, tip: 'La luna tapa el sol sobre el rival: adentro no puede lanzar hechizos y la oscuridad lo atrae; salir por el anillo de luz quema, y al final estalla el anillo de diamante (deja maleficio).' },
-  'fire+shadow':  { name: 'Fuegos fatuos', kind: 'wisps', cd: 4.5, n: 4, life: 6, trig: 150, speed: 430, turn: 5, dmg: 7, burn: 1.6, tip: 'Cuatro llamas te rodean y se lanzan sobre quien se acerque.' },
-  'water+shadow': { name: 'Marea negra', kind: 'bog', cd: 4.5, range: 290, flight: 0.45, r: 112, life: 5, dps: 5.5, slow: 0.7, drain: 0.45, tip: 'Charco oscuro que frena, hace daño y te devuelve vida.' },
-  'wind+shadow':  { name: 'Cuervos', kind: 'crows', cd: 4.0, n: 5, speed: 380, turn: 3.8, dmg: 5.5, life: 3.0, r: 11, dazzle: 0.5, hex: 2, tip: 'Una bandada de cinco cuervos que persigue, ciega y deja maleficio.' },
+  'light+shadow': { name: 'Eclipse', kind: 'eclipse', cd: 5.0, range: 320, r: 128, warn: 0.36, life: 3.2, dps: 6, pull: 170, ring: 10, ringSil: 1.1, burst: 17, hex: 2.2, tip: 'La luna tapa el sol sobre el rival: adentro no puede lanzar hechizos y la oscuridad lo atrae; salir por el anillo de luz quema, y al final estalla el anillo de diamante (deja maleficio).' },
+  'fire+shadow':  { name: 'Fuegos fatuos', kind: 'wisps', cd: 4.5, n: 5, life: 6, trig: 230, speed: 470, turn: 5.5, dmg: 8, burn: 1.8, tip: 'Cinco llamas te rodean y se lanzan sobre quien se acerque.' },
+  'water+shadow': { name: 'Marea negra', kind: 'bog', cd: 4.5, range: 290, flight: 0.45, r: 118, life: 5, dps: 6.5, slow: 0.68, drain: 0.55, tip: 'Charco oscuro que frena, hace daño y te devuelve vida.' },
+  'wind+shadow':  { name: 'Cuervos', kind: 'crows', cd: 4.0, n: 5, speed: 380, turn: 3.4, dmg: 5, life: 3.0, r: 11, dazzle: 0.5, hex: 2, tip: 'Una bandada de cinco cuervos que persigue, ciega y deja maleficio.' },
   'earth+shadow': { name: 'Fosa', kind: 'maw', cd: 5.0, range: 340, chase: 0.8, speed: 230, slow: 0.5, r: 52, life: 2.4, bite: 12, tip: 'Una sombra se pega a los pies del rival y lo frena con manos oscuras; luego el suelo se lo traga. ¡Esquiva para soltarte!' },
   'plant+shadow': { name: 'Zarzal', kind: 'thorns', cd: 4.5, r: 118, life: 4.5, dmg: 9, root: 0.6, tip: 'Anillo de espinas a tu alrededor: quien lo cruce queda enredado.' },
   'bolt+shadow':  { name: 'Rayo negro', kind: 'blackbolt', cd: 4.0, range: 330, dmg: 15, hex: 3.2, silence: 0.7, chain: 190, tip: 'Rayo que maldice, salta a otro rival y lo silencia un instante.' },
@@ -97,27 +97,27 @@ const FUSION_ORDER = Object.keys(FUSIONS);
 /* ---------- magos ---------- */
 const CHARS = {
   candela:   { name: 'Candela', title: 'llanera de fuego', hands: ['fire', 'wind'], hp: 160, speed: 1.06, sig: 'fire+wind', trait: 'Sus quemaduras duran 50 % más y al esquivar deja fuego.', look: 'candela' },
-  yuma:      { name: 'Yuma', title: 'aprendiz del Mohán', hands: ['water', 'bolt'], hp: 102, speed: 1.0, sig: 'water+bolt', trait: 'Más rápido en agua y barro; su agua electrificada no lo toca.', look: 'yuma' },
-  frailejon: { name: 'Frailejón', title: 'guardián del páramo', hands: ['earth', 'plant'], hp: 160, speed: 0.91, sig: 'earth+plant', trait: 'Casi no lo empujan; quieto sobre hierba se cura.', look: 'frailejon' },
+  yuma:      { name: 'Yuma', title: 'aprendiz del Mohán', hands: ['water', 'bolt'], hp: 114, speed: 1.05, sig: 'water+bolt', trait: 'Más rápido en agua y barro; su agua electrificada no lo toca.', look: 'yuma' },
+  frailejon: { name: 'Frailejón', title: 'guardián del páramo', hands: ['earth', 'plant'], hp: 166, speed: 0.95, sig: 'earth+plant', trait: 'Casi no lo empujan; quieto sobre hierba se cura; sus plantas pegan 40 % más.', look: 'frailejon' },
   purace:    { name: 'Puracé', title: 'hija del volcán', hands: ['fire', 'earth'], hp: 124, speed: 0.92, sig: 'fire+earth', trait: 'Recibe 25 % menos daño por fuego y lava.', look: 'purace' },
   iguaque:   { name: 'Iguaque', title: 'sacerdotisa de la laguna', hands: ['water', 'plant'], hp: 118, speed: 1.0, sig: 'water+plant', trait: 'Cura 50 % más; con poca vida se regenera.', look: 'iguaque' },
   catatumbo: { name: 'Catatumbo', title: 'relámpago errante', hands: ['wind', 'bolt'], hp: 144, speed: 1.15, sig: 'wind+bolt', trait: 'Sus rayos pegan 35 % más; esquiva más seguido y al esquivar a través del rival lo electrocuta.', look: 'catatumbo' },
   // 2.0 — más magos de los seis elementos de siempre
-  cocuy:     { name: 'Cocuy', title: 'ermitaño del nevado', hands: ['water', 'wind'], hp: 128, speed: 1.0, sig: 'water+wind', trait: 'Congela 40 % más tiempo, no resbala en el hielo y el frío no lo frena.', look: 'cocuy' },
-  tatacoa:   { name: 'Tatacoa', title: 'caminante del desierto', hands: ['wind', 'earth'], hp: 130, speed: 0.98, sig: 'wind+earth', trait: 'Dentro de su tormenta de arena se cura; sus muros aguantan más.', look: 'tatacoa' },
+  cocuy:     { name: 'Cocuy', title: 'ermitaño del nevado', hands: ['water', 'wind'], hp: 136, speed: 1.0, sig: 'water+wind', trait: 'Congela 40 % más tiempo, no resbala en el hielo y el frío no lo frena.', look: 'cocuy' },
+  tatacoa:   { name: 'Tatacoa', title: 'caminante del desierto', hands: ['wind', 'earth'], hp: 136, speed: 0.98, sig: 'wind+earth', trait: 'Dentro de su tormenta de arena se cura; sus muros aguantan más.', look: 'tatacoa' },
   galeras:   { name: 'Galeras', title: 'forjador de tormentas', hands: ['fire', 'bolt'], hp: 146, speed: 1.06, sig: 'fire+bolt', trait: 'Carga los hechizos 30 % más rápido y camina mientras prepara el Plasma.', look: 'galeras' },
   // 2.0 — magos de Luz y Sombra
   zuhe:      { name: 'Zuhé', title: 'hijo del sol', hands: ['light', 'fire'], hp: 100, speed: 1.02, sig: 'fire+light', trait: 'Encandila 50 % más tiempo y cada golpe de luz lo cura un poco.', look: 'zuhe' },
-  chia:      { name: 'Chía', title: 'señora de la luna', hands: ['light', 'shadow'], hp: 108, speed: 1.08, sig: 'light+shadow', trait: 'Sus maleficios duran más y pegan más fuerte; escondida o en la oscuridad se regenera.', look: 'chia' },
+  chia:      { name: 'Chía', title: 'señora de la luna', hands: ['light', 'shadow'], hp: 114, speed: 1.08, sig: 'light+shadow', trait: 'Sus maleficios duran más y pegan más fuerte; escondida o en la oscuridad se regenera.', look: 'chia' },
   mapale:    { name: 'Mapalé', title: 'danzante de la noche', hands: ['shadow', 'wind'], hp: 132, speed: 1.2, sig: 'wind+shadow', trait: 'Tiene tres esquives y al esquivar se vuelve sombra un instante (no se le puede apuntar).', look: 'mapale' },
-  tota:      { name: 'Tota', title: 'bruja del lago hondo', hands: ['shadow', 'water'], hp: 100, speed: 0.94, sig: 'water+shadow', trait: 'Roba vida con cada golpe de sombra y nada rápido en el agua.', look: 'tota' },
+  tota:      { name: 'Tota', title: 'bruja del lago hondo', hands: ['shadow', 'water'], hp: 112, speed: 0.94, sig: 'water+shadow', trait: 'Roba vida con cada golpe de sombra y nada rápido en el agua.', look: 'tota' },
 };
 const CHAR_ORDER = ['candela', 'yuma', 'frailejon', 'purace', 'iguaque', 'catatumbo', 'cocuy', 'tatacoa', 'galeras', 'zuhe', 'chia', 'mapale', 'tota'];
 // lo que cada rasgo cambia (Mage los lee)
 const TRAITS = {
   candela: { burnMul: 1.85, dashFire: 1 },
   yuma: { waterSpeed: 1.35, elecImmune: 1 },
-  frailejon: { knockMul: 0.45, grassRegen: 2.2 },
+  frailejon: { knockMul: 0.45, grassRegen: 2.2, plantMul: 1.4 },
   purace: { fireRes: 0.75 },
   iguaque: { healMul: 1.5, lowRegen: 1.2 },
   catatumbo: { dashCd: 0.65, dashZap: 9, boltMul: 1.35 },
@@ -127,5 +127,5 @@ const TRAITS = {
   zuhe: { dazzleMul: 1.4, lightHeal: 1.0 },
   chia: { hexMul: 1.4, hexDmg: 1.55, hideRegen: 2 },
   mapale: { dashN: 3, dashHide: 0.7 },
-  tota: { shadowLeech: 0.12, waterSpeed: 1.15 },
+  tota: { shadowLeech: 0.18, waterSpeed: 1.15 },
 };

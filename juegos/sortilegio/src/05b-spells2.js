@@ -95,6 +95,7 @@ const Spells2 = (() => {
       const a = aimOf(G, m, S.range), hx = m.x + Math.cos(m.face) * 22, hy = m.y - 20 + Math.sin(m.face) * 12; let x1, y1, tg = null; Object.assign(B, { x: m.x, y: m.y, id: -1 });
       if (a.target && !a.target.spot && a.dist <= S.range * Z + a.target.r) { tg = a.target; x1 = tg.x; y1 = tg.y - 14; } else { x1 = m.x + Math.cos(a.ang) * S.range; y1 = m.y + Math.sin(a.ang) * S.range; }
       G.fx.push({ type: 'zap', x0: hx, y0: hy, x1, y1, el: 'shadow' }); G.events.push({ type: 'thunder', x: x1, y: y1 });
+      G.fx.push({ type: 'blackStrike', x: x1, y: y1 + 14 });
       if (tg) { hit(G, B, tg, S.dmg * P, { el: 'shadow', hex: S.hex, silence: S.silence * L, big: true });
         let n2 = null, bd = S.chain; for (const u of G.units) if (u !== tg && foe(B, u) && !u.untargetable) { const d = hypot(u.x - tg.x, u.y - tg.y); if (d < bd) { bd = d; n2 = u; } }
         if (n2) { hit(G, B, n2, S.dmg * 0.6 * P, { el: 'shadow', hex: S.hex }); G.fx.push({ type: 'zap', x0: tg.x, y0: tg.y - 14, x1: n2.x, y1: n2.y - 14, el: 'shadow' }); } }
@@ -105,7 +106,7 @@ const Spells2 = (() => {
     if (!this.alive) return; this.life -= dt; this.tickStatus(G, dt); if (this.life <= 0 || this.hp <= 0) { if (this.alive) this.die(G, {}); return; }
     this.swap -= dt; if (this.swap <= 0) { this.swap = 0.7 + G.rng() * 0.9; this.dir += (G.rng() - 0.5) * 2.2; }
     const sp = 150; this.vx += (Math.cos(this.dir) * sp - this.vx) * Math.min(1, 10 * dt); this.vy += (Math.sin(this.dir) * sp - this.vy) * Math.min(1, 10 * dt);
-    const ox = this.x, oy = this.y; this.x += this.vx * dt; this.y += this.vy * dt; this.collide(G.T);
+    const ox = this.x, oy = this.y; this.x += this.vx * dt; this.y += this.vy * dt; this.collide(G.T); this.x = clamp(this.x, this.r, G.T.W - this.r); this.y = clamp(this.y, this.r, G.T.H - this.r);
     const i = Terrain.idx(G.T, this.x, this.y); if (i >= 0 && (G.T.base[i] === TT.CHASM || G.T.base[i] === TT.DEEP)) { this.x = ox; this.y = oy; this.dir += Math.PI; }
     if (hypot(this.x - ox, this.y - oy) < sp * dt * 0.3) this.dir += 1.3;
     this.face = Math.atan2(this.vy, this.vx); this.walk += sp * dt * 0.045; this.moving = sp;
@@ -121,7 +122,7 @@ const Spells2 = (() => {
     if (best) this.aim += clamp(angDiff(this.aim, Math.atan2(best.y - this.y, best.x - this.x)), -3 * dt, 3 * dt);
     this.next -= dt; if (this.next > 0) return;
     if (!best) { this.next = 0.2; return; }
-    this.next = this.every; const B = { by: this.by, team: this.team, el: 'light', id: -this.by - 20, x: this.x, y: this.y };
+    this.next = this.every; const B = { by: this.by, team: this.team, el: 'light', id: -this.by - 20, x: this.x, y: this.y, sk: 'plant+light' };
     hit(G, B, best, this.dmg, { el: 'light', dazzle: 0.25 }); G.fx.push({ type: 'sunray', segs: [[this.x, this.y - 40, best.x, best.y - 14]], w: 9, el: 'light', flat: true }); G.events.push({ type: 'ray', x: this.x, y: this.y, small: true });
   }
   /* ---------- paso de tiempo de los hechizos nuevos ---------- */
