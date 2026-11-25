@@ -73,6 +73,13 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
 - **25 nov** — En línea: la sala avisa si un aparato tiene otra versión de GameHub. Guía de Cloudflare con los pasos
   para recuperar la cuenta (`servidor/GUIA-CLOUDFLARE.md`). `test/todo.sh` corre también las campañas en línea
   (arranca el servidor local). Versiones: Sortilegio 2.4, Ventolera 3.6, Tira y Afloja 0.29, VÉRTIGO 1.2.
-- **Siguiente**: suite completa → merge a `main` → artefacto → contarle a Ignacio. Lo que queda para cuando Ignacio
-  tenga la cuenta de Cloudflare: poner la dirección del Worker en `SERVER0` (`app/net.js`), medir con
-  `test/netmovil.js` y publicar.
+- **25 nov ~02:00 — PUBLICADO**: suite completa OK (`bash test/todo.sh`: 40 pruebas; `netvtg` falló una vez por tiempo
+  del temporizador de respaldo y pasó al repetir; sin conexión: estado idéntico en Tira y Afloja, Ventolera y VÉRTIGO,
+  solo cambia el número de versión en la portada; Sortilegio cambia a propósito). `main` = `tanda4` (7ba97aa),
+  artefacto de GameHub republicado. Fotos revisadas: lava con costra también en los niveles de volcán e infierno de la
+  campaña.
+- **Lo único que falta** (depende de Ignacio): que recupere su cuenta de Cloudflare con los pasos de
+  `servidor/GUIA-CLOUDFLARE.md` y mande la dirección del Worker. Entonces: ponerla en `SERVER0` (`app/net.js`), revisar
+  `/ice`, medir con `test/netmovil.js` y publicar. Mientras tanto el en línea funciona como antes (MQTT + TURN público).
+- Ojo al probar juegos sueltos: `git checkout -- juegos/*/test/index.html` deja la página de prueba VIEJA; volver a
+  correr `node juegos/<juego>/build.js` antes de mirar fotos.
