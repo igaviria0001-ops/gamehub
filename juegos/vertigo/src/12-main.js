@@ -48,14 +48,7 @@ const Game = (() => {
       case 'duel': tid = TRACK_ORDER[(Math.max(0, TRACK_ORDER.indexOf(cfg.track)) + G.duel.r) % TRACK_ORDER.length]; if (n === 1) bots.push({ pid: pool[0], skill: [0.08, 0.22, 0.48][cfg.diff != null ? cfg.diff : 1] }); break;
       case 'elim': addBots(6 - n); laps = 999; rules = Rules.elim; break;
       case 'battle': tid = cfg.arena || ARENA_ORDER[0]; addBots(6 - n); laps = 999; rules = Rules.battle; break;
-      case 'world': { const C = CAMPAIGN[cfg.ch || 0] || CAMPAIGN[0], addD = (k, d) => { for (let i = 0; i < k; i++) bots.push({ pid: pool[i], skill: C.sk != null ? clamp(C.sk + SK_OFF[i], 0, 1) : DIFF_SK[d][i] }); }; tid = C.track; rules = R => Rules.world(R, C);
-        if (C.kind === 'race') { addD(6 - n, C.diff || 0); laps = C.laps; }
-        else if (C.kind === 'elim' || C.kind === 'battle') { addD(C.bots != null ? C.bots : 6 - n, C.diff); laps = 999; }
-        else if (C.L) { addBots(C.L.bots, C.L.botLevel); laps = C.L.laps; }
-        else if (C.kind === 'tt' || C.kind === 'clean' || C.kind === 'logs') laps = C.laps;
-        else if (C.kind === 'escape') { addBots(2, 0); laps = C.laps; }
-        else if (C.kind === 'rival') { const k = pool.indexOf(C.champ); if (k > 0) { pool.splice(k, 1); pool.unshift(C.champ); } addD(4, 1); laps = C.laps; }
-        else laps = 999; break; }
+      case 'world': { const P = worldPlan(cfg.ch || 0, humans); tid = P.tid; bots.push(...P.bots); laps = P.laps; rules = P.rules; break; }
       case 'chase': { const B = BOSSES[cfg.boss] || BOSSES.tren; tid = B.track; laps = 999; rules = R => Rules.chase(R, B, cfg.diff); break; } /* Persecución libre: fácil 0, normal 1, difícil 2 */
       case 'school': { const L = LESSONS[cfg.lesson || 0]; tid = L.track; addBots(L.bots || 0, L.botLevel || 0); laps = L.laps || 999; rules = R => Rules.lesson(R, L); botSlow = L.botSlow || 0; break; }
       default: addBots(6 - n);
@@ -65,6 +58,19 @@ const Game = (() => {
     G.mode = 'race'; G.paused = false; G.shownResults = false; G.introT = G.INTRO = R.boss ? 4.6 : 3.6;
     if (isTouch()) Touch.start(n); else Touch.stop();
     UI.show(null); Sound.startRace(n); Music.play(R.boss ? 'boss_' + R.boss.def.id : TRACKS[tid].theme); resize();
+  }
+  // Vuelta al mundo: pista, máquina y vueltas de un reto (en línea, el anfitrión arma con esto el reto de todos)
+  function worldPlan(ch, humans) {
+    const C = CAMPAIGN[ch] || CAMPAIGN[0], n = humans.length, pool = PILOT_ORDER.filter(p => !humans.includes(p)).sort(() => Math.random() - 0.5), bots = [];
+    const addB = (k, lv) => { for (let i = 0; i < k; i++) bots.push({ pid: pool[i], level: lv }); }, addD = (k, d) => { for (let i = 0; i < k; i++) bots.push({ pid: pool[i], skill: C.sk != null ? clamp(C.sk + SK_OFF[i], 0, 1) : DIFF_SK[d][i] }); };
+    let laps = 999;
+    if (C.kind === 'race') { addD(6 - n, C.diff || 0); laps = C.laps; }
+    else if (C.kind === 'elim' || C.kind === 'battle') addD(C.bots != null ? C.bots : 6 - n, C.diff);
+    else if (C.L) { addB(C.L.bots, C.L.botLevel); laps = C.L.laps; }
+    else if (C.kind === 'tt' || C.kind === 'clean' || C.kind === 'logs') laps = C.laps;
+    else if (C.kind === 'escape') { addB(2, 0); laps = C.laps; }
+    else if (C.kind === 'rival') { const k = pool.indexOf(C.champ); if (k > 0) { pool.splice(k, 1); pool.unshift(C.champ); } addD(4, 1); laps = C.laps; }
+    return { tid: C.track, bots, laps, noItems: C.kind === 'tt' || C.kind === 'clean' || C.kind === 'logs' || !!C.noItems, rules: R => Rules.world(R, C) };
   }
   function start(n) { startCfg(n, G.cfg || UI.cfg()); }
   function demo() {
@@ -154,6 +160,7 @@ const Game = (() => {
         case 'ring': HUD.msg(i, e.big ? '¡ARO DORADO!' : '¡ARO!', e.big ? '#ffd23d' : '#3dffa8', { key: 'ring', life: 0.9 }); break;
         case 'heart': HUD.msg(i, e.n > 0 ? (e.n === 1 ? '¡ÚLTIMO CORAZÓN!' : '−1 ♥') : '¡SIN CORAZONES!', '#ff5a7a', { key: 'heart', big: e.n <= 1, life: 1.4 }); break;
         case 'lessonTick': if (e.n < e.need) HUD.msg(i, `✓ ${e.n}/${e.need}`, '#3dffa8', { key: 'lesson', big: true, life: 1.2 }); break;
+        case 'cleanHit': HUD.msg(i, '¡CHOQUE!', e.n <= 1 ? '#ffd23d' : '#ff7a4a', { key: 'clean', big: true, life: 1.1, sub: 'van ' + e.n + (e.n === 2 ? ' · se fue una estrella' : e.n === 4 ? ' · se fue otra estrella' : e.n === 7 ? ' · sin estrellas' : '') }); break;
         case 'logHit': HUD.msg(i, '¡TRONCO!', '#ff7a4a', { key: 'log', big: true, life: 1.1, sub: 'golpe ' + (c.logHits || 1) }); break;
         case 'stormFree': HUD.msg(i, '¡A CORRER!', '#3dffa8', { key: 'storm', big: true, life: 1.1 }); break;
         case 'sandIn': HUD.msg(i, '¡ARENAS MOVEDIZAS!', '#e8b060', { key: 'sand', life: 1.1 }); break;
@@ -324,17 +331,18 @@ const Game = (() => {
     x.restore();
   }
   function startNet(o) {
-    const mode = o.mode || 'quick', rules = mode === 'elim' ? Rules.elim : mode === 'battle' ? Rules.battle : null;
-    G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode, laps: o.laps, cup: o.gp ? o.gp.cup : 0 }); clearShow();
+    const mode = o.mode || 'quick', wc = mode === 'world' ? CAMPAIGN[o.ch] : null, rules = mode === 'elim' ? Rules.elim : mode === 'battle' ? Rules.battle : wc ? (R => Rules.world(R, wc)) : null;
+    G.nHumans = NetPlay.mine.length || 1; Input.solo = G.nHumans === 1; G.cfg = Object.assign({}, UI.cfg(), { mode, laps: o.laps, cup: o.gp ? o.gp.cup : 0 }, wc ? { ch: o.ch } : {}); clearShow();
     // Gran Premio y mano a mano en línea: la cuenta la trae la configuración del anfitrión (todos ven lo mismo)
     G.gp = o.gp ? { i: o.gp.i, pts: Object.assign({}, o.gp.pts), list: cupTracks(o.gp.cup || 0), cup: (CUPS[o.gp.cup || 0] || CUPS[0]).name } : null;
     G.duel = o.duel ? { r: o.duel.r, w: o.duel.w.slice(), net: true } : null;
-    newRace(o.tid, o.humans, o.bots, undefined, { laps: rules ? 999 : o.laps, rules });
-    G.mode = 'race'; G.paused = false; G.shownResults = false; G.introT = G.INTRO = 3.6;
+    // Vuelta al mundo en línea: el reto que eligió el anfitrión, con su semilla (lo que se riega al azar sale igual en todos)
+    newRace(o.tid, o.humans, o.bots, undefined, { laps: rules && !wc ? 999 : o.laps, rules, noItems: !!o.noItems, seed: wc ? o.seed : undefined });
+    G.mode = 'race'; G.paused = false; G.shownResults = false; G.introT = G.INTRO = R.boss ? 4.6 : 3.6;
     if (isTouch() && NetPlay.mine.length) Touch.start(G.nHumans); else Touch.stop();
-    UI.show(null); Sound.startRace(G.nHumans); Music.play(TRACKS[o.tid].theme); resize();
+    UI.show(null); Sound.startRace(G.nHumans); Music.play(R.boss ? 'boss_' + R.boss.def.id : TRACKS[o.tid].theme); resize();
   }
   Object.defineProperty(G, 'R', { get: () => R });
-  return Object.assign(G, { start, startCfg, setup, showPilot, gpNext, duelNext, lessonNext, worldNext, toTitle, pause, boot, requality, preview, startNet });
+  return Object.assign(G, { start, startCfg, worldPlan, setup, showPilot, gpNext, duelNext, lessonNext, worldNext, toTitle, pause, boot, requality, preview, startNet });
 })();
 (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { try { Game.boot(); Hub.onPlay(ev => UI.hubPlay(ev)); Hub.ready(); } catch (e) { console.error(e); const v = document.getElementById('ver'); if (v) v.textContent = 'Este navegador no pudo iniciar los gráficos 3D (WebGL): ' + e.message; } });

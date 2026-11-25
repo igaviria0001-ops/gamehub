@@ -94,6 +94,10 @@ Rules.world = (R, C) => {
   // ---- río de troncos ----
   if (C.kind === 'logs') { RU.init = R => { R.bz = []; Challenge.logs(R); R.events.length = 0; }; RU.step = (R, dt) => Boss.hazards(R, null, dt); RU.avoid = Challenge.steer;
     RU.panel = (R, c) => ({ label: 'TRONCOS', value: String(c.logHits || 0), col: (c.logHits || 0) <= 2 ? '#3dffa8' : (c.logHits || 0) <= 4 ? '#ffd23d' : '#ff7a5a', sub: 'choques · vuelta ' + Math.min(R.laps, c.lap + 1) + '/' + R.laps }); }
+  // ---- curvas sin chocar: cada golpe fuerte contra la pared cuenta (uno por choque, aunque raspe un rato) ----
+  if (C.kind === 'clean') { RU.step = R => { if (R.state !== 'race') return; const n = R.events.length; for (let i = 0; i < n; i++) { const e = R.events[i]; if (e.type !== 'wall' || !(e.hit > 6)) continue; const c = R.cars[e.car];
+      if (c && !c.bot && !c.finished && R.time - (c.cleanT == null ? -9 : c.cleanT) > 0.8) { c.cleanT = R.time; c.cleanHits = (c.cleanHits || 0) + 1; R.events.push({ type: 'cleanHit', car: c.idx, n: c.cleanHits }); } } };
+    RU.panel = (R, c) => { const n = c.cleanHits || 0; return { label: 'CHOQUES', value: String(n), col: n <= 1 ? '#3dffa8' : n <= 3 ? '#ffd23d' : n <= 6 ? '#ff9a5a' : '#ff5a36', sub: (n <= 1 ? '★★★' : n <= 3 ? '★★' : n <= 6 ? '★' : 'sin estrellas') + ' · vuelta ' + Math.min(R.laps, c.lap + 1) + '/' + R.laps }; }; }
   // ---- tormenta de arena ----
   if (C.kind === 'escape') { RU.init = R => { Challenge.storm(R); R.events.length = 0; }; RU.step = (R, dt) => Challenge.stormStep(R, dt);
     RU.panel = (R, c) => { const g = Math.round(Boss.dist(R, c) - R.storm.d); return { label: 'TORMENTA', value: c.finished ? '¡LIBRE!' : g > 0 ? g + ' m' : '¡ENCIMA!', col: c.finished ? '#3dffa8' : g < 30 ? '#ff5a36' : g < 70 ? '#ffd23d' : '#fff', sub: 'te alcanzó ' + (c.stormN || 0) + ' · vuelta ' + Math.min(R.laps, c.lap + 1) + '/' + R.laps }; }; }

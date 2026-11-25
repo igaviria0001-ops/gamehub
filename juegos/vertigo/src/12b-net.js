@@ -16,8 +16,8 @@ const NetGame = (() => {
   };
   // los avisos del HUD van a la vista de ese jugador (en línea, solo los de este aparato)
   const _msg = HUD.msg; HUD.msg = (i, ...a) => { if (NetPlay.on) { i = NetPlay.mine.indexOf(i); if (i < 0) return; } return _msg(i, ...a); };
-  // modos en línea: carrera, mano a mano (al mejor de 3, sin máquina), eliminación, batalla en arena y Gran Premio
-  const NET_MODES = ['quick', 'duel', 'elim', 'battle', 'gp'];
+  // modos en línea: carrera, mano a mano (al mejor de 3, sin máquina), eliminación, batalla en arena, Gran Premio y la Vuelta al mundo de a dos
+  const NET_MODES = ['quick', 'duel', 'elim', 'battle', 'gp', 'world'];
   const IT = Object.keys(ITEMS), MODES = ['road', 'water', 'air'], TRICK = ['flip', 'back', 'rollL', 'rollR', 'spin'], ST = ['count', 'race', 'done'];
   const r2 = v => Math.round((+v || 0) * 100) / 100, r3 = v => Math.round((+v || 0) * 1000) / 1000;
   let cfg = null, evQ = [];
@@ -39,18 +39,22 @@ const NetGame = (() => {
       const pool = PILOT_ORDER.filter(p => !used.has(p)), bots = []; if (mode !== 'duel') for (let i = 0; i < Math.max(0, 6 - n); i++) bots.push({ pid: pool[i], skill: [0.1, 0.15, 0.28, 0.2, 0.05][i % 5] });
       const rnd = L => L[Math.floor(Math.random() * L.length)], cup = Math.max(0, Math.min(CUPS.length - 1, +ev.map || 0));
       const tid = mode === 'battle' ? (ARENA_ORDER.includes(ev.map) ? ev.map : rnd(ARENA_ORDER)) : mode === 'gp' ? cupTracks(cup)[0] : TRACK_ORDER.includes(ev.map) ? ev.map : rnd(TRACK_ORDER);
+      // Vuelta al mundo: primero el anfitrión elige el reto en su mapa (ch −1); la parrilla y la semilla salen del reto
+      if (mode === 'world') return { mode, ch: -1, tid: TRACK_ORDER[0], humans: pilots, bots: [], laps: 2, skins: S.map((s, i) => okSkin((want[i] || {}).skin)) };
       const c = { mode, tid, humans: pilots, bots, laps: mode === 'gp' ? 3 : Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), skins: S.map((s, i) => okSkin((want[i] || {}).skin)) };
       if (mode === 'gp') c.gp = { cup, i: 0, pts: {} }; if (mode === 'duel') c.duel = { r: 0, w: S.map(() => 0) };
       return c;
     },
-    apply(c) { cfg = c; for (const k in ghosts) delete ghosts[k]; const w = document.getElementById('resWait'); if (w) w.remove(); Game.startNet({ mode: c.mode || 'quick', tid: c.tid, humans: c.humans, bots: c.bots, laps: c.laps, gp: c.gp || null, duel: c.duel || null }); },
+    apply(c) { cfg = c; for (const k in ghosts) delete ghosts[k]; const w = document.getElementById('resWait'); if (w) w.remove();
+      const pick = c.mode === 'world' && !(c.ch >= 0 && CAMPAIGN[c.ch]); UI.netWorld(pick ? c : null); if (pick) return;
+      Game.startNet({ mode: c.mode || 'quick', tid: c.tid, humans: c.humans, bots: c.bots, laps: c.laps, gp: c.gp || null, duel: c.duel || null, ch: c.ch, noItems: !!c.noItems, seed: c.seed }); },
   });
 
   /* ---------- instantánea (anfitrión) ---------- */
   function snap() {
     const R = Game.R; if (!R || Game.mode !== 'race' || !cfg) return null;
     const T = R.track;
-    return {
+    return Object.assign({
       st: ST.indexOf(R.state), cd: r2(R.countT), tm: r2(R.time), dn: r2(R.doneT || 0),
       ord: R.order.map(c => c.idx),
       c: R.cars.map(c => [r3(c.s), r3(c.u), r3(c.h), r3(c.a), r3(c.roll), r3(c.pitch), r2(c.f), MODES.indexOf(c.mode), c.drift.on ? 1 : 0, c.drift.dir, c.drift.lv, r2(c.drift.t),
@@ -61,7 +65,31 @@ const NetGame = (() => {
       hz: R.hz.map(z => { const o = {}; for (const k in z) { const v = z[k]; if (typeof v === 'number') o[k] = r2(v); else if (typeof v === 'string' || typeof v === 'boolean') o[k] = v; } return o; }),
       bx: R.boxes.map(b => r2(b.gone)),
       gm: T.gems.map((g, i) => (g.gone > 0 ? i : -1)).filter(i => i >= 0),
-    };
+      tt: r2(T.time), // reloj de la pista (géiseres y lo que late con él)
+    }, wSnap(R));
+  }
+  /* ---------- Vuelta al mundo: jefes, retos y piezas del reto (anfitrión) ----------
+     · wp (lento): lo que lleva cada bólido en el reto (cuenta, choques, daño al jefe…), la cuenta del equipo y las estrellas al final
+     · pg (lento): los tunjos/máscaras que ya se recogieron (los objetos del reto salen iguales en todos por la semilla)
+     · lg: troncos del río · bs: el jefe · dz: lo que suelta el jefe (barriles, minas, balas, vagones, botín…) con su número */
+  const DIVE = ['warn', 'swoop', 'low', 'climb', 'under']; let bzN = 10000;
+  function wSnap(R) {
+    const RU = R.rules; if (!RU || !(RU.world || RU.id === 'chase')) return {};
+    const o = { wp: NetPlay.slow('wp', { c: R.cars.map(c => [c.lp || 0, r2(c.lessonT || 0), c.logHits || 0, c.stormN || 0, c.cleanHits || 0, Math.round(c.bossDmg || 0), r2(c.sandK || 0), r2(c.stormImm || 0)]), tn: R.teamN || 0, ws: R.state === 'done' && RU.stars ? RU.stars(R) : -1 }, 250) };
+    if (R.storm) o.sd = r2(R.storm.d);
+    const B = R.boss;
+    if (B) o.bs = [r2(B.d), r2(B.u), r2(B.h), r2(B.v), r2(B.hp), B.max, B.phase, r2(B.hitT), r2(B.stunT), r2(B.low), r2(B.dying), B.dead ? 1 : 0, B.escaped ? 1 : 0, r2(B.t), r2(B.endT), r2(B.gustT || 0),
+      B.segs.reduce((m, g, i) => m | (g.on ? 1 << i : 0), 0), r2(B.uT), B.dive ? [B.dive.kind === 'burrow' ? 1 : 0, DIVE.indexOf(B.dive.st), r2(B.dive.t), r2(B.dive.u0 || 0), r2(B.dive.u1 || 0)] : 0, B.out ? 1 : 0, B.gustDir || 0];
+    const pg = [], lg = [], dz = [];
+    for (const z of R.bz || []) {
+      if (!z.id) z.id = ++bzN;
+      if (z.k === 'pick') { if (z.gone > 0) pg.push(z.id); }
+      else if (z.k === 'tronco') lg.push(z.id, r2(z.s), r2(z.u), r2(z.yaw));
+      else { const q = {}; for (const k in z) { const v = z[k]; if (typeof v === 'number') q[k] = k === 'id' ? v : r2(v); else if (typeof v === 'string' || typeof v === 'boolean') q[k] = v; } dz.push(q); }
+    }
+    if ((R.bz || []).some(z => z.k === 'pick')) o.pg = NetPlay.slow('pg', pg, 500);
+    if (lg.length) o.lg = lg; if (dz.length || B) o.dz = dz;
+    return o;
   }
 
   /* ---------- aplicar (remoto) ---------- */

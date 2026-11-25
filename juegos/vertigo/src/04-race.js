@@ -110,8 +110,11 @@ class Race {
     /* ritmos repartidos entre los rivales (barajados): no todos van igual, la carrera se estira */
     { const bots = this.cars.filter(c => c.bot); for (let i = bots.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bots[i], bots[j]] = [bots[j], bots[i]]; }
       bots.forEach((c, i) => { const sp = lerp(0.09, 0.05, c.bot.skill), p = bots.length > 1 ? 1 - sp * i / (bots.length - 1) : 1 - sp / 2; c.bot.pace = p; c.vmax *= p; }); }
-    // reglas del modo (eliminación, batalla, escuela)
-    this.rules = cfg.rules ? cfg.rules(this) : null; if (this.rules && this.rules.init) this.rules.init(this);
+    // reglas del modo (eliminación, batalla, escuela). En línea llevan la misma semilla en todos los aparatos: lo que el reto
+    // riega al azar (tunjos, troncos, géiseres, el campeón) queda idéntico en todos, y cada pieza lleva su número para la red
+    const mk = () => { this.rules = cfg.rules ? cfg.rules(this) : null; if (this.rules && this.rules.init) this.rules.init(this); };
+    if (cfg.seed != null) { const rnd = Math.random; Math.random = makeRng(cfg.seed); try { mk(); } finally { Math.random = rnd; } (this.bz || []).forEach((z, i) => { z.id = i + 1; }); }
+    else mk();
   }
   step(dt) {
     this.events.length = 0; const T = this.track; T.time += dt;

@@ -5,3 +5,5 @@ juegos/*/dist/
 juegos/*/test/shots/
 *.log
 .DS_Store
+servidor/.wrangler/
+servidor/node_modules/
