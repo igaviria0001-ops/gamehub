@@ -34,7 +34,13 @@ entrar con GitHub. No hace falta crear nada: solo recuperar la entrada.
 Mientras tanto el en línea sigue funcionando como siempre (con los servidores públicos); con Cloudflare solo se vuelve
 más rápido y estable con datos móviles.
 
-## 2. Crear la llave de conexión (TURN)
+## 2. Crear la llave de conexión (TURN) — OPCIONAL, sáltalo
+
+**Sáltate este paso y el 4.** A Ignacio, al tocar «Get Started» en Realtime, Cloudflare le pidió pagar (pide poner una
+tarjeta, aunque los primeros 1.000 GB al mes son gratis). No hace falta: sin esto el servidor igual sirve para
+encontrarse rápido y para el respaldo propio (Workers y Durable Objects son gratis sin tarjeta). Lo de abajo queda por si
+algún día se quiere.
+
 
 1. En el menú de la izquierda busca **Realtime** (en algunas cuentas sale como **Calls**). Si no lo ves, usa el buscador de arriba y escribe `TURN`.
 2. Entra a **TURN Server** → botón **Create** (o **Create TURN Key**).
@@ -56,7 +62,7 @@ más rápido y estable con datos móviles.
    - Lo demás déjalo como está.
 7. **Deploy** (o **Save and Deploy**). Espera 1–2 minutos hasta que diga que terminó (Success).
 
-## 4. Darle la llave al servidor
+## 4. Darle la llave al servidor (solo si hiciste el paso 2)
 
 1. Entra al Worker **gamehub-red** → pestaña **Settings** → **Variables and Secrets**.
 2. **Add** → tipo **Secret** → nombre: `TURN_KEY_ID` → valor: el **Turn Token ID** del paso 2.
@@ -66,7 +72,7 @@ más rápido y estable con datos móviles.
 ## 5. Mandarle la dirección a Claude
 
 1. En el Worker **gamehub-red**, arriba sale su dirección, parecida a: `https://gamehub-red.TU-NOMBRE.workers.dev`
-2. Ábrela en el navegador y agrégale `/ice` al final. Debe salir un texto con `turn.cloudflare.com`. Si sale `sin-turn`, revisa el paso 4.
+2. Ábrela en el navegador: debe salir `GameHub`. (Si hiciste los pasos 2 y 4, con `/ice` al final sale un texto con `turn.cloudflare.com`; si no los hiciste, sale `sin-turn` y está bien.)
 3. **Mándale esa dirección a Claude** (sin el `/ice`). Con eso, Claude la pone en GameHub y queda funcionando para todos.
 
 ---

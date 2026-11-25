@@ -27,6 +27,11 @@
 | Sin conexión | — | **idéntico** (`test/offline-eq.js`) |
 
 ## 3. Cómo queda (arquitectura final)
+> **Cambio del 25 nov 15:50**: Cloudflare le pide tarjeta a Ignacio para activar Realtime (TURN), aunque los primeros
+> 1.000 GB sean gratis. Se sigue **sin TURN de Cloudflare** (no se paga ni se pone tarjeta): `/ice` responde `sin-turn` y el
+> cliente usa STUN + Open Relay; cuando lo directo no se puede, el camino principal pasa a ser el **relevo propio por el
+> WebSocket** (Durable Object en Sudamérica), que es lo que más hay que pulir (A5: medir si Open Relay o el relevo
+> propio va mejor y elegir el más rápido). Si algún día se pone tarjeta, el TURN se suma sin cambiar nada más (pasos 2 y 4).
 1. **Señal**: primero el WebSocket del servidor (Durable Object de la sala, pedido en Sudamérica con `locationHint: 'sam'`).
    Si en 2 s no abre, se suman los MQTT públicos (hoy van siempre los 3 a la vez: más tráfico y más lento).
 2. **Datos**: WebRTC directo; si no se puede, por **TURN de Cloudflare** (anycast: entra por el punto más cercano,
@@ -100,5 +105,5 @@ Para volver atrás en cualquier momento: `SERVER0 = ''`.
    http.server 8765 --bind 127.0.0.1` (los dos en segundo plano); probar con `?server=http://127.0.0.1:8799`.
 
 ## Bitácora (lo más nuevo abajo)
-- **25 nov 15:50** — Plan escrito. Esperando la dirección del Worker de Ignacio para la Parte B; la Parte A se puede
+- **25 nov 15:50** — Plan escrito. Sin TURN de Cloudflare (pide tarjeta; ver nota en §3). Esperando la dirección del Worker de Ignacio para la Parte B; la Parte A se puede
   empezar cuando Ignacio diga.
