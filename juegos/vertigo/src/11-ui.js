@@ -17,7 +17,7 @@ const UI = (() => {
       case 'gq': Game.requality((GQ.lv + 2) % 3); gqLabel(); break;
       case 'opts': fillOpts(); fillKeys(); show('s-opts'); break;
       case 'fs': FS.toggle(); break;
-      case 'back': if (hubCfg) { hubLeave(); Game.toTitle(); break; } if (!$('s-setup').hidden && cfg.mode === 'world') openWorld(); else Game.toTitle(); break;
+      case 'back': if (netWOn() && !$('s-world').hidden) { Hub.exit(); break; } if (hubCfg) { hubLeave(); Game.toTitle(); break; } if (!$('s-setup').hidden && cfg.mode === 'world') openWorld(); else Game.toTitle(); break;
       case 'startRace': if (hubCfg) { hubGo(); break; } Store.set('setup', cfg); Game.startCfg(nH, cfg); break;
       case 'hubhome': case 'hubback': Hub.exit(); break;
       case 'setup': openSetup(Game.nHumans); break;
@@ -28,6 +28,8 @@ const UI = (() => {
       case 'restart': if (cfg.mode === 'gp') { cfg.mode = 'gp'; Game.startCfg(nH, cfg); } else Game.startCfg(nH, cfg); break;
       case 'toTitle': if (Hub.ev) hubLeave(); Game.toTitle(); break;
       case 'netAgain': if (typeof NetGame !== 'undefined') NetGame.again(); break;
+      case 'netWorldNext': if (typeof NetGame !== 'undefined' && netWNext >= 0) NetGame.pick(netWNext); break;
+      case 'netWorldPick': if (typeof NetGame !== 'undefined') NetGame.pick(-1); break;
       case 'garage': case 'garage0': case 'garage1': { const G2 = VG(); if (G2) G2.open(a === 'garage1' ? 1 : 0); break; }
     }
   }
@@ -160,14 +162,15 @@ const UI = (() => {
     if (hubCfg && Hub.ev) { const w = hubWinner(R, G), d = G && G.duel; if (w != null) { Hub.result(w, { score: d && G.cfg.mode === 'duel' ? d.w.join(' – ') : '' }); Hub.release(); hubCfg = null; hubNow = true; } }
     results0(R, G);
     { const G2 = VG(); if (G2) { G2.record(R, G); G2.after(); } }
-    $('resHub').hidden = !hubNow; $('resMain').hidden = hubNow; $('resAlt').hidden = hubNow || !!hubCfg; const sal = document.querySelector('#resBtns [data-act="toTitle"]'); if (sal) sal.hidden = hubNow;
+    $('resRep').hidden = true; $('resHub').hidden = !hubNow; $('resMain').hidden = hubNow; $('resAlt').hidden = hubNow || !!hubCfg; const sal = document.querySelector('#resBtns [data-act="toTitle"]'); if (sal) sal.hidden = hubNow;
     // en línea: el anfitrión puede lanzar otra carrera para todos; cualquiera vuelve a la sala
     if (typeof NetPlay !== 'undefined' && NetPlay.on) {
       // nombres y colores de la sala en vez de J1/J2 (el jugador humano h es el puesto h)
       const S = NetPlay.seats, nm = h => (S[h] && S[h].name) || 'J' + (h + 1), col = h => (S[h] && S[h].color) || PLAYER_COLORS[h % PLAYER_COLORS.length].main;
       $('resTable').querySelectorAll('.tag').forEach(t => { const m = /^J(\d)$/.exec(t.textContent); if (m) { const h = +m[1] - 1; t.textContent = nm(h).slice(0, 12) + (NetPlay.mine.includes(h) ? ' ·tú' : ''); t.style.background = col(h); } });
       const best = R.cars.filter(c => !c.bot).sort((a, b) => a.place - b.place)[0];
-      if (best && !(G && G.cfg && G.cfg.mode === 'tt')) { $('resTitle').textContent = NetPlay.mine.includes(best.human) && NetPlay.mine.length === 1 ? '¡Ganaste!' : `¡Gana ${nm(best.human)}!`; $('resTitle').style.color = col(best.human); }
+      const worldM = !!(G && G.cfg && G.cfg.mode === 'world' && R.rules && R.rules.world);
+      if (best && !(G && G.cfg && (G.cfg.mode === 'tt' || worldM))) { $('resTitle').textContent = NetPlay.mine.includes(best.human) && NetPlay.mine.length === 1 ? '¡Ganaste!' : `¡Gana ${nm(best.human)}!`; $('resTitle').style.color = col(best.human); }
       $('resHub').hidden = false; $('resHub').textContent = 'Volver a la sala'; $('resHub').dataset.act = 'hubhome';
       const tourM = !!(NetPlay.ev && NetPlay.ev.tour); $('resMain').hidden = !NetPlay.isHost || tourM; if (tourM) $('resHub').textContent = 'Volver al torneo'; $('resMain').textContent = 'Otra carrera (todos)'; $('resMain').dataset.act = 'netAgain';
       // mano a mano en línea: rondas hasta que alguien gane 2; Gran Premio: pista por pista con puntos
@@ -183,7 +186,11 @@ const UI = (() => {
         if (D) { const champ = D.w.findIndex(w => w >= 2); if (champ >= 0) NetPlay.send({ t: 'res', r: { winner: champ, mode: 'duel', wins: D.w.slice(0, 2) } }, true, '*'); else $('resMain').hidden = false; }
         else if (a && b) NetPlay.send({ t: 'res', r: { winner: a.place === b.place ? -1 : a.place < b.place ? 0 : 1, mode: G.cfg.mode, score: [a.place + 'º', b.place + 'º'] } }, true, '*'); }
       $('resAlt').hidden = true; if (sal) sal.hidden = true;
-      if (!NetPlay.isHost && !tourM) { const w = document.getElementById('resWait') || document.createElement('div'); w.id = 'resWait'; w.className = 'mhelp'; w.textContent = 'El anfitrión puede lanzar otra carrera para todos.'; $('resBtns').after(w); }
+      // Vuelta al mundo de a dos: el anfitrión sigue con el siguiente reto (de su mapa), repite o vuelve a elegir; cada aparato ya guardó sus estrellas
+      if (worldM && !tourM) { const i = G.cfg.ch, st = R.netStars != null ? R.netStars : R.rules.stars(R), nx = World.next(i); netWNext = st > 0 && nx >= 0 ? nx : -1;
+        $('resMain').textContent = netWNext >= 0 ? 'Siguiente reto (todos)' : 'Repetir (todos)'; $('resMain').dataset.act = netWNext >= 0 ? 'netWorldNext' : 'netAgain';
+        $('resRep').hidden = !NetPlay.isHost || netWNext < 0; $('resAlt').hidden = !NetPlay.isHost; $('resAlt').textContent = 'Elegir reto'; $('resAlt').dataset.act = 'netWorldPick'; }
+      if (!NetPlay.isHost && !tourM) { const w = document.getElementById('resWait') || document.createElement('div'); w.id = 'resWait'; w.className = 'mhelp'; w.textContent = worldM ? (NetPlay.mine.length ? 'Tus estrellas quedaron guardadas en este aparato. El anfitrión elige qué sigue.' : 'El anfitrión elige qué sigue.') : 'El anfitrión puede lanzar otra carrera para todos.'; $('resBtns').after(w); }
     }
   }
   function results0(R, G) {
@@ -195,7 +202,8 @@ const UI = (() => {
     $('resMain').textContent = gp && !last ? 'Siguiente pista' : gp ? 'Nuevo Gran Premio' : 'Otra carrera'; $('resMain').dataset.act = gp && !last ? 'gpNext' : 'restart';
     const RU = R.rules, mode = G && G.cfg && G.cfg.mode; $('resAlt').textContent = 'Cambiar pilotos'; $('resAlt').dataset.act = 'setup';
     // Vuelta al mundo: estrellas, lo que se abre y el siguiente reto
-    if (mode === 'world' && RU && RU.world) { const C = RU.world, i = G.cfg.ch, st = RU.stars(R), S = STOPS[STOP_IDX[C.stop]], nextStop = STOP_IDX[C.stop] + 1, wasOpen = C.final || World.stopOpen(nextStop), was = World.save(i, st), nowOpen = !C.final && !wasOpen && World.stopOpen(nextStop), nx = World.next(i);
+    if (mode === 'world' && RU && RU.world) { const net = typeof NetPlay !== 'undefined' && NetPlay.on, C = RU.world, i = G.cfg.ch, st = R.netStars != null ? R.netStars : RU.stars(R), S = STOPS[STOP_IDX[C.stop]], nextStop = STOP_IDX[C.stop] + 1, wasOpen = C.final || World.stopOpen(nextStop),
+        was = net && !NetPlay.mine.length ? World.starsOf(i) : World.save(i, st), /* en línea: solo guarda el aparato que tiene jugadores (no el que mira) */ nowOpen = !C.final && !wasOpen && World.stopOpen(nextStop), nx = World.next(i);
       const head = C.kind === 'boss' ? RU.title(R, hum) : st ? (st === 3 ? '¡Perfecto!' : '¡Reto superado!') : C.kind === 'race' || C.kind === 'elim' || C.kind === 'battle' ? 'Sin podio… otra vez' : 'Sin estrellas… otra vez';
       $('resTitle').innerHTML = `${head} <span style="color:#ffd23d;letter-spacing:2px">${'★'.repeat(st)}<span style="color:rgba(255,255,255,0.22)">${'★'.repeat(3 - st)}</span></span>`; $('resTitle').style.color = st ? '#fff' : '#ff9a7a';
       const cap = document.createElement('tr'); cap.innerHTML = `<th colspan="4">VUELTA AL MUNDO · ${S.name.toUpperCase()} · ${C.name}${st > was ? ' · ¡nuevo récord de estrellas!' : ''}</th>`; tb.appendChild(cap);
@@ -238,26 +246,36 @@ const UI = (() => {
   let wSel = 0, wN = Store.get('wplayers', 2), wRAF = 0;
   const starLine = C => C.kind === 'tt' ? 'Estrellas: ' + C.times.map(t => HUD.fmt(t)).join(' · ') + '.' : C.kind === 'goal' ? 'Más rápido = más estrellas.' : C.kind === 'clean' ? 'Estrellas: 0–1 choques ★★★ · 2–3 ★★ · 4–6 ★.' : C.kind === 'boss' ? 'Más estrellas cuanto antes lo detengas.' : '1º ★★★ · 2º ★★ · 3º ★.';
   const firstOpen = () => { let k = 0; for (let i = 0; i < STOPS.length; i++) if (World.stopOpen(i)) { k = i; const [n, m] = World.stopStars(i); if (n === 0) break; } return k; };
+  // en línea: Vuelta al mundo de a dos — el anfitrión elige el reto en su mapa; los demás esperan con un aviso
+  let netW = null, netWNext = -1;
+  const netWOn = () => !!(netW && typeof NetPlay !== 'undefined' && NetPlay.on && NetPlay.isHost);
+  function netWorld(c) {
+    netW = c; if (!c) return;
+    if (NetPlay.isHost) { openWorld(); return; }
+    Game.toTitle(); show(null); NetPlay.notice('El anfitrión elige el reto…', NetPlay.mine.length ? 'Vuelta al mundo de a dos: las estrellas que ganen quedan guardadas también en tu aparato.' : 'Vuelta al mundo: vas a ver el reto que elija el anfitrión.');
+  }
   function openWorld() { Game.toTitle(); wSel = Math.min(wSel || firstOpen(), STOPS.length - 1); if (!World.stopOpen(wSel)) wSel = firstOpen(); renderWorld(); show('s-world'); cancelAnimationFrame(wRAF); const loop = () => { if ($('s-world').hidden) return; WorldMap.draw($('wMap'), wSel, performance.now() / 1000); wRAF = requestAnimationFrame(loop); }; loop(); }
   function renderWorld() {
     $('wTot').textContent = '★ ' + World.total() + ' / ' + CAMPAIGN.length * 3;
-    seg('wPlayers', [[1, '1 jugador'], [2, '2 jugadores']], wN, v => { wN = +v; Store.set('wplayers', wN); });
+    seg('wPlayers', [[1, '1 jugador'], [2, '2 jugadores']], wN, v => { wN = +v; Store.set('wplayers', wN); }); $('wPlayers').hidden = netWOn();
+    { const b = document.querySelector('#s-world .whead [data-act="back"]'); if (b) b.textContent = netWOn() ? 'Volver a la sala' : 'Volver'; }
     const S = STOPS[wSel], open = World.stopOpen(wSel), el = $('wPanel'); let h = `<div class="wc">Parada ${wSel + 1} · ${S.country}</div><h3>${S.name}</h3><p class="wb">${S.blurb}</p>`;
     if (!open) h += `<div class="wlock">🔒 Gana una estrella en ${STOPS[wSel - 1].name} para abrir esta parada.</div>`;
     CAMPAIGN.forEach((C, i) => { if (C.stop !== S.id) return; const st = World.starsOf(i), ok = World.open(i);
       h += `<div class="wch${C.kind === 'boss' ? ' boss' : ''}"><div class="k">${kindName(C)}${C.final ? ' final' : ''}</div><div class="n">${C.name}</div><div class="g">${C.goal[0].toUpperCase() + C.goal.slice(1)}.</div><div class="st">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></div>`
         + (ok ? `<button class="btn go" data-wplay="${i}">${st ? 'Otra vez' : 'Jugar'}</button>` : `<div class="lock" title="${C.final ? 'Termina Islandia' : ''}">🔒</div>`) + `</div>`;
       if (C.final && !ok) h += `<div class="wlock">El jefe final se abre al ganar una estrella en Islandia.</div>`; });
+    if (netWOn()) h = `<div class="wlock" style="border-color:rgba(138,255,200,0.5);color:#bfffe0">En línea: elige el reto para todos (${NetPlay.seats.length === 2 ? 'de a dos' : 'de a uno'}). Cuenta lo que tienes abierto en este aparato.</div>` + h;
     el.innerHTML = h;
   }
-  function playCh(i) { if (!World.open(i)) return; Sound.ui(); cfg.mode = 'world'; cfg.ch = i; cancelAnimationFrame(wRAF); openSetup(wN); }
+  function playCh(i) { if (!World.open(i)) return; Sound.ui(); if (netWOn()) { cancelAnimationFrame(wRAF); NetGame.pick(i); return; } cfg.mode = 'world'; cfg.ch = i; cancelAnimationFrame(wRAF); openSetup(wN); }
   document.addEventListener('click', e => { const b = e.target.closest('[data-wplay]'); if (b) playCh(+b.dataset.wplay); });
   $('wMap').addEventListener('pointerdown', e => { const r = $('wMap').getBoundingClientRect(), k = WorldMap.hit($('wMap'), e.clientX - r.left, e.clientY - r.top); if (k >= 0) { wSel = k; Sound.ui(); renderWorld(); } });
   addEventListener('keydown', e => { if ($('s-world').hidden) return; const c = e.code;
     if (c === 'ArrowRight' || c === 'ArrowDown' || c === 'KeyD') { wSel = (wSel + 1) % STOPS.length; Sound.ui(); renderWorld(); }
     else if (c === 'ArrowLeft' || c === 'ArrowUp' || c === 'KeyA') { wSel = (wSel - 1 + STOPS.length) % STOPS.length; Sound.ui(); renderWorld(); }
     else if (c === 'Enter' || c === 'Space') { e.preventDefault(); const list = CAMPAIGN.map((C, i) => i).filter(i => CAMPAIGN[i].stop === STOPS[wSel].id && World.open(i)); const k = list.find(i => World.starsOf(i) < 3); if (list.length) playCh(k != null ? k : list[0]); }
-    else if (c === 'Escape') Game.toTitle(); });
+    else if (c === 'Escape') { if (netWOn()) Hub.exit(); else Game.toTitle(); } });
   $('ver').textContent = 'v' + GAME_META.version;
-  return { show, results, hubPlay, cfg: () => cfg, openWorld, vestBadge, refreshSetup };
+  return { show, results, hubPlay, cfg: () => cfg, openWorld, netWorld, vestBadge, refreshSetup };
 })();

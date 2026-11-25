@@ -49,28 +49,15 @@ una cuenta creada con Google o GitHub con ese correo) y darle la mejor solución
 - **24 nov** — C Ventolera (a5bb697): Travesía para dos en línea (`test/nettrav-vto.js`). C Tira y Afloja (77936ab):
   campaña y 6 jefes en línea (`test/netcamp-tya.js`). Las tres pruebas pasan (servidor local :8799 + docs en :8765,
   un contexto de navegador por aparato).
-- **24 nov 20:50 — EN CURSO: C VÉRTIGO (Vuelta al mundo en línea)**. Hecho (sin probar aún):
-  - `04-race.js`: `cfg.seed` → las reglas del reto se arman con semilla (tunjos, troncos, géiseres, campeón iguales en
-    todos los aparatos) y cada pieza de `R.bz` lleva `id`.
-  - `12-main.js`: `worldPlan(ch, humans)` (pista, máquina y vueltas de un reto; lo usa `startCfg` y el anfitrión en
-    línea); `startNet` acepta `mode:'world'` con `ch`, `noItems`, `seed` (música e intro de jefe).
-  - `04d-world.js`: **arreglo**: el reto «Curvas del acantilado» (clean) nunca contaba choques (siempre 3 estrellas).
-    Ahora cuenta golpes fuertes contra la pared (uno cada 0,8 s), panel CHOQUES y aviso `cleanHit` en el HUD.
-  - `12b-net.js`: modo `world` en `NET_MODES`; `make` devuelve `ch:-1` (el anfitrión elige en su mapa);
-    `apply` llama `UI.netWorld(c|null)`; instantánea con `tt` (reloj de la pista: antes los géiseres no se movían en
-    el remoto) y `wSnap` (wp/pg lentos, lg troncos, bs jefe, dz lo que suelta el jefe con id).
-  - **Falta**: en `12b-net.js` aplicar en el remoto (`wApply`: wp, pg, lg, dz por id conservando los objetos, jefe
-    con historial de cola y adelantado a «ahora» con su velocidad, `R.netStars`), `slowKeys: ['wp','pg']`, conservar
-    los objetos de `R.hz` entre cuadros (hoy se rehacen cada cuadro), animar tunjos/troncos en el remoto
-    (`Challenge.pickPose`), choque del bólido propio con el jefe en la predicción (`Boss.solid`), `again()` para
-    world (repetir con semilla nueva) y `pick(ch)` (−1 = volver a elegir). `11-ui.js`: `netWorld(c)` (anfitrión: mapa
-    en modo en línea, sin «1/2 jugadores», «Volver a la sala», jugar = `NetGame.pick(i)`; remoto: `NetPlay.notice`),
-    resultados en línea del reto (estrellas del anfitrión, cada aparato con jugadores guarda con `World.save`;
-    anfitrión: «Siguiente reto (todos)», «Repetir (todos)» —botón nuevo `resRep` en template—, «Elegir reto»), sin
-    pisar el título con «¡Gana X!». Catálogo: `extra` de vertigo `{ id:'world', name:'Vuelta al mundo', seats:2,
-    watch:true, maps:[], noOpts:true }`. Prueba `test/netcamp-vtg.js` (VIEW=400x225, VTG_GQ=0, un contexto por
-    aparato, `?net=srv&server=http://127.0.0.1:8799`): reto normal, recolección, troncos, jefe (Tren de Oro) y
-    resultados/estrellas en los dos aparatos.
+- **24 nov 21:30** — C VÉRTIGO: **Vuelta al mundo en línea, hecha y probada** (`test/netcamp-vtg.js` OK con los 24
+  tipos de reto probados: recolección, troncos, tormenta, sin chocar, campeón, géiseres y los 6 jefes; `netvtgmodos.js`
+  OK; `offline-eq vertigo «máquinas world»` idéntico). Cómo funciona: `04-race.js` siembra las reglas con `cfg.seed`
+  (piezas iguales en todos, con `id`); `12-main.js` `worldPlan(ch, humans, pool)`; `12b-net.js` modo `world` (el
+  anfitrión elige en su mapa, `NetGame.pick(ch)`, −1 = volver a elegir), instantánea `wp`/`pg` lentas + `lg` troncos +
+  `bs` jefe + `dz` piezas del jefe por id (se conservan los objetos), jefe dibujado «ahora» (adelantado con su
+  velocidad) y sólido para el bólido propio (`Boss.solid`), reloj de la pista `tt` (antes los géiseres no se movían en
+  el remoto), los objetos de `R.hz` ya no se rehacen cada cuadro. `11-ui.js` `netWorld`, resultados con estrellas del
+  anfitrión y botones Siguiente/Repetir (`resRep`)/Elegir reto. Arreglo aparte: el reto «sin chocar» no contaba choques.
 - **Después**: volver a Sortilegio (más épica/cine; revisar Candela en bots Normal 22 %), luego P (todo.sh,
   offline-eq en TyA/Ventolera/VÉRTIGO, versiones, docs, merge a main, artefactos, bitácoras, README, memoria) y al
   final R/en línea + Cloudflare.

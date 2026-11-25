@@ -19,9 +19,10 @@ const Challenge = {
       R.bz.push({ k: 'pick', style, s, u, h: 1.3, air: !!air, ah: 3 + Math.random() * 5, life: 1e9, age: Math.random() * 6, gone: 0 });
     }
   },
+  pickPose(R, z) { z.h = z.air ? z.ah + Math.sin(z.age * 2) * 0.4 : R.track.groundH(z.s, z.u) + 1.4 + Math.sin(z.age * 3) * 0.2; },
   pickStep(R, z, dt) {
     const T = R.track; if (z.gone > 0) { z.gone -= dt; return; }
-    z.h = z.air ? z.ah + Math.sin(z.age * 2) * 0.4 : T.groundH(z.s, z.u) + 1.4 + Math.sin(z.age * 3) * 0.2;
+    Challenge.pickPose(R, z);
     for (const c of R.cars) { if (c.bot || c.out || c.respawnT > 0) continue; const ds = T.wrap(c.s - z.s + T.L / 2) - T.L / 2;
       if (Math.abs(ds) < 2.9 && Math.abs(c.u - z.u) < 2.7 && Math.abs(c.h - z.h) < 3.2) { Challenge.takePick(R, z, c); break; } }
   },

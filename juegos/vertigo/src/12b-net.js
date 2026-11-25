@@ -111,14 +111,59 @@ const NetGame = (() => {
       if (b[43] >= 0) c.hearts = b[43]; c.outT = b[44] || 0; if (c.stats) c.stats.hitsDone = b[45] || 0;
     });
     R.order = B.ord.map(i => R.cars[i]).filter(Boolean); if (B.ru && R.rules) Object.assign(R.rules, B.ru);
-    // cohetes, avispas, aceite…: entre las dos instantáneas (el mismo índice si es la misma cosa y quedó cerca); antes saltaban
-    R.hz = B.hz.map((z, i) => { const o = Object.assign({}, z), a = A.hz && A.hz[i];
+    if (typeof B.tt === 'number') R.track.time = typeof A.tt === 'number' ? lerp(A.tt, B.tt, k) : B.tt;
+    // cohetes, avispas, aceite…: entre las dos instantáneas (el mismo índice si es la misma cosa y quedó cerca); antes saltaban.
+    // Si en ese puesto sigue la misma cosa, se conserva el objeto (así su dibujo no se rehace en cada cuadro)
+    const prevHz = R.hz;
+    R.hz = B.hz.map((z, i) => { const p = prevHz[i], same = p && p.k === z.k && p.owner === z.owner && typeof p.s === 'number' && typeof z.s === 'number' && Math.abs(T_d(z.s - p.s, L)) < 60, o = same ? Object.assign(p, z) : Object.assign({}, z), a = A.hz && A.hz[i];
       if (a && a.k === z.k && a.owner === z.owner && typeof a.s === 'number' && typeof z.s === 'number') { let ds = z.s - a.s; if (ds > L / 2) ds -= L; else if (ds < -L / 2) ds += L;
         if (Math.abs(ds) < 120) { o.s = ((a.s + ds * k) % L + L) % L; if (typeof a.u === 'number' && typeof z.u === 'number') o.u = lerp(a.u, z.u, k); if (typeof a.h === 'number' && typeof z.h === 'number') o.h = lerp(a.h, z.h, k); } }
       return o; });
     B.bx.forEach((g, i) => { if (R.boxes[i]) R.boxes[i].gone = g; });
     const gs = new Set(B.gm); R.track.gems.forEach((g, i) => { g.gone = gs.has(i) ? 1 : 0; });
+    wApply(R, A, B, k);
   }
+  const T_d = (d, L) => { if (d > L / 2) d -= L; else if (d < -L / 2) d += L; return d; };
+  /* ---------- Vuelta al mundo (remoto): lo del reto, las piezas y el jefe ---------- */
+  function wApply(R, A, B, k) {
+    const T = R.track, L = T.L;
+    if (B.wp) { B.wp.c.forEach((p, i) => { const c = R.cars[i]; if (!c || !p) return; c.lp = p[0]; c.lessonT = p[1]; c.logHits = p[2]; c.stormN = p[3]; c.cleanHits = p[4]; c.bossDmg = p[5]; c.sandK = p[6]; c.stormImm = p[7]; });
+      R.teamN = B.wp.tn; if (B.wp.ws >= 0) R.netStars = B.wp.ws; }
+    if (R.storm && typeof B.sd === 'number') R.storm.d = typeof A.sd === 'number' ? lerp(A.sd, B.sd, k) : B.sd;
+    if (!R.bz) return;
+    const byId = new Map(); for (const z of R.bz) if (z.id) byId.set(z.id, z);
+    // tunjos y máscaras: ya están (misma semilla); solo cuáles se recogieron
+    if (B.pg) { const g = new Set(B.pg); for (const z of R.bz) if (z.k === 'pick') z.gone = g.has(z.id) ? 1 : 0; }
+    // troncos del río: entre las dos instantáneas
+    if (B.lg) { const la = new Map(); if (A.lg) for (let i = 0; i < A.lg.length; i += 4) la.set(A.lg[i], i);
+      for (let i = 0; i < B.lg.length; i += 4) { const z = byId.get(B.lg[i]); if (!z) continue; const j = la.get(B.lg[i]);
+        if (j != null) { z.s = T.wrap(A.lg[j + 1] + T_d(B.lg[i + 1] - A.lg[j + 1], L) * k); z.u = lerp(A.lg[j + 2], B.lg[i + 2], k); z.yaw = lerp(A.lg[j + 3], B.lg[i + 3], k); } else { z.s = B.lg[i + 1]; z.u = B.lg[i + 2]; z.yaw = B.lg[i + 3]; }
+        z.h = T.groundH(z.s, z.u) - 0.15; } }
+    // lo que suelta el jefe: por número; se conserva el mismo objeto mientras exista (su dibujo no se rehace)
+    if (B.dz) { const da = new Map(); if (A.dz) for (const q of A.dz) da.set(q.id, q); const keep = [], live = new Set();
+      for (const q of B.dz) { let z = byId.get(q.id); if (!z) z = {}; Object.assign(z, q); const a = da.get(q.id);
+        if (a && typeof a.s === 'number') { z.s = T.wrap(a.s + T_d(q.s - a.s, L) * k); for (const f of ['u', 'h', 'age']) if (typeof a[f] === 'number' && typeof q[f] === 'number') z[f] = lerp(a[f], q[f], k); }
+        keep.push(z); live.add(q.id); }
+      R.bz = R.bz.filter(z => z.id <= 10000 && !live.has(z.id)).concat(keep); }
+    if (R.boss && B.bs) bossApply(R, A.bs, B.bs, k);
+  }
+  function bossApply(R, a, b, k) {
+    const B = R.boss, f = (i) => (a ? lerp(a[i], b[i], k) : b[i]);
+    B.dBase = f(0); B.u = f(1); B.h = f(2); B.v = b[3]; B.hp = b[4]; B.max = b[5]; B.phase = b[6]; B.hitT = b[7]; B.stunT = b[8]; B.low = b[9]; B.dying = b[10]; B.dead = !!b[11]; B.escaped = !!b[12];
+    B.t = f(13); B.endT = b[14]; B.gustT = b[15]; B.segs.forEach((g, i) => { g.on = !!(b[16] & (1 << i)); }); B.len = Math.max(...B.segs.filter(g => g.on).map(g => g.off + g.len)); B.uT = b[17];
+    const dv = b[18]; B.dive = dv ? Object.assign(dv[0] ? { kind: 'burrow' } : {}, { st: DIVE[dv[1]] || 'warn', t: dv[2], u0: dv[3], u1: dv[4] }) : null; B.out = !!b[19]; B.gustDir = b[20];
+  }
+  // el jefe se dibuja donde está AHORA (adelantado con su velocidad lo que va de la instantánea a hoy): así el bólido propio,
+  // que también va en «ahora», lo embiste y lo choca donde de verdad está. La cola (vagones, riel) se arma con eso.
+  function bossNow(R) {
+    const B = R.boss; if (!B || B.dBase == null) return; const T = R.track, Lt = NetPlay.latest();
+    let lead = 0; if (Lt && Lt.d && R.state === 'race' && !B.dying && !B.dead) lead = clamp((Lt.d.tm + (performance.now() - Lt.arr) / 1000 + NetPlay.rtt / 2000) - R.time, 0, 0.45);
+    B.d = B.dBase + B.v * lead; B.s = T.wrap(B.d - B.len / 2); B.f = B.v; B.vs = B.v;
+    if (R.state === 'count' || B.d < B.lastD - 3 || B.d - B.lastD > 150) { B.hist.fill(B.u); B.hh.fill(B.h); B.lastD = B.d; }
+    while (B.d - B.lastD >= 0.5) { B.lastD += 0.5; B.head = (B.head + 1) % 800; B.hist[B.head] = B.u; B.hh[B.head] = B.h; }
+  }
+  // tunjos, máscaras y troncos se mecen aquí mismo (no viajan por la red)
+  function wAnim(R, dt) { if (!R.bz) return; for (const z of R.bz) { if (z.k === 'pick') { z.age += dt; Challenge.pickPose(R, z); } else if (z.k === 'tronco') z.age += dt; } }
   /* ---------- predicción del bólido propio (remoto) ----------
      El auto de cada jugador de este aparato responde YA a sus teclas: una copia corre aquí con la misma física
      (Car.step) y es la que se dibuja. Cuando llega una instantánea, se compara con lo que la copia predijo para el
@@ -178,7 +223,7 @@ const NetGame = (() => {
       // la copia avanza al ritmo de la carrera del anfitrión (si allá va lento o en la cuenta, aquí también)
       const r0 = g.rs[0], r1 = g.rs[g.rs.length - 1], rate = r1 && r1[0] - r0[0] > 300 ? clamp((r1[1] - r0[1]) / ((r1[0] - r0[0]) / 1000), 0, 1.25) : 1;
       const inp = Object.assign({}, NEUTRAL, lastIn[NetPlay.mine.indexOf(seat)] || {}, { item: false });
-      g.acc += realDt(g, dt) * rate; let n = 0; while (g.acc >= DT && n < 32) { g.car.step(DT, inp); g.PR.events.length = 0; g.acc -= DT; n++; } if (n >= 32) g.acc = 0;
+      g.acc += realDt(g, dt) * rate; let n = 0; while (g.acc >= DT && n < 32) { g.car.step(DT, inp); if (R.boss) Boss.solid(R, g.car); g.PR.events.length = 0; g.acc -= DT; n++; } if (n >= 32) g.acc = 0;
       const k = g.car; g.hist.push({ t: now, s: k.s, u: k.u, h: k.h, a: k.a, f: k.f, l: k.l || 0, vn: k.vn }); while (g.hist.length > 2 && now - g.hist[0].t > 3000) g.hist.shift();
       // se dibuja la copia (lo de la carrera —vueltas, puesto, objeto— sigue siendo lo del anfitrión)
       c.s = k.s; c.u = k.u; c.h = k.h; c.a = k.a; c.roll = k.roll; c.pitch = k.pitch; c.f = k.f; c.mode = k.mode; c.grounded = k.grounded; c.steerS = k.steerS; c.hopT = k.hopT;
@@ -188,14 +233,20 @@ const NetGame = (() => {
   // un paso del remoto: lo último del anfitrión + sus eventos de este cuadro (+ su propio bólido, ya)
   function clientStep(R, frameEv, dt) {
     const S = NetPlay.sample(); if (S) apply(S.a, S.b, S.k);
+    if (R.boss) bossNow(R); wAnim(R, dt);
     if (NetPlay.pred && dt > 0) predict(R, dt);
     if (evQ.length) { frameEv.push(...evQ); evQ = []; }
   }
   // el anfitrión lanza otra carrera para todos (otra pista, mismos jugadores)
   // «otra para todos»: en el Gran Premio, la pista siguiente (o uno nuevo al terminar); en el mano a mano, la ronda siguiente
   // (o un duelo nuevo si ya hay campeón); en la batalla, otra arena; en lo demás, otra pista
+  // Vuelta al mundo: el reto ch para todos (con parrilla y semilla nuevas); ch −1 = volver a elegir en el mapa
+  const worldAt = (c, ch) => { if (!(ch >= 0 && CAMPAIGN[ch])) return Object.assign({}, c, { ch: -1 }); const P = Game.worldPlan(ch, c.humans);
+    return Object.assign({}, c, { ch, tid: P.tid, bots: P.bots, laps: P.laps, noItems: P.noItems, seed: 1 + Math.floor(Math.random() * 2e9) }); };
+  function pick(ch) { NetPlay.again(c => worldAt(c, ch)); }
   function again() {
     NetPlay.again(c => {
+      if (c.mode === 'world') return worldAt(c, c.ch);
       const rnd = L => L[Math.floor(Math.random() * L.length)];
       if (c.mode === 'gp' && Game.gp) { const g = Game.gp, last = g.i >= g.list.length - 1, gp = last ? { cup: c.gp.cup, i: 0, pts: {} } : { cup: c.gp.cup, i: g.i + 1, pts: Object.assign({}, g.pts) }; return Object.assign({}, c, { gp, tid: cupTracks(gp.cup)[gp.i] }); }
       if (c.mode === 'duel' && Game.duel) { const d = Game.duel, champ = d.w.some(w => w >= 2), duel = champ ? { r: 0, w: d.w.map(() => 0) } : { r: d.r + 1, w: d.w.slice() }; return Object.assign({}, c, { duel, tid: TRACK_ORDER[(TRACK_ORDER.indexOf(c.tid) + 1) % TRACK_ORDER.length] }); }
@@ -204,7 +255,7 @@ const NetGame = (() => {
     });
   }
   return {
-    seatsMax: 4, again, get pst() { return PST; },
+    seatsMax: 4, again, pick, get pst() { return PST; }, slowKeys: ['wp', 'pg'],
     // lo que lleva puesto el jugador de otro aparato (lo manda el anfitrión en la carrera)
     skinOf(seat) { return (cfg && cfg.skins && okSkin(cfg.skins[seat])) || null; },
     neutral: () => NEUTRAL,

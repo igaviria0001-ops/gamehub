@@ -48,7 +48,7 @@ const Game = (() => {
       case 'duel': tid = TRACK_ORDER[(Math.max(0, TRACK_ORDER.indexOf(cfg.track)) + G.duel.r) % TRACK_ORDER.length]; if (n === 1) bots.push({ pid: pool[0], skill: [0.08, 0.22, 0.48][cfg.diff != null ? cfg.diff : 1] }); break;
       case 'elim': addBots(6 - n); laps = 999; rules = Rules.elim; break;
       case 'battle': tid = cfg.arena || ARENA_ORDER[0]; addBots(6 - n); laps = 999; rules = Rules.battle; break;
-      case 'world': { const P = worldPlan(cfg.ch || 0, humans); tid = P.tid; bots.push(...P.bots); laps = P.laps; rules = P.rules; break; }
+      case 'world': { const P = worldPlan(cfg.ch || 0, humans, pool); tid = P.tid; bots.push(...P.bots); laps = P.laps; rules = P.rules; break; }
       case 'chase': { const B = BOSSES[cfg.boss] || BOSSES.tren; tid = B.track; laps = 999; rules = R => Rules.chase(R, B, cfg.diff); break; } /* Persecución libre: fácil 0, normal 1, difícil 2 */
       case 'school': { const L = LESSONS[cfg.lesson || 0]; tid = L.track; addBots(L.bots || 0, L.botLevel || 0); laps = L.laps || 999; rules = R => Rules.lesson(R, L); botSlow = L.botSlow || 0; break; }
       default: addBots(6 - n);
@@ -60,8 +60,8 @@ const Game = (() => {
     UI.show(null); Sound.startRace(n); Music.play(R.boss ? 'boss_' + R.boss.def.id : TRACKS[tid].theme); resize();
   }
   // Vuelta al mundo: pista, máquina y vueltas de un reto (en línea, el anfitrión arma con esto el reto de todos)
-  function worldPlan(ch, humans) {
-    const C = CAMPAIGN[ch] || CAMPAIGN[0], n = humans.length, pool = PILOT_ORDER.filter(p => !humans.includes(p)).sort(() => Math.random() - 0.5), bots = [];
+  function worldPlan(ch, humans, pool0) {
+    const C = CAMPAIGN[ch] || CAMPAIGN[0], n = humans.length, pool = pool0 || PILOT_ORDER.filter(p => !humans.includes(p)).sort(() => Math.random() - 0.5), bots = [];
     const addB = (k, lv) => { for (let i = 0; i < k; i++) bots.push({ pid: pool[i], level: lv }); }, addD = (k, d) => { for (let i = 0; i < k; i++) bots.push({ pid: pool[i], skill: C.sk != null ? clamp(C.sk + SK_OFF[i], 0, 1) : DIFF_SK[d][i] }); };
     let laps = 999;
     if (C.kind === 'race') { addD(6 - n, C.diff || 0); laps = C.laps; }

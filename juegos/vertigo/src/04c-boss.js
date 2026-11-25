@@ -193,6 +193,18 @@ const Boss = {
       if (gone) bz.splice(i, 1);
     }
   },
+  // en línea (remoto): el bólido propio, que se predice aquí, tampoco atraviesa al jefe. Solo la posición (y el turbo que se
+  // gasta al embestir): el daño y los golpes los cuenta el anfitrión
+  solid(R, c) {
+    const B = R.boss, T = R.track; if (!B || B.dead || (B.dive && B.dive.st === 'under') || c.out || c.respawnT > 0) return;
+    for (const g of B.segs) { if (!g.on) continue; const p = Boss.segPos(B, g), ds = T.wrap(c.s - T.wrap(p.s) + T.L / 2) - T.L / 2, du = c.u - p.u;
+      if (Math.abs(ds) > g.len / 2 + 2.1 || Math.abs(du) > g.w / 2 + 1.1 || c.h < p.h - 2.2 || c.h > p.h + g.hh) continue;
+      const px = g.len / 2 + 2.1 - Math.abs(ds), py = g.w / 2 + 1.1 - Math.abs(du);
+      if (px < py && ds < 0) { const rel = c.vs - B.v; c.s = T.wrap(T.wrap(p.s) - g.len / 2 - 2.1); if (rel > 0) c.vs = B.v - rel * 0.35; if (rel > 4 && c.boostT > 0) c.boostT = Math.min(c.boostT, 0.2); }
+      else if (px < py) c.s = T.wrap(T.wrap(p.s) + g.len / 2 + 2.1);
+      else { const sg = Math.sign(du) || 1; c.u = p.u + sg * (g.w / 2 + 1.1); if (c.vu * sg < 0) c.vu = -c.vu * 0.4 + sg * 2; }
+    }
+  },
   // un proyectil de jugador contra el jefe o contra lo que suelta (vagón, minas)
   projectile(R, z) {
     const B = R.boss, T = R.track; if (!B || B.dead) return false; if (B.dive && B.dive.st === 'under') return false;

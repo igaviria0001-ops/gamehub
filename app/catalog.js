@@ -74,7 +74,8 @@ const GAMES = [
   {
     id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick', modes: ['quick', 'duel', 'elim', 'battle'],
       // modos que solo están adentro del juego (no en el torneo) y también van en línea
-      extra: [{ id: 'gp', name: 'Gran Premio', desc: 'Varias pistas seguidas con puntos por puesto (10, 8, 6…): gana la copa quien sume más.', maps: [['0', 'Copa Esmeralda · 5 pistas'], ['1', 'Copa Dorada · 5 pistas'], ['2', 'Gran Copa · 10 pistas']] }],
+      extra: [{ id: 'gp', name: 'Gran Premio', desc: 'Varias pistas seguidas con puntos por puesto (10, 8, 6…): gana la copa quien sume más.', maps: [['0', 'Copa Esmeralda · 5 pistas'], ['1', 'Copa Dorada · 5 pistas'], ['2', 'Gran Copa · 10 pistas']] },
+        { id: 'world', name: 'Vuelta al mundo', seats: 2, watch: true, maps: [], noOpts: true, desc: 'La campaña de a dos: 24 retos y 6 jefes por 13 lugares del mundo. El anfitrión elige en su mapa el reto (de lo que tiene abierto) y las estrellas quedan guardadas en el aparato de cada uno.' }],
       desc: { quick: 'Todos a la misma carrera; la máquina completa la parrilla hasta 6 autos. Gana quien llegue primero.', duel: 'Solo ustedes, sin máquina: carreras seguidas hasta que alguien gane 2.', elim: 'Cada 15 segundos sale el último (máquina incluida). Gana quien dure más.', battle: 'Arena con 3 corazones: embiste con turbo y usa objetos. Último en pie.' } },
     tag: 'La Copa Esmeralda', kind: 'Carreras en 3D',
     desc: 'Bólidos que derrapan, saltan, flotan en lancha y planean con alas por 10 pistas del mundo. Objetos, turbos esmeralda, batallas y pantalla dividida para dos.',
