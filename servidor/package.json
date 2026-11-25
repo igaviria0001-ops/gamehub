@@ -2,6 +2,6 @@
   "name": "gamehub-red",
   "private": true,
   "description": "Servidor de GameHub: señal, relevo rápido y TURN (Cloudflare Workers).",
-  "scripts": { "deploy": "wrangler deploy", "dev": "wrangler dev" },
+  "scripts": { "build": "echo Nada que construir: el Worker se publica tal cual", "deploy": "wrangler deploy", "dev": "wrangler dev" },
   "devDependencies": { "wrangler": "^4" }
 }
