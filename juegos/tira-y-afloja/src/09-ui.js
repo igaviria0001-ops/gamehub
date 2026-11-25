@@ -164,6 +164,7 @@ const UI = (() => {
     hubhome() { Hub.exit(); },
     hubback() { Hub.exit(); },
     netAgain() { if (typeof NetGame !== 'undefined') NetGame.again(); },
+    netNext() { if (typeof NetGame !== 'undefined' && netNext) NetGame.again(netNext); }, netPick() { if (typeof NetGame !== 'undefined') NetGame.again(null); },
     rematch() { stack = []; show(null, false); Game.restart(); },
     changemode() { if (Game.G.mode === 'campana' || Game.G.campBoss != null) { stack = ['title', 'modes']; fillCampaign(); show('campana', false); return; } vsBot = lastRes ? lastRes.vsBot : vsBot; Game.G.daily = null; Fiesta.force(null); stack = []; show('modes', false); stack = ['title']; },
     fullscreen() { FS.toggle(); },
@@ -236,6 +237,9 @@ const UI = (() => {
     else { Game.G.campBoss = null; startGame('campana', 'campana'); }
   }
   function fillCampaign() {
+    // en línea: el anfitrión elige la sala o el jefe para los dos; los demás esperan
+    const net = !!(netCamp && typeof NetPlay !== 'undefined' && NetPlay.isHost);
+    $('#camp-back').dataset.act = net ? 'hubhome' : 'back'; $('#camp-back').textContent = net ? 'Volver a la sala' : 'Atrás';
     const box = $('#camp-rows'); box.innerHTML = '';
     const st = Campaign.stages(), d = Campaign.data;
     let focusEl = null;
@@ -256,7 +260,7 @@ const UI = (() => {
         if (s.type === 'boss') { const J = Jefes.BY[s.jefe]; b.innerHTML = `<b>JEFE</b><span>${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</span><small>${J ? J.name.replace(/^(La|El) /, '') : s.jefe}</small>`; }
         else b.innerHTML = `<b>${s.id}</b><span>${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</span><small>${open ? (best ? best.toFixed(1).replace('.', ',') + ' s' : s.room.name) : '🔒'}</small>`;
         b.setAttribute('aria-label', s.type === 'boss' ? `Jefe de la zona ${zi + 1}` : `Sala ${s.id}: ${s.room.name}`);
-        b.addEventListener('click', () => { Sound.init(); Sound.play('select'); playStage(s); });
+        b.addEventListener('click', () => { Sound.init(); Sound.play('select'); if (net) NetGame.again(s.id); else playStage(s); });
         b.addEventListener('pointerenter', () => { if (!b.disabled && document.activeElement !== b) { b.focus({ preventScroll: true }); Sound.play('hover'); } });
         if (open && !stars && !focusEl) focusEl = b;
         row.append(b);
@@ -354,6 +358,10 @@ const UI = (() => {
 
   function showResults(res) {
     lastRes = res;
+    // en línea, en el aparato que no corre la partida: guardar la sala o el jefe con lo que mandó el anfitrión
+    const netC = Game.G.net && typeof NetPlay !== 'undefined' && NetPlay.on, mineN = netC ? NetPlay.mine.length : 0;
+    if (netC && NetPlay.isClient && res.cr && !res._rec) { res._rec = 1; if (mineN) Campaign.netRecord(res.cr); }
+    if (netC && NetPlay.isClient && res.jr && !res._rec) { res._rec = 1; Jefes.netResult(Object.assign({}, res.jr, mineN ? {} : { campDone: true })); }
     const fuga = res.mode === 'fuga', jefe = res.mode === 'jefe', jr = jefe ? (Jefes.result || {}) : null;
     const camp = res.mode === 'campana', cr = camp ? (Campaign.result || {}) : null, campBoss = jefe && Game.G.campBoss != null;
     let bossCamp = null;
@@ -385,8 +393,15 @@ const UI = (() => {
       $('#btn-next').hidden = true; $('#s-results [data-act="changemode"]').hidden = true; $('#s-results [data-act="menu"]').hidden = true;
       const tourM = !!(NetPlay.ev && NetPlay.ev.tour); if (tourM) $('#btn-hub').textContent = 'Volver al torneo';
       $('#btn-rematch').hidden = !NetPlay.isHost || tourM; $('#btn-rematch').textContent = 'Revancha (todos)'; $('#btn-rematch').dataset.act = 'netAgain';
-      if (!NetPlay.isHost && !tourM) { ra.hidden = false; ra.textContent = (ra.textContent && parts.length ? ra.textContent + ' · ' : '') + 'El anfitrión puede lanzar la revancha.'; }
-    }
+      // campaña en línea: el anfitrión sigue con la siguiente sala, repite o vuelve al mapa
+      if ((camp || campBoss) && !tourM) {
+        netNext = stNext && ((camp && cr.stars) || (campBoss && jr.win)) ? stNext.id : null;
+        $('#btn-next').hidden = !NetPlay.isHost || !netNext; $('#btn-next').dataset.act = 'netNext'; $('#btn-rematch').textContent = camp ? 'Repetir sala' : jr.win ? 'Pelear otra vez' : 'Reintentar';
+        $('#btn-netpick').hidden = !NetPlay.isHost;
+        if (!NetPlay.isHost) { ra.hidden = false; ra.textContent = 'El anfitrión elige qué sigue: la siguiente sala, repetir o volver al mapa.'; }
+      }
+      if (!NetPlay.isHost && !tourM && !(camp || campBoss)) { ra.hidden = false; ra.textContent = (ra.textContent && parts.length ? ra.textContent + ' · ' : '') + 'El anfitrión puede lanzar la revancha.'; }
+    } else { $('#btn-netpick').hidden = true; $('#btn-next').dataset.act = 'nextlevel'; }
     const P = Game.G.players;
     const t = $('#r-title');
     if (camp) {
@@ -698,8 +713,15 @@ const UI = (() => {
     Game.startMatch(ev.mode, false, ev.map && ev.map !== 'random' ? ev.map : 'random', !!(ev.opts && ev.opts.fiesta));
   }
   // en línea: arranca (o repite) la partida que mandó el anfitrión
-  function netStart(c) { vsBot = false; paused = false; stack = []; Game.G.net = true; Game.startNet(c); show(null, false); }
-  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge, netStart, showResults: r => showResults(r) };
+  function netStart(c) { vsBot = false; paused = false; stack = []; if (c.mode !== 'campana') netCamp = null; Game.G.net = true; Game.startNet(c); show(null, false); }
+  // en línea: campaña — el anfitrión elige en su mapa de la campaña (lo que él tiene abierto)
+  let netCamp = null, netNext = null;
+  function netCampPick(c) {
+    netCamp = c; paused = false; stack = [];
+    if (NetPlay.isHost) { fillCampaign(); show('campana', false); }
+    else { if (Game.G.state !== 'attract') Game.startAttract(); show(null, false); NetPlay.notice('El anfitrión elige la sala…', 'Campaña en línea: lo que ganen queda guardado también en tu aparato.'); }
+  }
+  return { init, drawModeArt, toast, get paused() { return paused; }, get current() { return current; }, show, pause, resume, hubPlay, vestBadge, netStart, netCampPick, showResults: r => showResults(r) };
 })();
 
 /* =========================================================================

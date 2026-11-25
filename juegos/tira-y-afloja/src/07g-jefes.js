@@ -996,6 +996,7 @@ const Jefes = (() => {
   return {
     LIST, BY, data, setup, clear, update, post, onDunk, status, drawWorld, drawHUD, heart, centerLabel,
     get result() { return J && J.result; }, get state() { return J; },
+    netResult(r) { if (J && r && typeof r === 'object') J.result = Object.assign({}, r); },
     point() { return J && J.body ? J.impl.point() : null; },
     get def() { return J ? J.def : null; },
     unlocked: id => { const i = LIST.findIndex(d => d.id === id); return i <= 0 || !!data.wins[LIST[i - 1].id]; },

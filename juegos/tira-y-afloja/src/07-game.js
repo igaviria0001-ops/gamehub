@@ -165,7 +165,11 @@ const Game = (() => {
   function startNet(c) {
     G.net = true; G.daily = null; G.campBoss = null; Fiesta.force(null);
     G.flavors = c.flavors.slice(); G.winsNeeded = c.wins || 3;
-    startMatch(c.mode, false, c.arena || 'random', !!c.fiesta); // Modo Fiesta: una sorpresa por ronda (la sortea el anfitrión)
+    // campaña en línea: una sala (G.campStage) o el jefe de una zona
+    const st = c.mode === 'campana' && c.stage ? Campaign.stages().find(s => s.id === c.stage) : null;
+    if (st && st.type === 'boss') { G.campStage = st.id; G.jefeId = st.jefe; G.campBoss = st.zone; startMatch('jefe', false, (Jefes.BY[st.jefe] || Jefes.LIST[0]).arena, false); }
+    else if (st) { G.campStage = st.id; startMatch('campana', false, 'campana', false); }
+    else startMatch(c.mode, false, c.arena || 'random', !!c.fiesta); // Modo Fiesta: una sorpresa por ronda (la sortea el anfitrión)
     const S = typeof NetPlay !== 'undefined' ? NetPlay.seats : [];
     G.players.forEach((p, i) => { if (S[i] && S[i].name) p.name = String(S[i].name).slice(0, 14); if (c.accs && c.accs[i]) p.acc = c.accs[i]; });
     G.handicap = [0, 0];
@@ -375,6 +379,9 @@ const Game = (() => {
     return {
       mode: G.mode, winner: G.lastWinner, wins: G.wins.slice(), points: G.points.slice(),
       stats: G.players.map(p => Object.assign({}, p.stats)), names: G.players.map(p => p.name), vsBot: G.vsBot,
+      // en línea: sala de la campaña (tiempo y envolturas de esta vez) y pelea con el jefe
+      cr: G.net && G.mode === 'campana' && Campaign.result ? { id: Campaign.result.id, t: Campaign.result.t, wrGot: (Campaign.state && Campaign.state.wr || []).map(w => !!w.got) } : undefined,
+      jr: G.net && G.mode === 'jefe' && Jefes.result ? Object.assign({}, Jefes.result) : undefined, stage: G.net ? G.campStage || undefined : undefined,
     };
   }
 

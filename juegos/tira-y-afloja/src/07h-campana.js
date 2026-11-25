@@ -894,6 +894,19 @@ const Campaign = (() => {
     return undefined;
   }
 
+  // en línea: el aparato que no corre la partida guarda la sala con lo que mandó el anfitrión (tiempo y envolturas
+  // de esta vez) más sus propias envolturas de antes; queda como resultado para la pantalla
+  function netRecord(R) {
+    const room = BYID[R && R.id]; if (!room) return null;
+    const prevW = data.wr[room.id] || [], got = Array.isArray(R.wrGot) ? R.wrGot : [], n = Math.max(prevW.length, got.length, (room.wrappers || []).length || 0);
+    const wr = Array.from({ length: n }, (_, i) => !!(got[i] || prevW[i])); data.wr[room.id] = wr;
+    const t = +R.t || 0, par = room.par, stars = 1 + (t <= par ? 1 : 0) + (wr.length && wr.every(Boolean) ? 1 : 0), prevStars = data.stars[room.id] || 0;
+    data.stars[room.id] = Math.max(prevStars, stars); const newBest = !(data.best[room.id] <= t); if (newBest) data.best[room.id] = +t.toFixed(1); save();
+    const res = { id: room.id, type: 'room', t, par, stars, wrNow: got.filter(Boolean).length, wrTotal: wr.filter(Boolean).length, newBest, first: !prevStars };
+    if (S && S.room === room) S.result = res; else S = { room, t, fail: 0, win: t, wr: [], result: res };
+    Progress.on('campana', { stars: totalStars() });
+    return res;
+  }
   /* jefes de la campaña */
   function bossResult(zone, win, hearts) {
     const id = `jefe-${zone + 1}`;
@@ -960,7 +973,7 @@ const Campaign = (() => {
 
   return {
     ZONES, ROOMS, BYID, data, define, stages, stageIndex, unlocked, totalStars, tickHazards,
-    setup, update, post, onFall, status, bossResult, drawHUD, centerLabel,
+    setup, update, post, onFall, status, bossResult, netRecord, drawHUD, centerLabel,
     get state() { return S; }, get result() { return S && S.result; },
     roomOf: id => BYID[id],
   };

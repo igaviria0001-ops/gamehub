@@ -140,7 +140,7 @@ const Online = (() => {
         <div class="lbl">Modo</div>${seg('mode', ms.map(x => [x.id, x.name]), m.id)}<p class="on-desc">${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</p>
         ${maps.length > 1 ? `<div class="lbl">Escenario</div>${seg('map', [['', '🎲 Al azar']].concat(maps), pickEv.map || '')}` : ''}
         ${m.len ? `<div class="lbl">Largo</div>${seg('len', m.len.map(n => [n, lenTxt(g, m, n)]), pickEv.len || m.len[1] || m.len[0])}` : ''}
-        ${netOpts(g).map(o => `<div class="lbl">${esc(o.name)}</div>${seg('opt:' + o.id, [['0', 'No'], ['1', 'Sí']], pickEv.opts && pickEv.opts[o.id] ? '1' : '0')}<p class="on-desc">${esc(o.desc[0].toUpperCase() + o.desc.slice(1))}.</p>`).join('')}
+        ${(m.noOpts ? [] : netOpts(g)).map(o => `<div class="lbl">${esc(o.name)}</div>${seg('opt:' + o.id, [['0', 'No'], ['1', 'Sí']], pickEv.opts && pickEv.opts[o.id] ? '1' : '0')}<p class="on-desc">${esc(o.desc[0].toUpperCase() + o.desc.slice(1))}.</p>`).join('')}
         ${over}<div class="row"><button class="btn gold big" id="on-go">¡A jugar!</button><button class="btn ghost" id="on-back">Otro juego</button></div>
       </div>`;
   }

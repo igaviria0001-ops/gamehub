@@ -34,15 +34,16 @@ const NetGame = (() => {
   NetPlay.gate({
     me(li) { return { flavor: G.flavors[li], acc: typeof Progress !== 'undefined' ? Progress.accOf(li) : 'ninguno' }; },
     make(want, ev) {
-      const mode = ['caneca', 'chicles', 'rey', 'gol', 'escalada'].includes(ev.mode) ? ev.mode : 'caneca';
+      const mode = ['caneca', 'chicles', 'rey', 'gol', 'escalada', 'campana'].includes(ev.mode) ? ev.mode : 'caneca';
       const fl = [0, 1].map(i => { const w = want[i] || {}; return FLAVORS[w.flavor] ? w.flavor : ['fresa', 'menta'][i]; });
       if (fl[0] === fl[1]) fl[1] = Object.keys(FLAVORS).find(k => k !== fl[0] && !FLAVORS[k].locked) || 'menta';
       const arena = ARENA_DEFS[ev.map] ? ev.map : 'random';
-      return { mode, arena, flavors: fl, accs: [0, 1].map(i => NetPlay.okId((want[i] || {}).acc) || 'ninguno'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), fiesta: !!(ev.opts && ev.opts.fiesta) };
+      // campaña en línea: primero el anfitrión elige la sala o el jefe (stage null) entre los que él tiene abiertos
+      return { mode, arena, flavors: fl, accs: [0, 1].map(i => NetPlay.okId((want[i] || {}).acc) || 'ninguno'), wins: Math.max(1, Math.min(5, ev.len || ev.rounds || 3)), fiesta: mode !== 'campana' && !!(ev.opts && ev.opts.fiesta), stage: mode === 'campana' ? null : undefined };
     },
-    apply(c) { reset(); UI.netStart(c); },
+    apply(c) { reset(); if (c.mode === 'campana' && !Campaign.stages().some(s => s.id === c.stage)) UI.netCampPick(c); else UI.netStart(c); },
   });
-  function again() { NetPlay.again(c => Object.assign({}, c)); }
+  function again(stage) { NetPlay.again(c => Object.assign({}, c, stage !== undefined ? { stage } : {})); }
 
   /* ---------- efectos y sonidos: cada llamada del anfitrión se repite en los remotos ---------- */
   const enc = (v, d = 0) => { if (v == null) return v; const t = typeof v; if (t === 'number') return r2(v); if (t === 'string' || t === 'boolean') return v; if (t === 'function' || d > 2) return undefined; if (Array.isArray(v)) return v.length > 40 ? undefined : v.map(x => enc(x, d + 1)); const o = {}; for (const k in v) { const e = enc(v[k], d + 1); if (e !== undefined) o[k] = e; } return o; };
@@ -80,8 +81,21 @@ const NetGame = (() => {
       pl: NetPlay.slow('pl', G.pellets.map(pl => { const o = enc(pl); delete o.t; return o; })), gd: NetPlay.slow('gd', G.golden ? (o => { delete o.t; return o; })(enc(G.golden)) : 0),
       a: (() => { const o = arenaSnap(); arenaSlow = o.$s; delete o.$s; return o; })(), as: NetPlay.slow('as', arenaSlow), m: NetPlay.slow('m', noTrail(enc(Modes.M))), f: NetPlay.slow('f', enc(Fiesta.state), 500),
       cam: G.cam.focus ? enc(G.cam.focus) : 0,
+      cp: G.mode === 'campana' ? campSnap() : undefined, jf: G.mode === 'jefe' ? jefeSnap() : undefined,
     };
   }
+  // campaña: lo que cambia de cada mecanismo (rejas, placas, palancas, poleas, ventiladores, carritos…) y el reloj de la sala
+  const OSKIP = new Set(['kind', 'id', 'link', 'dir', 'w', 'h', 'x0', 'y0', 'ay', 'by', 'cycle', 'latch', 'hold', 'color', 'label', 'r', 'len', 'amp', 'period', 'power']);
+  function objDyn(o) { const q = {}; for (const k in o) { if (OSKIP.has(k)) continue; const v = o[k], t = typeof v; if (t === 'number') q[k] = r1(v); else if (t === 'boolean') q[k] = v ? 1 : 0; else if (v && t === 'object' && !Array.isArray(v) && (k === 'a' || k === 'b')) q[k] = { x: r1(v.x), y: r1(v.y) }; } return q; }
+  const objLast = []; let objFullAt = 0;
+  function campSnap() {
+    const L = ARENA.L, S = Campaign.state, now = performance.now(), full = now - objFullAt > 1000; if (full) objFullAt = now;
+    const ob = []; if (L && L.objs) L.objs.forEach((o, i) => { const q = objDyn(o), j = JSON.stringify(q); if (full || objLast[i] !== j) { objLast[i] = j; ob.push([i, q]); } });
+    return { ob, s: S ? { t: r1(S.t), fail: r2(S.fail), win: r1(S.win), inDoor: S.inDoor | 0, cutT: r2(S.cutT || 0), tipT: r2(S.tipT || 0), falls: S.falls | 0, wr: (S.wr || []).map(w => (w.got ? 1 : 0)) } : null };
+  }
+  // jefe: su estado entero (sin la definición ni las funciones), cuerpo incluido
+  const JSKIP = new Set(['def', 'impl', 'result', 'lossBy']);
+  function jefeSnap() { const J = Jefes.state; if (!J) return null; const o = {}; for (const k in J) { if (JSKIP.has(k)) continue; const e = enc(J[k]); if (e !== undefined) o[k] = e; } return o; }
 
   /* ---------- aplicar (remoto) ---------- */
   const lerp = (a, b, k) => a + (b - a) * k;
@@ -110,6 +124,9 @@ const NetGame = (() => {
       // su estela, como la del anfitrión (rápido = deja rastro que se apaga en ~0,17 s)
       if (MB) { const now = performance.now(), tr = MB._tr || (MB._tr = []); if (Math.hypot(MB.vx || 0, MB.vy || 0) > 900 && (!tr.length || now - tr[tr.length - 1].t > 16)) tr.push({ x: MB.x, y: MB.y, t: now }); while (tr.length && now - tr[0].t > 170) tr.shift(); MB.trail = tr.slice(-8).map(g => ({ x: g.x, y: g.y, a: 0.4 - (now - g.t) * 0.0024 })).filter(g => g.a > 0); } }
     if (B.f) deepSet(Fiesta.state, B.f);
+    if (B.cp) { const L = ARENA.L, S = Campaign.state; if (L && L.objs) for (const [i, q] of B.cp.ob) if (L.objs[i]) { for (const k in q) { const v = q[k]; if (v && typeof v === 'object') { if (L.objs[i][k]) Object.assign(L.objs[i][k], v); } else L.objs[i][k] = typeof L.objs[i][k] === 'boolean' ? !!v : v; } }
+      if (B.cp.s && S) { const s = B.cp.s; S.t = s.t; S.fail = s.fail; S.win = s.win; S.inDoor = s.inDoor; S.cutT = s.cutT; S.tipT = s.tipT; S.falls = s.falls; (S.wr || []).forEach((w, i) => { w.got = !!s.wr[i]; }); } }
+    if (B.jf && Jefes.state) deepSet(Jefes.state, B.jf);
     G.cam.focus = B.cam ? Object.assign({}, B.cam) : null;
   }
 

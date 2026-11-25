@@ -6,7 +6,9 @@
 const GAMES = [
   {
     id: 'tira-y-afloja', file: 'games/tira-y-afloja.html', name: 'Tira y Afloja', short: 'Tira y Afloja', num: '01',
-    net: { seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], opts: ['fiesta'], watch: true, desc: { caneca: 'Echa al otro a la caneca. Juegan dos; los demás miran en vivo.' } },
+    net: { seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], opts: ['fiesta'], watch: true,
+      extra: [{ id: 'campana', name: 'Campaña', seats: 2, watch: true, maps: [], noOpts: true, desc: 'Las 30 salas y los 6 jefes de la campaña, juntos: el anfitrión elige en su mapa la sala o el jefe (de lo que tiene abierto) y lo que ganen queda guardado en el aparato de cada uno.' }],
+      desc: { caneca: 'Echa al otro a la caneca. Juegan dos; los demás miran en vivo.' } },
     tag: 'Duelo de chicle', kind: 'Física y empujones',
     desc: 'Dos chicles unidos por un hilo pelean en el colegio: tirar te hace pesado, aflojar te vuelve ágil. Empuja, embiste, salta en tirachinas y echa al otro a la caneca.',
     c1: '#ff5d8f', c2: '#45d6b0', c3: '#ffd84d', ink: '#2a1710', font: 'tya',
