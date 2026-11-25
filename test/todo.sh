@@ -38,6 +38,8 @@ run motor node test/motor.js
 if ! curl -s -m 2 http://127.0.0.1:8799/ping >/dev/null; then (cd servidor && exec npx --yes wrangler dev --port 8799 --ip 127.0.0.1 >/tmp/wrangler-todo.log 2>&1) & WR=$!; trap "kill $SRV $WR 2>/dev/null" EXIT; for i in $(seq 1 40); do curl -s -m 2 http://127.0.0.1:8799/ping >/dev/null && break; sleep 1; done; fi
 if curl -s -m 2 http://127.0.0.1:8799/ping >/dev/null; then
   run servidor node test/netsrv.js
+  run servidorCae node test/srvcae.js
+  run movilServidor env PERFIL=corte SRV=http://127.0.0.1:8799 JUEGOS=sortilegio,ventolera node test/netmovil.js
   run campSrt node test/netcamp-srt.js
   run travVto node test/nettrav-vto.js
   run campTyA node test/netcamp-tya.js

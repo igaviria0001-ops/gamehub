@@ -107,3 +107,40 @@ Para volver atrás en cualquier momento: `SERVER0 = ''`.
 ## Bitácora (lo más nuevo abajo)
 - **25 nov 15:50** — Plan escrito. Sin TURN de Cloudflare (pide tarjeta; ver nota en §3). Esperando la dirección del Worker de Ignacio para la Parte B; la Parte A se puede
   empezar cuando Ignacio diga.
+- **25 nov 16:05** — Ignacio creó el Worker (sin TURN, sin tarjeta): `https://gamehub-red.igaviria0001.workers.dev`
+  (responde `/ping`). Desde la nube de Claude no se alcanza `workers.dev` (lista de sitios): las pruebas van con el
+  servidor local, que es el mismo código. Primer intento de Cloudflare falló porque corre `npm run build` y no había
+  script → se agregó uno vacío en `servidor/package.json`.
+- **25 nov ~17:00 — Parte A hecha (rama `tanda5`)**. Decisiones al hacerla (cambian el plan, con su razón):
+  - **Sin `locationHint: 'sam'`**: la sala se crea cerca de quien la abre (el anfitrión). Desde Colombia el tráfico sale
+    casi siempre por Miami; forzar Sudamérica podía mandarla a São Paulo, más lejos.
+  - **MQTT sigue en paralelo** para encontrarse (no solo como respaldo): con un aparato de versión vieja o con el
+    servidor caído igual se encuentran; la señal ya llega primero por el servidor y los repetidos se descartan.
+  - **Elegir camino con medidas de verdad** (`choosePath` en `app/net.js`): cada 2 s un ping por el relevo del servidor
+    (`relayPing`) mientras se va por un TURN, y uno por lo directo (`directSend`) mientras se va por el servidor. Solo si
+    ICE terminó en un **TURN** (p. ej. el público lejano) y el servidor gana ≥ 60 ms o un 20 % (3 medidas seguidas, 5 s
+    después de cada cambio) se pasa al servidor; vuelve si lo directo gana 30 ms. Lo **directo de verdad** entre dos
+    aparatos no se cambia: con un estimado se pasaba de más, y aun midiendo, en el juego el ruido del ping (rachas de
+    congestión) lo hacía cambiar sin razón y quedarse en el relevo (que junta instantáneas, ~30/s: menos fluido).
+  - **Paso más rápido al relevo** con el servidor: 1 s de gracia (antes 2,5) y la conexión nueva a los 3 s (antes 6).
+  - **Servidor «fresco»**: el latido es cada 3 s; si no contesta en 2,5 s (WebSocket medio muerto al cambiar de red) se
+    deja de confiar en él y todo sale también por la señal pública; se cierra a los 12 s sin nada.
+  - **Freno del servidor**: 300 mensajes/s por aparato durante 3 s (un anfitrión que releva a 4 aparatos manda ~140/s).
+  - La sala muestra «por tu servidor» (verde) en vez de «por relevo · lento». Ajustes → Probar muestra el servidor y
+    su ciudad de Cloudflare.
+  - Medido (`test/netmovil.js`, 2 aparatos con la red simulada de datos móviles, Sortilegio y Ventolera):
+
+    | Caso | Sin servidor (antes) | Con el servidor |
+    |---|---|---|
+    | Corte de 6 s de lo directo (cambio de antena), 4 pasadas | congelado hasta **2,8–3,3 s**, «hambre» 11–17 % | Sortilegio **0,05 s** (hambre 0,3–0,7 %), Ventolera ~**1 s** (5–7 %); los dos vuelven a directo |
+    | Solo relevo (lo directo no se puede) | ping ~**0,9–1,0 s** | ping ~**0,46–0,50 s** |
+    | Datos móviles normales | directo | directo (no cambia nada) |
+
+  - Pruebas nuevas: `test/srvcae.js` (servidor que deja de contestar, se cae, vuelve y corta a quien manda de más) y
+    `PERFIL=corte SRV=… test/netmovil.js` en `test/todo.sh`.
+  - Plan gratis (para Ignacio): cada aparato que va por el servidor gasta ~10.800 pedidos por hora (60 mensajes/s a 20:1);
+    con 100.000 al día alcanza para ~9 horas al día de un aparato por el relevo. Si un día se acaba, el juego sigue por MQTT.
+- **25 nov ~17:45** — Suite completa (`bash test/todo.sh`, servidor local; las que se cayeron porque se apagó el servidor de
+  pruebas se repitieron): todo OK. `test/offline-eq.js`: igual que antes de esta tanda (Sortilegio distinto a propósito;
+  en Ventolera y VÉRTIGO solo el número de versión de la portada). Se publica a `main` con `SERVER0` = el Worker de Ignacio.
+- **Sigue (B5)**: prueba real con Ignacio (lista en §4) y mirar el uso en Cloudflare a la semana (B6).

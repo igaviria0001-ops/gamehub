@@ -38,7 +38,8 @@ assets/         galaxia, fuentes, fotos (shots/) e íconos de la portada
 docs/           lo que se publica (lo genera build.js; no editar a mano)
 test/           pruebas con Playwright (todo.sh las corre todas)
 tools/          generadores: galaxia, íconos, enlace, capturas
-ONLINE.md       diseño y bitácora del modo en línea · README.md: cómo funciona todo · GUIA-GITHUB.md: guía vieja de la primera subida
+servidor/       el servidor de las salas (Cloudflare Worker + Durable Object, plan gratis): se publica SOLO al subir a main
+ONLINE.md       diseño y bitácora del modo en línea · RED-CLOUDFLARE.md: plan y bitácora del servidor propio · README.md: cómo funciona todo · GUIA-GITHUB.md: guía vieja de la primera subida
 ```
 
 Juegos actuales: `tira-y-afloja` (prefijo `tya_`), `ventolera` (`vto_`), `sortilegio` (`srt_`), `vertigo` (`vtg_`). La portada guarda con `gamehub_`.

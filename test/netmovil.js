@@ -9,7 +9,7 @@
 const { chromium } = require('playwright');
 const BASE = process.env.URL || 'http://127.0.0.1:8765/';
 const PERFIL = process.env.PERFIL || 'mob', SECS = +process.env.SECS || 20, CUT = +process.env.CUT || 6000; // CUT: ms del corte
-const Q = { mob: 'netmob=1', relay: 'netmob=1&netforce=relay', corte: 'netmob=1' }[PERFIL] || PERFIL;
+const Q = ({ mob: 'netmob=1', relay: 'netmob=1&netforce=relay', corte: 'netmob=1', lento: 'netmob=1&netdlag=200' }[PERFIL] || PERFIL) + (process.env.SRV ? '&server=' + process.env.SRV : ''); // SRV=http://127.0.0.1:8799: con el servidor propio · PERFIL=lento: lo directo 200 ms más lento
 const JUEGOS = (process.env.JUEGOS || 'sortilegio,ventolera,tira-y-afloja,vertigo').split(',');
 const KEYS = { vertigo: ['KeyA', 'KeyD'], ventolera: ['KeyW', 'KeyS'], sortilegio: ['KeyD', 'KeyA', 'KeyW', 'KeyS'], 'tira-y-afloja': ['KeyD', 'KeyA'] };
 const PLAY = { vertigo: '() => window.__vtg && window.__vtg.R && window.__vtg.R.state === "race"', ventolera: '() => Game.G.state === "play"', sortilegio: '() => Game.G.state === "play"', 'tira-y-afloja': '() => Game.G.state === "play"' };
@@ -44,7 +44,7 @@ async function uno(b, gid) {
   // en el corte: se mira si volvió a la conexión directa (unos segundos después)
   if (PERFIL === 'corte') await wait(6000);
   const st = await fc.evaluate(() => NetPlay.stats), sh = await fh.evaluate(() => NetPlay.stats);
-  const via = await C.evaluate(() => { const h = Net.peers.get(Net.hostId); return h ? { via: h.via, rtt: Math.round(h.rtt) } : null; });
+  const via = await C.evaluate(() => { const h = Net.peers.get(Net.hostId); return h ? { via: h.via, rtt: Math.round(h.rtt), prefiere: h.preferRelay ? 'servidor' : undefined, directo: h.drtt ? Math.round(h.drtt) : undefined, porServidor: h.rrtt ? Math.round(h.rrtt) : undefined, estado: h.pc ? h.pc.connectionState : 'sin' } : null; });
   const viaH = await H.evaluate(() => [...Net.peers.values()].map(p => p.via));
   const ge = [...await fh.evaluate(() => window.__errs.slice(0, 3)).catch(() => []), ...await fc.evaluate(() => window.__errs.slice(0, 3)).catch(() => [])];
   await ctx.close();

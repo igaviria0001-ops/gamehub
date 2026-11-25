@@ -29,7 +29,7 @@ const Online = (() => {
     const mine = myBuild().date || '', older = bad.filter(d => (d.info.vd || '') < mine).map(d => esc(d.info.name || 'un aparato')), newer = bad.some(d => (d.info.vd || '') > mine);
     const what = older.length || newer ? (older.length ? older.join(' y ') + (older.length > 1 ? ' tienen' : ' tiene') + ' una versión vieja de GameHub' : '') + (older.length && newer ? '; y ' : '') + (newer ? 'este aparato tiene una versión más vieja que la de otro' : '') : 'Hay aparatos con versiones distintas de GameHub';
     return `<div class="on-warn">⚠ ${what}. Abran GameHub con internet y toquen «Actualizar» (o ciérrenlo y vuelvan a abrirlo) antes de jugar, para que todo salga igual en todos.</div>`; }
-  const VIA = { local: ['este aparato', 'ok'], p2p: ['directo', 'ok'], turn: ['por TURN', 'mid'], relay: ['por relevo · lento', 'bad'], conectando: ['conectando…', 'mid'] };
+  const VIA = { local: ['este aparato', 'ok'], p2p: ['directo', 'ok'], turn: ['por TURN', 'mid'], srv: ['por tu servidor', 'ok'], relay: ['por relevo · lento', 'bad'], conectando: ['conectando…', 'mid'] };
   const DEV = { cel: '📱', pc: '💻' };
   const sig = ms => ms <= 0 ? '' : ms < 60 ? 'ok' : ms < 140 ? 'mid' : 'bad';
   function linkFor(code) { const u = new URL(location.href); u.search = ''; u.hash = 'online'; u.searchParams.set('sala', code); if (params.get('net')) u.searchParams.set('net', params.get('net')); return u.toString(); }
@@ -103,7 +103,7 @@ const Online = (() => {
         </div>
         <div class="on-react" role="group" aria-label="Reacciones rápidas">${REACT.map(e => `<button class="on-rx" data-rx="${e}" aria-label="Enviar ${e}">${e}</button>`).join('')}</div>
         <div class="panel"><div class="h2">APARATOS Y JUGADORES</div>
-          <div class="on-devs">${devs.map(d => { const hp = d.host && !host ? hostPeer : null; if (hp) d = Object.assign({}, d, { via: hp.via, rtt: Math.round(hp.rtt) }); const v = VIA[d.id === me ? 'local' : d.via] || VIA.conectando; return `<div class="on-dev${d.id === me ? ' me' : ''}">
+          <div class="on-devs">${devs.map(d => { const hp = d.host && !host ? hostPeer : null; if (hp) d = Object.assign({}, d, { via: hp.via === 'relay' && Net.serverReady ? 'srv' : hp.via, rtt: Math.round(hp.rtt) }); const v = VIA[d.id === me ? 'local' : d.via] || VIA.conectando; return `<div class="on-dev${d.id === me ? ' me' : ''}">
             <div class="on-dh"><span class="on-di">${DEV[d.info && d.info.dev] || '🎮'}</span><b>${esc(d.info ? d.info.name : '…')}</b>${d.host ? '<span class="on-tag gold">anfitrión</span>' : ''}${d.id === me ? '<span class="on-tag">tú</span>' : ''}${d.id !== me && oldDev(d) ? '<span class="on-tag warn">otra versión</span>' : ''}
               <span class="on-via ${v[1]}">${v[0]}${d.id !== me && d.rtt ? ` · ${d.rtt} ms` : ''}</span></div>
             <div class="on-ps">${ps.filter(p => p.dev === d.id).map(p => `<span class="on-p" style="--c:${esc(p.color)}"><i></i>${esc(p.name)}</span>`).join('')}</div></div>`; }).join('')}</div>

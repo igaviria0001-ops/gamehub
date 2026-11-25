@@ -61,8 +61,12 @@ export default {
 };
 
 /* Una sala = un objeto. Reparte los mensajes: los primeros 8 bytes dicen a quién («********» = a todos los demás).
-   Usa la API de hibernación: si nadie habla, el objeto duerme y no gasta. */
+   Usa la API de hibernación: si nadie habla, el objeto duerme y no gasta. Se crea cerca de quien la abre (el anfitrión).
+   Freno: un aparato que manda más de 300 mensajes por segundo durante 3 s seguidos (un error, no una partida) se
+   desconecta, para no gastar el plan gratis; el juego se vuelve a conectar solo y mientras tanto sigue por MQTT. */
+const RATE = 300, RATE_SECS = 3;
 export class Sala extends DurableObject {
+  constructor(ctx, env) { super(ctx, env); this.rate = new Map(); } // aparato → { s: segundo, n: mensajes, malos: segundos seguidos }
   async fetch(req) {
     const id = new URL(req.url).searchParams.get('id');
     const socks = this.ctx.getWebSockets();
@@ -74,7 +78,11 @@ export class Sala extends DurableObject {
     return new Response(null, { status: 101, webSocket: client });
   }
   async webSocketMessage(ws, msg) {
-    if (typeof msg === 'string') { if (msg === 'p') ws.send('q'); return; } // latido
+    if (typeof msg === 'string') { if (msg === 'p') ws.send('q'); return; } // latido (el aparato mide con él cuánto tarda el servidor)
+    const sec = Math.floor(Date.now() / 1000), r = this.rate.get(ws) || { s: sec, n: 0, malos: 0 };
+    if (r.s !== sec) { r.malos = r.n > RATE ? (sec - r.s === 1 ? r.malos + 1 : 1) : 0; r.s = sec; r.n = 0; }
+    r.n++; this.rate.set(ws, r);
+    if (r.malos >= RATE_SECS) { this.rate.delete(ws); try { ws.close(1008, 'demasiado'); } catch (e) { /* nada */ } return; }
     const u8 = new Uint8Array(msg);
     if (u8.length < 9 || u8.length > 65536) return;
     const to = String.fromCharCode(...u8.subarray(0, 8)), body = u8.subarray(8);
@@ -83,6 +91,6 @@ export class Sala extends DurableObject {
     if (!ID_RE.test(to) || to === me) return;
     for (const w of this.ctx.getWebSockets(to)) { try { w.send(body); } catch (e) { /* nada */ } }
   }
-  async webSocketClose(ws) { try { ws.close(1000, 'chao'); } catch (e) { /* nada */ } }
-  async webSocketError(ws) { try { ws.close(1011, 'error'); } catch (e) { /* nada */ } }
+  async webSocketClose(ws) { this.rate.delete(ws); try { ws.close(1000, 'chao'); } catch (e) { /* nada */ } }
+  async webSocketError(ws) { this.rate.delete(ws); try { ws.close(1011, 'error'); } catch (e) { /* nada */ } }
 }

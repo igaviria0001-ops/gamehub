@@ -23,7 +23,7 @@ const Net = (() => {
   const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   const BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
   // servidor propio (Cloudflare Workers). ?server=… (pruebas) o gamehub_server (Ajustes) lo cambian; '' = sin servidor
-  const SERVER0 = '';
+  const SERVER0 = 'https://gamehub-red.igaviria0001.workers.dev'; // el de Ignacio (Cloudflare, plan gratis; ver servidor/)
   const SERVER = (() => { try { const q = new URLSearchParams(location.search).get('server'); const v = q != null ? q : localStorage.getItem('gamehub_server'); const u = v != null ? v : SERVER0; return /^https?:\/\/[\w.\-:]+$/.test(u || '') ? u.replace(/\/$/, '') : ''; } catch (e) { return SERVER0; } })();
   const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }, { urls: 'stun:stun1.l.google.com:19302' }];
   const enc = new TextEncoder(), dec = new TextDecoder();
@@ -39,8 +39,8 @@ const Net = (() => {
   // · ?netmob=1 (perfil de datos móviles: 60 ms, vaivén 25, 3 % de pérdida, rachas 0,05/s; el relevo suma 220 ms)
   // · ?netforce=relay (sin WebRTC). Lo confiable nunca se desordena: si «se pierde», llega tarde y frena lo que viene detrás.
   const SIM = (() => { try { const q = new URLSearchParams(location.search), mob = q.get('netmob') === '1', n = (k, d, mx) => Math.min(mx, q.has(k) ? +q.get(k) || 0 : d), cut = (q.get('netcut') || '').split(':').map(Number);
-    const o = { loss: n('netloss', mob ? 0.03 : 0, 0.9), lag: n('netlag', mob ? 60 : 0, 2000), jit: n('netjit', mob ? 25 : 0, 1000), spike: n('netspike', mob ? 0.05 : 0, 5), rlag: mob || q.has('netlag') ? n('netrlag', 220, 3000) : 0, cut: cut.length === 2 && cut[1] > 0 ? cut : null, relay: q.get('netforce') === 'relay' };
-    o.on = !!(o.loss || o.lag || o.jit || o.spike || o.cut); return o; } catch (e) { return { on: false, loss: 0, lag: 0, jit: 0, spike: 0, rlag: 0, cut: null, relay: false }; } })();
+    const o = { loss: n('netloss', mob ? 0.03 : 0, 0.9), lag: n('netlag', mob ? 60 : 0, 2000), jit: n('netjit', mob ? 25 : 0, 1000), spike: n('netspike', mob ? 0.05 : 0, 5), rlag: mob || q.has('netlag') ? n('netrlag', 220, 3000) : 0, dlag: n('netdlag', 0, 3000), cut: cut.length === 2 && cut[1] > 0 ? cut : null, relay: q.get('netforce') === 'relay' };
+    o.on = !!(o.loss || o.lag || o.jit || o.spike || o.cut || o.dlag); return o; } catch (e) { return { on: false, loss: 0, lag: 0, jit: 0, spike: 0, rlag: 0, dlag: 0, cut: null, relay: false }; } })();
   const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
   let simDrop = null; // pruebas: { f(m) → true = se pierde, until }
   let cutA = 0, cutB = 0, cutDirect = false; // corte simulado: [desde, hasta) en performance.now(); cutDirect = solo se cae lo directo
@@ -49,8 +49,12 @@ const Net = (() => {
     let d = SIM.lag + Math.abs(gauss()) * SIM.jit;
     if (SIM.spike) { const dt = Math.min(1000, now - (p.simChk || now)); p.simChk = now; if (now > (p.congUntil || 0) && Math.random() < SIM.spike * dt / 1000) { p.congUntil = now + 400 + Math.random() * 600; p.congAdd = 150 + Math.random() * 350; } if (now < (p.congUntil || 0)) d += p.congAdd; }
     if (p.via === 'relay') { const rl = S.sig && S.sig.srv ? SIM.rlag * 0.2 : SIM.rlag; d += rl + Math.abs(gauss()) * rl * 0.3; } // (por el servidor propio el relevo suma mucho menos)
+    else d += SIM.dlag; // ?netdlag: lo directo más lento (para probar que se elige el camino más rápido)
     return d;
   }
+  // demora simulada por un camino dado, con las mismas rachas de congestión del aparato (en la vida real la red del celular
+  // es una sola: una racha frena lo directo y el servidor por igual)
+  function simPath(p, via, now) { const v = p.via; p.via = via; try { return simDelay(p, now); } finally { p.via = v; } }
   // estado de la conexión directa (en las pruebas, durante ?netcut se ve «desconectada»)
   const pcState = p => (simCut(performance.now()) ? 'disconnected' : p.pc ? p.pc.connectionState : 'none');
   const ST = { out: 0, in: 0, nOut: 0, nIn: 0, t0: Date.now() };
@@ -100,32 +104,35 @@ const Net = (() => {
   // señalización: varios brokers a la vez (o BroadcastChannel en pruebas); los repetidos se descartan
   // servidor propio: un WebSocket a la sala (el servidor reparte; solo ve a quién va cada mensaje, lo demás va cifrado)
   function Srv(onMsg) {
-    let ws = null, dead = false, tries = 0, ready = false, beat = 0, lastIn = 0;
+    let ws = null, dead = false, tries = 0, ready = false, beat = 0, lastIn = 0, pT = 0, rtt = 0; // rtt: ida y vuelta a la sala del servidor (ms)
     const room = S.topic.split('/').pop(), queue = [], te = new TextEncoder();
     function connect() {
       if (dead || !SERVER) return; ready = false;
       try { ws = new WebSocket(SERVER.replace(/^http/, 'ws') + '/s/' + room + '?id=' + S.id); } catch (e) { return retry(); }
       ws.binaryType = 'arraybuffer';
       ws.onopen = () => { tries = 0; ready = true; lastIn = Date.now(); while (queue.length) raw(queue.shift()); emit('status', { server: true, ok: true });
-        clearInterval(beat); beat = setInterval(() => { if (!ws) return; if (Date.now() - lastIn > 25000) { try { ws.close(); } catch (e) { /* nada */ } return; } try { ws.send('p'); } catch (e) { /* nada */ } }, 10000); };
-      ws.onmessage = e => { lastIn = Date.now(); if (typeof e.data !== 'string') onMsg(new Uint8Array(e.data)); };
+        const pingSrv = () => { pT = performance.now(); try { ws.send('p'); } catch (e) { /* nada */ } }; pingSrv();
+        clearInterval(beat); beat = setInterval(() => { if (!ws) return; if (Date.now() - lastIn > 12000) { try { ws.close(); } catch (e) { /* nada */ } return; } if (!pT) pingSrv(); }, 3000); };
+      ws.onmessage = e => { lastIn = Date.now(); if (typeof e.data !== 'string') onMsg(new Uint8Array(e.data)); else if (e.data === 'q' && pT) { const r = performance.now() - pT; pT = 0; rtt = rtt ? rtt * 0.7 + r * 0.3 : r; } };
       ws.onclose = ws.onerror = () => { clearInterval(beat); const was = ready; ready = false; if (ws) { ws.onclose = ws.onerror = ws.onmessage = null; ws = null; } if (was) emit('status', { server: true, ok: false }); retry(); };
     }
     function retry() { if (dead) return; tries++; setTimeout(connect, Math.min(10000, 500 * tries)); }
     function raw(b) { try { ws.send(b); } catch (e) { /* nada */ } }
     function send(u8, to) { const h = te.encode(to && /^[A-Za-z0-9]{8}$/.test(to) ? to : '********'), b = new Uint8Array(8 + u8.length); b.set(h); b.set(u8, 8); if (!ws || !ready) { if (queue.length < 40) queue.push(b); return; } raw(b); }
     connect();
-    return { send, close() { dead = true; clearInterval(beat); try { ws && ws.close(); } catch (e) { /* nada */ } }, get ready() { return ready; } };
+    // fresco = abierto y contestando (un WebSocket puede quedar «medio muerto» al cambiar de red sin avisar que se cerró)
+    const fresh = () => ready && !(pT && performance.now() - pT > 2500) && Date.now() - lastIn < 8000;
+    return { send, close() { dead = true; clearInterval(beat); try { ws && ws.close(); } catch (e) { /* nada */ } }, get ready() { return fresh(); }, get open() { return ready; }, get rtt() { return ready ? rtt : 0; } };
   }
   function Signal() {
     const useBC = new URLSearchParams(location.search).get('net') === 'bc' || Net.transport === 'bc';
     const onRaw = async u8 => { const m = await open(u8); if (!m || m.from === S.id || (m.to && m.to !== S.id)) return; if (S.seen.has(m.mid)) return; S.seen.set(m.mid, Date.now()); if (S.seen.size > 600) { const old = Date.now() - 60000; for (const [k, t] of S.seen) if (t < old) S.seen.delete(k); } onSignal(m); };
     const srv = SERVER && (!useBC || /[?&]server=/.test(location.search)) ? Srv(onRaw) : null;
-    if (srv && new URLSearchParams(location.search).get('net') === 'srv') return { send: (u8, to) => srv.send(u8, to), close: () => srv.close(), get ready() { return srv.ready; }, get srv() { return srv.ready; } }; // pruebas: solo el servidor
-    if (useBC) { const bc = new BroadcastChannel(S.topic); bc.onmessage = e => onRaw(new Uint8Array(e.data)); return { send: (u8, to, fast) => { if (srv && srv.ready) { srv.send(u8, to); if (fast) return; } bc.postMessage(u8.buffer); }, close: () => { bc.close(); srv && srv.close(); }, get ready() { return true; }, get srv() { return !!(srv && srv.ready); } }; }
+    if (srv && new URLSearchParams(location.search).get('net') === 'srv') return { send: (u8, to) => srv.send(u8, to), close: () => srv.close(), get ready() { return srv.ready; }, get srv() { return srv.ready; }, get srvRtt() { return srv.rtt; } }; // pruebas: solo el servidor
+    if (useBC) { const bc = new BroadcastChannel(S.topic); bc.onmessage = e => onRaw(new Uint8Array(e.data)); return { send: (u8, to, fast) => { if (srv && srv.open) srv.send(u8, to); if (fast && srv && srv.ready) return; bc.postMessage(u8.buffer); }, close: () => { bc.close(); srv && srv.close(); }, get ready() { return true; }, get srv() { return !!(srv && srv.ready); }, get srvRtt() { return srv ? srv.rtt : 0; } }; }
     const bs = BROKERS.map(u => Broker(u, onRaw));
     // lo de la partida (relevo) va solo por el servidor si está; la señal (encontrarse) por todos los caminos a la vez
-    return { send: (u8, to, fast) => { if (srv && srv.ready) { srv.send(u8, to); if (fast) return; } bs.forEach(b => b.send(u8)); }, close: () => { bs.forEach(b => b.close()); srv && srv.close(); }, get ready() { return bs.some(b => b.ready) || !!(srv && srv.ready); }, get srv() { return !!(srv && srv.ready); } };
+    return { send: (u8, to, fast) => { if (srv && srv.open) srv.send(u8, to); if (fast && srv && srv.ready) return; bs.forEach(b => b.send(u8)); }, close: () => { bs.forEach(b => b.close()); srv && srv.close(); }, get ready() { return bs.some(b => b.ready) || !!(srv && srv.ready); }, get srv() { return !!(srv && srv.ready); }, get srvRtt() { return srv ? srv.rtt : 0; } };
   }
   async function signal(obj, fast) { if (!S.sig) return; obj.from = S.id; obj.mid = rid(10); S.sig.send(await seal(obj), obj.to, fast); }
 
@@ -148,7 +155,7 @@ const Net = (() => {
   // TURN de Cloudflare: el servidor da credenciales de un día; se guardan 6 h para no pedirlas en cada conexión
   let cfIceP = null;
   function cfIce() {
-    if (!SERVER) return Promise.resolve([]);
+    if (!SERVER || (/[?&]net=bc/.test(location.search) && !/[?&]server=/.test(location.search))) return Promise.resolve([]); // (pruebas en un solo aparato sin servidor)
     try { const c = JSON.parse(localStorage.getItem('gamehub_ice') || 'null'); if (c && c.s === SERVER && Date.now() < c.exp && Array.isArray(c.ice)) return Promise.resolve(c.ice); } catch (e) { /* nada */ }
     if (cfIceP) return cfIceP;
     cfIceP = (async () => {
@@ -156,7 +163,7 @@ const Net = (() => {
         const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null, to = setTimeout(() => ctl && ctl.abort(), 4000);
         const r = await fetch(SERVER + '/ice', { cache: 'no-store', signal: ctl ? ctl.signal : undefined }); clearTimeout(to);
         const j = await r.json(), ice = (Array.isArray(j.iceServers) ? j.iceServers : []).map(x => ({ urls: (Array.isArray(x.urls) ? x.urls : [x.urls]).filter(u => typeof u === 'string' && /^(turns?|stun):/.test(u)).slice(0, 8), username: x.username, credential: x.credential })).filter(x => x.urls.length);
-        if (ice.length) try { localStorage.setItem('gamehub_ice', JSON.stringify({ s: SERVER, exp: Date.now() + 6 * 3600e3, ice })); } catch (e) { /* nada */ }
+        if (r.ok || ice.length) try { localStorage.setItem('gamehub_ice', JSON.stringify({ s: SERVER, exp: Date.now() + 6 * 3600e3, ice })); } catch (e) { /* nada */ }
         return ice;
       } catch (e) { return []; } finally { setTimeout(() => { cfIceP = null; }, 30000); }
     })();
@@ -168,7 +175,7 @@ const Net = (() => {
   /* ---------- pares (WebRTC) ---------- */
   function newPeer(id, info) {
     let p = peers.get(id); if (p) { if (info) p.info = info; return p; }
-    p = { id, info: info || null, pc: null, r: null, u: null, via: 'conectando', rtt: 0, open: false, lastSeen: Date.now(), pend: [], relayT: 0 };
+    p = { id, info: info || null, pc: null, r: null, u: null, via: 'conectando', rtt: 0, open: false, lastSeen: Date.now(), pend: [], relayT: 0, srvRtt: 0, drtt: 0, rrtt: 0, slowN: 0, fastN: 0, preferRelay: false };
     peers.set(id, p); return p;
   }
   async function makePC(p, initiator, extraIce) {
@@ -178,8 +185,8 @@ const Net = (() => {
     p.pc = pc; if (p.via !== 'relay') { p.open = false; p.via = 'conectando'; } // si va por el relevo, sigue por ahí hasta que abra la nueva
     pc.onicecandidate = e => { if (e.candidate) signal({ t: 'ice', to: p.id, c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
     // se cayó: al relevo (2,5 s de gracia: en datos móviles hay baches cortos); volvió: de nuevo directo
-    pc.onconnectionstatechange = () => { if (p.pc !== pc) return; const st = pc.connectionState; if (st === 'failed') toRelay(p); if (st === 'disconnected') setTimeout(() => { if (p.pc === pc && pc.connectionState === 'disconnected') toRelay(p); }, 2500); if (st === 'connected') backToDirect(p); emit('peers'); };
-    const wire = (ch, kind) => { ch.binaryType = 'arraybuffer'; p[kind] = ch; ch.onopen = () => { if (p.pc === pc && p.r && p.r.readyState === 'open') { const was = p.via; p.open = true; p.via = route(pc); p.routeChecked = false; p.relayN = 0; flush(p); emit('peers'); if (was === 'relay') emit('status', { direct: p.id }); } }; ch.onmessage = e => onData(p, e.data, kind === 'r'); ch.onclose = () => { if (p[kind] === ch) p[kind] = null; }; };
+    pc.onconnectionstatechange = () => { if (p.pc !== pc) return; const st = pc.connectionState; if (st === 'failed') toRelay(p); if (st === 'disconnected') setTimeout(() => { if (p.pc === pc && pc.connectionState === 'disconnected') toRelay(p); }, graceMs()); if (st === 'connected') backToDirect(p); emit('peers'); };
+    const wire = (ch, kind) => { ch.binaryType = 'arraybuffer'; p[kind] = ch; ch.onopen = () => { if (p.pc === pc && p.r && p.r.readyState === 'open') { const was = p.via; p.open = true; if (!p.preferRelay && was !== 'p2p' && was !== 'turn') newPath(p, 0); p.via = p.preferRelay ? 'relay' : route(pc); p.routeChecked = false; p.relayN = 0; flush(p); emit('peers'); if (was === 'relay') emit('status', { direct: p.id }); } }; ch.onmessage = e => onData(p, e.data, kind === 'r'); ch.onclose = () => { if (p[kind] === ch) p[kind] = null; }; };
     // canales negociados: los dos lados los crean igual (sin esperar a «ondatachannel»)
     wire(pc.createDataChannel('r', { negotiated: true, id: 1, ordered: true }), 'r');
     wire(pc.createDataChannel('u', { negotiated: true, id: 2, ordered: false, maxRetransmits: 0 }), 'u');
@@ -189,15 +196,49 @@ const Net = (() => {
   }
   function route(pc) { return 'p2p'; }
   async function refineRoute(p) { // ¿directo o por TURN? (para mostrarlo en la sala)
-    try { const st = await p.pc.getStats(); let pair = null; st.forEach(s => { if (s.type === 'transport' && s.selectedCandidatePairId) pair = st.get(s.selectedCandidatePairId); }); if (!pair) st.forEach(s => { if (s.type === 'candidate-pair' && s.nominated && s.state === 'succeeded') pair = s; }); if (pair) { const lc = st.get(pair.localCandidateId), rc = st.get(pair.remoteCandidateId); p.via = (lc && lc.candidateType === 'relay') || (rc && rc.candidateType === 'relay') ? 'turn' : 'p2p'; } } catch (e) { /* nada */ }
+    try { const st = await p.pc.getStats(); let pair = null; st.forEach(s => { if (s.type === 'transport' && s.selectedCandidatePairId) pair = st.get(s.selectedCandidatePairId); }); if (!pair) st.forEach(s => { if (s.type === 'candidate-pair' && s.nominated && s.state === 'succeeded') pair = s; }); if (pair && p.via !== 'relay') { const lc = st.get(pair.localCandidateId), rc = st.get(pair.remoteCandidateId); p.via = (lc && lc.candidateType === 'relay') || (rc && rc.candidateType === 'relay') ? 'turn' : 'p2p'; } } catch (e) { /* nada */ }
   }
   // relevo = solo mientras la conexión directa no sirve: el anfitrión vuelve a intentarla (6 s, 15 s, 30 s, 45 s…) y, si la
   // misma conexión revive (bache de la red), se vuelve a ella sola. Antes, un bache de unos segundos dejaba la partida
   // por el relevo lento hasta el final.
-  function toRelay(p) { if (p.via === 'relay') return; p.via = 'relay'; p.open = true; p.relayAt = Date.now(); p.retryAt = Date.now() + (p.relayN ? Math.min(45000, 15000 * p.relayN) : 6000); flush(p); emit('peers'); }
+  // con el servidor propio el relevo es bueno: se pasa a él más rápido (1 s de gracia) y la conexión nueva se intenta antes
+  const srvOn = () => !!(S.sig && S.sig.srv);
+  const graceMs = () => (srvOn() ? 1000 : 2500);
+  // al cambiar de camino, el ping se vuelve a medir en el camino nuevo (el promedio del otro confundía la elección)
+  const newPath = (p, rtt) => { p.pathT = Date.now(); p.rtt = rtt || 0; p.slowN = p.fastN = 0; };
+  function toRelay(p) { if (p.via === 'relay') return; newPath(p, p.rrtt); p.via = 'relay'; p.open = true; p.relayAt = Date.now(); p.retryAt = Date.now() + (p.relayN ? Math.min(45000, 15000 * p.relayN) : srvOn() ? 3000 : 6000); flush(p); emit('peers'); }
   const directOk = p => !!(p.pc && pcState(p) === 'connected' && p.r && p.r.readyState === 'open' && p.u && p.u.readyState === 'open');
-  function backToDirect(p) { if (p.via !== 'relay' || !directOk(p)) return; p.via = 'p2p'; p.routeChecked = false; p.relayN = 0; flush(p); emit('peers'); emit('status', { direct: p.id }); }
+  function backToDirect(p) { if (p.via !== 'relay' || !directOk(p) || p.preferRelay) return; newPath(p, p.drtt); p.via = 'p2p'; p.routeChecked = false; p.relayN = 0; flush(p); emit('peers'); emit('status', { direct: p.id }); }
   function flush(p) { const q = p.pend; p.pend = []; for (const [d, rel] of q) rawSend(p, d, rel); }
+  // por el canal directo sí o sí (para medir lo directo mientras se va por el relevo del servidor)
+  function directSend(p, o) {
+    const ch = p.u && p.u.readyState === 'open' ? p.u : null; if (!ch) return; const s = JSON.stringify(o);
+    if (!SIM.on) { try { ch.send(s); } catch (e) { /* nada */ } return; }
+    const now = performance.now(); if (simCut(now, { via: 'p2p' }) || Math.random() < SIM.loss) return; setTimeout(() => { try { ch.send(s); } catch (e) { /* nada */ } }, simPath(p, 'p2p', now));
+  }
+  // el camino más rápido: si lo directo (o el TURN que encontró ICE, que puede ser uno público lejano) tarda bastante más que
+  // ir por el servidor propio —medido de verdad: un ping por cada camino cada 2 s—, se va por el servidor y se sigue
+  // midiendo lo directo para volver cuando mejore. Se exige que gane mucho (3 medidas seguidas; ver «need»):
+  // el relevo junta las instantáneas (~30 por segundo) y un poco menos de retraso no compensa verse menos fluido.
+  function relaySend(p, o) { // por el relevo del servidor sí o sí (con la red simulada de las pruebas)
+    const s = JSON.stringify(o); if (!SIM.on) { signal({ t: 'relay', to: p.id, d: s }, true); return; }
+    const now = performance.now(); if (simCut(now, { via: 'relay' }) || Math.random() < SIM.loss) return; setTimeout(() => signal({ t: 'relay', to: p.id, d: s }, true), simPath(p, 'relay', now));
+  }
+  function relayPing(p) { relaySend(p, { $: 'ping', t: performance.now(), r: 1 }); }
+  function choosePath(p) {
+    if (Date.now() - (p.pathT || 0) < 5000) return; // recién cambió de camino: primero medir el nuevo
+    if (!p.preferRelay) {
+      // solo cuando ICE terminó en un TURN (puede ser uno público lejano): ganar 60 ms o un 20 %. Lo directo de verdad entre
+      // dos aparatos no se cambia (casi nunca pierde y, medido en el juego, el ruido del ping hacía cambiar de más)
+      const gain = p.rtt - p.rrtt, need = Math.max(60, p.rtt * 0.2);
+      if (srvOn() && p.open && p.via === 'turn' && p.rtt > 0 && p.rrtt > 0 && gain > need) { if (++p.slowN >= 3) { p.preferRelay = true; p.slowN = 0; p.fastN = 0; p.drtt = p.rtt; toRelay(p); emit('status', { viaServer: p.id }); } }
+      else p.slowN = 0;
+      return;
+    }
+    if (!srvOn()) { p.preferRelay = false; backToDirect(p); return; } // sin servidor: de vuelta a lo directo si está vivo
+    if (!directOk(p)) { p.fastN = 0; return; }
+    if (p.drtt > 0 && p.rtt > 0 && p.drtt < p.rtt - 30) { if (++p.fastN >= 3) { p.preferRelay = false; p.fastN = 0; p.rrtt = p.rtt; backToDirect(p); } } else p.fastN = 0;
+  }
   function rawSend(p, data, rel) {
     const s = typeof data === 'string' ? data : JSON.stringify(data);
     if (!SIM.on) { sendNow(p, s, rel); return; }
@@ -231,7 +272,9 @@ const Net = (() => {
     p.lastSeen = Date.now(); ST.in += typeof raw === 'string' ? raw.length : raw.byteLength || 0; ST.nIn++;
     let m; try { m = JSON.parse(typeof raw === 'string' ? raw : dec.decode(raw)); } catch (e) { return; }
     if (simDrop && performance.now() < simDrop.until) { try { if (simDrop.f(m)) return; } catch (e) { /* nada */ } } // pruebas: «se perdió»
-    if (m && m.$ === 'ping') { rawSend(p, { $: 'pong', t: m.t, h: S.isHost ? performance.now() : undefined }, p.via === 'relay'); return; }
+    if (m && m.$ === 'ping') { if (m.s != null) p.srvRtt = Math.max(0, +m.s || 0); if (m.d) { directSend(p, { $: 'pong', t: m.t, d: 1 }); return; } if (m.r) { if (srvOn()) relaySend(p, { $: 'pong', t: m.t, r: 1 }); return; } rawSend(p, { $: 'pong', t: m.t, h: S.isHost ? performance.now() : undefined }, p.via === 'relay'); return; }
+    if (m && m.$ === 'pong' && m.d) { const rtt = performance.now() - m.t; p.drtt = p.drtt ? p.drtt * 0.7 + rtt * 0.3 : rtt; return; }
+    if (m && m.$ === 'pong' && m.r) { const rtt = performance.now() - m.t; p.rrtt = p.rrtt ? p.rrtt * 0.7 + rtt * 0.3 : rtt; return; }
     if (m && m.$ === 'pong') { const now = performance.now(), rtt = now - m.t; p.rtt = p.rtt ? p.rtt * 0.8 + rtt * 0.2 : rtt; if (m.h != null && !S.isHost) { const off = m.h + rtt / 2 - now; S.clockOff = S.clockOff ? S.clockOff * 0.85 + off * 0.15 : off; } return; }
     if (m && m.$ === 'room' && !S.isHost) { if (p.id !== S.hostId) return; S.room = m.room; S.term = Math.max(S.term, m.room.term | 0); for (const d of m.room.devices || []) if (d.id !== S.hostId) S.dead.delete(d.id); emit('room', m.room); return; }
     if (m && m.$ === 'bye') { dropPeer(p.id); return; }
@@ -296,7 +339,7 @@ const Net = (() => {
   }
 
   /* ---------- la sala ---------- */
-  function roomState() { return { code: S.code, host: S.id, term: S.term, play: S.play || null, devices: [{ id: S.id, info: S.info, host: true, rtt: 0, via: 'local' }].concat([...peers.values()].filter(p => p.info).map(p => ({ id: p.id, info: p.info, rtt: Math.round(p.rtt), via: p.via, open: p.open }))) }; }
+  function roomState() { return { code: S.code, host: S.id, term: S.term, play: S.play || null, devices: [{ id: S.id, info: S.info, host: true, rtt: 0, via: 'local' }].concat([...peers.values()].filter(p => p.info).map(p => ({ id: p.id, info: p.info, rtt: Math.round(p.rtt), via: p.via === 'relay' && srvOn() ? 'srv' : p.via, open: p.open }))) }; }
   function broadcastRoom() { if (!S.isHost) return; const room = roomState(); S.room = room; emit('room', room); for (const p of peers.values()) if (p.open) rawSend(p, { $: 'room', room }, true); }
   let tick = 0, linkT = 0, annN = 0, lastTick = 0;
   function loop() {
@@ -307,7 +350,8 @@ const Net = (() => {
       // no se juzga a nadie por ese silencio (se les da el beneficio de haber hablado justo ahora)
       if (lastTick && now - lastTick > 4500) for (const p of peers.values()) p.lastSeen = Math.max(p.lastSeen, now - 1000);
       lastTick = now;
-      for (const p of peers.values()) { if (p.open) rawSend(p, { $: 'ping', t: performance.now() }, p.via === 'relay'); if (p.via === 'p2p' && p.pc && !p.routeChecked) { p.routeChecked = true; refineRoute(p); } }
+      const myS = S.sig && S.sig.srvRtt ? Math.round(S.sig.srvRtt) : 0;
+      for (const p of peers.values()) { if (p.open) rawSend(p, { $: 'ping', t: performance.now(), s: myS }, p.via === 'relay'); if (p.preferRelay) directSend(p, { $: 'ping', t: performance.now(), d: 1, s: myS }); else if (p.open && p.via !== 'relay' && srvOn()) relayPing(p); if ((p.via === 'p2p' || p.via === 'turn') && p.pc && !p.routeChecked) { p.routeChecked = true; refineRoute(p); } choosePath(p); }
       // silencio largo = se fue (con margen: mientras un aparato carga un juego pesado puede callar varios segundos)
       const gone = p => now - p.lastSeen > (p.pc && p.pc.connectionState === 'connected' ? 60000 : p.via === 'relay' ? 30000 : 20000);
       if (S.isHost) { for (const p of [...peers.values()]) if (gone(p)) dropPeer(p.id); broadcastRoom(); if (++annN % 2 === 0) announce(); }
@@ -321,12 +365,12 @@ const Net = (() => {
     for (const p of [...peers.values()]) {
       if (p.via === 'relay') {
         p.discT = 0;
-        if (directOk(p)) backToDirect(p);
+        if (directOk(p)) { if (!p.preferRelay) backToDirect(p); }
         else if (S.isHost && p.info && !SIM.relay && now >= (p.retryAt || 0)) { p.relayN = (p.relayN || 0) + 1; p.retryAt = now + Math.min(45000, 15000 * p.relayN); p.callT = now; makePC(p, true); } // conexión nueva por debajo
         continue;
       }
       if (!p.pc) { p.discT = 0; continue; }
-      if (pcState(p) === 'disconnected') { if (!p.discT) p.discT = now; else if (now - p.discT >= 2500) toRelay(p); } else p.discT = 0;
+      if (pcState(p) === 'disconnected') { if (!p.discT) p.discT = now; else if (now - p.discT >= graceMs()) toRelay(p); } else p.discT = 0;
     }
   }
   async function start(code, info, host) {
