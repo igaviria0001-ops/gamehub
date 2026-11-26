@@ -130,37 +130,65 @@ const Online = (() => {
   const allModes = g => g.modes.concat((g.net && g.net.extra) || []);
   const mapsFor = (g, m) => (m && Array.isArray(m.maps) ? m.maps : m && m.maps === 'arenas' ? g.arenas || [] : g.maps).filter(x => !(m && m.map) || x[0] === m.map);
   const lenTxt = (g, m, n) => (g.net && g.net.lenTxt && g.net.lenTxt[m.id] ? g.net.lenTxt[m.id](n) : m.lenTxt(n));
-  function evText(g, ev) {
-    if (!g || !ev) return ''; const m = allModes(g).find(x => x.id === ev.mode), mp = (Array.isArray(m && m.maps) ? m.maps : g.maps.concat(g.arenas || [])).find(x => x[0] === ev.map);
-    return [g.name, m && m.name, mp ? mp[1] : m && Array.isArray(m.maps) && !m.maps.length ? '' : 'escenario al azar', m && m.len && ev.len ? lenTxt(g, m, ev.len) : '', ...netOpts(g).filter(o => ev.opts && ev.opts[o.id]).map(o => o.name)].filter(Boolean).join(' · ');
+
+  // foto del juego para el escenario escogido (si hay), o la primera
+  const shotFor = (g, map) => { const pre = (g.shots[0] || '').split('-')[0], k = g.shots.find(x => x === pre + '-' + map); return 'assets/shots/' + (k || g.shots[0]) + '.jpg'; };
+  const logo = g => (GAMEHUB.glogo ? GAMEHUB.glogo(g) : `<h2 class="glogo">${esc(g.name)}</h2>`);
+  const CHARS = [['pick', 'Cada quien elige'], ['random', 'Al azar']];
+  const seatsOf = (g, m) => (m && m.seats) || g.net.seats;
+  const watchOf = (g, m) => !!((m && m.watch) || g.net.watch);
+  // quiénes juegan y quiénes miran (en orden de la sala)
+  function whoPlays(g, m, ps) { const n = seatsOf(g, m); return { play: ps.slice(0, n), rest: ps.slice(n), watch: watchOf(g, m) }; }
+  const pchips = L => L.map(p => `<span class="on-p" style="--c:${esc(p.color)}"><i></i>${esc(p.name)}</span>`).join('');
+  function modeCard(g, x, sel, n) {
+    const nS = seatsOf(g, x), w = watchOf(g, x), camp = Array.isArray(x.maps) && !x.maps.length;
+    const meta = [nS === 2 ? (w && n > 2 ? '👥 juegan 2' : '👥 2') : `👥 2 a ${nS}`, x.mins ? `⏱ ~${x.mins} min` : '', camp ? '🗺️ eligen el nivel' : x.map ? '📍 cancha fija' : ''].filter(Boolean);
+    return `<button class="on-mode" data-onmode="${esc(x.id)}" aria-pressed="${sel}"><b>${esc(x.name)}</b><span>${esc((g.net.desc && g.net.desc[x.id]) || x.desc)}</span><small>${meta.map(t => `<em>${t}</em>`).join('')}</small></button>`;
   }
   function hostPlayHTML(ps) {
     const gs = GAMES(), g = pick && gs.find(x => x.id === pick);
-    const cards = `<div class="on-games">${gs.map(x => `<button class="on-game${x.id === pick ? ' sel' : ''}" data-ong="${x.id}" style="--c1:${x.c1};--c2:${x.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(x.name)}</b><small>${x.net ? (x.net.watch ? `en línea · juegan ${x.net.seats}, los demás miran` : `en línea · hasta ${x.net.seats}`) : 'en línea · pronto'}</small></button>`).join('')}</div>`;
-    const tourBtn = ps.length >= 2 ? `<div class="row" style="margin-top:12px"><button class="btn gold" id="on-tour">🏆 ${GAMEHUB.Tour.T && GAMEHUB.Tour.T.online && !GAMEHUB.Tour.T.done ? 'Seguir el torneo' : 'Torneo con todos'}</button><span class="note" style="margin:0">liga, eliminatoria, rey de la pista… con los ${ps.length} de la sala</span></div>` : '';
-    if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: elige un juego.`}</p>${cards}${tourBtn}`;
-    const ms = netModes(g), m = ms.find(x => x.id === pickEv.mode) || ms[0], maps = mapsFor(g, m), seg = (k, items, v) => `<div class="seg" data-onseg="${k}">${items.map(([id, t]) => `<button data-v="${esc(id)}" aria-pressed="${String(id) === String(v)}">${esc(t)}</button>`).join('')}</div>`;
-    const nS = m.seats || g.net.seats, watch = m.watch || g.net.watch;
-    const over = ps.length > nS ? `<p class="note warn">${m.seats ? 'Este modo' : 'Este juego'} es de ${watch ? '' : 'hasta '}${nS}: juegan ${ps.slice(0, nS).map(p => esc(p.name)).join(' y ')}; ${watch ? 'los demás miran en vivo' : 'los demás esperan'}.</p>` : '';
-    return `<p class="note">Con ${ps.length} jugadores.</p>${cards}
-      <div class="on-cfg" style="--c1:${g.c1};--c2:${g.c2}">
-        <div class="lbl">Modo</div>${seg('mode', ms.map(x => [x.id, x.name]), m.id)}<p class="on-desc">${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</p>
-        ${maps.length > 1 ? `<div class="lbl">Escenario</div>${seg('map', [['', '🎲 Al azar']].concat(maps), pickEv.map || '')}` : ''}
-        ${m.len ? `<div class="lbl">Largo</div>${seg('len', m.len.map(n => [n, lenTxt(g, m, n)]), pickEv.len || m.len[1] || m.len[0])}` : ''}
-        ${(m.noOpts ? [] : netOpts(g)).map(o => `<div class="lbl">${esc(o.name)}</div>${seg('opt:' + o.id, [['0', 'No'], ['1', 'Sí']], pickEv.opts && pickEv.opts[o.id] ? '1' : '0')}<p class="on-desc">${esc(o.desc[0].toUpperCase() + o.desc.slice(1))}.</p>`).join('')}
-        ${over}<div class="row"><button class="btn gold big" id="on-go">¡A jugar!</button><button class="btn ghost" id="on-back">Otro juego</button></div>
+    const cards = `<div class="on-games${g ? ' has-sel' : ''}">${gs.map(x => `<button class="on-game${x.id === pick ? ' sel' : ''}" data-ong="${x.id}" style="${GAMEHUB.gvars ? GAMEHUB.gvars(x) : ''}" ${ps.length < 2 || !x.net ? 'disabled' : ''} aria-pressed="${x.id === pick}">
+        <img src="assets/shots/${x.shots[0]}.jpg" alt="" loading="lazy" decoding="async"><span class="sh"></span>
+        <span class="tx"><span class="num">${x.num} · ${esc(x.kind)}</span>${logo(x)}<small>${x.net ? (x.net.watch ? `juegan ${x.net.seats} · los demás miran` : `de 2 a ${x.net.seats}`) : 'pronto'}</small></span></button>`).join('')}</div>`;
+    const T = GAMEHUB.Tour.T, tourOn = T && T.online && !T.done;
+    const tourBtn = ps.length >= 2 ? `<div class="tbanner on-tb" id="on-tour" role="button" tabindex="0"><span class="cup">🏆</span><div><b>${tourOn ? 'Seguir el torneo' : 'Torneo con todos'}</b><p>Liga, eliminatoria, rey de la pista… con los ${ps.length} de la sala y los 4 juegos.</p></div><span class="btn small">${tourOn ? 'Seguir' : 'Armar uno'} ›</span></div>` : '';
+    if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar: pásales el código.' : `Son ${ps.length}. Escoge un juego (o arma un torneo).`}</p>${cards}${tourBtn}`;
+    const ms = netModes(g), m = ms.find(x => x.id === pickEv.mode) || ms[0], maps = mapsFor(g, m), camp = Array.isArray(m.maps) && !m.maps.length;
+    if (pickEv.mode !== m.id) { pickEv.mode = m.id; if (!maps.some(x => x[0] === pickEv.map)) pickEv.map = ''; if (m.len && !m.len.includes(pickEv.len)) pickEv.len = m.len[1] || m.len[0]; } // (ese modo ya no cabe con tantos jugadores)
+    const seg = (k, items, v) => `<div class="seg" data-onseg="${k}">${items.map(([id, t]) => `<button data-v="${esc(id)}" aria-pressed="${String(id) === String(v)}">${esc(t)}</button>`).join('')}</div>`;
+    const vs = ms.filter(x => !x.coop), co = ms.filter(x => x.coop), W = whoPlays(g, m, ps), pn = g.net.pick;
+    const curMap = maps.find(x => x[0] === pickEv.map);
+    const opts = (m.noOpts ? [] : netOpts(g)).map(o => `<div class="on-f"><span class="lbl">${esc(o.name)}</span>${seg('opt:' + o.id, [['0', 'No'], ['1', 'Sí']], pickEv.opts && pickEv.opts[o.id] ? '1' : '0')}<span class="hint">${esc(o.desc[0].toUpperCase() + o.desc.slice(1))}.</span></div>`).join('');
+    const sum = [m.name, camp ? 'nivel en el mapa' : maps.length > 1 ? (curMap ? curMap[1] : 'escenario al azar') : maps[0] ? maps[0][1] : '', m.len ? lenTxt(g, m, pickEv.len || m.len[1] || m.len[0]) : '', pn ? `${pn[1]}: ${pickEv.chars === 'random' ? 'al azar' : 'cada quien elige'}` : ''].filter(Boolean).join(' · ');
+    return `${cards}
+      <div class="on-cfg" style="${GAMEHUB.gvars ? GAMEHUB.gvars(g) : ''}">
+        <div class="on-hero"><img src="${shotFor(g, pickEv.map)}" alt=""><span class="sh"></span><div class="tx"><span class="num">${g.num} · ${esc(g.tag)}</span>${logo(g)}</div><button class="btn small ghost" id="on-back">Otro juego</button></div>
+        <div class="on-sec"><span class="lbl">Uno contra otro</span><div class="on-modes">${vs.map(x => modeCard(g, x, x.id === m.id, ps.length)).join('')}</div></div>
+        ${co.length ? `<div class="on-sec"><span class="lbl">En equipo · todos juntos</span><div class="on-modes">${co.map(x => modeCard(g, x, x.id === m.id, ps.length)).join('')}</div></div>` : ''}
+        ${camp ? `<div class="on-camp">🗺️ <span>Al entrar se abre el mapa de ${esc(m.name.toLowerCase())}: el anfitrión escoge el nivel entre los que tiene abiertos, y lo que ganen queda guardado en el aparato de cada uno.</span></div>` : ''}
+        ${!camp && maps.length > 1 ? `<div class="on-sec"><span class="lbl">Escenario</span><div class="chips">${[['', '🎲 Al azar']].concat(maps).map(([id, t]) => `<button class="chipbtn" data-onmap="${esc(id)}" aria-pressed="${(pickEv.map || '') === id}">${esc(t)}</button>`).join('')}</div></div>` : ''}
+        <div class="on-row">
+          ${m.len ? `<div class="on-f"><span class="lbl">Largo</span>${seg('len', m.len.map(n => [n, lenTxt(g, m, n)]), pickEv.len || m.len[1] || m.len[0])}</div>` : ''}
+          ${pn ? `<div class="on-f"><span class="lbl">${esc(pn[1][0].toUpperCase() + pn[1].slice(1))}</span>${seg('chars', CHARS, pickEv.chars || 'pick')}<span class="hint">${pickEv.chars === 'random' ? `A cada uno le toca un ${esc(pn[0])} al azar, sin repetir.` : `Antes de empezar, cada uno escoge su ${esc(pn[0])} (20 s); arranca apenas todos confirman.`}</span></div>` : ''}
+          ${opts}
+        </div>
+        <div class="on-who"><span class="lbl">Juegan</span>${pchips(W.play)}${W.rest.length ? `<span class="lbl">${W.watch ? 'Miran en vivo' : 'Esperan'}</span>${pchips(W.rest)}` : ''}</div>
+        <div class="on-go"><div><b>${esc(g.name)}</b><small>${esc(sum)}</small></div><button class="btn gold big" id="on-go">¡A jugar!</button></div>
       </div>`;
   }
   function bindHostPlay(root) {
-    if ($('#on-tour', root)) $('#on-tour', root).onclick = () => { const T = GAMEHUB.Tour.T; if (T && T.online && !T.done) GAMEHUB.go('torneo'); else GAMEHUB.onlineTour(players(Net.room)); };
+    const tb = $('#on-tour', root); if (tb) { const go = () => { const T = GAMEHUB.Tour.T; if (T && T.online && !T.done) GAMEHUB.go('torneo'); else GAMEHUB.onlineTour(players(Net.room)); }; tb.onclick = go; tb.onkeydown = e => { if (e.key === 'Enter') go(); }; }
+    const click = () => { try { GAMEHUB.Snd.click(); } catch (e) { /* nada */ } };
     $$('[data-ong]', root).forEach(b => b.onclick = () => { const g = GAMES().find(x => x.id === b.dataset.ong); if (!g || !g.net) { note = 'Ese juego todavía no está listo para jugar en línea (en construcción).'; render(); return; }
-      if (pick !== g.id) { pick = g.id; const m = netModes(g)[0]; pickEv = { mode: m.id, map: '', len: m.len ? m.len[1] || m.len[0] : 0 }; sendPick(); } note = ''; render(); });
-    $$('[data-onseg]', root).forEach(sg => sg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = sg.dataset.onseg, v = b.dataset.v; if (k.startsWith('opt:')) { pickEv.opts = Object.assign({}, pickEv.opts, { [k.slice(4)]: v === '1' }); sendPick(); render(); return; } pickEv[k] = k === 'len' ? +v : v;
-      if (k === 'mode') { const g = GAMES().find(x => x.id === pick), m = allModes(g).find(x => x.id === v); if (!mapsFor(g, m).some(x => x[0] === pickEv.map)) pickEv.map = ''; if (m.len && !m.len.includes(pickEv.len)) pickEv.len = m.len[1] || m.len[0]; }
-      sendPick(); render(); }));
+      click(); if (pick !== g.id) { pick = g.id; const m = netModes(g)[0]; pickEv = { mode: m.id, map: '', len: m.len ? m.len[1] || m.len[0] : 0, chars: (pickEv && pickEv.chars) || 'pick' }; sendPick(); } note = ''; render();
+      requestAnimationFrame(() => { const c = $('.on-cfg', root); if (c && c.getBoundingClientRect().top > innerHeight * 0.6) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); });
+    $$('[data-onmode]', root).forEach(b => b.onclick = () => { const g = GAMES().find(x => x.id === pick), m = allModes(g).find(x => x.id === b.dataset.onmode); if (!m) return; click(); pickEv.mode = m.id;
+      if (!mapsFor(g, m).some(x => x[0] === pickEv.map)) pickEv.map = ''; if (m.len && !m.len.includes(pickEv.len)) pickEv.len = m.len[1] || m.len[0]; sendPick(); render(); });
+    $$('[data-onmap]', root).forEach(b => b.onclick = () => { click(); pickEv.map = b.dataset.onmap; sendPick(); render(); });
+    $$('[data-onseg]', root).forEach(sg => sg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = sg.dataset.onseg, v = b.dataset.v; click(); if (k.startsWith('opt:')) { pickEv.opts = Object.assign({}, pickEv.opts, { [k.slice(4)]: v === '1' }); sendPick(); render(); return; } pickEv[k] = k === 'len' ? +v : v; sendPick(); render(); }));
     if ($('#on-go', root)) $('#on-go', root).onclick = () => { const g = GAMES().find(x => x.id === pick); if (!g) return; const m = allModes(g).find(x => x.id === pickEv.mode), maps = mapsFor(g, m);
-      const map = pickEv.map || (maps[Math.floor(Math.random() * maps.length)] || [])[0]; startGame(g, { mode: pickEv.mode, map, rounds: pickEv.len || 3, len: pickEv.len || 0, opts: Object.assign({}, pickEv.opts) }); };
-    if ($('#on-back', root)) $('#on-back', root).onclick = () => { pick = null; pickEv = null; sendPick(); render(); };
+      const map = pickEv.map || (maps[Math.floor(Math.random() * maps.length)] || [])[0]; startGame(g, { mode: pickEv.mode, map, rounds: pickEv.len || 3, len: pickEv.len || 0, opts: Object.assign({}, pickEv.opts), chars: g.net.pick ? pickEv.chars || 'pick' : undefined }); };
+    if ($('#on-back', root)) $('#on-back', root).onclick = () => { click(); pick = null; pickEv = null; sendPick(); render(); };
   }
   // los demás ven lo que el anfitrión está armando
   function sendPick() { Net.send('*', { $: 'pick', game: pick, ev: pickEv }, true); if (pick) GAMEHUB.Launcher.preload(pick); }
@@ -230,7 +258,7 @@ const Online = (() => {
     const ps = players(Net.room), byName = id => { const p = T.players.find(x => x.id === id); return p && ps.find(q => q.name.trim().toLowerCase() === p.name.trim().toLowerCase()); };
     const a = byName(ev.j1), b = byName(ev.j2); if (!a || !b) return `Falta en la sala: ${[!a && ev.j1, !b && ev.j2].filter(Boolean).map(id => (T.players.find(x => x.id === id) || {}).name).join(' y ')}.`;
     const nm = id => (T.players.find(x => x.id === id) || {}).name;
-    startGame(g, { mode: ev.mode, map: ev.map, rounds: ev.rounds || 3, len: ev.rounds || 0, tour: true }, [a, b], { id: ev.id, n: ev.n, j1: ev.j1, j2: ev.j2, title: `Prueba ${ev.n}: ${nm(ev.j1)} contra ${nm(ev.j2)}` });
+    startGame(g, { mode: ev.mode, map: ev.map, rounds: ev.rounds || 3, len: ev.rounds || 0, tour: true, chars: ev.chars || T.rules.chars || 'pick', opts: ev.opts }, [a, b], { id: ev.id, n: ev.n, j1: ev.j1, j2: ev.j2, title: `Prueba ${ev.n}: ${nm(ev.j1)} contra ${nm(ev.j2)}` });
     return '';
   }
   function devLocal(p) { if (typeof p.li === 'number') return p.li; const d = (Net.room.devices || []).find(x => x.id === p.dev); return d ? Math.max(0, (d.info.players || []).findIndex(q => q.name === p.name)) : 0; }
@@ -241,9 +269,18 @@ const Online = (() => {
   function clientPlayHTML(connected) {
     if (!connected) return '<p class="note">Conectando con el anfitrión…</p>';
     const g = lastPick && GAMES().find(x => x.id === lastPick.game);
-    return g ? `<div class="on-next" style="--c1:${g.c1};--c2:${g.c2}"><span class="lbl">EL ANFITRIÓN PREPARA</span><b>${esc(evText(g, lastPick.ev).split(' · ')[0])}</b><small>${esc(evText(g, lastPick.ev).split(' · ').slice(1).join(' · '))}</small></div>` : '<p class="note">Esperando a que el anfitrión elija…</p>';
+    if (!g) return '<div class="on-idle"><span class="sp"></span><p class="note">El anfitrión está escogiendo el juego…</p></div>';
+    const ev = lastPick.ev || {}, m = allModes(g).find(x => x.id === ev.mode), maps = m ? mapsFor(g, m) : [], camp = m && Array.isArray(m.maps) && !m.maps.length, mp = maps.find(x => x[0] === ev.map), pn = g.net && g.net.pick;
+    const W = m ? whoPlays(g, m, players(Net.room)) : null, me = W && W.play.some(p => p.dev === Net.id);
+    const bits = [camp ? 'el nivel se escoge en el mapa' : maps.length > 1 ? (mp ? mp[1] : 'escenario al azar') : maps[0] ? maps[0][1] : '', m && m.len && ev.len ? lenTxt(g, m, ev.len) : '', pn ? `${pn[1]}: ${ev.chars === 'random' ? 'al azar' : 'cada quien elige'}` : '', ...netOpts(g).filter(o => ev.opts && ev.opts[o.id]).map(o => o.name)].filter(Boolean);
+    return `<div class="on-cfg on-peek" style="${GAMEHUB.gvars ? GAMEHUB.gvars(g) : ''}">
+      <div class="on-hero"><img src="${shotFor(g, ev.map)}" alt=""><span class="sh"></span><div class="tx"><span class="num">EL ANFITRIÓN PREPARA</span>${logo(g)}</div></div>
+      ${m ? `<div class="on-pm"><b>${esc(m.name)}</b><span>${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</span>${bits.length ? `<div class="chips">${bits.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}</div>` : ''}
+      ${W ? `<div class="on-who"><span class="lbl">Juegan</span>${pchips(W.play)}${W.rest.length ? `<span class="lbl">${W.watch ? 'Miran en vivo' : 'Esperan'}</span>${pchips(W.rest)}` : ''}</div>` : ''}
+      <p class="note on-pn">${me ? (pn && ev.chars !== 'random' ? `Cuando el anfitrión dé «¡A jugar!», escoges tu ${esc(pn[0])}.` : 'Cuando el anfitrión dé «¡A jugar!», arranca aquí solo.') : 'Esta vez te toca mirar: la partida se abre aquí en vivo.'}</p>
+    </div>`;
   }
-  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0, opts: m.ev.opts && typeof m.ev.opts === 'object' ? Object.fromEntries(Object.entries(m.ev.opts).filter(([k, v]) => /^\w{1,20}$/.test(k) && typeof v === 'boolean')) : {} } : {} } : null; if (lastPick && lastPick.game) GAMEHUB.Launcher.preload(lastPick.game); if (visible()) render(); } });
+  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0, chars: m.ev.chars === 'random' ? 'random' : 'pick', opts: m.ev.opts && typeof m.ev.opts === 'object' ? Object.fromEntries(Object.entries(m.ev.opts).filter(([k, v]) => /^\w{1,20}$/.test(k) && typeof v === 'boolean')) : {} } : {} } : null; if (lastPick && lastPick.game) GAMEHUB.Launcher.preload(lastPick.game); if (visible()) render(); } });
   // al entrar alguien nuevo, el anfitrión le cuenta qué está armando
   Net.on('peers', () => { if (Net.isHost && pick) sendPick(); });
   // los remotos: el anfitrión arrancó una partida → abrirla aquí también

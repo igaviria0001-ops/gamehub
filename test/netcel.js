@@ -7,7 +7,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] });
   const ctx = await b.newContext({ hasTouch: true, isMobile: true, deviceScaleFactor: 2, userAgent: devices['Pixel 7'].userAgent }); const errs = [];
-  await ctx.addInitScript(() => { window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 160))); });
+  await ctx.addInitScript(() => { window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 160))); });
   const page = async (w, h) => { const p = await ctx.newPage(); await p.setViewportSize({ width: w, height: h }); p.on('pageerror', e => errs.push(e.message)); await p.goto(URL); await wait(800); return p; };
   const H = await page(1180, 820), C = await page(844, 390);
   await H.fill('[data-pname="0"]', 'Tablet'); await H.click('#on-host'); await wait(400);

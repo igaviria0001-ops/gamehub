@@ -18,6 +18,10 @@ run tyaFiesta env FIESTA=1 node test/nettya.js
 run vtg env VIEW=$V node test/netvtg.js
 run vtgModos env VIEW=$V node test/netvtgmodos.js
 run torneo node test/nettour.js
+run elegir node test/netelige.js
+run elegirVtg env VIEW=640x360 G=vertigo node test/netelige.js
+run elegirTyA env G=tira-y-afloja node test/netelige.js
+run elegirAzar env CH=random G=ventolera node test/netelige.js
 run celTyA node test/netcel.js
 run celVto env JUEGO=ventolera node test/netcel.js
 run sucesion node test/netsucc.js

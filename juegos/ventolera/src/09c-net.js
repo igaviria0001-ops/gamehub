@@ -37,8 +37,15 @@ const NetGame = (() => {
   const rgb = h => { const n = parseInt(String(h).slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
   NetPlay.onStart(o => { o.seats.forEach((s, i) => { if (s && /^#[0-9a-f]{6}$/i.test(s.color)) { const c = rgb(s.color); PLAYER_COLORS[i] = { main: s.color, glow: c.join(','), deep: '#' + c.map(v => Math.round(v * 0.6).toString(16).padStart(2, '0')).join(''), name: s.name }; } }); });
   const okLook = v => (typeof v === 'number' && v >= 0 && v < 9 ? v : NetPlay.okId(v) || 0);
+  const PICK_SUB = { guacamaya: 'equilibrada: de todo un poco', colibri: 'la más rápida y ágil', tucan: 'pico de dos cañones', condor: 'blindado y pesado' };
+  const PICK_COL = { guacamaya: ['#ff5a3c', '#2a6ad8'], colibri: ['#3cf0b0', '#1a6a8a'], tucan: ['#ffb020', '#1a1a2a'], condor: ['#e8e8f0', '#2a2a36'] };
   NetPlay.gate({
-    me(li) { const c = Game.cfg; return { sp: c.species[li], look: c.looks[li], trail: c.trails[li] }; },
+    me(li, id) { const c = Game.cfg; if (SPECIES[id] && id !== c.species[li]) { let look = 0; try { look = Vestidor.V.eq(li, 'paint', id); } catch (e) { look = 0; } return { sp: id, look, trail: c.trails[li] }; } return { sp: c.species[li], look: c.looks[li], trail: c.trails[li] }; },
+    // elegir pájaro antes de cada partida en línea (con la pintura que cada uno tiene puesta)
+    pick: { key: 'sp', what: 'tu pájaro', list: () => SPECIES_ORDER.filter(k => SPECIES[k]).map(k => ({ id: k, name: SPECIES[k].name, sub: PICK_SUB[k] || '', c1: PICK_COL[k][0], c2: PICK_COL[k][1] })),
+      art(cv, id, li) { const c = cv.getContext('2d'), sp = SPECIES[id], W = cv.width; let look = 0; try { look = Vestidor.V.eq(li, 'paint', id); } catch (e) { look = 0; }
+        const fake = { sp, look, x: 0, y: 0, a: -0.12, c: 1, perch: null, flapPh: 1.2, rollT: 0, stun: 0, facing: 1, boosting: false, hitT: 0, shield: 0 }, s = Math.min(W / 84, W / 48) / sp.size * 1.12;
+        c.save(); c.translate(W / 2 - 4, W / 2 + 6); c.scale(s, s); ArtPilot.draw(c, fake, 0.4, PLAYER_COLORS[li % PLAYER_COLORS.length]); c.restore(); } },
     make(want, ev) {
       const S = NetPlay.seats, mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel';
       const arena = ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];

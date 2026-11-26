@@ -463,7 +463,7 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-big { font: 900 clamp(38px, 7vw, 64px)/1 var(--display, var(--body)); letter-spacing: .18em; background: linear-gradient(180deg, #fff, #d4b3ff 60%, #ff9be6); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .on-sum { color: var(--mute); font-weight: 800; } .on-sum b { color: var(--text); }
 .on-ping { font-weight: 900; } .on-ping.ok, .on-via.ok { color: var(--ok); } .on-ping.mid, .on-via.mid { color: var(--gold); } .on-ping.bad, .on-via.bad { color: var(--bad); }
-.on-devs { display: grid; gap: 10px; margin: 6px 0 4px; }
+.on-devs { display: grid; gap: 10px; margin: 6px 0 4px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
 .on-dev { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; background: rgba(255,255,255,.035); }
 .on-dev.me { border-color: var(--line2); background: rgba(255,255,255,.06); }
 .on-dh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -477,19 +477,69 @@ main { position: relative; flex: 1; min-height: 0; }
 .on-p { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px; background: rgba(255,255,255,.07); font-weight: 900; font-size: 13.5px; }
 .on-p i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
 .on-me { margin-top: 8px; } .on-me summary { cursor: pointer; color: var(--mute); font-weight: 800; font-size: 13.5px; padding: 6px 0; }
-.on-games { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 10px; }
-.on-game { border: 0; border-radius: 16px; padding: 16px 14px; text-align: left; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--c1), var(--c2)); box-shadow: 0 10px 26px rgba(0,0,0,.35); display: flex; flex-direction: column; gap: 4px; font: inherit; }
-.on-game b { font-size: 17px; font-weight: 900; } .on-game small { opacity: .85; font-weight: 800; }
-.on-game[disabled] { opacity: .45; cursor: default; }
 .on-note { color: var(--gold); font-weight: 800; word-break: break-all; }
 
-/* sala en línea: elegir modo, escenario y largo */
-.on-game.sel { outline: 3px solid var(--text); outline-offset: 2px; }
-.on-cfg { margin-top: 14px; display: grid; gap: 8px; padding: 16px; border-radius: 18px; background: linear-gradient(135deg, color-mix(in srgb, var(--c1) 22%, transparent), color-mix(in srgb, var(--c2) 14%, transparent)); border: 1px solid var(--line2); }
-.on-cfg .lbl { font-size: 11.5px; font-weight: 900; letter-spacing: 1.4px; color: var(--mute); margin-top: 4px; }
-.on-cfg .seg { align-self: flex-start; max-width: 100%; }
-.on-cfg .on-desc { margin: 0; color: var(--mute); font-size: 13.5px; }
-.on-cfg .row { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; }
+/* sala en línea: los juegos con su foto y su logo (como en la portada) */
+.on-games { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
+@media (max-width: 760px) { .on-games { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.on-game { position: relative; overflow: hidden; isolation: isolate; border: 0; border-radius: 18px; padding: 0; min-height: 132px; text-align: left; cursor: pointer; color: #fff; font: inherit; background: #120c26; box-shadow: 0 10px 26px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.08); transition: transform .18s, box-shadow .18s, filter .18s; }
+.on-game img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transform: scale(1.04); transition: transform .5s; }
+.on-game .sh { position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(8,5,22,.05) 0%, rgba(8,5,22,.55) 55%, rgba(8,5,22,.92) 100%); }
+.on-game::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, var(--c1), var(--c2)); }
+.on-game .tx { position: absolute; left: 12px; right: 10px; bottom: 10px; display: grid; gap: 4px; }
+.on-game .num { font: 400 10.5px/1 var(--display); letter-spacing: .16em; color: var(--c1); text-shadow: 0 1px 6px rgba(0,0,0,.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.on-game .glogo { font-size: clamp(20px, 2.3vw, 28px); white-space: nowrap; }
+.on-game small { font-weight: 800; font-size: 12px; color: rgba(255,255,255,.82); }
+.on-game:hover:not([disabled]) { transform: translateY(-3px); box-shadow: 0 16px 34px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.16); }
+.on-game:hover:not([disabled]) img { transform: scale(1.1); }
+.on-game[disabled] { opacity: .45; cursor: default; filter: grayscale(.6); }
+.on-games.has-sel .on-game:not(.sel) { filter: saturate(.55) brightness(.72); }
+.on-game.sel { box-shadow: 0 0 0 2px var(--c1), 0 0 0 4px rgba(255,255,255,.85), 0 16px 40px color-mix(in srgb, var(--c1) 45%, transparent); transform: translateY(-2px); }
+.on-tb { margin: 12px 0 0; cursor: pointer; }
+.on-tb .cup { font-size: 30px; display: grid; place-items: center; }
+/* lo escogido: modo, escenario, largo, personajes y quién juega */
+.on-cfg { margin-top: 16px; display: grid; gap: 16px; padding: 0 0 16px; border-radius: 22px; overflow: hidden; background: linear-gradient(160deg, color-mix(in srgb, var(--c1) 16%, rgba(12,8,30,.6)), color-mix(in srgb, var(--c2) 10%, rgba(12,8,30,.6))); border: 1px solid color-mix(in srgb, var(--c1) 45%, var(--line)); }
+.on-cfg > *:not(.on-hero) { margin: 0 16px; }
+.on-hero { position: relative; isolation: isolate; min-height: 150px; display: flex; align-items: flex-end; padding: 16px 18px; }
+.on-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+.on-hero .sh { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8,5,22,.9) 0%, rgba(8,5,22,.55) 45%, rgba(8,5,22,.1) 100%), linear-gradient(0deg, rgba(8,5,22,.75), transparent 60%); }
+.on-hero .tx { display: grid; gap: 8px; }
+.on-hero .num { font: 400 12px/1 var(--display); letter-spacing: .2em; color: var(--c1); }
+.on-hero .glogo { font-size: clamp(30px, 4.4vw, 48px); }
+.on-hero .btn { position: absolute; top: 12px; right: 12px; backdrop-filter: blur(6px); background: rgba(10,6,24,.55); }
+.on-sec { display: grid; gap: 8px; }
+.on-cfg .lbl { font: 400 11.5px/1 var(--display); letter-spacing: .14em; color: var(--c1); text-transform: uppercase; }
+.on-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(205px, 1fr)); gap: 8px; }
+.on-mode { text-align: left; display: grid; gap: 4px; align-content: start; padding: 12px 14px; border-radius: 16px; border: 2px solid var(--line); background: rgba(255,255,255,.045); color: var(--text); font: inherit; cursor: pointer; transition: border-color .15s, background .15s, transform .15s; }
+.on-mode b { font: 400 15px/1.1 var(--display); letter-spacing: .02em; }
+.on-mode span { font-size: 12.5px; color: var(--mute); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.on-mode small { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.on-mode em { font-style: normal; font-size: 11px; font-weight: 900; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,.08); color: #d6dcf2; }
+.on-mode:hover { border-color: var(--line2); background: rgba(255,255,255,.08); }
+.on-mode[aria-pressed="true"] { border-color: var(--c1); background: color-mix(in srgb, var(--c1) 18%, rgba(255,255,255,.04)); box-shadow: 0 0 0 1px var(--c1) inset, 0 0 26px color-mix(in srgb, var(--c1) 30%, transparent); transform: translateY(-1px); }
+.on-mode[aria-pressed="true"] span { color: #e7ebfb; }
+.on-camp { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; background: rgba(255,211,107,.1); border: 1px solid rgba(255,211,107,.35); color: #ffe7ad; font-weight: 700; font-size: 13.5px; line-height: 1.4; }
+.on-cfg .chipbtn[aria-pressed="true"] { background: var(--c1); border-color: var(--c1); color: #140c22; }
+.on-row { display: flex; flex-wrap: wrap; gap: 14px 22px; }
+.on-f { display: grid; gap: 7px; align-content: start; max-width: 100%; }
+.on-f .seg { align-self: start; justify-self: start; max-width: 100%; }
+.on-f .hint { font-size: 12.5px; color: var(--mute); max-width: 340px; line-height: 1.35; }
+.on-who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.on-who .lbl { margin-right: 2px; } .on-who .lbl + .on-p { margin-left: 0; } .on-who .on-p ~ .lbl { margin-left: 10px; }
+.on-go { display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 16px; border-radius: 18px; background: rgba(8,5,22,.55); border: 1px solid var(--line); }
+.on-go > div { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.on-go b { font: 400 17px/1.1 var(--display); letter-spacing: .02em; }
+.on-go small { color: var(--mute); font-weight: 800; font-size: 13px; }
+.on-go .btn { flex: none; }
+@media (max-width: 560px) { .on-go { flex-direction: column; align-items: stretch; text-align: center; } .on-hero { min-height: 120px; } .on-cfg > *:not(.on-hero) { margin: 0 12px; } }
+/* lo que ven los demás mientras el anfitrión escoge */
+.on-peek .on-pm { display: grid; gap: 6px; }
+.on-peek .on-pm b { font: 400 20px/1.1 var(--display); }
+.on-peek .on-pm span { color: var(--mute); font-size: 14px; }
+.on-peek .on-pn { margin-top: 0; margin-bottom: 0; }
+.on-idle { display: flex; align-items: center; gap: 12px; }
+.on-idle .sp { width: 22px; height: 22px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: var(--acc); animation: onSpin .9s linear infinite; }
+@keyframes onSpin { to { transform: rotate(360deg); } }
 .on-cfg .note.warn { color: #ffcf6a; margin: 0; }
 .on-next { display: grid; gap: 4px; padding: 16px 18px; border-radius: 18px; background: linear-gradient(135deg, color-mix(in srgb, var(--c1) 30%, transparent), color-mix(in srgb, var(--c2) 18%, transparent)); border: 1px solid var(--line2); }
 .on-next .lbl { font-size: 11.5px; font-weight: 900; letter-spacing: 1.4px; color: var(--mute); }
@@ -526,6 +576,8 @@ main { position: relative; flex: 1; min-height: 0; }
 .nprobe .npv { margin: 2px 0 0; }
 .npturn { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; max-width: 640px; } .npturn .textin { max-width: none; min-width: 0; }
 @media (max-width: 620px) { .npturn { grid-template-columns: 1fr; } }
+.on-codebox .lbl { font: 400 12px/1 var(--display); letter-spacing: .22em; color: var(--acc); }
+@media (max-width: 560px) { .on-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; } .on-mode { padding: 10px 10px; } .on-mode b { font-size: 13px; } .on-mode span { font-size: 11.5px; -webkit-line-clamp: 3; } .on-mode em { font-size: 10px; padding: 2px 5px; } }
 
 </style>
 </head>
@@ -572,8 +624,8 @@ main { position: relative; flex: 1; min-height: 0; }
 const GAMES = [
   {
     id: 'tira-y-afloja', file: 'games/tira-y-afloja.html', name: 'Tira y Afloja', short: 'Tira y Afloja', num: '01',
-    net: { seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], opts: ['fiesta'], watch: true,
-      extra: [{ id: 'campana', name: 'Campaña', seats: 2, watch: true, maps: [], noOpts: true, desc: 'Las 30 salas y los 6 jefes de la campaña, juntos: el anfitrión elige en su mapa la sala o el jefe (de lo que tiene abierto) y lo que ganen queda guardado en el aparato de cada uno.' }],
+    net: { pick: ['chicle', 'chicles'], seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], opts: ['fiesta'], watch: true,
+      extra: [{ id: 'campana', name: 'Campaña', coop: true, seats: 2, watch: true, maps: [], noOpts: true, desc: 'Las 30 salas y los 6 jefes de la campaña, juntos: el anfitrión elige en su mapa la sala o el jefe (de lo que tiene abierto) y lo que ganen queda guardado en el aparato de cada uno.' }],
       desc: { caneca: 'Echa al otro a la caneca. Juegan dos; los demás miran en vivo.' } },
     tag: 'Duelo de chicle', kind: 'Física y empujones',
     desc: 'Dos chicles unidos por un hilo pelean en el colegio: tirar te hace pesado, aflojar te vuelve ágil. Empuja, embiste, salta en tirachinas y echa al otro a la caneca.',
@@ -596,7 +648,7 @@ const GAMES = [
   },
   {
     id: 'ventolera', file: 'games/ventolera.html', name: 'Ventolera', short: 'Ventolera', num: '02',
-    net: { seats: 4, mode: 'duel', modes: ['duel', 'targets', 'case', 'race'], extra: [{ id: 'boss', name: 'Jefe en pareja', desc: 'Todos juntos contra La Sombra, un dirigible armado con torretas y drones: vidas compartidas, sin fuego amigo.' }, { id: 'trav', name: 'Travesía para dos', seats: 2, watch: true, maps: [], desc: 'Los diez desafíos en equipo de la Travesía (relevos, entregas, oleadas y La Sombra reforzada): el anfitrión elige la etapa entre las que tiene abiertas y lo que ganen queda guardado en el aparato de cada uno.' }], desc: { duel: 'Todos contra todos: la ronda es del último que quede en el aire.', targets: 'Revienta más globos y drones que los demás en 90 segundos.', case: 'Quien lleva el maletín suma; embestirlo se lo roba.', race: 'Aros en orden a 3 vueltas, con armas: gana quien cruce primero.' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
+    net: { pick: ['pájaro', 'pájaros'], seats: 4, mode: 'duel', modes: ['duel', 'targets', 'case', 'race'], extra: [{ id: 'boss', name: 'Jefe en pareja', coop: true, desc: 'Todos juntos contra La Sombra, un dirigible armado con torretas y drones: vidas compartidas, sin fuego amigo.' }, { id: 'trav', name: 'Travesía para dos', coop: true, seats: 2, watch: true, maps: [], desc: 'Los diez desafíos en equipo de la Travesía (relevos, entregas, oleadas y La Sombra reforzada): el anfitrión elige la etapa entre las que tiene abiertas y lo que ganen queda guardado en el aparato de cada uno.' }], desc: { duel: 'Todos contra todos: la ronda es del último que quede en el aire.', targets: 'Revienta más globos y drones que los demás en 90 segundos.', case: 'Quien lleva el maletín suma; embestirlo se lo roba.', race: 'Aros en orden a 3 vueltas, con armas: gana quien cruce primero.' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
     tag: 'Duelo de alas de chorro', kind: 'Combate aéreo',
     desc: 'Pilotos con alas de chorro se persiguen entre palmas de cera, rascacielos, galeones y globos. Ráfagas, misiles que se esquivan con un tonel, bengalas y maniobras de película.',
     c1: '#ffb36b', c2: '#6fc3ff', c3: '#ff7a8a', ink: '#141a3a', font: 'vento',
@@ -616,9 +668,9 @@ const GAMES = [
   },
   {
     id: 'sortilegio', file: 'games/sortilegio.html', name: 'Sortilegio', short: 'Sortilegio', num: '03',
-    net: { seats: 4, mode: 'duel', modes: ['duel', 'altar', 'hunt', 'tejo'], max: { tejo: 2 },
+    net: { pick: ['mago', 'magos'], seats: 4, mode: 'duel', modes: ['duel', 'altar', 'hunt', 'tejo'], max: { tejo: 2 },
       // campaña en equipo en línea: juegan dos (los demás miran); el anfitrión elige el nivel dentro del juego
-      extra: [{ id: 'camp', name: 'Campaña en equipo', seats: 2, watch: true, maps: [], desc: 'La Travesía de los Tunjos para dos: el anfitrión elige el nivel entre los que tiene abiertos y lo que ganen queda guardado en el aparato de cada uno.' }],
+      extra: [{ id: 'camp', name: 'Campaña en equipo', coop: true, seats: 2, watch: true, maps: [], desc: 'La Travesía de los Tunjos para dos: el anfitrión elige el nivel entre los que tiene abiertos y lo que ganen queda guardado en el aparato de cada uno.' }],
       desc: { duel: 'Todos contra todos: la ronda es del último mago en pie.', altar: 'Suma quien esté solo dentro del círculo sagrado.', hunt: 'Cada espanto cae solo con su contrario: el que más cace gana.', tejo: 'Mete el tejo en el bocín del otro (solo para dos).' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
     tag: 'Duelo de magos', kind: 'Hechizos y fusiones',
     desc: 'Magos con un elemento en cada mano: toca, carga o funde las dos para crear 28 hechizos. Reacciones con el terreno, combinaciones y el Gran Sortilegio.',
@@ -638,10 +690,10 @@ const GAMES = [
     extras: ['Campaña en equipo de 18 niveles (también en línea)', '13 magos con atuendos', 'Grimorio de 28 fusiones', 'Escuela de magia'],
   },
   {
-    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick', modes: ['quick', 'duel', 'elim', 'battle'],
+    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { pick: ['piloto', 'pilotos'], seats: 4, mode: 'quick', modes: ['quick', 'duel', 'elim', 'battle'],
       // modos que solo están adentro del juego (no en el torneo) y también van en línea
       extra: [{ id: 'gp', name: 'Gran Premio', desc: 'Varias pistas seguidas con puntos por puesto (10, 8, 6…): gana la copa quien sume más.', maps: [['0', 'Copa Esmeralda · 5 pistas'], ['1', 'Copa Dorada · 5 pistas'], ['2', 'Gran Copa · 10 pistas']] },
-        { id: 'world', name: 'Vuelta al mundo', seats: 2, watch: true, maps: [], noOpts: true, desc: 'La campaña de a dos: 24 retos y 6 jefes por 13 lugares del mundo. El anfitrión elige en su mapa el reto (de lo que tiene abierto) y las estrellas quedan guardadas en el aparato de cada uno.' }],
+        { id: 'world', name: 'Vuelta al mundo', coop: true, seats: 2, watch: true, maps: [], noOpts: true, desc: 'La campaña de a dos: 24 retos y 6 jefes por 13 lugares del mundo. El anfitrión elige en su mapa el reto (de lo que tiene abierto) y las estrellas quedan guardadas en el aparato de cada uno.' }],
       desc: { quick: 'Todos a la misma carrera; la máquina completa la parrilla hasta 6 autos. Gana quien llegue primero.', duel: 'Solo ustedes, sin máquina: carreras seguidas hasta que alguien gane 2.', elim: 'Cada 15 segundos sale el último (máquina incluida). Gana quien dure más.', battle: 'Arena con 3 corazones: embiste con turbo y usa objetos. Último en pie.' } },
     tag: 'La Copa Esmeralda', kind: 'Carreras en 3D',
     desc: 'Bólidos que derrapan, saltan, flotan en lancha y planean con alas por 10 pistas del mundo. Objetos, turbos esmeralda, batallas y pantalla dividida para dos.',
@@ -1494,37 +1546,65 @@ const Online = (() => {
   const allModes = g => g.modes.concat((g.net && g.net.extra) || []);
   const mapsFor = (g, m) => (m && Array.isArray(m.maps) ? m.maps : m && m.maps === 'arenas' ? g.arenas || [] : g.maps).filter(x => !(m && m.map) || x[0] === m.map);
   const lenTxt = (g, m, n) => (g.net && g.net.lenTxt && g.net.lenTxt[m.id] ? g.net.lenTxt[m.id](n) : m.lenTxt(n));
-  function evText(g, ev) {
-    if (!g || !ev) return ''; const m = allModes(g).find(x => x.id === ev.mode), mp = (Array.isArray(m && m.maps) ? m.maps : g.maps.concat(g.arenas || [])).find(x => x[0] === ev.map);
-    return [g.name, m && m.name, mp ? mp[1] : m && Array.isArray(m.maps) && !m.maps.length ? '' : 'escenario al azar', m && m.len && ev.len ? lenTxt(g, m, ev.len) : '', ...netOpts(g).filter(o => ev.opts && ev.opts[o.id]).map(o => o.name)].filter(Boolean).join(' · ');
+
+  // foto del juego para el escenario escogido (si hay), o la primera
+  const shotFor = (g, map) => { const pre = (g.shots[0] || '').split('-')[0], k = g.shots.find(x => x === pre + '-' + map); return 'assets/shots/' + (k || g.shots[0]) + '.jpg'; };
+  const logo = g => (GAMEHUB.glogo ? GAMEHUB.glogo(g) : `<h2 class="glogo">${esc(g.name)}</h2>`);
+  const CHARS = [['pick', 'Cada quien elige'], ['random', 'Al azar']];
+  const seatsOf = (g, m) => (m && m.seats) || g.net.seats;
+  const watchOf = (g, m) => !!((m && m.watch) || g.net.watch);
+  // quiénes juegan y quiénes miran (en orden de la sala)
+  function whoPlays(g, m, ps) { const n = seatsOf(g, m); return { play: ps.slice(0, n), rest: ps.slice(n), watch: watchOf(g, m) }; }
+  const pchips = L => L.map(p => `<span class="on-p" style="--c:${esc(p.color)}"><i></i>${esc(p.name)}</span>`).join('');
+  function modeCard(g, x, sel, n) {
+    const nS = seatsOf(g, x), w = watchOf(g, x), camp = Array.isArray(x.maps) && !x.maps.length;
+    const meta = [nS === 2 ? (w && n > 2 ? '👥 juegan 2' : '👥 2') : `👥 2 a ${nS}`, x.mins ? `⏱ ~${x.mins} min` : '', camp ? '🗺️ eligen el nivel' : x.map ? '📍 cancha fija' : ''].filter(Boolean);
+    return `<button class="on-mode" data-onmode="${esc(x.id)}" aria-pressed="${sel}"><b>${esc(x.name)}</b><span>${esc((g.net.desc && g.net.desc[x.id]) || x.desc)}</span><small>${meta.map(t => `<em>${t}</em>`).join('')}</small></button>`;
   }
   function hostPlayHTML(ps) {
     const gs = GAMES(), g = pick && gs.find(x => x.id === pick);
-    const cards = `<div class="on-games">${gs.map(x => `<button class="on-game${x.id === pick ? ' sel' : ''}" data-ong="${x.id}" style="--c1:${x.c1};--c2:${x.c2}" ${ps.length < 2 ? 'disabled' : ''}><b>${esc(x.name)}</b><small>${x.net ? (x.net.watch ? `en línea · juegan ${x.net.seats}, los demás miran` : `en línea · hasta ${x.net.seats}`) : 'en línea · pronto'}</small></button>`).join('')}</div>`;
-    const tourBtn = ps.length >= 2 ? `<div class="row" style="margin-top:12px"><button class="btn gold" id="on-tour">🏆 ${GAMEHUB.Tour.T && GAMEHUB.Tour.T.online && !GAMEHUB.Tour.T.done ? 'Seguir el torneo' : 'Torneo con todos'}</button><span class="note" style="margin:0">liga, eliminatoria, rey de la pista… con los ${ps.length} de la sala</span></div>` : '';
-    if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar.' : `Con ${ps.length} jugadores: elige un juego.`}</p>${cards}${tourBtn}`;
-    const ms = netModes(g), m = ms.find(x => x.id === pickEv.mode) || ms[0], maps = mapsFor(g, m), seg = (k, items, v) => `<div class="seg" data-onseg="${k}">${items.map(([id, t]) => `<button data-v="${esc(id)}" aria-pressed="${String(id) === String(v)}">${esc(t)}</button>`).join('')}</div>`;
-    const nS = m.seats || g.net.seats, watch = m.watch || g.net.watch;
-    const over = ps.length > nS ? `<p class="note warn">${m.seats ? 'Este modo' : 'Este juego'} es de ${watch ? '' : 'hasta '}${nS}: juegan ${ps.slice(0, nS).map(p => esc(p.name)).join(' y ')}; ${watch ? 'los demás miran en vivo' : 'los demás esperan'}.</p>` : '';
-    return `<p class="note">Con ${ps.length} jugadores.</p>${cards}
-      <div class="on-cfg" style="--c1:${g.c1};--c2:${g.c2}">
-        <div class="lbl">Modo</div>${seg('mode', ms.map(x => [x.id, x.name]), m.id)}<p class="on-desc">${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</p>
-        ${maps.length > 1 ? `<div class="lbl">Escenario</div>${seg('map', [['', '🎲 Al azar']].concat(maps), pickEv.map || '')}` : ''}
-        ${m.len ? `<div class="lbl">Largo</div>${seg('len', m.len.map(n => [n, lenTxt(g, m, n)]), pickEv.len || m.len[1] || m.len[0])}` : ''}
-        ${(m.noOpts ? [] : netOpts(g)).map(o => `<div class="lbl">${esc(o.name)}</div>${seg('opt:' + o.id, [['0', 'No'], ['1', 'Sí']], pickEv.opts && pickEv.opts[o.id] ? '1' : '0')}<p class="on-desc">${esc(o.desc[0].toUpperCase() + o.desc.slice(1))}.</p>`).join('')}
-        ${over}<div class="row"><button class="btn gold big" id="on-go">¡A jugar!</button><button class="btn ghost" id="on-back">Otro juego</button></div>
+    const cards = `<div class="on-games${g ? ' has-sel' : ''}">${gs.map(x => `<button class="on-game${x.id === pick ? ' sel' : ''}" data-ong="${x.id}" style="${GAMEHUB.gvars ? GAMEHUB.gvars(x) : ''}" ${ps.length < 2 || !x.net ? 'disabled' : ''} aria-pressed="${x.id === pick}">
+        <img src="assets/shots/${x.shots[0]}.jpg" alt="" loading="lazy" decoding="async"><span class="sh"></span>
+        <span class="tx"><span class="num">${x.num} · ${esc(x.kind)}</span>${logo(x)}<small>${x.net ? (x.net.watch ? `juegan ${x.net.seats} · los demás miran` : `de 2 a ${x.net.seats}`) : 'pronto'}</small></span></button>`).join('')}</div>`;
+    const T = GAMEHUB.Tour.T, tourOn = T && T.online && !T.done;
+    const tourBtn = ps.length >= 2 ? `<div class="tbanner on-tb" id="on-tour" role="button" tabindex="0"><span class="cup">🏆</span><div><b>${tourOn ? 'Seguir el torneo' : 'Torneo con todos'}</b><p>Liga, eliminatoria, rey de la pista… con los ${ps.length} de la sala y los 4 juegos.</p></div><span class="btn small">${tourOn ? 'Seguir' : 'Armar uno'} ›</span></div>` : '';
+    if (!g) return `<p class="note">${ps.length < 2 ? 'Falta al menos un jugador más para jugar: pásales el código.' : `Son ${ps.length}. Escoge un juego (o arma un torneo).`}</p>${cards}${tourBtn}`;
+    const ms = netModes(g), m = ms.find(x => x.id === pickEv.mode) || ms[0], maps = mapsFor(g, m), camp = Array.isArray(m.maps) && !m.maps.length;
+    if (pickEv.mode !== m.id) { pickEv.mode = m.id; if (!maps.some(x => x[0] === pickEv.map)) pickEv.map = ''; if (m.len && !m.len.includes(pickEv.len)) pickEv.len = m.len[1] || m.len[0]; } // (ese modo ya no cabe con tantos jugadores)
+    const seg = (k, items, v) => `<div class="seg" data-onseg="${k}">${items.map(([id, t]) => `<button data-v="${esc(id)}" aria-pressed="${String(id) === String(v)}">${esc(t)}</button>`).join('')}</div>`;
+    const vs = ms.filter(x => !x.coop), co = ms.filter(x => x.coop), W = whoPlays(g, m, ps), pn = g.net.pick;
+    const curMap = maps.find(x => x[0] === pickEv.map);
+    const opts = (m.noOpts ? [] : netOpts(g)).map(o => `<div class="on-f"><span class="lbl">${esc(o.name)}</span>${seg('opt:' + o.id, [['0', 'No'], ['1', 'Sí']], pickEv.opts && pickEv.opts[o.id] ? '1' : '0')}<span class="hint">${esc(o.desc[0].toUpperCase() + o.desc.slice(1))}.</span></div>`).join('');
+    const sum = [m.name, camp ? 'nivel en el mapa' : maps.length > 1 ? (curMap ? curMap[1] : 'escenario al azar') : maps[0] ? maps[0][1] : '', m.len ? lenTxt(g, m, pickEv.len || m.len[1] || m.len[0]) : '', pn ? `${pn[1]}: ${pickEv.chars === 'random' ? 'al azar' : 'cada quien elige'}` : ''].filter(Boolean).join(' · ');
+    return `${cards}
+      <div class="on-cfg" style="${GAMEHUB.gvars ? GAMEHUB.gvars(g) : ''}">
+        <div class="on-hero"><img src="${shotFor(g, pickEv.map)}" alt=""><span class="sh"></span><div class="tx"><span class="num">${g.num} · ${esc(g.tag)}</span>${logo(g)}</div><button class="btn small ghost" id="on-back">Otro juego</button></div>
+        <div class="on-sec"><span class="lbl">Uno contra otro</span><div class="on-modes">${vs.map(x => modeCard(g, x, x.id === m.id, ps.length)).join('')}</div></div>
+        ${co.length ? `<div class="on-sec"><span class="lbl">En equipo · todos juntos</span><div class="on-modes">${co.map(x => modeCard(g, x, x.id === m.id, ps.length)).join('')}</div></div>` : ''}
+        ${camp ? `<div class="on-camp">🗺️ <span>Al entrar se abre el mapa de ${esc(m.name.toLowerCase())}: el anfitrión escoge el nivel entre los que tiene abiertos, y lo que ganen queda guardado en el aparato de cada uno.</span></div>` : ''}
+        ${!camp && maps.length > 1 ? `<div class="on-sec"><span class="lbl">Escenario</span><div class="chips">${[['', '🎲 Al azar']].concat(maps).map(([id, t]) => `<button class="chipbtn" data-onmap="${esc(id)}" aria-pressed="${(pickEv.map || '') === id}">${esc(t)}</button>`).join('')}</div></div>` : ''}
+        <div class="on-row">
+          ${m.len ? `<div class="on-f"><span class="lbl">Largo</span>${seg('len', m.len.map(n => [n, lenTxt(g, m, n)]), pickEv.len || m.len[1] || m.len[0])}</div>` : ''}
+          ${pn ? `<div class="on-f"><span class="lbl">${esc(pn[1][0].toUpperCase() + pn[1].slice(1))}</span>${seg('chars', CHARS, pickEv.chars || 'pick')}<span class="hint">${pickEv.chars === 'random' ? `A cada uno le toca un ${esc(pn[0])} al azar, sin repetir.` : `Antes de empezar, cada uno escoge su ${esc(pn[0])} (20 s); arranca apenas todos confirman.`}</span></div>` : ''}
+          ${opts}
+        </div>
+        <div class="on-who"><span class="lbl">Juegan</span>${pchips(W.play)}${W.rest.length ? `<span class="lbl">${W.watch ? 'Miran en vivo' : 'Esperan'}</span>${pchips(W.rest)}` : ''}</div>
+        <div class="on-go"><div><b>${esc(g.name)}</b><small>${esc(sum)}</small></div><button class="btn gold big" id="on-go">¡A jugar!</button></div>
       </div>`;
   }
   function bindHostPlay(root) {
-    if ($('#on-tour', root)) $('#on-tour', root).onclick = () => { const T = GAMEHUB.Tour.T; if (T && T.online && !T.done) GAMEHUB.go('torneo'); else GAMEHUB.onlineTour(players(Net.room)); };
+    const tb = $('#on-tour', root); if (tb) { const go = () => { const T = GAMEHUB.Tour.T; if (T && T.online && !T.done) GAMEHUB.go('torneo'); else GAMEHUB.onlineTour(players(Net.room)); }; tb.onclick = go; tb.onkeydown = e => { if (e.key === 'Enter') go(); }; }
+    const click = () => { try { GAMEHUB.Snd.click(); } catch (e) { /* nada */ } };
     $$('[data-ong]', root).forEach(b => b.onclick = () => { const g = GAMES().find(x => x.id === b.dataset.ong); if (!g || !g.net) { note = 'Ese juego todavía no está listo para jugar en línea (en construcción).'; render(); return; }
-      if (pick !== g.id) { pick = g.id; const m = netModes(g)[0]; pickEv = { mode: m.id, map: '', len: m.len ? m.len[1] || m.len[0] : 0 }; sendPick(); } note = ''; render(); });
-    $$('[data-onseg]', root).forEach(sg => sg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = sg.dataset.onseg, v = b.dataset.v; if (k.startsWith('opt:')) { pickEv.opts = Object.assign({}, pickEv.opts, { [k.slice(4)]: v === '1' }); sendPick(); render(); return; } pickEv[k] = k === 'len' ? +v : v;
-      if (k === 'mode') { const g = GAMES().find(x => x.id === pick), m = allModes(g).find(x => x.id === v); if (!mapsFor(g, m).some(x => x[0] === pickEv.map)) pickEv.map = ''; if (m.len && !m.len.includes(pickEv.len)) pickEv.len = m.len[1] || m.len[0]; }
-      sendPick(); render(); }));
+      click(); if (pick !== g.id) { pick = g.id; const m = netModes(g)[0]; pickEv = { mode: m.id, map: '', len: m.len ? m.len[1] || m.len[0] : 0, chars: (pickEv && pickEv.chars) || 'pick' }; sendPick(); } note = ''; render();
+      requestAnimationFrame(() => { const c = $('.on-cfg', root); if (c && c.getBoundingClientRect().top > innerHeight * 0.6) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); });
+    $$('[data-onmode]', root).forEach(b => b.onclick = () => { const g = GAMES().find(x => x.id === pick), m = allModes(g).find(x => x.id === b.dataset.onmode); if (!m) return; click(); pickEv.mode = m.id;
+      if (!mapsFor(g, m).some(x => x[0] === pickEv.map)) pickEv.map = ''; if (m.len && !m.len.includes(pickEv.len)) pickEv.len = m.len[1] || m.len[0]; sendPick(); render(); });
+    $$('[data-onmap]', root).forEach(b => b.onclick = () => { click(); pickEv.map = b.dataset.onmap; sendPick(); render(); });
+    $$('[data-onseg]', root).forEach(sg => sg.querySelectorAll('button').forEach(b => b.onclick = () => { const k = sg.dataset.onseg, v = b.dataset.v; click(); if (k.startsWith('opt:')) { pickEv.opts = Object.assign({}, pickEv.opts, { [k.slice(4)]: v === '1' }); sendPick(); render(); return; } pickEv[k] = k === 'len' ? +v : v; sendPick(); render(); }));
     if ($('#on-go', root)) $('#on-go', root).onclick = () => { const g = GAMES().find(x => x.id === pick); if (!g) return; const m = allModes(g).find(x => x.id === pickEv.mode), maps = mapsFor(g, m);
-      const map = pickEv.map || (maps[Math.floor(Math.random() * maps.length)] || [])[0]; startGame(g, { mode: pickEv.mode, map, rounds: pickEv.len || 3, len: pickEv.len || 0, opts: Object.assign({}, pickEv.opts) }); };
-    if ($('#on-back', root)) $('#on-back', root).onclick = () => { pick = null; pickEv = null; sendPick(); render(); };
+      const map = pickEv.map || (maps[Math.floor(Math.random() * maps.length)] || [])[0]; startGame(g, { mode: pickEv.mode, map, rounds: pickEv.len || 3, len: pickEv.len || 0, opts: Object.assign({}, pickEv.opts), chars: g.net.pick ? pickEv.chars || 'pick' : undefined }); };
+    if ($('#on-back', root)) $('#on-back', root).onclick = () => { click(); pick = null; pickEv = null; sendPick(); render(); };
   }
   // los demás ven lo que el anfitrión está armando
   function sendPick() { Net.send('*', { $: 'pick', game: pick, ev: pickEv }, true); if (pick) GAMEHUB.Launcher.preload(pick); }
@@ -1594,7 +1674,7 @@ const Online = (() => {
     const ps = players(Net.room), byName = id => { const p = T.players.find(x => x.id === id); return p && ps.find(q => q.name.trim().toLowerCase() === p.name.trim().toLowerCase()); };
     const a = byName(ev.j1), b = byName(ev.j2); if (!a || !b) return `Falta en la sala: ${[!a && ev.j1, !b && ev.j2].filter(Boolean).map(id => (T.players.find(x => x.id === id) || {}).name).join(' y ')}.`;
     const nm = id => (T.players.find(x => x.id === id) || {}).name;
-    startGame(g, { mode: ev.mode, map: ev.map, rounds: ev.rounds || 3, len: ev.rounds || 0, tour: true }, [a, b], { id: ev.id, n: ev.n, j1: ev.j1, j2: ev.j2, title: `Prueba ${ev.n}: ${nm(ev.j1)} contra ${nm(ev.j2)}` });
+    startGame(g, { mode: ev.mode, map: ev.map, rounds: ev.rounds || 3, len: ev.rounds || 0, tour: true, chars: ev.chars || T.rules.chars || 'pick', opts: ev.opts }, [a, b], { id: ev.id, n: ev.n, j1: ev.j1, j2: ev.j2, title: `Prueba ${ev.n}: ${nm(ev.j1)} contra ${nm(ev.j2)}` });
     return '';
   }
   function devLocal(p) { if (typeof p.li === 'number') return p.li; const d = (Net.room.devices || []).find(x => x.id === p.dev); return d ? Math.max(0, (d.info.players || []).findIndex(q => q.name === p.name)) : 0; }
@@ -1605,9 +1685,18 @@ const Online = (() => {
   function clientPlayHTML(connected) {
     if (!connected) return '<p class="note">Conectando con el anfitrión…</p>';
     const g = lastPick && GAMES().find(x => x.id === lastPick.game);
-    return g ? `<div class="on-next" style="--c1:${g.c1};--c2:${g.c2}"><span class="lbl">EL ANFITRIÓN PREPARA</span><b>${esc(evText(g, lastPick.ev).split(' · ')[0])}</b><small>${esc(evText(g, lastPick.ev).split(' · ').slice(1).join(' · '))}</small></div>` : '<p class="note">Esperando a que el anfitrión elija…</p>';
+    if (!g) return '<div class="on-idle"><span class="sp"></span><p class="note">El anfitrión está escogiendo el juego…</p></div>';
+    const ev = lastPick.ev || {}, m = allModes(g).find(x => x.id === ev.mode), maps = m ? mapsFor(g, m) : [], camp = m && Array.isArray(m.maps) && !m.maps.length, mp = maps.find(x => x[0] === ev.map), pn = g.net && g.net.pick;
+    const W = m ? whoPlays(g, m, players(Net.room)) : null, me = W && W.play.some(p => p.dev === Net.id);
+    const bits = [camp ? 'el nivel se escoge en el mapa' : maps.length > 1 ? (mp ? mp[1] : 'escenario al azar') : maps[0] ? maps[0][1] : '', m && m.len && ev.len ? lenTxt(g, m, ev.len) : '', pn ? `${pn[1]}: ${ev.chars === 'random' ? 'al azar' : 'cada quien elige'}` : '', ...netOpts(g).filter(o => ev.opts && ev.opts[o.id]).map(o => o.name)].filter(Boolean);
+    return `<div class="on-cfg on-peek" style="${GAMEHUB.gvars ? GAMEHUB.gvars(g) : ''}">
+      <div class="on-hero"><img src="${shotFor(g, ev.map)}" alt=""><span class="sh"></span><div class="tx"><span class="num">EL ANFITRIÓN PREPARA</span>${logo(g)}</div></div>
+      ${m ? `<div class="on-pm"><b>${esc(m.name)}</b><span>${esc((g.net.desc && g.net.desc[m.id]) || m.desc)}</span>${bits.length ? `<div class="chips">${bits.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}</div>` : ''}
+      ${W ? `<div class="on-who"><span class="lbl">Juegan</span>${pchips(W.play)}${W.rest.length ? `<span class="lbl">${W.watch ? 'Miran en vivo' : 'Esperan'}</span>${pchips(W.rest)}` : ''}</div>` : ''}
+      <p class="note on-pn">${me ? (pn && ev.chars !== 'random' ? `Cuando el anfitrión dé «¡A jugar!», escoges tu ${esc(pn[0])}.` : 'Cuando el anfitrión dé «¡A jugar!», arranca aquí solo.') : 'Esta vez te toca mirar: la partida se abre aquí en vivo.'}</p>
+    </div>`;
   }
-  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0, opts: m.ev.opts && typeof m.ev.opts === 'object' ? Object.fromEntries(Object.entries(m.ev.opts).filter(([k, v]) => /^\w{1,20}$/.test(k) && typeof v === 'boolean')) : {} } : {} } : null; if (lastPick && lastPick.game) GAMEHUB.Launcher.preload(lastPick.game); if (visible()) render(); } });
+  Net.on('msg', (from, m) => { if (m && m.$ === 'pick' && !Net.isHost && from === Net.hostId) { lastPick = m.game ? { game: String(m.game), ev: m.ev && typeof m.ev === 'object' ? { mode: String(m.ev.mode || ''), map: String(m.ev.map || ''), len: +m.ev.len || 0, chars: m.ev.chars === 'random' ? 'random' : 'pick', opts: m.ev.opts && typeof m.ev.opts === 'object' ? Object.fromEntries(Object.entries(m.ev.opts).filter(([k, v]) => /^\w{1,20}$/.test(k) && typeof v === 'boolean')) : {} } : {} } : null; if (lastPick && lastPick.game) GAMEHUB.Launcher.preload(lastPick.game); if (visible()) render(); } });
   // al entrar alguien nuevo, el anfitrión le cuenta qué está armando
   Net.on('peers', () => { if (Net.isHost && pick) sendPick(); });
   // los remotos: el anfitrión arrancó una partida → abrirla aquí también
@@ -1687,7 +1776,7 @@ const Online = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"c2cd2be5de","date":"2026-11-25"};
+  const BUILD = {"v":"55ffee7830","date":"2026-11-26"};
   try { window.__ghBuild = BUILD; } catch (e) { /* nada */ } // la sala en línea compara versiones entre aparatos
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);
@@ -2532,7 +2621,7 @@ const Online = (() => {
 
   /* ---------- arranque ---------- */
   const h = (location.hash || '').slice(1);
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox, glogo, gvars, Snd };
   // un enlace de invitación (?sala=CÓDIGO) abre directo la sala en línea
   if (new URLSearchParams(location.search).get('sala')) go('online', null, false);
   else if (h.startsWith('ficha-') && GAME[h.slice(6)]) go('game', h.slice(6), false);
@@ -2541,7 +2630,7 @@ const Online = (() => {
   BG.start();
   // en GitHub Pages: app instalable, sin internet y con actualizaciones que no tocan el progreso
   App.register();
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox, glogo, gvars, Snd };
 })();
 
 </script>

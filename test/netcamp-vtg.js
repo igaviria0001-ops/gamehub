@@ -12,7 +12,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const errs = [];
-  const page = async who => { const ctx = await b.newContext({ viewport: { width: VIEW[0], height: VIEW[1] } }); await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) { /* nada */ } window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); });
+  const page = async who => { const ctx = await b.newContext({ viewport: { width: VIEW[0], height: VIEW[1] } }); await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) { /* nada */ } window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); });
     const p = await ctx.newPage(); p.on('pageerror', e => errs.push(who + ': ' + e.message)); await p.goto(URL); await wait(800); return p; };
   const H = await page('anfitrión'), C = await page('remoto');
   // el anfitrión tiene abierta toda la vuelta (una estrella en cada reto menos el final); el remoto no tiene nada
@@ -23,7 +23,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await C.fill('[data-pname="0"]', 'Remoto'); await C.fill('#on-code', code); await C.click('#on-join');
   for (let i = 0; i < 40; i++) { if (await H.evaluate(() => Net.room && Net.room.devices.length === 2 && Net.room.devices.every(d => d.host || d.open))) break; await wait(300); }
   await H.click('[data-ong="vertigo"]'); await wait(300);
-  await H.click('[data-onseg="mode"] [data-v="world"]'); await wait(400);
+  await H.click('[data-onmode="world"]'); await wait(400);
   await H.click('#on-go');
   const frameOf = async (p, cond) => { for (let i = 0; i < 160; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(cond)) return f; } catch (e) { /* cargando */ } } await wait(500); } return null; };
   const fh = await frameOf(H, () => typeof UI !== 'undefined' && !document.getElementById('s-world').hidden);

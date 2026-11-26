@@ -84,6 +84,7 @@ Pruebas (con el servidor andando; usan Playwright, `npm i -D playwright`):
 | `node test/app.js` | app instalable: actualizar sin perder el progreso, sin internet y copia de seguridad |
 | `node test/net.js` · `node test/sala.js` | red (WebRTC real entre pestañas) y sala en línea |
 | `node test/netvtg.js` · `netvto.js` · `netsrt.js` · `nettya.js` | cada juego en línea (con `TRES=1`: 3 aparatos o un mirón; con `RED='netloss=0.15&netlag=120'`: red mala) |
+| `node test/netelige.js` | elegir personaje antes de la partida en línea (`G=vertigo`…, `CH=random`) |
 | `node test/nettour.js` · `node test/netcel.js` | torneo en línea con 3 aparatos · celular táctil como remoto |
 | `node test/netdatos.js` | datos por minuto de cada juego (`RELEVO=1`: sin WebRTC) |
 | `node test/offline-eq.js` | **sin conexión idéntico**: la versión de antes del en línea contra la actual, mismo azar, reloj y teclas; estado completo e imagen iguales en todos los modos |

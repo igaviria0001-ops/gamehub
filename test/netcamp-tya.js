@@ -8,7 +8,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] });
   const errs = [];
-  const page = async () => { const ctx = await b.newContext({ viewport: { width: 960, height: 540 } }); await ctx.addInitScript(() => { window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); }); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('c:' + m.text().slice(0, 160)); }); await p.goto(URL); await wait(800); return p; };
+  const page = async () => { const ctx = await b.newContext({ viewport: { width: 960, height: 540 } }); await ctx.addInitScript(() => { window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); }); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('c:' + m.text().slice(0, 160)); }); await p.goto(URL); await wait(800); return p; };
   const H = await page(), C = await page();
   await H.evaluate(() => localStorage.setItem('tya_camp', JSON.stringify({ stars: { '1-1': 2, '1-2': 1 }, best: {}, wr: {}, rewards: {} }))); await C.evaluate(() => localStorage.removeItem('tya_camp'));
   await H.fill('[data-pname="0"]', 'Ignacio'); await H.click('#on-host'); await wait(500);
@@ -16,7 +16,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await C.fill('[data-pname="0"]', 'Remoto'); await C.fill('#on-code', code); await C.click('#on-join');
   for (let i = 0; i < 40; i++) { const ok = await H.evaluate(() => Net.room && Net.room.devices.length === 2 && Net.room.devices.every(d => d.host || d.open)); if (ok) break; await wait(300); }
   await H.click('[data-ong="tira-y-afloja"]'); await wait(300);
-  await H.click('[data-onseg="mode"] [data-v="campana"]'); await wait(300);
+  await H.click('[data-onmode="campana"]'); await wait(300);
   await H.click('#on-go');
   const frameOf = async (p, cond) => { for (let i = 0; i < 120; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(cond)) return f; } catch (e) { /* cargando */ } } await wait(500); } return null; };
   const fh = await frameOf(H, () => typeof UI !== 'undefined' && UI.current === 'campana');

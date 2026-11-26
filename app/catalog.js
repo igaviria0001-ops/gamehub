@@ -6,8 +6,8 @@
 const GAMES = [
   {
     id: 'tira-y-afloja', file: 'games/tira-y-afloja.html', name: 'Tira y Afloja', short: 'Tira y Afloja', num: '01',
-    net: { seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], opts: ['fiesta'], watch: true,
-      extra: [{ id: 'campana', name: 'Campaña', seats: 2, watch: true, maps: [], noOpts: true, desc: 'Las 30 salas y los 6 jefes de la campaña, juntos: el anfitrión elige en su mapa la sala o el jefe (de lo que tiene abierto) y lo que ganen queda guardado en el aparato de cada uno.' }],
+    net: { pick: ['chicle', 'chicles'], seats: 2, mode: 'caneca', modes: ['caneca', 'chicles', 'rey', 'gol', 'escalada'], opts: ['fiesta'], watch: true,
+      extra: [{ id: 'campana', name: 'Campaña', coop: true, seats: 2, watch: true, maps: [], noOpts: true, desc: 'Las 30 salas y los 6 jefes de la campaña, juntos: el anfitrión elige en su mapa la sala o el jefe (de lo que tiene abierto) y lo que ganen queda guardado en el aparato de cada uno.' }],
       desc: { caneca: 'Echa al otro a la caneca. Juegan dos; los demás miran en vivo.' } },
     tag: 'Duelo de chicle', kind: 'Física y empujones',
     desc: 'Dos chicles unidos por un hilo pelean en el colegio: tirar te hace pesado, aflojar te vuelve ágil. Empuja, embiste, salta en tirachinas y echa al otro a la caneca.',
@@ -30,7 +30,7 @@ const GAMES = [
   },
   {
     id: 'ventolera', file: 'games/ventolera.html', name: 'Ventolera', short: 'Ventolera', num: '02',
-    net: { seats: 4, mode: 'duel', modes: ['duel', 'targets', 'case', 'race'], extra: [{ id: 'boss', name: 'Jefe en pareja', desc: 'Todos juntos contra La Sombra, un dirigible armado con torretas y drones: vidas compartidas, sin fuego amigo.' }, { id: 'trav', name: 'Travesía para dos', seats: 2, watch: true, maps: [], desc: 'Los diez desafíos en equipo de la Travesía (relevos, entregas, oleadas y La Sombra reforzada): el anfitrión elige la etapa entre las que tiene abiertas y lo que ganen queda guardado en el aparato de cada uno.' }], desc: { duel: 'Todos contra todos: la ronda es del último que quede en el aire.', targets: 'Revienta más globos y drones que los demás en 90 segundos.', case: 'Quien lleva el maletín suma; embestirlo se lo roba.', race: 'Aros en orden a 3 vueltas, con armas: gana quien cruce primero.' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
+    net: { pick: ['pájaro', 'pájaros'], seats: 4, mode: 'duel', modes: ['duel', 'targets', 'case', 'race'], extra: [{ id: 'boss', name: 'Jefe en pareja', coop: true, desc: 'Todos juntos contra La Sombra, un dirigible armado con torretas y drones: vidas compartidas, sin fuego amigo.' }, { id: 'trav', name: 'Travesía para dos', coop: true, seats: 2, watch: true, maps: [], desc: 'Los diez desafíos en equipo de la Travesía (relevos, entregas, oleadas y La Sombra reforzada): el anfitrión elige la etapa entre las que tiene abiertas y lo que ganen queda guardado en el aparato de cada uno.' }], desc: { duel: 'Todos contra todos: la ronda es del último que quede en el aire.', targets: 'Revienta más globos y drones que los demás en 90 segundos.', case: 'Quien lleva el maletín suma; embestirlo se lo roba.', race: 'Aros en orden a 3 vueltas, con armas: gana quien cruce primero.' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
     tag: 'Duelo de alas de chorro', kind: 'Combate aéreo',
     desc: 'Pilotos con alas de chorro se persiguen entre palmas de cera, rascacielos, galeones y globos. Ráfagas, misiles que se esquivan con un tonel, bengalas y maniobras de película.',
     c1: '#ffb36b', c2: '#6fc3ff', c3: '#ff7a8a', ink: '#141a3a', font: 'vento',
@@ -50,9 +50,9 @@ const GAMES = [
   },
   {
     id: 'sortilegio', file: 'games/sortilegio.html', name: 'Sortilegio', short: 'Sortilegio', num: '03',
-    net: { seats: 4, mode: 'duel', modes: ['duel', 'altar', 'hunt', 'tejo'], max: { tejo: 2 },
+    net: { pick: ['mago', 'magos'], seats: 4, mode: 'duel', modes: ['duel', 'altar', 'hunt', 'tejo'], max: { tejo: 2 },
       // campaña en equipo en línea: juegan dos (los demás miran); el anfitrión elige el nivel dentro del juego
-      extra: [{ id: 'camp', name: 'Campaña en equipo', seats: 2, watch: true, maps: [], desc: 'La Travesía de los Tunjos para dos: el anfitrión elige el nivel entre los que tiene abiertos y lo que ganen queda guardado en el aparato de cada uno.' }],
+      extra: [{ id: 'camp', name: 'Campaña en equipo', coop: true, seats: 2, watch: true, maps: [], desc: 'La Travesía de los Tunjos para dos: el anfitrión elige el nivel entre los que tiene abiertos y lo que ganen queda guardado en el aparato de cada uno.' }],
       desc: { duel: 'Todos contra todos: la ronda es del último mago en pie.', altar: 'Suma quien esté solo dentro del círculo sagrado.', hunt: 'Cada espanto cae solo con su contrario: el que más cace gana.', tejo: 'Mete el tejo en el bocín del otro (solo para dos).' }, lenTxt: { duel: n => `primero a ${n} rondas` } },
     tag: 'Duelo de magos', kind: 'Hechizos y fusiones',
     desc: 'Magos con un elemento en cada mano: toca, carga o funde las dos para crear 28 hechizos. Reacciones con el terreno, combinaciones y el Gran Sortilegio.',
@@ -72,10 +72,10 @@ const GAMES = [
     extras: ['Campaña en equipo de 18 niveles (también en línea)', '13 magos con atuendos', 'Grimorio de 28 fusiones', 'Escuela de magia'],
   },
   {
-    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { seats: 4, mode: 'quick', modes: ['quick', 'duel', 'elim', 'battle'],
+    id: 'vertigo', file: 'games/vertigo.html', name: 'VÉRTIGO', short: 'VÉRTIGO', num: '04', net: { pick: ['piloto', 'pilotos'], seats: 4, mode: 'quick', modes: ['quick', 'duel', 'elim', 'battle'],
       // modos que solo están adentro del juego (no en el torneo) y también van en línea
       extra: [{ id: 'gp', name: 'Gran Premio', desc: 'Varias pistas seguidas con puntos por puesto (10, 8, 6…): gana la copa quien sume más.', maps: [['0', 'Copa Esmeralda · 5 pistas'], ['1', 'Copa Dorada · 5 pistas'], ['2', 'Gran Copa · 10 pistas']] },
-        { id: 'world', name: 'Vuelta al mundo', seats: 2, watch: true, maps: [], noOpts: true, desc: 'La campaña de a dos: 24 retos y 6 jefes por 13 lugares del mundo. El anfitrión elige en su mapa el reto (de lo que tiene abierto) y las estrellas quedan guardadas en el aparato de cada uno.' }],
+        { id: 'world', name: 'Vuelta al mundo', coop: true, seats: 2, watch: true, maps: [], noOpts: true, desc: 'La campaña de a dos: 24 retos y 6 jefes por 13 lugares del mundo. El anfitrión elige en su mapa el reto (de lo que tiene abierto) y las estrellas quedan guardadas en el aparato de cada uno.' }],
       desc: { quick: 'Todos a la misma carrera; la máquina completa la parrilla hasta 6 autos. Gana quien llegue primero.', duel: 'Solo ustedes, sin máquina: carreras seguidas hasta que alguien gane 2.', elim: 'Cada 15 segundos sale el último (máquina incluida). Gana quien dure más.', battle: 'Arena con 3 corazones: embiste con turbo y usa objetos. Último en pie.' } },
     tag: 'La Copa Esmeralda', kind: 'Carreras en 3D',
     desc: 'Bólidos que derrapan, saltan, flotan en lancha y planean con alas por 10 pistas del mundo. Objetos, turbos esmeralda, batallas y pantalla dividida para dos.',

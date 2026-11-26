@@ -20,7 +20,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 async function uno(b, gid, mode) {
   const vw = process.env.VIEW ? process.env.VIEW.split('x').map(Number) : [960, 540];
   const ctx = await b.newContext({ viewport: { width: vw[0], height: vw[1] } }); const errs = [];
-  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 160))); });
+  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 160))); });
   const page = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(BASE); await wait(700); return p; };
   const H = await page(), C = await page();
   await H.fill('[data-pname="0"]', 'Ana'); await H.click('#on-host'); await wait(400);
@@ -28,8 +28,8 @@ async function uno(b, gid, mode) {
   await C.fill('[data-pname="0"]', 'Beto'); await C.fill('#on-code', code); await C.click('#on-join');
   for (let i = 0; i < 60; i++) { if (await H.evaluate(() => Net.room && Net.room.devices.length === 2 && Net.room.devices.every(d => d.host || d.open))) break; await wait(300); }
   await H.click(`[data-ong="${gid}"]`); await wait(300);
-  const has = await H.$(`[data-onseg="mode"] [data-v="${mode}"]`); if (!has) { await ctx.close(); return { juego: gid, modo: mode, error: 'modo no está en la sala' }; }
-  await H.click(`[data-onseg="mode"] [data-v="${mode}"]`); await wait(300);
+  const has = await H.$(`[data-onmode="${mode}"]`); if (!has) { await ctx.close(); return { juego: gid, modo: mode, error: 'modo no está en la sala' }; }
+  await H.click(`[data-onmode="${mode}"]`); await wait(300);
   await H.click('#on-go');
   const frameOf = async p => { for (let i = 0; i < 200; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(() => typeof NetPlay !== 'undefined' && NetPlay.on && !!NetPlay.cfg)) return f; } catch (e) {} } await wait(400); } return null; };
   const fh = await frameOf(H), fc = await frameOf(C);

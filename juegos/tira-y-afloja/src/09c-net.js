@@ -31,8 +31,22 @@ const NetGame = (() => {
   const lastIn = [];
 
   /* ---------- arranque ---------- */
+  // ¿este sabor ya es de este aparato? (los premios de la campaña y del Vestidor, solo si ya se ganaron)
+  function flavorOpen(id) { const F = FLAVORS[id]; if (!F) return false; if (F.camp && !((typeof Campaign !== 'undefined' && Campaign.data.rewards) || {})[F.camp]) return false; if (typeof Vestidor !== 'undefined' && Vestidor.V.BY[id] && !Vestidor.V.has(id)) return false; return true; }
   NetPlay.gate({
-    me(li) { return { flavor: G.flavors[li], acc: typeof Progress !== 'undefined' ? Progress.accOf(li) : 'ninguno' }; },
+    me(li, id) { return { flavor: FLAVORS[id] && flavorOpen(id) ? id : G.flavors[li], acc: typeof Progress !== 'undefined' ? Progress.accOf(li) : 'ninguno' }; },
+    // elegir sabor antes de cada partida en línea (los premios de la campaña y del Vestidor, solo si ya se ganaron)
+    pick: { key: 'flavor', what: 'tu chicle', unique: true, list: () => Object.keys(FLAVORS).map(k => ({ id: k, name: FLAVORS[k].name, sub: FLAVORS[k].camp ? 'premio de la campaña' : typeof Vestidor !== 'undefined' && Vestidor.V.BY[k] ? 'del Vestidor' : 'sabor clásico', c1: FLAVORS[k].light, c2: FLAVORS[k].dark, lock: !flavorOpen(k) })),
+      art(cv, id) { const F = FLAVORS[id], x = cv.getContext('2d'), W = cv.width, u = W / 128; x.save(); x.scale(u, u);
+        const g = x.createRadialGradient(64, 50, 4, 64, 64, 70); g.addColorStop(0, '#fff6ea'); g.addColorStop(1, '#f2d9c0'); x.fillStyle = g; x.beginPath(); x.arc(64, 64, 64, 0, Math.PI * 2); x.fill();
+        x.fillStyle = 'rgba(60,30,20,.18)'; x.beginPath(); x.ellipse(64, 106, 34, 6, 0, 0, Math.PI * 2); x.fill();
+        const b = x.createRadialGradient(54, 52, 4, 64, 70, 44); b.addColorStop(0, F.light); b.addColorStop(0.55, F.base); b.addColorStop(1, F.dark); x.fillStyle = b; x.strokeStyle = F.deep; x.lineWidth = 3;
+        x.beginPath(); x.moveTo(64, 28); x.bezierCurveTo(96, 28, 102, 60, 100, 78); x.bezierCurveTo(98, 98, 82, 106, 64, 106); x.bezierCurveTo(46, 106, 30, 98, 28, 78); x.bezierCurveTo(26, 60, 32, 28, 64, 28); x.closePath(); x.fill(); x.stroke();
+        x.fillStyle = 'rgba(255,255,255,.55)'; x.beginPath(); x.ellipse(50, 46, 9, 5, -0.5, 0, Math.PI * 2); x.fill();
+        for (const ex of [52, 76]) { x.fillStyle = '#fff'; x.beginPath(); x.ellipse(ex, 70, 8, 9, 0, 0, Math.PI * 2); x.fill(); x.fillStyle = '#1a1020'; x.beginPath(); x.arc(ex + 1.5, 72, 4.5, 0, Math.PI * 2); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(ex + 3, 70, 1.6, 0, Math.PI * 2); x.fill(); }
+        x.strokeStyle = F.deep; x.lineWidth = 2.5; x.lineCap = 'round'; x.beginPath(); x.arc(64, 86, 6, 0.15 * Math.PI, 0.85 * Math.PI); x.stroke();
+        x.fillStyle = F.hat || F.accent; x.beginPath(); x.ellipse(64, 30, 14, 5, 0, 0, Math.PI * 2); x.fill(); x.fillStyle = F.hatDark || F.deep; x.fillRect(62, 18, 4, 10);
+        x.restore(); } },
     make(want, ev) {
       const mode = ['caneca', 'chicles', 'rey', 'gol', 'escalada', 'campana'].includes(ev.mode) ? ev.mode : 'caneca';
       const fl = [0, 1].map(i => { const w = want[i] || {}; return FLAVORS[w.flavor] ? w.flavor : ['fresa', 'menta'][i]; });

@@ -10,7 +10,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] });
   const errs = [];
-  const page = async () => { const ctx = await b.newContext({ viewport: { width: 960, height: 540 } }); await ctx.addInitScript(() => { window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); }); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('c:' + m.text().slice(0, 160)); }); await p.goto(URL); await wait(800); return p; };
+  const page = async () => { const ctx = await b.newContext({ viewport: { width: 960, height: 540 } }); await ctx.addInitScript(() => { window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); }); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('c:' + m.text().slice(0, 160)); }); await p.goto(URL); await wait(800); return p; };
   const H = await page(), C = await page(), M = MIRA ? await page() : null;
   // el remoto empieza sin nada de la campaña; el anfitrión ya pasó los dos primeros niveles
   await H.evaluate(() => localStorage.setItem('srt_camp', JSON.stringify({ c1: 2, c2: 1 }))); await C.evaluate(() => localStorage.removeItem('srt_camp'));
@@ -20,7 +20,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const nDev = MIRA ? 3 : 2;
   for (let i = 0; i < 40; i++) { const ok = await H.evaluate(n => Net.room && Net.room.devices.length === n && Net.room.devices.every(d => d.host || d.open), nDev); if (ok) break; await wait(300); }
   await H.click('[data-ong="sortilegio"]'); await wait(300);
-  await H.click('[data-onseg="mode"] [data-v="camp"]'); await wait(300);
+  await H.click('[data-onmode="camp"]'); await wait(300);
   const salaTxt = await H.evaluate(() => document.querySelector('#on-play').textContent.replace(/\s+/g, ' ').slice(0, 300));
   await H.click('#on-go');
   const frameOf = async (p, cond) => { for (let i = 0; i < 120; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(cond)) return f; } catch (e) { /* cargando */ } } await wait(500); } return null; };

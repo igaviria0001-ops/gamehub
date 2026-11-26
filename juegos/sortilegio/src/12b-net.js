@@ -87,7 +87,10 @@ const NetGame = (() => {
   NetPlay.onStart(o => { o.seats.forEach((s, i) => { if (s && /^#[0-9a-f]{6}$/i.test(s.color)) { const n = parseInt(s.color.slice(1), 16), dk = '#' + [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => Math.round(v * 0.55).toString(16).padStart(2, '0')).join(''); PLAYER_COLORS[i] = { main: s.color, dark: dk, name: s.name }; } }); });
   const MODES_NET = ['duel', 'altar', 'hunt', 'tejo', 'camp'];
   NetPlay.gate({
-    me(li) { const c = Game.cfg.chars[li] || CHAR_ORDER[li % CHAR_ORDER.length]; let skin = 0; try { skin = Vestidor.V.eq(li, 'skin', c); } catch (e) { /* nada */ } return { cid: c, skin }; },
+    me(li, id) { const c = CHARS[id] ? id : Game.cfg.chars[li] || CHAR_ORDER[li % CHAR_ORDER.length]; let skin = 0; try { skin = Vestidor.V.eq(li, 'skin', c); } catch (e) { /* nada */ } return { cid: c, skin }; },
+    // elegir mago antes de cada partida en línea (con su retrato y su atuendo puesto)
+    pick: { key: 'cid', what: 'tu mago', list: () => CHAR_ORDER.map(k => ({ id: k, name: CHARS[k].name, sub: CHARS[k].title + ' · ' + CHARS[k].hands.map(e => ELEMENTS[e].name.toLowerCase()).join(' y '), c1: ELEMENTS[CHARS[k].hands[0]].c1, c2: ELEMENTS[CHARS[k].hands[1]].c2 })),
+      art(cv, id, li) { let skin = 0; try { skin = Vestidor.V.eq(li, 'skin', id); } catch (e) { /* nada */ } ArtMage.portrait(cv.getContext('2d'), id, cv.width / 2, cv.height / 2, cv.width / 2, 0.6, skin); } },
     make(want, ev) {
       const S = NetPlay.seats, n = S.length; let mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel'; if ((mode === 'tejo' || mode === 'camp') && n !== 2) mode = 'duel';
       const arena = ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];

@@ -7,17 +7,17 @@ const MODOS = (process.env.MODOS || 'duel,elim,battle,gp').split(',');
 const wait = ms => new Promise(r => setTimeout(r, ms));
 async function uno(b, mode) {
   const ctx = await b.newContext({ viewport: (process.env.VIEW ? { width: +process.env.VIEW.split('x')[0], height: +process.env.VIEW.split('x')[1] } : { width: 960, height: 540 }) }); const errs = [];
-  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); });
+  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); });
   const page = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(URL); await wait(700); return p; };
   const H = await page(), C = await page();
   await H.fill('[data-pname="0"]', 'Ana'); await H.click('#on-host'); await wait(400);
   const code = await H.evaluate(() => Net.code);
   await C.fill('[data-pname="0"]', 'Beto'); await C.fill('#on-code', code); await C.click('#on-join');
   for (let i = 0; i < 60; i++) { if (await H.evaluate(() => Net.room && Net.room.devices.length === 2 && Net.room.devices.every(d => d.host || d.open))) break; await wait(300); }
-  await H.click('[data-ong="vertigo"]'); await wait(300); await H.click(`[data-onseg="mode"] [data-v="${mode}"]`); await wait(300);
-  const opts = await H.evaluate(() => [...document.querySelectorAll('[data-onseg="map"] button')].map(x => x.dataset.v));
-  if (mode === 'gp') await H.click('[data-onseg="map"] [data-v="0"]'); else if (mode === 'battle') await H.click('[data-onseg="map"] [data-v="coliseo"]'); else await H.click('[data-onseg="map"] [data-v="tokio"]');
-  await wait(600); const sees = await C.evaluate(() => { const e = document.querySelector('.on-next'); return e ? e.innerText.replace(/\s+/g, ' ') : ''; });
+  await H.click('[data-ong="vertigo"]'); await wait(300); await H.click(`[data-onmode="${mode}"]`); await wait(300);
+  const opts = await H.evaluate(() => [...document.querySelectorAll('[data-onmap]')].map(x => x.dataset.onmap));
+  if (mode === 'gp') await H.click('[data-onmap="0"]'); else if (mode === 'battle') await H.click('[data-onmap="coliseo"]'); else await H.click('[data-onmap="tokio"]');
+  await wait(600); const sees = await C.evaluate(() => { const e = document.querySelector('.on-peek'); return e ? e.innerText.replace(/\s+/g, ' ') : ''; });
   await H.screenshot({ path: `${OUT}vtgmodo-${mode}-sala.png` }); await H.click('#on-go');
   const frameOf = async p => { for (let i = 0; i < 160; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(() => typeof Game !== 'undefined' && Game.R && Game.mode === 'race' && NetPlay.on && !!NetPlay.cfg)) return f; } catch (e) {} } await wait(500); } return null; };
   const fh = await frameOf(H), fc = await frameOf(C);

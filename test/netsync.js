@@ -8,7 +8,7 @@ const BASE = (process.env.URL || 'http://127.0.0.1:8765/') + '?net=bc#online', G
 const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling'] });
-  const ctx = await b.newContext({ viewport: { width: 800, height: 450 } }); const errs = [];
+  const ctx = await b.newContext({ viewport: { width: 800, height: 450 } }); const errs = []; await ctx.addInitScript(() => { if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll('#netWait .pf button:not(.no)').forEach(b => b.click()); } catch (e) {} }, 700); }); 
   const page = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(BASE); await wait(700); return p; };
   const H = await page(), C = await page();
   await H.fill('[data-pname="0"]', 'Ana'); await H.click('#on-host'); await wait(400);

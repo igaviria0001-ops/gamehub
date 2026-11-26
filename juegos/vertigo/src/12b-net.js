@@ -31,7 +31,21 @@ const NetGame = (() => {
   const okSkin = k => (k && typeof k === 'object' ? { paint: okId(k.paint), neon: okId(k.neon), turbo: okId(k.turbo) } : null);
   // sala de espera y arranque comunes (shared/netplay.js): aquí solo qué manda cada uno y cómo se arma la carrera
   NetPlay.gate({
-    me(li) { const pid = (UI.cfg().p || [])[li]; let skin = null; try { skin = Vestidor.skinOf(li, pid); } catch (e) { /* nada */ } return { pid, skin }; },
+    me(li, id) { const pid = PILOTS[id] ? id : (UI.cfg().p || [])[li]; let skin = null; try { skin = Vestidor.skinOf(li, pid); } catch (e) { /* nada */ } return { pid, skin }; },
+    // elegir piloto antes de cada partida en línea (cada piloto es un solo auto: no se repiten)
+    pick: { key: 'pid', what: 'tu piloto', unique: true, list: () => PILOT_ORDER.map(k => ({ id: k, name: PILOTS[k].name, sub: `${PILOTS[k].from} · ${PILOTS[k].car} · especial: ${SPECIALS[k].name.toLowerCase()}`, c1: PILOTS[k].color, c2: PILOTS[k].accent })),
+      art(cv, id) { const P = PILOTS[id], x = cv.getContext('2d'), W = cv.width, u = W / 128;
+        const rr = (X, Y, w, h, r) => { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); };
+        x.save(); x.scale(u, u); const g = x.createRadialGradient(64, 50, 4, 64, 64, 70); g.addColorStop(0, '#2c2a52'); g.addColorStop(1, '#0a0918'); x.fillStyle = g; x.beginPath(); x.arc(64, 64, 64, 0, Math.PI * 2); x.fill();
+        x.fillStyle = 'rgba(0,0,0,.45)'; x.beginPath(); x.ellipse(64, 104, 46, 7, 0, 0, Math.PI * 2); x.fill();
+        x.fillStyle = '#121218'; rr(14, 74, 22, 30, 7); x.fill(); rr(92, 74, 22, 30, 7); x.fill(); // ruedas
+        x.fillStyle = P.color; x.beginPath(); x.moveTo(22, 96); x.lineTo(28, 66); x.quadraticCurveTo(64, 52, 100, 66); x.lineTo(106, 96); x.quadraticCurveTo(64, 104, 22, 96); x.fill(); // carrocería
+        x.fillStyle = P.color2; x.beginPath(); x.moveTo(56, 58); x.lineTo(72, 58); x.lineTo(76, 99); x.lineTo(52, 99); x.closePath(); x.fill(); // franja
+        x.fillStyle = P.accent; rr(26, 84, 18, 7, 3); x.fill(); rr(84, 84, 18, 7, 3); x.fill(); // faros
+        x.fillStyle = 'rgba(255,255,255,.25)'; x.beginPath(); x.moveTo(30, 70); x.quadraticCurveTo(64, 58, 98, 70); x.lineTo(96, 74); x.quadraticCurveTo(64, 63, 32, 74); x.fill();
+        x.fillStyle = P.accent; x.beginPath(); x.arc(64, 46, 20, Math.PI, 0); x.lineTo(84, 58); x.lineTo(44, 58); x.fill(); // casco
+        x.fillStyle = '#0c0c18'; rr(48, 40, 32, 11, 5); x.fill(); x.fillStyle = 'rgba(160,220,255,.55)'; rr(52, 42, 12, 3, 1.5); x.fill();
+        x.restore(); } },
     make(want, ev) {
       const S = NetPlay.seats, n = S.length, used = new Set(), mode = NET_MODES.includes(ev.mode) ? ev.mode : 'quick';
       const pilots = S.map((s, i) => { const w = want[i] || {}; let p = PILOTS[w.pid] ? w.pid : PILOT_ORDER[i % PILOT_ORDER.length]; if (used.has(p)) p = PILOT_ORDER.find(q => !used.has(q)); used.add(p); return p; });

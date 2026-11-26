@@ -6,7 +6,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const ctx = await b.newContext({ viewport: (process.env.VIEW ? { width: +process.env.VIEW.split('x')[0], height: +process.env.VIEW.split('x')[1] } : { width: 960, height: 540 }) }); const errs = [];
-  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); });
+  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); });
   const page = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('c:' + m.text().slice(0, 160)); }); await p.goto(URL); await wait(800); return p; };
   const H = await page(), C = await page();
   await H.fill('[data-pname="0"]', 'Ignacio'); await H.click('#on-host'); await wait(500);
@@ -14,8 +14,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await C.fill('[data-pname="0"]', 'Remoto'); await C.fill('#on-code', code); await C.click('#on-join');
   for (let i = 0; i < 40; i++) { const ok = await H.evaluate(() => Net.room && Net.room.devices.length === 2 && Net.room.devices.every(d => d.host || d.open)); if (ok) break; await wait(300); }
   await C.evaluate(() => { const t0 = Date.now(); window.__nl = []; Net.on('status', s => __nl.push([Date.now() - t0, 'st', JSON.stringify(s)])); Net.on('peers', () => __nl.push([Date.now() - t0, 'peers', JSON.stringify(Net.peers)])); });
-  await H.click('[data-ong="vertigo"]'); await wait(300); await H.click('[data-onseg="map"] [data-v="venecia"]'); await wait(200); await H.click('[data-onseg="len"] [data-v="2"]'); await wait(1200);
-  const nextTxt = await C.evaluate(() => { const e = document.querySelector('.on-next'); return e ? e.innerText.replace(/\s+/g, ' ') : null; });
+  await H.click('[data-ong="vertigo"]'); await wait(300); await H.click('[data-onmap="venecia"]'); await wait(200); await H.click('[data-onseg="len"] [data-v="2"]'); await wait(1200);
+  const nextTxt = await C.evaluate(() => { const e = document.querySelector('.on-peek'); return e ? e.innerText.replace(/\s+/g, ' ') : null; });
   console.log('el remoto ve:', nextTxt); await H.screenshot({ path: OUT + 'sala-elegir.png' }); await C.screenshot({ path: OUT + 'sala-remoto-ve.png' });
   await H.click('#on-go');
   const frameOf = async p => { for (let i = 0; i < 120; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(() => typeof Game !== 'undefined' && Game.R && Game.mode === 'race')) return f; } catch (e) {} } await wait(500); } return null; };

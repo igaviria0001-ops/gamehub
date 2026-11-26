@@ -863,7 +863,7 @@
 
   /* ---------- arranque ---------- */
   const h = (location.hash || '').slice(1);
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox, glogo, gvars, Snd };
   // un enlace de invitación (?sala=CÓDIGO) abre directo la sala en línea
   if (new URLSearchParams(location.search).get('sala')) go('online', null, false);
   else if (h.startsWith('ficha-') && GAME[h.slice(6)]) go('game', h.slice(6), false);
@@ -872,5 +872,5 @@
   BG.start();
   // en GitHub Pages: app instalable, sin internet y con actualizaciones que no tocan el progreso
   App.register();
-  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox };
+  window.GAMEHUB = { Tour, Torneo, Launcher, go, GAMES, FS, App, onlineTour, fameAdd, tourHTML, confirm: confirmBox, glogo, gvars, Snd };
 })();

@@ -18,9 +18,9 @@ const NetPlay = (() => {
   let lagMs = 100, offset = null, lagFixed = false, rtt = 80, pt = null, ptAt = 0;
   // medidas (pruebas): cuadros dibujados, cuadros sin instantánea nueva para ese momento («hambre»), la racha más larga
   // de hambre, saltos del reloj de dibujo hacia atrás, instantáneas recibidas / desordenadas / perdidas, tamaño (anfitrión)
-  const PS = { fr: 0, hungry: 0, hRun: 0, hMax: 0, hEp: 0, back: 0, rx: 0, ooo: 0, miss: 0, maxN: 0, lastPT: 0, lastAt: 0, szN: 0, szSum: 0, szMax: 0 };
+  const PS = { fr: 0, hungry: 0, hRun: 0, hMax: 0, hEp: 0, back: 0, rx: 0, ooo: 0, miss: 0, maxN: 0, lastPT: 0, lastAt: 0, szN: 0, szSum: 0, szMax: 0, ext: 0 }; // ext: cuadros adelantados (sin congelar)
   function psReset() { for (const k in PS) PS[k] = 0; }
-  // colchón de interpolación que se ajusta solo: con red pareja, poquito (responde antes); con red a saltos, más (no tiembla)
+  // colchón de interpolación que se ajusta solo: con red pareja, poquito (responde antes); con red a saltos, más (no tiembla).
   let lastArr = 0, lastTm = 0, jit = 8, gap = 33;
   function adapt(now, tm) {
     if (lastArr && tm > lastTm) { const g = tm - lastTm, j = Math.abs((now - lastArr) - g); gap = gap * 0.9 + g * 0.1; jit = j > jit ? jit * 0.7 + j * 0.3 : jit * 0.98 + j * 0.02; }
@@ -121,34 +121,125 @@ const NetPlay = (() => {
   // remoto: al apretar o soltar algo, la entrada sale YA (no espera al próximo tick de 16 ms); después de que el juego la registró
   const nowIn = () => { if (on && role === 'client') setTimeout(clientTick, 0); };
   for (const ev of ['keydown', 'keyup', 'pointerdown', 'pointerup', 'touchstart', 'touchend']) addEventListener(ev, nowIn, { passive: true });
-  /* ---------- sala de espera y arranque (común a los 4 juegos) ----------
-     NetPlay.gate({ me(li) → lo de este jugador local (personaje, pinta…),
+  /* ---------- sala de espera, elección de personaje y arranque (común a los 4 juegos) ----------
+     NetPlay.gate({ me(li, id) → lo de este jugador local (personaje, pinta…); con id, con ESE personaje,
+                    pick: { key, what, list(li) → [{ id, name, sub, c1, c2, lock }], art(canvas, id, li), unique } (opcional),
                     make(want, ev) → cfg de la partida (solo el anfitrión; want[puesto] = lo que mandó cada uno),
                     apply(cfg) → arrancar la partida con esa cfg (todos) })
+     ev.chars: 'pick' → antes de arrancar, cada quien escoge su personaje en unos segundos (arranca apenas todos confirman);
+               'random' → a cada puesto le toca uno al azar, sin repetir (igual en todos los aparatos: sale del número de la partida);
+               otro → el que cada uno ya llevaba en ese juego.
      Nadie arranca hasta que todos cargaron el juego (o pasan 25 s; el anfitrión puede «Empezar ya» a los 5 s).
-     «Otra partida»: NetPlay.again(f) → el anfitrión arma otra cfg (id+1) y todos la aplican. */
+     «Otra partida»: NetPlay.again(f) → el anfitrión arma otra cfg (id+1) y todos la aplican (con los mismos personajes). */
   let gateO = null, gcfg = null, want = {}, pend = false, t0 = 0, wtick = 0, askT = 0;
+  const PICK_MS = 20000;
+  let pickOn = false, sel = [], okL = [], pk = {}, pDead = 0, pAtLaunch = -1, pst = null, pLeft = -1, pSent = '', pSentAt = 0;
+  const P = () => gateO && gateO.pick;
+  const coarse = () => { try { return matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) { return false; } };
+  const roster = li => { let L = []; try { L = (P().list(li) || []).filter(x => x && typeof x.id === 'string'); } catch (e) { L = []; } return L; };
+  // al azar, sin repetir y igual en todos los aparatos: una baraja que sale del número de la partida
+  function randId(seat, li) {
+    const L = roster(li); if (!L.length) return undefined;
+    let h = 2166136261; for (const ch of String(sid || 'x')) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
+    const d = L.map(x => x.id); for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
+    const free = id => { const x = L.find(q => q.id === id); return x && !x.lock; };
+    return free(d[seat % d.length]) ? d[seat % d.length] : d.slice(seats.length).find(free) || d.find(free);
+  }
+  const chosen = li => (pickOn ? sel[li] : ev && ev.chars === 'random' && P() ? randId(mine[li], li) : undefined);
+  const myInfo = () => mine.map((seat, li) => { let m = null; try { m = gateO.me(li, chosen(li)); } catch (e) { m = null; } return { s: seat, m, ok: pickOn ? !!okL[li] : undefined }; });
+  const pickName = id => { const x = roster(0).find(q => q.id === id); return x ? x.name : ''; };
+  const okColor = c => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#fff');
   const Wait = (() => {
-    let el = null;
+    let el = null, pUI = null;
     function show() {
       if (el) return el; el = document.createElement('div'); el.id = 'netWait';
-      el.innerHTML = `<style>#netWait{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,rgba(20,30,60,.86),rgba(3,6,13,.96));font-family:Nunito,system-ui,sans-serif;color:#eef3ff;padding:16px}
+      el.innerHTML = `<style>#netWait{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,rgba(40,26,80,.9),rgba(5,4,16,.97));font-family:Nunito,system-ui,sans-serif;color:#eef3ff;padding:max(10px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overflow:auto}
 #netWait .b{width:min(420px,100%);text-align:center;display:grid;gap:14px}#netWait h2{margin:0;font-size:clamp(20px,4.5vw,28px);font-weight:900;letter-spacing:.5px}
 #netWait .sp{width:46px;height:46px;margin:0 auto;border-radius:50%;border:4px solid rgba(255,255,255,.14);border-top-color:#5ad8ff;animation:nwS 0.9s linear infinite}@keyframes nwS{to{transform:rotate(360deg)}}
 #netWait ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}#netWait li{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:12px;background:rgba(255,255,255,.06);font-weight:800}
 #netWait li i{width:12px;height:12px;border-radius:50%;flex:none}#netWait li span{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#netWait li b{font-size:13px;color:#8a97b8}#netWait li.ok b{color:#6ff0b0}
-#netWait button{justify-self:center;font:inherit;font-weight:900;border:0;border-radius:999px;padding:11px 22px;background:linear-gradient(#3dffa0,#18b870);color:#04210f;cursor:pointer}#netWait p{margin:0;color:#8a97b8;font-size:14px}</style>
+#netWait button{justify-self:center;font:inherit;font-weight:900;border:0;border-radius:999px;padding:11px 22px;background:linear-gradient(#3dffa0,#18b870);color:#04210f;cursor:pointer}#netWait p{margin:0;color:#8a97b8;font-size:14px}
+#netWait.nwpick{background:radial-gradient(ellipse at 50% 30%,rgba(40,26,80,.95),rgba(5,4,16,.985))}#netWait .pk{width:100%;max-width:1100px;justify-self:center;align-self:center;margin:auto 0;display:grid;gap:clamp(8px,1.6vh,14px);text-align:left}
+#netWait .ph{display:flex;align-items:center;gap:12px}#netWait .ph h2{flex:1;font-size:clamp(18px,3.4vw,30px);letter-spacing:.06em;text-transform:uppercase;background:linear-gradient(180deg,#fff,#d4b3ff 60%,#ff9be6);-webkit-background-clip:text;background-clip:text;color:transparent}
+#netWait .cd{position:relative;width:clamp(42px,6vw,58px);aspect-ratio:1;flex:none;display:grid;place-items:center;font-weight:900;font-size:clamp(16px,2.4vw,22px)}#netWait .cd svg{position:absolute;inset:0;transform:rotate(-90deg)}#netWait .cd circle{fill:none;stroke-width:4}#netWait .cd .bg{stroke:rgba(255,255,255,.12)}#netWait .cd .fg{stroke:#ffd36b;stroke-linecap:round;transition:stroke-dashoffset .25s linear}#netWait .cd.hot{color:#ff8a8a}#netWait .cd.hot .fg{stroke:#ff6f8a}
+#netWait .pps{display:grid;gap:clamp(8px,1.6vw,16px);grid-template-columns:repeat(var(--n,1),minmax(0,1fr))}
+#netWait .pp{border-radius:18px;padding:clamp(8px,1.4vw,14px);background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1);display:grid;gap:clamp(6px,1.2vh,10px);align-content:start;box-shadow:inset 0 3px 0 var(--pc)}
+#netWait .pp.done{border-color:color-mix(in srgb,var(--pc) 70%,transparent);background:color-mix(in srgb,var(--pc) 10%,rgba(255,255,255,.04))}
+#netWait .pn{display:flex;align-items:center;gap:8px;font-weight:900;font-size:clamp(13px,1.8vw,16px)}#netWait .pn i{width:12px;height:12px;border-radius:50%;background:var(--pc);box-shadow:0 0 10px var(--pc)}#netWait .pn small{margin-left:auto;color:#8a97b8;font-weight:800;font-size:12px}
+#netWait .gr{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--cs,clamp(58px,7.6vw,86px)),1fr));gap:clamp(4px,.8vw,8px)}
+#netWait .ch{position:relative;justify-self:stretch;display:grid;justify-items:center;gap:2px;padding:6px 3px 5px;border-radius:14px;background:rgba(255,255,255,.05);border:2px solid transparent;color:#eef3ff;font-weight:800;font-size:clamp(10.5px,1.25vw,12.5px);line-height:1.1;transition:transform .12s,background .12s;box-shadow:none}
+#netWait .ch canvas{width:var(--cv,clamp(38px,5.6vw,64px));height:var(--cv,clamp(38px,5.6vw,64px));border-radius:50%;background:radial-gradient(circle at 50% 40%,var(--c1),var(--c2));box-shadow:0 4px 14px rgba(0,0,0,.4)}
+#netWait .ch span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#netWait .ch:hover{background:rgba(255,255,255,.1)}#netWait .ch.on{border-color:var(--pc);background:color-mix(in srgb,var(--pc) 22%,rgba(255,255,255,.04));transform:translateY(-2px)}#netWait .ch.on canvas{box-shadow:0 0 0 2px #fff,0 0 22px var(--c1)}
+#netWait .ch[disabled]{opacity:.35;cursor:default}#netWait .ch em{position:absolute;top:3px;right:5px;font-style:normal;font-size:12px}
+#netWait .pf{display:flex;align-items:center;gap:10px;min-height:44px}#netWait .pf div{flex:1;min-width:0;display:grid}#netWait .pf b{font-size:clamp(15px,2vw,19px);font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#netWait .pf small{color:#a9b3d6;font-weight:700;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#netWait .pf button{flex:none;padding:10px 18px;font-size:15px}#netWait .pf button.no{background:rgba(255,255,255,.12);color:#eef3ff}
+#netWait .ps{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}#netWait .ps span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.07);font-weight:800;font-size:12.5px;color:#cdd5ee}#netWait .ps span i{width:9px;height:9px;border-radius:50%}#netWait .ps span.ok{color:#6ff0b0}
+#netWait .pw{text-align:center;color:#a9b3d6;font-weight:800;font-size:14px;padding:12px}
+@media (max-height:430px){#netWait .ph h2{font-size:17px}#netWait .gr{grid-template-columns:repeat(auto-fill,minmax(var(--csm,52px),1fr))}#netWait .ch canvas{width:var(--cvm,34px);height:var(--cvm,34px)}#netWait .ch{padding:3px 2px;font-size:10px}#netWait .pf{min-height:36px}#netWait .pf button{padding:7px 14px;font-size:14px}#netWait .pp{padding:7px 8px;gap:5px}}
+@media (prefers-reduced-motion:reduce){#netWait .ch{transition:none}}</style>
 <div class="b"><div class="sp"></div><h2>Preparando la partida…</h2><ul></ul><p></p><button hidden>Empezar ya</button></div>`;
-      document.body.appendChild(el); el.querySelector('button').onclick = () => launch(); return el;
+      document.body.appendChild(el); el.querySelector('.b button').onclick = () => launch(); return el;
     }
     function list(ready, note, canGo) {
-      const e = show(); e.querySelector('ul').innerHTML = '';
-      seats.forEach((s, i) => { const li = document.createElement('li'), ok = ready.includes(i); li.className = ok ? 'ok' : ''; li.innerHTML = '<i></i><span></span><b></b>'; li.querySelector('i').style.background = /^#[0-9a-f]{3,8}$/i.test(s.color || '') ? s.color : '#fff'; li.querySelector('span').textContent = s.name || 'J' + (i + 1); li.querySelector('b').textContent = ok ? 'listo ✓' : 'cargando…'; e.querySelector('ul').appendChild(li); });
-      e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = !canGo;
+      const e = show(); if (pUI) return; e.querySelector('ul').innerHTML = '';
+      seats.forEach((s, i) => { const li = document.createElement('li'), ok = ready.includes(i); li.className = ok ? 'ok' : ''; li.innerHTML = '<i></i><span></span><b></b>'; li.querySelector('i').style.background = okColor(s.color); li.querySelector('span').textContent = s.name || 'J' + (i + 1); li.querySelector('b').textContent = ok ? 'listo ✓' : 'cargando…'; e.querySelector('ul').appendChild(li); });
+      e.querySelector('p').textContent = note || ''; e.querySelector('.b button').hidden = !canGo;
     }
     // aviso sin lista: «El anfitrión elige el nivel…» (se quita solo cuando llega la partida)
-    function msg(title, note) { const e = show(); e.querySelector('h2').textContent = title || ''; e.querySelector('ul').innerHTML = ''; e.querySelector('p').textContent = note || ''; e.querySelector('button').hidden = true; }
-    return { list, msg, hide() { if (el) { el.remove(); el = null; } } };
+    function msg(title, note) { const e = show(); pickOff(); e.querySelector('h2').textContent = title || ''; e.querySelector('ul').innerHTML = ''; e.querySelector('p').textContent = note || ''; e.querySelector('.b button').hidden = true; }
+    /* --- elegir personaje: una columna por jugador de este aparato (con el mouse, el dedo o sus teclas) y abajo, cómo va cada uno --- */
+    function pickShow() {
+      const e = show(); if (pUI) return; const Q = P(), what = (Q && Q.what) || 'tu personaje';
+      e.querySelector('.b').style.display = 'none';
+      const box = document.createElement('div'); box.className = 'pk';
+      box.innerHTML = `<div class="ph"><h2></h2><div class="cd"><svg viewBox="0 0 48 48"><circle class="bg" cx="24" cy="24" r="21"/><circle class="fg" cx="24" cy="24" r="21" stroke-dasharray="132" stroke-dashoffset="0"/></svg><span>·</span></div></div><div class="pps" style="--n:${Math.max(1, mine.length)}"></div><div class="ps"></div>`;
+      box.querySelector('h2').textContent = 'Elige ' + what;
+      const pps = box.querySelector('.pps');
+      if (!mine.length) { const w = document.createElement('div'); w.className = 'pw'; w.textContent = `Esta vez te toca mirar: los demás eligen ${what}…`; pps.appendChild(w); }
+      const cols = [];
+      mine.forEach((seat, li) => {
+        const S = seats[seat] || {}, L = roster(li), pp = document.createElement('div'); pp.className = 'pp'; pp.style.setProperty('--pc', okColor(S.color));
+        pp.innerHTML = `<div class="pn"><i></i><span></span><small></small></div><div class="gr"></div><div class="pf"><div><b></b><small></small></div><button>¡Listo!</button></div>`;
+        pp.querySelector('.pn span').textContent = S.name || 'J' + (seat + 1);
+        pp.querySelector('.pn small').textContent = mine.length > 1 && !coarse() ? (li ? 'teclas J L I K · O' : 'teclas A D W S · E') : '';
+        const gr = pp.querySelector('.gr'), btns = [];
+        if (L.length <= 6) { gr.style.setProperty('--cs', 'clamp(76px,10.5vw,118px)'); gr.style.setProperty('--cv', 'clamp(54px,7.8vw,88px)'); gr.style.setProperty('--csm', '66px'); gr.style.setProperty('--cvm', '48px'); }
+        for (const it of L) {
+          const b = document.createElement('button'); b.className = 'ch'; b.dataset.id = it.id; b.style.setProperty('--c1', okColor(it.c1)); b.style.setProperty('--c2', okColor(it.c2 || it.c1));
+          const cv = document.createElement('canvas'); cv.width = cv.height = 128; b.appendChild(cv); const sp = document.createElement('span'); sp.textContent = it.name; b.appendChild(sp);
+          if (it.lock) { b.disabled = true; const em = document.createElement('em'); em.textContent = '🔒'; b.appendChild(em); b.title = 'Todavía no lo tienes'; }
+          try { if (Q.art) Q.art(cv, it.id, li); else { const x = cv.getContext('2d'); x.fillStyle = 'rgba(255,255,255,.92)'; x.font = '900 60px Nunito,system-ui,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText((it.name || '?')[0], 64, 68); } } catch (er) { /* sin dibujo: queda el color */ }
+          b.onclick = () => choose(li, it.id); gr.appendChild(b); btns.push(b);
+        }
+        pp.querySelector('.pf button').onclick = () => confirm(li);
+        pps.appendChild(pp); cols.push({ pp, btns, L });
+      });
+      e.appendChild(box); e.classList.add('nwpick'); pUI = { box, cols };
+      pickDraw();
+    }
+    function pickOff() { if (!pUI) return; pUI.box.remove(); pUI = null; if (el) el.classList.remove('nwpick'); if (el) el.querySelector('.b').style.display = ''; }
+    // pinta el estado: lo escogido, quién ya está listo, qué está tomado (si no se puede repetir) y cuánto falta
+    function pickDraw() {
+      if (!pUI) return; const Q = P(), uniq = Q && Q.unique, st = pst || [];
+      const takenBy = (id, seat) => { for (let i = 0; i < seats.length; i++) if (i !== seat && st[i] && st[i][1] && st[i][0] === id) return seats[i].name || 'J' + (i + 1); for (let k = 0; k < mine.length; k++) if (mine[k] !== seat && okL[k] && sel[k] === id) return seats[mine[k]].name || ''; return ''; };
+      pUI.cols.forEach((c, li) => {
+        const seat = mine[li], ok = !!okL[li], id = sel[li], it = c.L.find(x => x.id === id);
+        c.pp.classList.toggle('done', ok);
+        for (const b of c.btns) { const tk = uniq ? takenBy(b.dataset.id, seat) : ''; const lock = c.L.find(x => x.id === b.dataset.id).lock; b.classList.toggle('on', b.dataset.id === id); b.disabled = !!lock || (!!tk && b.dataset.id !== id) || ok && b.dataset.id !== id; b.title = tk ? 'Ya lo tiene ' + tk : lock ? 'Todavía no lo tienes' : ''; }
+        c.pp.querySelector('.pf b').textContent = it ? it.name : '—'; c.pp.querySelector('.pf small').textContent = ok ? '¡Listo! Esperando a los demás…' : it ? it.sub || '' : '';
+        const bt = c.pp.querySelector('.pf button'); bt.textContent = ok ? 'Cambiar' : '¡Listo!'; bt.className = ok ? 'no' : '';
+      });
+      const ps = pUI.box.querySelector('.ps'); ps.innerHTML = '';
+      seats.forEach((s, i) => { const x = st[i] || [], k = mine.indexOf(i), ld = k >= 0 || x[2], ok = k >= 0 ? okL[k] : x[1], id = k >= 0 ? sel[k] : x[0];
+        const sp = document.createElement('span'); sp.className = ok ? 'ok' : ''; sp.innerHTML = '<i></i>'; sp.querySelector('i').style.background = okColor(s.color);
+        sp.appendChild(document.createTextNode(`${s.name || 'J' + (i + 1)} · ${!ld ? 'cargando…' : ok ? (pickName(id) || 'listo') + ' ✓' : 'eligiendo…'}`)); ps.appendChild(sp); });
+      const cd = pUI.box.querySelector('.cd'), left = pLeft;
+      cd.querySelector('span').textContent = left >= 0 ? Math.ceil(left / 1000) : '·'; cd.classList.toggle('hot', left >= 0 && left < 5500);
+      cd.querySelector('.fg').setAttribute('stroke-dashoffset', left >= 0 ? String(132 * (1 - Math.min(1, left / PICK_MS))) : '0');
+    }
+    return { list, msg, pickShow, pickDraw, get picking() { return !!pUI; }, cols: () => (pUI ? pUI.cols : []), hide() { pUI = null; if (el) { el.remove(); el = null; } } };
   })();
   // aviso suave si el anfitrión deja de mandar (salió de la app, se le fue la señal): se quita solo al volver
   const Lost = (() => {
@@ -171,32 +262,84 @@ const NetPlay = (() => {
     }
     return { set, hide() { bad = 0; if (el) { el.remove(); el = null; } } };
   })();
-  const myInfo = () => mine.map((seat, li) => { let m = null; try { m = gateO.me(li); } catch (e) { m = null; } return { s: seat, m }; });
+  /* --- elegir: lo de este aparato --- */
+  function choose(li, id) {
+    if (!pickOn || okL[li] || gcfg) return; const it = roster(li).find(x => x.id === id); if (!it || it.lock) return;
+    if (P().unique && Wait.picking) { const st = pst || []; if (seats.some((s, i) => i !== mine[li] && ((st[i] && st[i][1] && st[i][0] === id) || (mine.indexOf(i) >= 0 && okL[mine.indexOf(i)] && sel[mine.indexOf(i)] === id)))) return; }
+    sel[li] = id; pickSend();
+  }
+  function confirm(li) { if (!pickOn || gcfg || !sel[li]) return; if (!okL[li] && P().unique && takenOther(li, sel[li])) return; okL[li] = !okL[li]; pickSend(); }
+  const takenOther = (li, id) => { const st = pst || []; return seats.some((s, i) => i !== mine[li] && ((st[i] && st[i][1] && st[i][0] === id) || (mine.indexOf(i) >= 0 && okL[mine.indexOf(i)] && sel[mine.indexOf(i)] === id))); };
+  function pickSend() {
+    if (role === 'host') { for (const x of myInfo()) { want[x.s] = x.m || {}; pk[x.s] = { id: sel[mine.indexOf(x.s)], ok: !!x.ok }; } hostPst(true); }
+    else send({ t: 'want', me: myInfo() }, true, 'host');
+    Wait.pickDraw();
+  }
+  // anfitrión: cómo va la elección, para todos (al cambiar algo, y una vez por segundo por si se perdió)
+  function hostPst(force) {
+    const now = performance.now(); pLeft = pDead ? Math.max(0, pDead - now) : -1;
+    pst = seats.map((s, i) => [pk[i] ? pk[i].id || '' : '', pk[i] && pk[i].ok ? 1 : 0, want[i] ? 1 : 0]);
+    const j = JSON.stringify(pst); if (force || j !== pSent || now - pSentAt > 1000) { pSent = j; pSentAt = now; send({ t: 'pst', st: pst, left: Math.round(pLeft) }, true, '*'); }
+    Wait.pickDraw();
+  }
+  // teclas mientras se elige (J1: A D W S y E; J2: J L I K u O, o las flechas y Enter): que no le lleguen al juego de atrás
+  addEventListener('keydown', e => {
+    if (!Wait.picking || e.repeat && /^(e|o|enter| )$/i.test(e.key)) { if (Wait.picking) { e.preventDefault(); e.stopPropagation(); } return; }
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key, K1 = { a: -1, d: 1, w: 'u', s: 'd', e: 'ok', f: 'ok', ' ': 'ok' }, K2 = { j: -1, l: 1, i: 'u', k: 'd', o: 'ok', ArrowLeft: -1, ArrowRight: 1, ArrowUp: 'u', ArrowDown: 'd', Enter: 'ok' };
+    let li = -1, a; if (k in K1) { li = 0; a = K1[k]; } else if (k in K2) { li = mine.length > 1 ? 1 : 0; a = K2[k]; }
+    e.stopPropagation(); if (li < 0) return; e.preventDefault(); const c = Wait.cols()[li]; if (!c || !c.L.length) return;
+    if (a === 'ok') { confirm(li); return; }
+    if (okL[li]) return;
+    const free = c.btns.filter(b => !b.disabled || b.dataset.id === sel[li]), cur = Math.max(0, c.btns.findIndex(b => b.dataset.id === sel[li]));
+    const row0 = c.btns[0].offsetTop, per = Math.max(1, c.btns.filter(b => b.offsetTop === row0).length), step = a === 'u' ? -per : a === 'd' ? per : a;
+    for (let n = cur + step, t = 0; t < c.btns.length; n += Math.sign(step), t++) { const i = (n + c.btns.length) % c.btns.length; if (free.includes(c.btns[i])) { choose(li, c.btns[i].dataset.id); break; } }
+  }, true);
   function launch() {
-    if (!pend || !gateO) return; pend = false; clearTimeout(wtick);
+    if (!pend || !gateO) return; pend = false; clearTimeout(wtick); pAtLaunch = pDead ? Math.round(pDead - performance.now()) : -1;
     let c = null; try { c = gateO.make(want, ev || {}); } catch (e) { post('error', { msg: 'make: ' + (e && e.message) }); }
     if (!c) return; gcfg = Object.assign({ id: 1 }, c); Wait.hide(); send({ t: 'cfg', cfg: gcfg }, true, '*');
     try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); }
   }
   startSubs.push(o => {
     if (!gateO) return; gcfg = null; want = {}; clearTimeout(wtick); clearTimeout(askT);
+    pickOn = !!(ev && ev.chars === 'pick' && P() && roster(0).length > 1); pk = {}; pDead = 0; pst = null; pLeft = -1; pSent = ''; okL = mine.map(() => false);
+    // de entrada queda marcado el de siempre (si está abierto); cada quien lo cambia y confirma
+    sel = mine.map((s, li) => { if (!pickOn) return undefined; const L = roster(li), cur = (() => { try { return (gateO.me(li) || {})[P().key]; } catch (e) { return undefined; } })(); const ok = id => L.some(x => x.id === id && !x.lock); return ok(cur) ? cur : (L.find(x => !x.lock) || {}).id; });
+    if (pickOn && P().unique) for (let k = 1; k < sel.length; k++) if (sel.slice(0, k).includes(sel[k])) sel[k] = (roster(k).find(x => !x.lock && !sel.includes(x.id)) || {}).id || sel[k];
     if (o.role === 'host') {
-      pend = true; t0 = performance.now(); for (const x of myInfo()) want[x.s] = x.m || {};
-      const tick = () => { if (!pend || !on) return; const ready = Object.keys(want).map(Number), all = ready.length >= seats.length, el = performance.now() - t0;
+      pend = true; t0 = performance.now(); for (const x of myInfo()) { want[x.s] = x.m || {}; if (pickOn) pk[x.s] = { id: sel[mine.indexOf(x.s)], ok: false }; }
+      if (pickOn) Wait.pickShow();
+      const tick = () => { if (!pend || !on) return; const ready = Object.keys(want).map(Number), all = ready.length >= seats.length, now = performance.now(), el = now - t0;
+        if (pickOn) {
+          if (!pDead && (all || el > 25000)) pDead = now + PICK_MS;
+          const allOk = seats.every((s, i) => pk[i] && pk[i].ok); hostPst(false);
+          if ((all && allOk) || (pDead && now >= pDead)) { launch(); return; }
+          wtick = setTimeout(tick, 250); return;
+        }
         Wait.list(ready, all ? '¡Todos listos!' : 'Esperando a que todos carguen el juego…', el > 5000); send({ t: 'wait', ready }, true, '*');
         if (all || el > 25000) launch(); else wtick = setTimeout(tick, 250); };
       tick();
     } else {
-      Wait.list([], 'Esperando al anfitrión…', false);
+      if (pickOn) Wait.pickShow(); else Wait.list([], 'Esperando al anfitrión…', false);
       const ask = () => { if (!gcfg && on && role === 'client') { send({ t: 'want', me: myInfo() }, true, 'host'); askT = setTimeout(ask, 1500); } }; ask();
     }
   });
   msgSubs.push(d => {
     if (!gateO || !d) return;
     if (d.t === 'cfg' && role === 'client' && d.cfg && typeof d.cfg.id === 'number' && (!gcfg || d.cfg.id > gcfg.id)) { gcfg = d.cfg; snaps.length = 0; pt = null; Wait.hide(); try { gateO.apply(gcfg); } catch (e) { post('error', { msg: 'apply: ' + (e && e.message) }); } }
-    if (d.t === 'wait' && role === 'client' && !gcfg && Array.isArray(d.ready)) Wait.list(d.ready, 'Esperando a que todos carguen el juego…', false);
+    if (d.t === 'wait' && role === 'client' && !gcfg && Array.isArray(d.ready)) { if (pickOn) Wait.pickShow(); else Wait.list(d.ready, 'Esperando a que todos carguen el juego…', false); }
+    if (d.t === 'pst' && role === 'client' && !gcfg && pickOn && Array.isArray(d.st)) {
+      pst = d.st.slice(0, seats.length).map(x => (Array.isArray(x) ? [okId(x[0]), x[1] ? 1 : 0, x[2] ? 1 : 0] : ['', 0, 0])); pLeft = typeof d.left === 'number' ? d.left : -1;
+      // el anfitrión no aceptó el «listo» (otro ya tenía ese personaje): se vuelve a elegir
+      let back = false; mine.forEach((s, li) => { if (okL[li] && pst[s] && pst[s][2] && !pst[s][1] && pst[s][0] === sel[li] && P().unique && takenOther(li, sel[li])) { okL[li] = false; back = true; } });
+      Wait.pickShow(); Wait.pickDraw(); if (back) send({ t: 'want', me: myInfo() }, true, 'host');
+    }
     if (d.t === 'want' && role === 'host') {
-      if (Array.isArray(d.me)) for (const x of d.me) { const s = +x.s; if (s >= 0 && s < seats.length && !mine.includes(s) && !want[s]) want[s] = x.m && typeof x.m === 'object' ? x.m : {}; }
+      if (Array.isArray(d.me)) for (const x of d.me) { const s = +x.s; if (!(s >= 0 && s < seats.length) || mine.includes(s)) continue; const m = x.m && typeof x.m === 'object' ? x.m : {};
+        if (pickOn && pend) { const id = okId(m[P().key]), known = roster(0).some(q => q.id === id); let ok = !!x.ok && known;
+          if (ok && P().unique && seats.some((q, i) => i !== s && pk[i] && pk[i].ok && pk[i].id === id)) ok = false; // ya lo tiene otro: el primero que confirmó se lo queda
+          want[s] = m; pk[s] = { id: known ? id : '', ok }; hostPst(true); }
+        else if (!want[s]) want[s] = m; }
       if (gcfg) send({ t: 'cfg', cfg: gcfg }, true, '*');
     }
   });
@@ -208,6 +351,8 @@ const NetPlay = (() => {
   function slow(k, v, ms = 1000) { if (v === undefined) return undefined; const j = JSON.stringify(v), now = performance.now(), L = slowLast[k]; if (L && L.j === j && now - L.t < ms) return undefined; slowLast[k] = { j, t: now }; return v; }
   return {
     gate(o) { gateO = o; }, again, get cfg() { return gcfg; }, okId, slow,
+    // (pruebas) cómo va la elección de personaje
+    get pickState() { return { on: pickOn, sel: sel.slice(), ok: okL.slice(), pk: JSON.parse(JSON.stringify(pk)), left: pLeft, pend, atLaunch: pAtLaunch }; },
     notice(title, note) { if (on) Wait.msg(title, note); }, noticeOff() { Wait.hide(); },
     get on() { return on; }, get role() { return role; }, get isHost() { return on && role === 'host'; }, get isClient() { return on && role === 'client'; },
     get seats() { return seats; }, get mine() { return mine; }, get sid() { return sid; }, get ev() { return ev; },
@@ -224,14 +369,20 @@ const NetPlay = (() => {
       const sk = G() && G().slowKeys; if (sk && snaps.length > 1) { for (let i = 1; i < snaps.length; i++) { const p = snaps[i - 1], c = snaps[i]; if (p._used) continue; for (const k of sk) if (p.d[k] !== undefined && c.d[k] === undefined) c.d[k] = p.d[k]; } } if (snaps.length === 1 || offset == null) { const s = snaps[snaps.length - 1]; return { a: s.d, b: s.d, k: 1 }; }
       // reloj de dibujo: avanza con el tiempo real y se acerca a «ahora − colchón» cambiando un poco la velocidad (entre
       // 0,75× y 1,1×) en vez de saltar: los saltos (sobre todo hacia atrás, cuando el colchón crece) se ven como tirones.
-      // Si no hay instantánea para ese momento, se queda en la última y sigue desde ahí cuando llegue (no salta adelante).
+      // Si no hay instantánea para ese momento, sigue un poquito más allá de la última con el mismo movimiento (hasta EX ms:
+      // con datos malos, un bache corto ya no congela a los demás) y después se queda quieto hasta que llegue la siguiente.
       const nowF = performance.now(), target = nowF + offset - lagMs, last = snaps[snaps.length - 1].tm;
       if (pt == null || Math.abs(target - pt) > 600) pt = target;
       else { const dt = Math.min(100, Math.max(0, nowF - ptAt)), err = target - pt; pt += dt + Math.max(-0.25 * dt, Math.min(0.1 * dt, err * 0.1)); }
       ptAt = nowF;
       PS.fr++; if (PS.lastPT && pt < PS.lastPT - 1) PS.back++;
-      if (pt > last) { PS.hungry++; if (!PS.hRun) { PS.hRun = nowF; PS.hEp++; } PS.hMax = Math.max(PS.hMax, nowF - PS.hRun); pt = last; } else PS.hRun = 0;
+      const EX = snaps.length > 1 ? Math.min(140, Math.max(50, gap * 2.5)) : 0;
+      if (pt > last + EX) { PS.hungry++; if (!PS.hRun) { PS.hRun = nowF; PS.hEp++; } PS.hMax = Math.max(PS.hMax, nowF - PS.hRun); pt = last + EX; } else PS.hRun = 0;
       PS.lastPT = pt; const t = pt;
+      if (t > last && snaps.length > 1) { // adelantar: las dos últimas, k > 1 (cada juego lo usa como interpolación; tope 2)
+        PS.ext++; const a = snaps[snaps.length - 2], b = snaps[snaps.length - 1], span = b.tm - a.tm;
+        const k = span > 8 ? Math.min(2, 1 + (t - b.tm) / span) : 1; return { a: a.d, b: b.d, k, dt: span / 1000, ex: true };
+      }
       for (let i = snaps.length - 1; i > 0; i--) { const a = snaps[i - 1], b = snaps[i]; if (a.tm <= t) { const k = b.tm > a.tm ? Math.min(1, Math.max(0, (t - a.tm) / (b.tm - a.tm))) : 1; return { a: a.d, b: b.d, k, dt: (b.tm - a.tm) / 1000 }; } }
       return { a: snaps[0].d, b: snaps[0].d, k: 1 };
     },

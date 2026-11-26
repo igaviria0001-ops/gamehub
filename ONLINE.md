@@ -444,3 +444,29 @@ Plan, detalle y cómo retomar en [TANDA4.md](TANDA4.md). Resumen:
 Plan completo, metas medibles, pasos en orden, pruebas y cálculo del plan gratis en
 [RED-CLOUDFLARE.md](RED-CLOUDFLARE.md). Parte A (mejoras del cliente y del servidor) se puede hacer sin la dirección;
 Parte B cuando Ignacio mande la dirección del Worker (pasos en `servidor/GUIA-CLOUDFLARE.md`).
+
+## Sexta tanda (25 nov, rama `tanda6`) — datos malos, sala nueva y elegir personaje
+- **Datos malos (fijos o a ratos)**: medido con `test/netmovil.js` (perfiles lento, corte, relevo). Lo que más se notaba
+  eran los congelones cortos del remoto cuando una instantánea llega tarde. Ahora `NetPlay.sample()` **adelanta** un
+  poquito con el último movimiento (hasta ~140 ms, k > 1 entre las dos últimas) en vez de congelar, y luego espera; el
+  colchón sigue igual (se probó subirlo y se sentía más atrasado sin ganar fluidez). En la prueba con datos lentos: menos
+  cuadros congelados y rachas más cortas; con red buena no cambia nada (no hace falta adelantar).
+- **Sala nueva** (`app/online.js` + `app/app.css`, mismo estilo de la portada): los juegos con su foto y su logo; al
+  escoger uno, una ficha con la foto, los modos en tarjetas separados en «Uno contra otro» y «En equipo» (campañas,
+  jefe en pareja), duración y cuántos juegan; escenario en botones; largo; personajes; quién juega y quién mira; y abajo
+  el resumen con «¡A jugar!». Las campañas explican que el nivel se escoge en el mapa. Los demás aparatos ven la misma
+  ficha («El anfitrión prepara…»). El torneo con todos va en una franja como la de la portada.
+- **Elegir personaje antes de cada partida en línea** (`shared/netplay.js`, puerta común): `ev.chars`
+  - `'pick'` (por defecto en la sala): pantalla «Elige tu mago/piloto/pájaro/chicle» en cada aparato, una columna por
+    jugador local (clic, dedo o teclas: J1 A D W S + E, J2 J L I K + O), retratos dibujados por cada juego, cuenta de
+    20 s que empieza cuando todos cargaron, y **arranca apenas todos confirman**. Lo que no se puede repetir (pilotos de
+    VÉRTIGO, sabores de Tira y Afloja) queda bloqueado cuando otro ya lo confirmó (el primero que confirma se lo queda).
+    Si se acaba el tiempo, cada uno juega con el que tenía marcado (de entrada, el de siempre).
+  - `'random'`: a cada puesto uno al azar, sin repetir e igual en todos (sale del número de la partida); sin pantalla.
+  - `'keep'` (solo torneos que lo pidan): como antes, el de siempre.
+  - Cada juego da en su `gate`: `me(li, id)` (con ese personaje, con su pinta/atuendo del vestidor de ese aparato) y
+    `pick: { key, what, list(li), art(canvas, id, li), unique }`. Lo bloqueado del aparato (sabores sin ganar) sale con 🔒.
+  - El torneo en línea pasa su regla de personajes (y las opciones de la prueba) a cada partida.
+  - «Revancha» dentro del juego mantiene los mismos personajes (es para seguir rápido); para cambiar, «Volver a la sala».
+- Prueba nueva `test/netelige.js` (G=juego, CH=random): la pantalla en los dos aparatos, clic y teclas, el bloqueo de
+  repetidos, que arranca sin esperar la cuenta y que cada uno juega con el que escogió. Las pruebas viejas confirman solas.

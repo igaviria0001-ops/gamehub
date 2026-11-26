@@ -8,7 +8,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const until = async (f, ms, step = 300) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await f()) return true; } catch (e) { /* aún no */ } await wait(step); } return false; };
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] }); const errs = [];
-  const mk = async () => { const ctx = await b.newContext({ viewport: { width: 1100, height: 700 } }); return async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(URL); await wait(700); return p; }; };
+  const mk = async () => { const ctx = await b.newContext({ viewport: { width: 1100, height: 700 } }); await ctx.addInitScript(() => { if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll('#netWait .pf button:not(.no)').forEach(b => b.click()); } catch (e) {} }, 700); }); return async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(URL); await wait(700); return p; }; };
   const frameOf = async p => { for (let i = 0; i < 80; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(() => typeof NetPlay !== 'undefined' && NetPlay.on && !!NetPlay.cfg)) return f; } catch (e) {} } await wait(400); } return null; };
   // ---------- 1) sale a propósito, con torneo ----------
   const pg = await mk(); const H = await pg(), A = await pg(), B = await pg();

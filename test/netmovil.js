@@ -17,7 +17,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 async function uno(b, gid) {
   const vw = process.env.VIEW ? process.env.VIEW.split('x').map(Number) : [960, 540];
   const ctx = await b.newContext({ viewport: { width: vw[0], height: vw[1] } }); const errs = [];
-  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 160))); });
+  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 160))); });
   const page = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(BASE + '?net=bc&' + Q + '#online'); await wait(700); return p; };
   const H = await page(), C = await page();
   await H.fill('[data-pname="0"]', 'Ana'); await H.click('#on-host'); await wait(400);
@@ -26,7 +26,7 @@ async function uno(b, gid) {
   for (let i = 0; i < 80; i++) { if (await H.evaluate(() => Net.room && Net.room.devices.length === 2 && Net.room.devices.every(d => d.host || d.open))) break; await wait(300); }
   await H.click(`[data-ong="${gid}"]`); await wait(300);
   // siempre el mismo escenario (el primero de la lista), para comparar antes y después
-  if (await H.$('[data-onseg="map"] button:not([data-v=""])')) { await H.click('[data-onseg="map"] button:not([data-v=""])'); await wait(300); }
+  if (await H.$('[data-onmap]:not([data-onmap=""])')) { await H.click('[data-onmap]:not([data-onmap=""])'); await wait(300); }
   await H.click('#on-go');
   const frameOf = async p => { for (let i = 0; i < 200; i++) { const f = p.frames().find(x => x !== p.mainFrame() && x.url() !== 'about:blank'); if (f) { try { if (await f.evaluate(() => typeof NetPlay !== 'undefined' && NetPlay.on && !!NetPlay.cfg)) return f; } catch (e) {} } await wait(400); } return null; };
   const fh = await frameOf(H), fc = await frameOf(C);

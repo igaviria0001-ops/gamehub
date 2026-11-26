@@ -9,7 +9,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 async function uno(b, gid) {
   const q = ['net=bc', RED, RELEVO ? 'netforce=relay' : ''].filter(Boolean).join('&');
   const ctx = await b.newContext({ viewport: { width: 900, height: 520 } }); const errs = [];
-  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 160))); });
+  await ctx.addInitScript(() => { try { localStorage.setItem('vtg_gq', '0'); } catch (e) {} window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 160))); });
   const page = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.goto(BASE + '?' + q + '#online'); await wait(700); return p; };
   const H = await page(), C = await page();
   await H.fill('[data-pname="0"]', 'Ana'); await H.click('#on-host'); await wait(400);

@@ -8,7 +8,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch({ args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] });
   const ctx = await b.newContext({ viewport: { width: 960, height: 540 } }); const errs = [];
-  await ctx.addInitScript(() => { window.__errs = []; addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); });
+  await ctx.addInitScript(() => { window.__errs = []; if (!window.__autoPick) window.__autoPick = setInterval(() => { try { document.querySelectorAll("#netWait .pf button:not(.no)").forEach(b => b.click()); } catch (e) {} }, 700); addEventListener('error', e => window.__errs.push(String(e.message).slice(0, 200))); });
   const page = async () => { const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('c:' + m.text().slice(0, 160)); }); await p.goto(URL); await wait(800); return p; };
   const H = await page(), C = await page();
   if (TRES) { await H.evaluate(() => { const b = [...document.querySelectorAll('[data-v="2"]')][0]; if (b) b.click(); }); await wait(300); }
@@ -18,8 +18,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await C.fill('[data-pname="0"]', 'Remoto'); await C.fill('#on-code', code); await C.click('#on-join');
   for (let i = 0; i < 40; i++) { const ok = await H.evaluate(() => Net.room && Net.room.devices.length === 2 && Net.room.devices.every(d => d.host || d.open)); if (ok) break; await wait(300); }
   await H.click('[data-ong="sortilegio"]'); await wait(300);
-  await H.click(`[data-onseg="mode"] [data-v="${MODE}"]`); await wait(150);
-  await H.click('[data-onseg="map"] [data-v="rio"]'); await wait(150);
+  await H.click(`[data-onmode="${MODE}"]`); await wait(150);
+  await H.click('[data-onmap="rio"]'); await wait(150);
   if (MODE === 'duel') await H.click('[data-onseg="len"] [data-v="2"]');
   await wait(600); await H.screenshot({ path: OUT + 'netsrt-sala.png' });
   await H.click('#on-go');
