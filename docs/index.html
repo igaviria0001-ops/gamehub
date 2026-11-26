@@ -1777,7 +1777,7 @@ const Online = (() => {
     set(k, v) { try { localStorage.setItem(PRE + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },
     del(k) { try { localStorage.removeItem(PRE + k); } catch (e) { /* nada */ } },
   };
-  const BUILD = {"v":"38e12a5996","date":"2026-11-26"};
+  const BUILD = {"v":"90f5a303e9","date":"2026-11-26"};
   try { window.__ghBuild = BUILD; } catch (e) { /* nada */ } // la sala en línea compara versiones entre aparatos
   const SET = Object.assign({ sound: true, fsPlay: true }, Store.get('settings', {}));
   const saveSet = () => Store.set('settings', SET);

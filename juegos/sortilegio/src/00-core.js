@@ -32,7 +32,7 @@ function noise2(x, y) {
 function fbm2(x, y, oct = 4) { let v = 0, a = 0.5, n = 0; for (let k = 0; k < oct; k++) { v += a * noise2(x, y); n += a; x = x * 2.03 + 17.1; y = y * 2.03 + 9.7; a *= 0.5; } return v / n; }
 
 /* ---------- guardado (prefijo propio: no choca con los otros juegos) ---------- */
-const GAME_META = { id: 'sortilegio', name: 'Sortilegio', version: '3.0', storagePrefix: 'srt_', players: 2 };
+const GAME_META = { id: 'sortilegio', name: 'Sortilegio', version: '3.1', storagePrefix: 'srt_', players: 2 };
 const Store = {
   get(k, def) { try { const v = localStorage.getItem(GAME_META.storagePrefix + k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } },
   set(k, v) { try { localStorage.setItem(GAME_META.storagePrefix + k, JSON.stringify(v)); } catch (e) { /* sin guardado */ } },

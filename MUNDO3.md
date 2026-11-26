@@ -137,3 +137,22 @@ Metas de dificultad (jugador normal + compañero, 10 intentos): c19–c20 ganar 
     marcados; lo que alguien desmarcó sigue desmarcado.
   - Prueba completa (`BASE=24f2919 bash test/todo.sh`): todo OK salvo mundo3Srt (arreglado arriba, luego OK) y
     «sin conexión» por la portada (esperado). Celular 844×390: niveles, jefes y cinemáticas se leen bien.
+- **26 nov (noche)** — Pedido de Ignacio: bajar un poquito el Plasma de Galeras (fusión y Gran Sortilegio) y que los
+  jefes del Mundo 3 y los árboles se vean menos simples, con textura. Versión 3.1.
+  - **Galeras**: Plasma 27 → 25 de golpe y quemadura 2 → 1,7 s (≈9 % menos en total); en Gran Sortilegio, además
+    ×0,97 (≈11 % menos). Revisado si otro mago tenía el problema de puntería que tenía el Plasma (rayo fijo mientras
+    carga): ninguno. Supernova, Relámpago, Magma y Juicio ya caen donde VA a estar el rival y dejan esquivar a
+    propósito; Prisma y Rayo negro son instantáneos.
+  - **Jefes** (`10k2-art-w3boss.js`, ArtW3B2; `10k-art-w3b.js` ahora solo avisos, barras y reparte): texturas en
+    mosaico (pelo, escamas, piel de tigre, grano de tinta) dentro de cada forma, luz y sombra. Kitsune: nueve colas
+    esponjosas, marcas de kumadori, cuerda sagrada con cascabel, joya hōju y fuegos de zorro. Raijin y Fujin: nube de
+    buen agüero con rizos de oro, aro de tambores con rayos al compás, piel de tigre, chal celeste, melena de pincel;
+    saco de viento con remolinos. Orochi: anillos de escamas con panza roja que late, cedros y musgo, cuellos con
+    escamas; cabezas con cresta de su elemento, barbas, lengua bífida. El Borrón: tinta húmeda con grano, cuernos,
+    máscara de hannya agrietada, letras de pincel que giran, grietas de luz cuando pierde la coraza. Copias y tinajas.
+    Para no pesar más, lo quieto se pinta una vez (cuerpo de la Kitsune, colas, cuerpo de Orochi, torso y cabeza de
+    los dioses, nubes, tambores, brillos y llamitas). Medido: mismos cuadros por segundo que antes.
+  - **Árboles** (`10i-art-ink.js` treeSpr): pinos con almohadas de agujas, cerezos y arces de hojitas en tres capas
+    (sombra, color, luz) y hojas que caen, corteza con vetas y nudo, bambú con brillo y nudos claros.
+  - Pruebas: `juegos/sortilegio/test/bossgal3.js` (galería de jefes) y `treegal.js` (árboles); offline-eq idéntico
+    con `BASE=f73e610`; films, spells, c21 con dos máquinas (88 s) y netw3 OK.

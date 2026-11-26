@@ -450,7 +450,8 @@ const Spells = (() => {
   function fireBeam(G, s, m) {
     const S = s.S, L = S.len * s.size, W = S.w * s.size, x0 = m.x, y0 = m.y - 16, x1 = x0 + Math.cos(s.ang) * L, y1 = y0 + Math.sin(s.ang) * L;
     s.x1 = x1; s.y1 = y1;
-    for (const u of G.units) if (foe(s, u) && segDist(u.x, u.y - 14, x0, y0, x1, y1) < W / 2 + u.r) hit(G, s, u, S.dmg * s.power, { el: 'fire', burn: 2, knock: 260, kx: Math.cos(s.ang), ky: Math.sin(s.ang), big: true });
+    const dmg = S.dmg * s.power * (s.gran && S.granMul ? S.granMul : 1); // Plasma: 25 (antes 27); en Gran Sortilegio un 3 % menos encima
+    for (const u of G.units) if (foe(s, u) && segDist(u.x, u.y - 14, x0, y0, x1, y1) < W / 2 + u.r) hit(G, s, u, dmg, { el: 'fire', burn: S.burn || 2, knock: 260, kx: Math.cos(s.ang), ky: Math.sin(s.ang), big: true });
     let lit = 0; Terrain.forLine(G.T, x0, y0 + 16, x1, y1 + 16, i => { if (G.T.wall[i] > 0) Terrain.hitWall(G, i, 999); else if (Terrain.burnable(G.T, i) && G.rng() < 0.5 && Terrain.ignite(G, i, 2.6, s.by)) lit++; });
     if (lit >= 5) Combos.add(G, s.by, 'incendio', { x: (x0 + x1) / 2, y: (y0 + y1) / 2 });
     G.events.push({ type: 'beam', x: x0, y: y0 }); G.fx.push({ type: 'beamFlash', x0, y0, x1, y1, w: W });
