@@ -68,3 +68,43 @@ Metas de dificultad (jugador normal + compañero, 10 intentos): c19–c20 ganar 
   - Pruebas: `test/ink.js` (capturas de las 4 estaciones y lo que tarda pintar cada una), `test/perfink.js` (cuadros por
     segundo contra un duelo normal: ligera más rápido, media ~15 % más lento en la nube sin tarjeta gráfica).
     `offline-eq sortilegio` idéntico (se ignoran los campos nuevos, vacíos fuera del Mundo 3); `test/netsrt.js` OK.
+- **26 nov ~19:30** — Fase 4 (voces y música, ver commit 20d6afe) y **Fases 5, 6 y 7** (niveles, jefes, cinemáticas). Commit d6e771e.
+  - **Pedido nuevo de Ignacio**: (1) subir música, efectos y voces en TODO el juego (la gente ni notaba que había sonido) y
+    que las voces suenen imponentes, no robóticas, «como otro idioma de verdad», con subtítulos que funcionen; (2) las
+    cinemáticas deben salir CADA VEZ que se pasa el nivel (no solo la primera), siempre con opción de saltarlas.
+  - **Sonido** (`11-sound.js`, `11b-music.js`, `11d-voice.js`): compresor suave + ganancia de compensación (+8 dB) +
+    limitador al final (más fuerte sin romperse); música 0,42→0,66 y se aparta (−58 %) mientras alguien habla
+    (`Music.vduck`); voces ×2,1 y volumen inicial «altas». Voz nueva: «lengua mágica» por moras (consonantes del español
+    pasan a k, s, sh, t, ts, ch, h, f, m, n, r, y, w, b, d, g, p; acento de tono por palabra; ritmo parejo), fuente de
+    glotis suavizada + pecho, vibrato y temblor humanos, 4 formantes, cierres y explosiones de las oclusivas, sala de
+    templo de 2,4 s para todos los que hablan con nombre. Subtítulos: máximo dos, se limpian al empezar ronda, suben si
+    hay barra de jefe. `test/audio.js`: voces rms 0,026–0,065, nada satura.
+  - **Niveles** (`07e-world3.js`, objetos nuevos por `Camp.EXT`: start/setup/step/plan/job/draw/event/update/boss/spawn):
+    c19 El torii en el mar (lotos de primavera, seto verde que solo arde en verano, molinete de otoño, mar que se cruza
+    congelado, el Borrón mancha el gran torii → luz), c20 El bosque de bambú (sendero entre bambú; laberinto que se
+    rearma con la gran ráfaga; en otoño las ráfagas acuestan el bambú 2,6 s y el viento lo dobla un ratito; en verano
+    arde; en primavera rebrota), c22 Himeji (foso: congelar o quemar la cuerda; escalera borrada → enredadera de
+    primavera; tres toriis sueltos con tablillas, si se equivocan despierta una armadura), c23 Shirakawa-go (noche,
+    defender 3 faroles 3 min, frío, Yuki-onna, verano de 30 s con el torii), c25 Kioto (huir del muro de tinta que se
+    adapta a la velocidad; puestos de papel, molinete, río Kamo con lotos o hielo).
+  - **Jefes** (`07f-bosses3.js`): Kitsune (ilusiones SIN sombra, la luz las deshace y la deja al descubierto; pelea por
+    el verano), Raijin y Fujin (al compás del tambor; juntos se protegen ×0,3; si cae uno se levanta a los 12 s salvo
+    que caiga el otro), Orochi (8 cabezas que suben y bajan, débiles a su contrario, el sake las emborracha) y el
+    Borrón (coraza de tinta que solo rompe la luz, copias de tinta de los magos, fosas). Sumi pinta luz al salir el Borrón.
+  - **Arte** (`10j-art-w3.js`, `10k-art-w3b.js`): criaturas, casas, puestos, molinete, tablillas, muros del castillo,
+    machiya, lotos, enredadera, seto, ensō de salida, muro de tinta, fuegos artificiales, ventisca; temas por lugar
+    (noche en Shirakawa, Kioto, Fushimi e Izumo; cielo de nubes en el Fuji; losas en Himeji, Kioto y Fushimi).
+  - **Cinemáticas** (`10l-film.js`, `Film.play`): la caída de Buziraco (25 s), la entrada de cada nivel (4,4 s) y la
+    presentación de cada jefe (10,5 s), el final (26 s). Salen SIEMPRE; «Saltar», Esc, Enter o dos toques; en línea no
+    salen. Se vuelven a ver desde la campaña (fila «Cinemáticas»). `test/films.js`: dibujan sin errores y se saltan.
+  - **Campaña**: pestaña «Mundo 3 · El Pergamino» (abre al vencer a Buziraco). Máquina compañera: elige fuentes a las
+    que de verdad puede llegar y suelta la meta si no llega en 9 s.
+  - **Dificultad con dos máquinas** (`test/w3dbg.js`, `/tmp` de pruebas): c19 51 s 5 vidas · c20 114 s 4 · c21 ~100 s 3 ·
+    c22 89 s 3 · c23 gana ~50 % (defensa dura) · c24 130 s · c25 ~55 s (persecución) · c26 310–360 s, 1–4 vidas.
+    (Cóndor 193 s / Buziraco ~240 s, 3 vidas.)
+  - `offline-eq sortilegio` con `BASE=20d6afe`: estado e imagen idénticos en todas las escenas (la prueba ahora apaga las
+    voces en las dos versiones porque gastan azar según lo que dura cada frase).
+  - **Sigue**: Fase 8 (magos Fuji y Yoshino + atuendos + nivelar), Fase 9 (8 escenarios y Sumo mágico), Fase 10 (en línea:
+    probar campaña del Mundo 3 con `test/netsrt.js`, catálogo, torneo, Copa, Escuela, logros, sellos → atuendo mítico),
+    ajustes finos de c23 (defensa) y revisar en celular. Desviaciones del plan: criaturas de nieve débiles al FUEGO;
+    recorrido de la palanca ~1,4×.
