@@ -98,21 +98,24 @@ const FUSION_ORDER = Object.keys(FUSIONS);
 const CHARS = {
   candela:   { name: 'Candela', title: 'llanera de fuego', hands: ['fire', 'wind'], hp: 168, speed: 1.06, sig: 'fire+wind', trait: 'Sus quemaduras duran 50 % más y al esquivar deja fuego.', look: 'candela' },
   yuma:      { name: 'Yuma', title: 'aprendiz del Mohán', hands: ['water', 'bolt'], hp: 114, speed: 1.05, sig: 'water+bolt', trait: 'Más rápido en agua y barro; su agua electrificada no lo toca.', look: 'yuma' },
-  frailejon: { name: 'Frailejón', title: 'guardián del páramo', hands: ['earth', 'plant'], hp: 166, speed: 0.95, sig: 'earth+plant', trait: 'Casi no lo empujan; quieto sobre hierba se cura; sus plantas pegan 40 % más.', look: 'frailejon' },
+  frailejon: { name: 'Frailejón', title: 'guardián del páramo', hands: ['earth', 'plant'], hp: 172, speed: 0.95, sig: 'earth+plant', trait: 'Casi no lo empujan; quieto sobre hierba se cura; sus plantas pegan 40 % más.', look: 'frailejon' },
   purace:    { name: 'Puracé', title: 'hija del volcán', hands: ['fire', 'earth'], hp: 136, speed: 0.92, sig: 'fire+earth', trait: 'Recibe 25 % menos daño por fuego y lava.', look: 'purace' },
   iguaque:   { name: 'Iguaque', title: 'sacerdotisa de la laguna', hands: ['water', 'plant'], hp: 118, speed: 1.0, sig: 'water+plant', trait: 'Cura 50 % más; con poca vida se regenera.', look: 'iguaque' },
   catatumbo: { name: 'Catatumbo', title: 'relámpago errante', hands: ['wind', 'bolt'], hp: 144, speed: 1.15, sig: 'wind+bolt', trait: 'Sus rayos pegan 35 % más; esquiva más seguido y al esquivar a través del rival lo electrocuta.', look: 'catatumbo' },
   // 2.0 — más magos de los seis elementos de siempre
-  cocuy:     { name: 'Cocuy', title: 'ermitaño del nevado', hands: ['water', 'wind'], hp: 136, speed: 1.0, sig: 'water+wind', trait: 'Congela 40 % más tiempo, no resbala en el hielo y el frío no lo frena.', look: 'cocuy' },
-  tatacoa:   { name: 'Tatacoa', title: 'caminante del desierto', hands: ['wind', 'earth'], hp: 136, speed: 0.98, sig: 'wind+earth', trait: 'Dentro de su tormenta de arena se cura; sus muros aguantan más.', look: 'tatacoa' },
+  cocuy:     { name: 'Cocuy', title: 'ermitaño del nevado', hands: ['water', 'wind'], hp: 148, speed: 1.0, sig: 'water+wind', trait: 'Congela 40 % más tiempo, no resbala en el hielo y el frío no lo frena.', look: 'cocuy' },
+  tatacoa:   { name: 'Tatacoa', title: 'caminante del desierto', hands: ['wind', 'earth'], hp: 144, speed: 0.98, sig: 'wind+earth', trait: 'Dentro de su tormenta de arena se cura; sus muros aguantan más.', look: 'tatacoa' },
   galeras:   { name: 'Galeras', title: 'forjador de tormentas', hands: ['fire', 'bolt'], hp: 146, speed: 1.06, sig: 'fire+bolt', trait: 'Carga los hechizos 30 % más rápido y camina mientras prepara el Plasma.', look: 'galeras' },
   // 2.0 — magos de Luz y Sombra
   zuhe:      { name: 'Zuhé', title: 'hijo del sol', hands: ['light', 'fire'], hp: 106, speed: 1.02, sig: 'fire+light', trait: 'Encandila 40 % más tiempo y cada golpe de luz lo cura; lo rodea un halo de sol.', look: 'zuhe' },
   chia:      { name: 'Chía', title: 'señora de la luna', hands: ['light', 'shadow'], hp: 114, speed: 1.08, sig: 'light+shadow', trait: 'Sus maleficios duran más y pegan más fuerte; escondida o en la oscuridad se regenera.', look: 'chia' },
   mapale:    { name: 'Mapalé', title: 'danzante de la noche', hands: ['shadow', 'wind'], hp: 132, speed: 1.2, sig: 'wind+shadow', trait: 'Tiene tres esquives y al esquivar se vuelve sombra un instante (no se le puede apuntar).', look: 'mapale' },
-  tota:      { name: 'Tota', title: 'bruja del lago hondo', hands: ['shadow', 'water'], hp: 112, speed: 0.94, sig: 'water+shadow', trait: 'Roba vida con cada golpe de sombra y nada rápido en el agua.', look: 'tota' },
+  tota:      { name: 'Tota', title: 'bruja del lago hondo', hands: ['shadow', 'water'], hp: 124, speed: 0.94, sig: 'water+shadow', trait: 'Roba vida con cada golpe de sombra y nada rápido en el agua.', look: 'tota' },
+  // 3.0 — magos del Mundo 3 (los que faltaban de los elementos de siempre)
+  fuji:      { name: 'Fuji', title: 'monje del monte sagrado', hands: ['fire', 'water'], hp: 126, speed: 1.0, sig: 'fire+water', trait: 'EQUILIBRIO: si alterna fuego y agua, cada hechizo pega 15 % más; dentro de su Vapor se cura.', look: 'fuji' },
+  yoshino:   { name: 'Yoshino', title: 'guardiana de los cerezos', hands: ['plant', 'wind'], hp: 114, speed: 1.1, sig: 'wind+plant', trait: 'PÉTALOS AL VIENTO: su enjambre lleva 4 pétalos más y corre más rápido sobre hierba y hojarasca.', look: 'yoshino' },
 };
-const CHAR_ORDER = ['candela', 'yuma', 'frailejon', 'purace', 'iguaque', 'catatumbo', 'cocuy', 'tatacoa', 'galeras', 'zuhe', 'chia', 'mapale', 'tota'];
+const CHAR_ORDER = ['candela', 'yuma', 'frailejon', 'purace', 'iguaque', 'catatumbo', 'cocuy', 'tatacoa', 'galeras', 'zuhe', 'chia', 'mapale', 'tota', 'fuji', 'yoshino'];
 // lo que cada rasgo cambia (Mage los lee)
 const TRAITS = {
   candela: { burnMul: 1.85, dashFire: 1 },
@@ -127,5 +130,7 @@ const TRAITS = {
   zuhe: { dazzleMul: 1.4, lightHeal: 1.4 },
   chia: { hexMul: 1.4, hexDmg: 1.55, hideRegen: 2 },
   mapale: { dashN: 3, dashHide: 0.7 },
-  tota: { shadowLeech: 0.18, waterSpeed: 1.15 },
+  tota: { shadowLeech: 0.24, waterSpeed: 1.15 },
+  fuji: { balance: 1.15, vaporHeal: 2.5 },
+  yoshino: { petalN: 4, grassSpeed: 1.12 },
 };

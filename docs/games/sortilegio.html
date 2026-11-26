@@ -1813,21 +1813,24 @@ const FUSION_ORDER = Object.keys(FUSIONS);
 const CHARS = {
   candela:   { name: 'Candela', title: 'llanera de fuego', hands: ['fire', 'wind'], hp: 168, speed: 1.06, sig: 'fire+wind', trait: 'Sus quemaduras duran 50 % más y al esquivar deja fuego.', look: 'candela' },
   yuma:      { name: 'Yuma', title: 'aprendiz del Mohán', hands: ['water', 'bolt'], hp: 114, speed: 1.05, sig: 'water+bolt', trait: 'Más rápido en agua y barro; su agua electrificada no lo toca.', look: 'yuma' },
-  frailejon: { name: 'Frailejón', title: 'guardián del páramo', hands: ['earth', 'plant'], hp: 166, speed: 0.95, sig: 'earth+plant', trait: 'Casi no lo empujan; quieto sobre hierba se cura; sus plantas pegan 40 % más.', look: 'frailejon' },
+  frailejon: { name: 'Frailejón', title: 'guardián del páramo', hands: ['earth', 'plant'], hp: 172, speed: 0.95, sig: 'earth+plant', trait: 'Casi no lo empujan; quieto sobre hierba se cura; sus plantas pegan 40 % más.', look: 'frailejon' },
   purace:    { name: 'Puracé', title: 'hija del volcán', hands: ['fire', 'earth'], hp: 136, speed: 0.92, sig: 'fire+earth', trait: 'Recibe 25 % menos daño por fuego y lava.', look: 'purace' },
   iguaque:   { name: 'Iguaque', title: 'sacerdotisa de la laguna', hands: ['water', 'plant'], hp: 118, speed: 1.0, sig: 'water+plant', trait: 'Cura 50 % más; con poca vida se regenera.', look: 'iguaque' },
   catatumbo: { name: 'Catatumbo', title: 'relámpago errante', hands: ['wind', 'bolt'], hp: 144, speed: 1.15, sig: 'wind+bolt', trait: 'Sus rayos pegan 35 % más; esquiva más seguido y al esquivar a través del rival lo electrocuta.', look: 'catatumbo' },
   // 2.0 — más magos de los seis elementos de siempre
-  cocuy:     { name: 'Cocuy', title: 'ermitaño del nevado', hands: ['water', 'wind'], hp: 136, speed: 1.0, sig: 'water+wind', trait: 'Congela 40 % más tiempo, no resbala en el hielo y el frío no lo frena.', look: 'cocuy' },
-  tatacoa:   { name: 'Tatacoa', title: 'caminante del desierto', hands: ['wind', 'earth'], hp: 136, speed: 0.98, sig: 'wind+earth', trait: 'Dentro de su tormenta de arena se cura; sus muros aguantan más.', look: 'tatacoa' },
+  cocuy:     { name: 'Cocuy', title: 'ermitaño del nevado', hands: ['water', 'wind'], hp: 148, speed: 1.0, sig: 'water+wind', trait: 'Congela 40 % más tiempo, no resbala en el hielo y el frío no lo frena.', look: 'cocuy' },
+  tatacoa:   { name: 'Tatacoa', title: 'caminante del desierto', hands: ['wind', 'earth'], hp: 144, speed: 0.98, sig: 'wind+earth', trait: 'Dentro de su tormenta de arena se cura; sus muros aguantan más.', look: 'tatacoa' },
   galeras:   { name: 'Galeras', title: 'forjador de tormentas', hands: ['fire', 'bolt'], hp: 146, speed: 1.06, sig: 'fire+bolt', trait: 'Carga los hechizos 30 % más rápido y camina mientras prepara el Plasma.', look: 'galeras' },
   // 2.0 — magos de Luz y Sombra
   zuhe:      { name: 'Zuhé', title: 'hijo del sol', hands: ['light', 'fire'], hp: 106, speed: 1.02, sig: 'fire+light', trait: 'Encandila 40 % más tiempo y cada golpe de luz lo cura; lo rodea un halo de sol.', look: 'zuhe' },
   chia:      { name: 'Chía', title: 'señora de la luna', hands: ['light', 'shadow'], hp: 114, speed: 1.08, sig: 'light+shadow', trait: 'Sus maleficios duran más y pegan más fuerte; escondida o en la oscuridad se regenera.', look: 'chia' },
   mapale:    { name: 'Mapalé', title: 'danzante de la noche', hands: ['shadow', 'wind'], hp: 132, speed: 1.2, sig: 'wind+shadow', trait: 'Tiene tres esquives y al esquivar se vuelve sombra un instante (no se le puede apuntar).', look: 'mapale' },
-  tota:      { name: 'Tota', title: 'bruja del lago hondo', hands: ['shadow', 'water'], hp: 112, speed: 0.94, sig: 'water+shadow', trait: 'Roba vida con cada golpe de sombra y nada rápido en el agua.', look: 'tota' },
+  tota:      { name: 'Tota', title: 'bruja del lago hondo', hands: ['shadow', 'water'], hp: 124, speed: 0.94, sig: 'water+shadow', trait: 'Roba vida con cada golpe de sombra y nada rápido en el agua.', look: 'tota' },
+  // 3.0 — magos del Mundo 3 (los que faltaban de los elementos de siempre)
+  fuji:      { name: 'Fuji', title: 'monje del monte sagrado', hands: ['fire', 'water'], hp: 126, speed: 1.0, sig: 'fire+water', trait: 'EQUILIBRIO: si alterna fuego y agua, cada hechizo pega 15 % más; dentro de su Vapor se cura.', look: 'fuji' },
+  yoshino:   { name: 'Yoshino', title: 'guardiana de los cerezos', hands: ['plant', 'wind'], hp: 114, speed: 1.1, sig: 'wind+plant', trait: 'PÉTALOS AL VIENTO: su enjambre lleva 4 pétalos más y corre más rápido sobre hierba y hojarasca.', look: 'yoshino' },
 };
-const CHAR_ORDER = ['candela', 'yuma', 'frailejon', 'purace', 'iguaque', 'catatumbo', 'cocuy', 'tatacoa', 'galeras', 'zuhe', 'chia', 'mapale', 'tota'];
+const CHAR_ORDER = ['candela', 'yuma', 'frailejon', 'purace', 'iguaque', 'catatumbo', 'cocuy', 'tatacoa', 'galeras', 'zuhe', 'chia', 'mapale', 'tota', 'fuji', 'yoshino'];
 // lo que cada rasgo cambia (Mage los lee)
 const TRAITS = {
   candela: { burnMul: 1.85, dashFire: 1 },
@@ -1842,7 +1845,9 @@ const TRAITS = {
   zuhe: { dazzleMul: 1.4, lightHeal: 1.4 },
   chia: { hexMul: 1.4, hexDmg: 1.55, hideRegen: 2 },
   mapale: { dashN: 3, dashHide: 0.7 },
-  tota: { shadowLeech: 0.18, waterSpeed: 1.15 },
+  tota: { shadowLeech: 0.24, waterSpeed: 1.15 },
+  fuji: { balance: 1.15, vaporHeal: 2.5 },
+  yoshino: { petalN: 4, grassSpeed: 1.12 },
 };
 
 /* ===== 03-terrain.js ===== */
@@ -2507,6 +2512,7 @@ class Mage extends Unit {
       else if (T.wet[ci] > 0) this.soak(G, 0.6);
       if (T.mud[ci] > 0) { spd *= this.tr.waterSpeed ? 0.8 : 0.45; noDash = true; }
       if (T.snow[ci] && !this.tr.iceWalk) spd *= 0.88; // nieve honda fuera de los caminos
+      if (this.tr.grassSpeed && ((b === TT.GRASS && T.ash[ci] <= 0) || T.leaf[ci])) spd *= this.tr.grassSpeed;
       if (T.vine[ci] > 0 && !G.ally(T.vineO[ci], this)) { spd *= 0.5; this.hurt(G, 6 * dt, { by: T.vineO[ci], el: 'plant', dot: 1 }); }
       if (T.fire[ci] > 0 && !G.ally(T.fireO[ci], this)) { this.hurt(G, 6 * dt, { by: T.fireO[ci], el: 'fire', dot: 1 }); this.burn(G, 1.0, T.fireO[ci]); }
       if (T.elec[ci] > 0 && !(this.tr.elecImmune && T.elecO[ci] === this.idx) && !(G.coop && G.ally(T.elecO[ci], this))) { this.hurt(G, 14 * dt, { by: T.elecO[ci], el: 'bolt', dot: 1 }); if (this.st.wet > 0) this.slow(0.2, 0.6); }
@@ -2614,7 +2620,10 @@ class Mage extends Unit {
   useHand(h) { if (h.uses > 0) { h.uses--; if (h.uses === 0) h.el = h.nat; } }
   castSingle(G, k, level) {
     const h = this.hands[k], el = h.el, S = SPELLS[el][level - 1];
-    this.casting = true; try { Spells.cast(G, this, S, el, { level, power: 1 }); } finally { this.casting = false; }
+    // Fuji (equilibrio): alternar los dos elementos sube el golpe
+    const bal = this.tr.balance && this.lastEl && this.lastEl !== el && this.hands.some(q => q.el === this.lastEl) ? this.tr.balance : 1; this.lastEl = el;
+    if (bal > 1 && !G.attract) G.fx.push({ type: 'flashRing', x: this.x, y: this.y - 20, el, r: 40 });
+    this.casting = true; try { Spells.cast(G, this, S, el, { level, power: bal }); } finally { this.casting = false; }
     h.cd = S.cd; this.rec = 0.16; this.castT = 0.25; this.castEl = el; this.castHand = k; this.stats.casts++;
     this.useHand(h);
   }
@@ -2833,7 +2842,7 @@ const Spells = (() => {
     } else if (k === 'sand') {
       add(G, Object.assign(B, { t: 'sand', S, el: 'earth', x: m.x, y: m.y, r: S.r * Z, life: S.life * (B.gran ? 1.3 : 1), dps: S.dps * P }));
     } else if (k === 'petals') {
-      const a = m.aim(G, 700, 0), n = S.n + (B.gran ? 4 : 0);
+      const a = m.aim(G, 700, 0), n = S.n + (B.gran ? 4 : 0) + ((m.tr && m.tr.petalN) || 0);
       for (let j = 0; j < n; j++) {
         const off = (j / (n - 1) - 0.5) * 1.7, sp = S.speed * (0.85 + 0.3 * ((j * 7) % 5) / 4);
         add(G, Object.assign({}, B, { t: 'proj', S, el: 'plant', petal: true, x: m.x + Math.cos(a.ang + off) * 18, y: m.y + Math.sin(a.ang + off) * 18, vx: Math.cos(a.ang + off) * sp, vy: Math.sin(a.ang + off) * sp, r: S.r, life: S.life + j * 0.03, dmg: S.dmg * P, turn: S.turn, delayHome: 0.12 + j * 0.02, fusion: o.fusion }));
@@ -2935,7 +2944,7 @@ const Spells = (() => {
         }
         case 'cloud': {
           s.x += (s.vx || 0) * dt; s.y += (s.vy || 0) * dt; s.vx *= 1 - 1.2 * dt; s.vy *= 1 - 1.2 * dt;
-          for (const u of G.units) { const d = hypot(u.x - s.x, u.y - s.y); if (d < s.r) { u.st.hidden = 0.2; if (foe(s, u) && !u.obj) { hit(G, s, u, s.dps * dt, { el: 'fire', tick: true }); u.lastSpell = null; } if (u.st.burn > 0) u.st.burn = 0; } }
+          for (const u of G.units) { const d = hypot(u.x - s.x, u.y - s.y); if (d < s.r) { u.st.hidden = 0.2; if (u.isMage && u.idx === s.by && u.tr.vaporHeal) u.heal(G, u.tr.vaporHeal * dt); if (foe(s, u) && !u.obj) { hit(G, s, u, s.dps * dt, { el: 'fire', tick: true }); u.lastSpell = null; } if (u.st.burn > 0) u.st.burn = 0; } }
           if (G.frame % 10 === 0) Terrain.forCircle(T, s.x, s.y, s.r * 0.8, i => { if (T.fire[i] > 0) T.fire[i] = 0; if (T.ice[i] > 0) T.ice[i] = Math.min(T.ice[i], 1); });
           s.life -= dt; if (s.life <= 0) s.dead = true; break;
         }
@@ -6606,6 +6615,9 @@ const ArtMage = (() => {
     chia: { robe: '#2a3464', robe2: '#090b20', trim: '#e2e8ff', lining: '#8a5cff', panel: '#141a3e', skin: '#a8a0b8', eye: '#eaf2ff', cape: '#aab6de', cape2: '#353d6c', scale: 1.0, build: 0.92, head: 'crescent', peak: 17, pect: 'star', motif: 'stars', aura: 'stardust' },
     mapale: { robe: '#1e1524', robe2: '#060408', trim: '#e8485e', lining: '#c443a6', panel: '#2e0c1a', skin: '#5a3a2e', eye: '#ff5a7a', cape: '#271c30', cape2: '#08040c', scale: 0.98, build: 0.9, head: 'feathers', peak: 15, pect: 'leaf', motif: 'moss', aura: 'shade' },
     tota: { robe: '#12393e', robe2: '#041214', trim: '#7af0d0', lining: '#c443a6', panel: '#0a2428', skin: '#7a9a94', eye: '#9affe0', cape: '#17484c', cape2: '#04100f', scale: 1.05, build: 1.12, head: 'kelp', peak: 13, pect: 'fish', motif: 'waves', aura: 'shade' },
+    // 3.0 — Mundo 3
+    fuji: { robe: '#24305e', robe2: '#0a0e22', trim: '#f4f0e6', lining: '#e8503a', panel: '#141c40', skin: '#b8906a', eye: '#ffd0a0', cape: '#efece4', cape2: '#7a8aa6', scale: 1.04, build: 1.12, head: 'wrap', peak: 12, pect: 'sun', motif: 'waves', aura: 'drop' },
+    yoshino: { robe: '#e8a0b8', robe2: '#7a3a52', trim: '#fff6f8', lining: '#7ac88a', panel: '#5a2a3a', skin: '#c89a7a', eye: '#ffd8ea', cape: '#f6c6d6', cape2: '#a85a78', scale: 0.98, build: 0.92, head: 'flowers', peak: 14, pect: 'leaf', motif: 'flowers', aura: 'petal' },
   };
   // atuendos: se ganan venciendo duelos con cada mago (2 y 6 victorias)
   const SKINS = {
@@ -6617,6 +6629,8 @@ const ArtMage = (() => {
     catatumbo: [{ name: 'Errante' }, { name: 'Relámpago blanco', robe: '#d8dcec', robe2: '#5a6080', cape: '#eef0f8', cape2: '#606890', trim: '#5ae0ff', panel: '#3a4266', lining: '#9ff0ff', eye: '#5ae0ff' }, { name: 'Tormenta roja', robe: '#7a1a24', robe2: '#1e0408', cape: '#8a2230', cape2: '#140206', trim: '#ffd36a', panel: '#2a060c', lining: '#ff8a3a', eye: '#ffd36a' }],
   };
   Object.assign(SKINS, {
+    fuji: [{ name: 'Monte sagrado' }, { name: 'Ola de Kanagawa', robe: '#1a3a6a', robe2: '#06122a', cape: '#e8f0f8', cape2: '#3a5a8a', trim: '#ffffff', panel: '#0c2244', lining: '#5ab8ff', eye: '#bff0ff' }, { name: 'Sol naciente', robe: '#c8281e', robe2: '#4a0a08', cape: '#f4ece0', cape2: '#a08a6a', trim: '#ffe9a0', panel: '#6a1410', lining: '#ffd23a', eye: '#fff2b0' }],
+    yoshino: [{ name: 'Cerezo' }, { name: 'Arce de otoño', robe: '#c8502a', robe2: '#4a1a08', cape: '#e8a040', cape2: '#7a3a10', trim: '#fff0c8', panel: '#5a2010', lining: '#ffd23a', eye: '#ffe0a0' }, { name: 'Ciruelo de invierno', robe: '#f2f0f6', robe2: '#7a6a8a', cape: '#c8a0d8', cape2: '#5a3a6a', trim: '#e8406a', panel: '#4a3a5a', lining: '#ff8ab0', eye: '#ffe8f0' }],
     cocuy: [{ name: 'Nevado' }, { name: 'Glaciar azul', robe: '#2a5a8a', robe2: '#0a1e3a', cape: '#3a74a8', cape2: '#0c2444', trim: '#bff6ff', panel: '#12304e', lining: '#9ff0ff', eye: '#ffffff' }, { name: 'Aurora', robe: '#3a2a5e', robe2: '#120a26', cape: '#7ae0b0', cape2: '#1e5a4a', trim: '#e0ffe8', panel: '#221640', lining: '#7affc8', eye: '#c8ffe8' }],
     tatacoa: [{ name: 'Desierto rojo' }, { name: 'Desierto gris', robe: '#8a8478', robe2: '#3a362e', cape: '#b0aa9c', cape2: '#46423a', trim: '#fff6dc', panel: '#4a463c', lining: '#e8d8a0', eye: '#fff2b0' }, { name: 'Noche de estrellas', robe: '#1c2448', robe2: '#080a1a', cape: '#2a3468', cape2: '#0a0c20', trim: '#ffe9a0', panel: '#101630', lining: '#b9c4ff', eye: '#fff6c0' }],
     galeras: [{ name: 'Fragua' }, { name: 'Ceniza viva', robe: '#5a5458', robe2: '#1c181a', cape: '#787074', cape2: '#221e20', trim: '#ff6a2a', panel: '#2a2426', lining: '#ff8a3a', eye: '#ffb04a' }, { name: 'Tormenta blanca', robe: '#d8dcec', robe2: '#5a6288', cape: '#f0f2fc', cape2: '#6a72a0', trim: '#b98aff', panel: '#4a5280', lining: '#d9b0ff', eye: '#ffffff' }],

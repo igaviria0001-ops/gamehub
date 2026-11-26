@@ -175,6 +175,7 @@ class Mage extends Unit {
       else if (T.wet[ci] > 0) this.soak(G, 0.6);
       if (T.mud[ci] > 0) { spd *= this.tr.waterSpeed ? 0.8 : 0.45; noDash = true; }
       if (T.snow[ci] && !this.tr.iceWalk) spd *= 0.88; // nieve honda fuera de los caminos
+      if (this.tr.grassSpeed && ((b === TT.GRASS && T.ash[ci] <= 0) || T.leaf[ci])) spd *= this.tr.grassSpeed;
       if (T.vine[ci] > 0 && !G.ally(T.vineO[ci], this)) { spd *= 0.5; this.hurt(G, 6 * dt, { by: T.vineO[ci], el: 'plant', dot: 1 }); }
       if (T.fire[ci] > 0 && !G.ally(T.fireO[ci], this)) { this.hurt(G, 6 * dt, { by: T.fireO[ci], el: 'fire', dot: 1 }); this.burn(G, 1.0, T.fireO[ci]); }
       if (T.elec[ci] > 0 && !(this.tr.elecImmune && T.elecO[ci] === this.idx) && !(G.coop && G.ally(T.elecO[ci], this))) { this.hurt(G, 14 * dt, { by: T.elecO[ci], el: 'bolt', dot: 1 }); if (this.st.wet > 0) this.slow(0.2, 0.6); }
@@ -282,7 +283,10 @@ class Mage extends Unit {
   useHand(h) { if (h.uses > 0) { h.uses--; if (h.uses === 0) h.el = h.nat; } }
   castSingle(G, k, level) {
     const h = this.hands[k], el = h.el, S = SPELLS[el][level - 1];
-    this.casting = true; try { Spells.cast(G, this, S, el, { level, power: 1 }); } finally { this.casting = false; }
+    // Fuji (equilibrio): alternar los dos elementos sube el golpe
+    const bal = this.tr.balance && this.lastEl && this.lastEl !== el && this.hands.some(q => q.el === this.lastEl) ? this.tr.balance : 1; this.lastEl = el;
+    if (bal > 1 && !G.attract) G.fx.push({ type: 'flashRing', x: this.x, y: this.y - 20, el, r: 40 });
+    this.casting = true; try { Spells.cast(G, this, S, el, { level, power: bal }); } finally { this.casting = false; }
     h.cd = S.cd; this.rec = 0.16; this.castT = 0.25; this.castEl = el; this.castHand = k; this.stats.casts++;
     this.useHand(h);
   }

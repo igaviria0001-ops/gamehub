@@ -171,7 +171,7 @@ const Spells = (() => {
     } else if (k === 'sand') {
       add(G, Object.assign(B, { t: 'sand', S, el: 'earth', x: m.x, y: m.y, r: S.r * Z, life: S.life * (B.gran ? 1.3 : 1), dps: S.dps * P }));
     } else if (k === 'petals') {
-      const a = m.aim(G, 700, 0), n = S.n + (B.gran ? 4 : 0);
+      const a = m.aim(G, 700, 0), n = S.n + (B.gran ? 4 : 0) + ((m.tr && m.tr.petalN) || 0);
       for (let j = 0; j < n; j++) {
         const off = (j / (n - 1) - 0.5) * 1.7, sp = S.speed * (0.85 + 0.3 * ((j * 7) % 5) / 4);
         add(G, Object.assign({}, B, { t: 'proj', S, el: 'plant', petal: true, x: m.x + Math.cos(a.ang + off) * 18, y: m.y + Math.sin(a.ang + off) * 18, vx: Math.cos(a.ang + off) * sp, vy: Math.sin(a.ang + off) * sp, r: S.r, life: S.life + j * 0.03, dmg: S.dmg * P, turn: S.turn, delayHome: 0.12 + j * 0.02, fusion: o.fusion }));
@@ -273,7 +273,7 @@ const Spells = (() => {
         }
         case 'cloud': {
           s.x += (s.vx || 0) * dt; s.y += (s.vy || 0) * dt; s.vx *= 1 - 1.2 * dt; s.vy *= 1 - 1.2 * dt;
-          for (const u of G.units) { const d = hypot(u.x - s.x, u.y - s.y); if (d < s.r) { u.st.hidden = 0.2; if (foe(s, u) && !u.obj) { hit(G, s, u, s.dps * dt, { el: 'fire', tick: true }); u.lastSpell = null; } if (u.st.burn > 0) u.st.burn = 0; } }
+          for (const u of G.units) { const d = hypot(u.x - s.x, u.y - s.y); if (d < s.r) { u.st.hidden = 0.2; if (u.isMage && u.idx === s.by && u.tr.vaporHeal) u.heal(G, u.tr.vaporHeal * dt); if (foe(s, u) && !u.obj) { hit(G, s, u, s.dps * dt, { el: 'fire', tick: true }); u.lastSpell = null; } if (u.st.burn > 0) u.st.burn = 0; } }
           if (G.frame % 10 === 0) Terrain.forCircle(T, s.x, s.y, s.r * 0.8, i => { if (T.fire[i] > 0) T.fire[i] = 0; if (T.ice[i] > 0) T.ice[i] = Math.min(T.ice[i], 1); });
           s.life -= dt; if (s.life <= 0) s.dead = true; break;
         }
