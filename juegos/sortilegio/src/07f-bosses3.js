@@ -145,6 +145,8 @@ const W3B = (() => {
   const HEADS = ['fire', 'water', 'wind', 'earth', 'plant', 'bolt', 'light', 'shadow'];
   const COUNTER = { fire: 'water', water: 'bolt', wind: 'earth', earth: 'plant', plant: 'fire', bolt: 'wind', light: 'shadow', shadow: 'light' };
   const OBODY = [1200, 330];
+  // las cabezas de Orochi: se buscan entre las unidades (en el remoto, la lista del cuerpo no viaja)
+  const headsOf = G => G.units.filter(u => u && u.w3boss === 'ohead').sort((a, b) => (a.hk || 0) - (b.hk || 0));
   function orochiSpawn(G) {
     const body = make(G, 'orochi', OBODY[0], OBODY[1], { untargetable: true, knockMul: 0, hp: 1e9, maxHp: 1e9, heads: [], phase: 0 }); body.hurt = () => 0; body.update = function (G2, dt) { orochiStep(G2, this, dt); };
     G.units.push(body); G.boss = body;
@@ -161,9 +163,10 @@ const W3B = (() => {
     h.untargetable = !!h.up; h.yOff = h.up ? -70 : 0;
     if (h.busy) return;
     // la tinaja de sake más cercana: si está a mano, va a beber
+    // solo huele la tinaja que viene rodando (la que alguien empujó) o la que tiene encima: hay que llevársela
     const J = G.units.filter(u => u.obj === 'sake' && u.alive && !u.drunkBy);
-    let jar = null, jd = 1e9; for (const u of J) { const d = hypot(u.x - h.x, u.y - h.y); if (d < jd) { jd = d; jar = u; } }
-    if (jar && jd < 260) { h.up = 0; h.untargetable = false; h.yOff = 0; moveTo(G, h, jar.x, jar.y - 10, 240, dt); if (jd < 46) { jar.drunkBy = h; jar.alive = false; jar.x = jar.y = -9999; h.drunk = 7; h.tele = null; G.events.push({ type: 'sakeDrink', x: jar.x, y: jar.y }); G.fx.push({ type: 'pop', x: jar.x, y: jar.y - 20, el: 'water', r: 30 }); pop(G, h.x, h.y - 120, '¡Borracha! (recibe el doble)', '#ffe9a0', { small: true }); } return; }
+    let jar = null, jd = 1e9; for (const u of J) { const d = hypot(u.x - h.x, u.y - h.y); if ((u.hot > 0 && d < 240) || d < 60) if (d < jd) { jd = d; jar = u; } }
+    if (jar) { h.up = 0; h.untargetable = false; h.yOff = 0; moveTo(G, h, jar.x, jar.y - 10, 240, dt); if (jd < 46) { jar.drunkBy = h; jar.alive = false; jar.x = jar.y = -9999; h.drunk = 7; h.tele = null; G.events.push({ type: 'sakeDrink', x: jar.x, y: jar.y }); G.fx.push({ type: 'pop', x: jar.x, y: jar.y - 20, el: 'water', r: 30 }); pop(G, h.x, h.y - 120, '¡Borracha! (recibe el doble)', '#ffe9a0', { small: true }); } return; }
     if (tele(G, h, dt)) return;
     const [m, d] = nearest(G, h); if (!m) return;
     // el cuello alcanza hasta cierto radio desde su anclaje
@@ -178,6 +181,8 @@ const W3B = (() => {
   }
   function orochiStep(G, body, dt) {
     body.t += dt; const T = G.T, cs = G.cs;
+    // la tinaja que va rodando (la empujó un hechizo) queda «caliente» 2,5 s: las cabezas la persiguen
+    for (const u of G.units) if (u.obj === 'sake' && u.alive) u.hot = hypot(u.vx, u.vy) > 70 ? 2.5 : Math.max(0, (u.hot || 0) - dt);
     // mordiscos (se resuelven aquí: la cabeza se estira de golpe)
     for (const h of body.heads) if (h.alive && h.lunge) { h.lunge.t -= dt; h.x += Math.cos(h.lunge.a) * 900 * dt; h.y += Math.sin(h.lunge.a) * 900 * dt; for (const q of G.mages) if (q.alive && hypot(q.x - h.x, q.y - h.y) < h.r + q.r + 8 && !(q.iframes > 0) && !q.biteH) { q.biteH = 1; q.hurt(G, 16, { by: -1, el: h.el }); q.knock(Math.cos(h.lunge.a), Math.sin(h.lunge.a), 500); } if (h.lunge.t <= 0) { h.lunge = null; for (const q of G.mages) q.biteH = 0; } }
     const alive = body.heads.filter(h => h.alive).length;
@@ -262,14 +267,14 @@ const W3B = (() => {
     spawns: [[1100, 1220], [1300, 1220]],
     sources: [S(260, 1180, 'water'), S(700, 1260, 'bolt'), S(1200, 1300, 'light'), S(1700, 1260, 'wind'), S(2140, 1180, 'earth'), S(260, 760, 'fire'), S(2140, 760, 'plant'), S(1200, 900, 'shadow')],
     seasons: { panels: [[0, 1200, 'summer'], [1200, 2400, 'autumn']], toriis: [{ x: 420, y: 1000 }, { x: 1980, y: 1000 }] },
-    jars: [[560, 900], [900, 1060], [1500, 1060], [1840, 900], [740, 700], [1660, 700], [1200, 1120], [1200, 760]],
+    jars: [[560, 900], [900, 1060], [1500, 1060], [1840, 900], [700, 880], [1700, 880], [1200, 1120], [1200, 980]],
     paint(T) { all(T, TT.DIRT); ell(T, 1200, 360, 520, 260, TT.DEEP); rect(T, 0, 0, 2400, 120, TT.DEEP); path(T, [[40, 1320], [2360, 1320]], 40, TT.SHALLOW); ell(T, 1200, 900, 900, 420, TT.GRASS); ell(T, 1200, 900, 600, 280, TT.STONE);
       bushes(T, [[120, 300], [2280, 300], [120, 600], [2280, 600], [300, 1300], [2100, 1300]]); border(T); },
     objs: [{ t: 'seal3', x: 2320, y: 1340 }],
     setup(G) { for (const [x, y] of this.jars) { const u = Modes.pushable(G, x, y, 'sake', 20); u.knockMul = 0.9; } },
     want: G => null,
     goal: G => G.cs.borronDone, autoWin: true,
-    label: G => { const B = G.boss; if (!B) return ''; if (B.w3boss === 'orochi') { const n = B.heads.filter(h => h.alive).length; return `Cabezas: ${n}/8 · cada una cae con su CONTRARIO · empujen el SAKE hacia ellas`; } if (G.cs.borronT > 0) return '…'; return B.shield > 0 ? 'Rompan la tinta del Borrón con LUZ' : '¡Sin tinta: con todo!'; },
+    label: G => { const B = G.boss; if (!B) return ''; if (B.w3boss === 'orochi') { const n = headsOf(G).filter(h => h.alive).length; return `Cabezas: ${n}/8 · cada una cae con su CONTRARIO · empujen el SAKE hacia ellas`; } if (G.cs.borronT > 0) return '…'; return B.shield > 0 ? 'Rompan la tinta del Borrón con LUZ' : '¡Sin tinta: con todo!'; },
     script(G, dt) {
       const cs = G.cs;
       if (!cs.hi && G.state === 'play') { cs.hi = 1; say(G, 'Yamata no Orochi… el Borrón lo despertó.'); say(G, 'Cada cabeza cae con su contrario. Y el sake las duerme.', 'sumi', 3.4); }
@@ -280,5 +285,5 @@ const W3B = (() => {
 
   // el orden de la campaña: los ocho niveles del Mundo 3 van después del 18
   for (const id of ['c19', 'c20', 'c21', 'c22', 'c23', 'c24', 'c25', 'c26']) Camp.LEVELS.push(LV[id]);
-  return { shieldK, COUNTER, HEADS };
+  return { shieldK, COUNTER, HEADS, headsOf };
 })();

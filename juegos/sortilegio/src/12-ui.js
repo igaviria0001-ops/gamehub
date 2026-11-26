@@ -275,7 +275,7 @@ const UI = (() => {
     $('#r-netpick').hidden = !host;
     ['setupAgain', 'toTitle'].forEach(a => { const e = document.querySelector(`#s-results [data-act="${a}"]`); if (e) e.hidden = true; });
     $('#r-copa').hidden = host; if (!host) $('#r-copa').innerHTML = '<div style="font-size:15px;color:var(--mute)">El anfitrión elige qué sigue: el siguiente nivel, repetir o volver a la sala.</div>';
-    if (c.win && c.level === 9) $('#r-title').textContent = '¡Tragaluz cayó! Se abre el Mundo 2'; if (c.win && c.level === Camp.LEVELS.length - 1) $('#r-title').textContent = '¡Buziraco cayó!';
+    if (c.win && c.level === 9) $('#r-title').textContent = '¡Tragaluz cayó! Se abre el Mundo 2'; { const id = Camp.LEVELS[c.level] && Camp.LEVELS[c.level].id; if (c.win && id === 'c18') $('#r-title').textContent = '¡Buziraco cayó! Se abre el Mundo 3'; if (c.win && id === 'c26') $('#r-title').textContent = '¡El Borrón cayó: el pergamino vuelve a tener sus cuatro estaciones!'; }
     hero(r.chars[0], c.win ? '¡Victoria!' : '', -1, r.chars[1]);
     paused = false; show('results', false); startHero(); vestAfter();
   }

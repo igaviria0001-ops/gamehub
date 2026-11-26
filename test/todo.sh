@@ -45,6 +45,7 @@ if curl -s -m 2 http://127.0.0.1:8799/ping >/dev/null; then
   run servidorCae node test/srvcae.js
   run movilServidor env PERFIL=corte SRV=http://127.0.0.1:8799 JUEGOS=sortilegio,ventolera node test/netmovil.js
   run campSrt node test/netcamp-srt.js
+  run mundo3Srt env LVS=18,20,23,25 node test/netw3-srt.js
   run travVto node test/nettrav-vto.js
   run campTyA node test/netcamp-tya.js
   run mundoVtg env VIEW=$V node test/netcamp-vtg.js

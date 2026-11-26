@@ -21,7 +21,10 @@ const ACHIEVEMENTS = [
   { id: 'camp1', name: 'La Travesía empieza', text: 'Supera el primer nivel de la campaña.' },
   { id: 'campAll', name: 'El páramo vuelve a brillar', text: 'Derrota a Tragaluz.' },
   { id: 'campW2', name: 'Señor de la luz y la sombra', text: 'Derrota a Buziraco en el Mundo 2.' },
-  { id: 'starsAll', name: 'Constelación completa', text: 'Consigue todas las estrellas de los dos mundos.' },
+  { id: 'campW3', name: 'El pergamino se cierra', text: 'Derrota a Orochi y al Borrón en el Mundo 3.' },
+  { id: 'w3seals', name: 'Ocho sellos', text: 'Encuentra los 8 sellos escondidos del Mundo 3.' },
+  { id: 'sumo', name: 'Yokozuna', text: 'Gana un Sumo mágico 3 a 0.' },
+  { id: 'starsAll', name: 'Constelación completa', text: 'Consigue todas las estrellas de la campaña.' },
   { id: 'stars30', name: 'Treinta estrellas', text: 'Consigue las 30 estrellas de la campaña.' },
   { id: 'all6', name: 'Todos los caminos', text: 'Gana al menos un duelo con cada mago.' },
   { id: 'school', name: 'Aprendiz', text: 'Termina la Escuela de magia.' },
@@ -42,9 +45,10 @@ const Progress = (() => {
       if (e.key === 'porunpelo') { P.grazes++; save(); if (P.grazes >= 10) unlock(G, 'pelo'); }
     }
     if (e.type === 'absorb' && human(G, e.who)) { P.absorbs++; save(); if (P.absorbs >= 20) unlock(G, 'absorb'); }
-    if (e.type === 'goal' && human(G, e.who)) unlock(G, 'tejo');
+    if (e.type === 'goal' && G.mode === 'tejo' && human(G, e.who)) unlock(G, 'tejo');
     if (e.type === 'roundWin' || e.type === 'matchWin') {
       const w = e.who; if (G.mode === 'duel' && human(G, w) && G.mages[w].stats.taken < 0.5 && G.roundWinner === w) unlock(G, 'perfect');
+      if (G.mode === 'sumo' && human(G, w) && G.roundWinner === w && G.score && G.score[w] >= 3 && G.score[1 - w] === 0) unlock(G, 'sumo');
     }
   }
   function onMatchEnd(G, r) {
@@ -52,7 +56,7 @@ const Progress = (() => {
     const w = r.winner;
     if (G.mode === 'duel' && w >= 0 && human(G, w)) { P.wins[G.chars[w]] = (P.wins[G.chars[w]] || 0) + 1; if (CHAR_ORDER.every(c => P.wins[c])) unlock(G, 'all6'); if (G.players === 1 && w === 0 && G.level >= 4 && !((Store.get('adv', [0, 0]) || [])[0] > 0)) unlock(G, 'hard'); }
     if (G.mode === 'hunt' && G.score) for (let i = 0; i < G.mages.length; i++) if (human(G, i) && G.score[i] >= 20) unlock(G, 'hunt');
-    if (r.camp && r.camp.win) { unlock(G, 'camp1'); if (r.camp.level === 9) unlock(G, 'campAll'); if (r.camp.level === 17) unlock(G, 'campW2'); if (Camp.total() >= 30) unlock(G, 'stars30'); if (Camp.total() >= Camp.LEVELS.length * 3) unlock(G, 'starsAll'); }
+    if (r.camp && r.camp.win) { unlock(G, 'camp1'); if (r.camp.level === 9) unlock(G, 'campAll'); if (r.camp.level === 17) unlock(G, 'campW2'); if (Camp.LEVELS[r.camp.level] && Camp.LEVELS[r.camp.level].id === 'c26') unlock(G, 'campW3'); if (Camp.total() >= 30) unlock(G, 'stars30'); if (Camp.total() >= Camp.LEVELS.length * 3) unlock(G, 'starsAll'); }
     save();
   }
   /* ---------- Escuela de magia ---------- */

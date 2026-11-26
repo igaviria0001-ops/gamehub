@@ -102,7 +102,7 @@ const ArtW3B = (() => {
   function tomoe(x, X, Y, r, col) { x.save(); x.translate(X, Y); x.fillStyle = col; for (let k = 0; k < 3; k++) { x.rotate(TAU / 3); x.beginPath(); x.arc(r * 0.45, 0, r * 0.38, 0, TAU); x.fill(); x.beginPath(); x.moveTo(r * 0.45 + r * 0.38, 0); x.quadraticCurveTo(r * 0.9, r * 0.7, r * 0.1, r * 0.95); x.quadraticCurveTo(r * 0.6, r * 0.4, r * 0.45, r * 0.38); x.fill(); } x.restore(); }
   /* ---------- Yamata no Orochi: el cuerpo con árboles en el lomo y ocho cuellos hacia sus cabezas ---------- */
   function orochi(x, G, b) {
-    const t = G.time, H = b.heads || G.units.filter(u => u.w3boss === 'ohead');
+    const t = G.time, H = W3B.headsOf(G);
     x.save(); x.translate(b.x, b.y);
     x.globalAlpha = 0.5; x.drawImage(ArtInk.wash('10,8,12', 1), -340, -60, 680, 200); x.globalAlpha = 1;
     // los cuellos: serpientes gruesas que suben del cuerpo y bajan hacia cada cabeza (los cortados, caídos y quietos)
@@ -186,7 +186,7 @@ const ArtW3B = (() => {
     const B = G.boss, cx = sw / 2, by = sh - 40 * u - (getInsets().bottom || 0) * (isTouch() ? 1.6 : 0); x.textBaseline = 'middle';
     if (B.w3boss === 'kitsune') { bar(x, cx - 180 * u, by, 360 * u, B.hp / B.maxHp, '#e86a4a', Camp.BOSS.kitsune.name, u); return true; }
     if (B.w3boss === 'raijin' || B.w3boss === 'fujin') { const R = G.units.find(q => q.w3boss === 'raijin'), F = G.units.find(q => q.w3boss === 'fujin'); [R, F].forEach((g, k) => { if (!g) return; const X = cx + (k ? 20 * u : -300 * u), f = g.down ? 0 : g.alive ? g.hp / g.maxHp : 0; bar(x, X, by, 280 * u, f, k ? '#7ac86a' : '#b89aff', g.down ? `${k ? 'Fujin' : 'Raijin'} · caído (${Math.ceil(g.downT)} s)` : Camp.BOSS[g.w3boss].name, u); }); if (W3B.shieldK(G) < 1) { x.font = fontB(12 * u, 900); x.fillStyle = '#e6d8ff'; x.fillText('⛓ juntos se protegen', cx, by + 20 * u); } return true; }
-    if (B.w3boss === 'orochi') { const H = B.heads || []; x.fillStyle = 'rgba(29,24,23,0.72)'; HUD.rr(x, cx - 200 * u, by - 30 * u, 400 * u, 48 * u, 10 * u); x.fill(); x.font = fontT(14 * u); x.textAlign = 'center'; x.fillStyle = '#f4e6c8'; x.fillText(Camp.BOSS.orochi.name, cx, by - 16 * u);
+    if (B.w3boss === 'orochi') { const H = W3B.headsOf(G); x.fillStyle = 'rgba(29,24,23,0.72)'; HUD.rr(x, cx - 200 * u, by - 30 * u, 400 * u, 48 * u, 10 * u); x.fill(); x.font = fontT(14 * u); x.textAlign = 'center'; x.fillStyle = '#f4e6c8'; x.fillText(Camp.BOSS.orochi.name, cx, by - 16 * u);
       H.forEach((h, k) => { const X = cx - 168 * u + k * 48 * u, Y = by + 6 * u, E = ELEMENTS[h.el]; x.fillStyle = h.alive ? E.c2 : 'rgba(60,60,60,0.6)'; x.beginPath(); x.arc(X, Y, 11 * u, 0, TAU); x.fill(); HUD.icon(x, h.el, X, Y, 6.5 * u, h.alive ? E.c0 : 'rgba(150,150,150,0.6)'); if (h.alive && h.hp < h.maxHp) { x.strokeStyle = E.c1; x.lineWidth = 2.5 * u; x.beginPath(); x.arc(X, Y, 13.5 * u, -Math.PI / 2, -Math.PI / 2 + h.hp / h.maxHp * TAU); x.stroke(); } if (!h.alive) { x.strokeStyle = '#c8281e'; x.lineWidth = 2.5 * u; x.beginPath(); x.moveTo(X - 9 * u, Y - 9 * u); x.lineTo(X + 9 * u, Y + 9 * u); x.stroke(); } if (h.drunk > 0) { x.font = fontB(11 * u, 900); x.fillStyle = '#ffe9a0'; x.fillText('zzz', X, Y - 18 * u); } }); return true; }
     if (B.w3boss === 'borron') { bar(x, cx - 180 * u, by, 360 * u, B.hp / B.maxHp, '#9a5ad0', Camp.BOSS.borron.name, u, B.maxShield ? B.shield / B.maxShield : null, '#2a2430'); return true; }
     return false;

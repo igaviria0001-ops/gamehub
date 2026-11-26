@@ -248,6 +248,8 @@ const ArtW3 = (() => {
   function objects(x, G, list) {
     const t = G.time, T = G.T;
     // estado de los toriis que llega en línea (manchas y estación de los sueltos)
+    // en el remoto, la estación de cada panel sale del suelo (T.sea viaja con el terreno)
+    if (G.sea && G.net && T.sea) for (const P of G.sea.panels) { const c = Math.max(0, Math.min(T.cols - 1, Math.floor((P.x0 + P.x1) / 2 / CELL))), q = SEASON_BY_CODE[T.sea[Math.floor(T.rows / 2) * T.cols + c]]; if (q && q !== P.s) P.s = q; }
     if (G.sea && G.cs && typeof G.cs.tor === 'string') G.cs.tor.split(',').forEach((q, k) => { const tr = G.sea.toriis[k]; if (!tr) return; tr.stain = q[0] === 'x'; if (tr.solo) { const n = +q.replace('x', ''); if (n) tr.s = SEASON_BY_CODE[n]; } });
     if (G.A && G.A.theme === 'kioto') festival(x, G, list);
     for (const o of G.objs) {

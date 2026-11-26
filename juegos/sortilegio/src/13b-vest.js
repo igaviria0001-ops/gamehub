@@ -32,7 +32,13 @@ const Vestidor = (() => {
   U('dragon', 'legendario', 'Completa el grimorio: las 28 fusiones.', 'Escamas de jade y oro, y un dragón espíritu que lo rodea.', c => c.grim >= 28 || !!c.ach.fusion15, c => [c.grim, 28]);
   U('galaxia', 'mitico', 'Consigue 30 estrellas en la campaña.', 'Una galaxia entera en la túnica y la capa. Aura de galaxia con planetas y estela de cometa.', c => c.stars >= 30, c => [c.stars, 30]);
   U('abismo', 'mitico', 'Vence a Buziraco, el jefe final del Mundo 2.', 'Negro de agujero negro, con su disco de luz girando detrás y estela de sombra.', L('c18'));
-  U('prisma', 'mitico', 'Consigue todas las estrellas de los dos mundos.', 'Tela holográfica que cambia de color, cristales de arcoíris y estela de arcoíris.', c => c.stars >= Camp.LEVELS.length * 3, c => [c.stars, Camp.LEVELS.length * 3]);
+  U('prisma', 'mitico', 'Consigue todas las estrellas de la campaña (los tres mundos).', 'Tela holográfica que cambia de color, cristales de arcoíris y estela de arcoíris.', c => c.stars >= Camp.LEVELS.length * 3, c => [c.stars, Camp.LEVELS.length * 3]);
+  U('yokozuna', 'raro', 'Gana un Sumo mágico 3 a 0.', 'Blanco de ceremonia con hilo de oro y una capa de olas seigaiha.', c => !!c.ach.sumo);
+  U('kitsune', 'epico', 'Vence a la Kitsune (Mundo 3).', 'Piel de zorra blanca con marcas rojas, fuegos de zorro por dentro y nueve colas que se abren detrás.', L('c21'));
+  U('raijin', 'legendario', 'Vence a Raijin y Fujin (Mundo 3).', 'Nubes y tomoe de oro que cruzan relámpagos. Un anillo de tambores del trueno y estela de viento.', L('c24'));
+  U('sumi', 'mitico', 'Vence a Orochi y al Borrón, el final del Mundo 3.', 'Tinta viva sobre papel de arroz que corre y gotea. Detrás se pinta solo un ensō, y al caminar deja una pincelada.', L('c26'));
+  const SEALS = () => Object.keys(Store.get('w3seals', {})).length;
+  U('estaciones', 'mitico', 'Encuentra los 8 sellos escondidos del Mundo 3.', 'La tela pasa por primavera, verano, otoño e invierno, y lo que vuela a su alrededor cambia con ella.', c => SEALS() >= 8, c => [SEALS(), 8]);
 
   let pickOf = p => Game.cfg.chars[p];
   const V = Vest.create({

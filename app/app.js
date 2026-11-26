@@ -350,6 +350,14 @@
     rey: { name: 'Rey de la pista', icon: 'rey', desc: 'El que gana se queda; el que pierde hace fila. Gana quien llegue primero a la meta.', min: 3, max: 8 },
   };
   function defaultPool() { const P = {}; GAMES.forEach(g => { P[g.id] = { on: true, modes: Object.fromEntries(g.modes.map(m => [m.id, true])), maps: Object.fromEntries(g.maps.map(m => [m[0], true])), arenas: g.arenas ? Object.fromEntries(g.arenas.map(m => [m[0], true])) : null, len: 'normal', opts: Object.fromEntries((g.opts || []).map(o => [o.id, o.def])) }; }); return P; }
+  // la última selección guardada + lo nuevo (modos y mapas que salieron después) ya marcado; lo que se desmarcó, sigue desmarcado
+  function mergePool(saved) {
+    const D = defaultPool(); if (!saved || typeof saved !== 'object') return D;
+    for (const id in D) { const s = saved[id]; if (!s || typeof s !== 'object') { saved[id] = D[id]; continue; }
+      for (const k of ['modes', 'maps', 'arenas']) { if (!D[id][k]) continue; if (!s[k] || typeof s[k] !== 'object') { s[k] = D[id][k]; continue; } for (const m in D[id][k]) if (!(m in s[k])) s[k][m] = D[id][k][m]; }
+      for (const k in D[id]) if (!(k in s)) s[k] = D[id][k]; }
+    return saved;
+  }
   function newWizard() {
     const lastP = Store.get('lastPlayers', null);
     return {
@@ -357,7 +365,7 @@
       players: lastP && lastP.length >= 2 ? lastP.map(p => ({ name: p.name, color: p.color })) : [{ name: '', color: COLORS[0] }, { name: '', color: COLORS[3] }],
       format: 'serie',
       rules: { bestOf: 5, legs: 1, ptsW: 3, ptsD: 1, ptsL: 0, final: 3, finalBestOf: 3, third: true, kingGoal: 5, order: 'azar', noRepeat: true, noRepeatMap: true, chars: 'pick', swapSides: true },
-      pool: Store.get('lastPool', null) || defaultPool(), open: {},
+      pool: mergePool(Store.get('lastPool', null)), open: {},
     };
   }
   let W = null;

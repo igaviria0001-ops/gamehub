@@ -108,3 +108,32 @@ Metas de dificultad (jugador normal + compañero, 10 intentos): c19–c20 ganar 
     probar campaña del Mundo 3 con `test/netsrt.js`, catálogo, torneo, Copa, Escuela, logros, sellos → atuendo mítico),
     ajustes finos de c23 (defensa) y revisar en celular. Desviaciones del plan: criaturas de nieve débiles al FUEGO;
     recorrido de la palanca ~1,4×.
+- **26 nov (tarde)** — **Fases 8, 9 y 10.** Commits 03ece42 (magos), 24f2919 (Sumo y mapas) y el de integración.
+  - **Magos** Fuji (fuego+agua: alternar manos da *Equilibrio* ×1,15 y su Vapor lo cura) y Yoshino (planta+viento:
+    +4 pétalos, 12 % más rápida sobre pasto y hojas), con sus tres atuendos. Suben Cocuy, Tatacoa, Frailejón y Tota.
+  - **Sumo mágico** (`07-modes.js`): dohyō en el centro, daño ×0,2 y empujón ×1,75; 3 salidas ganan; la regla es la
+    misma elipse que se dibuja (`sumoOut`). En línea con 2. Logro «Yokozuna» (3 a 0).
+  - **13 mapas** en duelo y demás modos (`03e-arenas4.js`): los 4 del Japón (Miyajima, Arashiyama, Fushimi,
+    Shirakawa-go: estación que rota sola y toriis que la fuerzan) y 4 del Mundo 2 (Islas, Templo, Coliseo, Huesos).
+  - **Atuendos nuevos** (`10m-art-outfits3.js`: telas, auras y estelas propias sin tocar `shared/`): Yokozuna (raro,
+    olas seigaiha), Kitsune de nueve colas (épico, c21), Tambores del trueno (legendario, c24: anillo de taiko con
+    rayos, capa de viento de Fujin, estela de viento), Tinta viva (mítico, c26: papel de arroz con tinta que corre,
+    ensō que se pinta solo, estela de pincel) y Cuatro estaciones (mítico, los 8 sellos: la tela, el aura y la estela
+    cambian de estación cada 3,4 s). Vestidor: 48.
+  - **Logros**: «El pergamino se cierra» (c26), «Ocho sellos», «Yokozuna». Arreglos: el gol del Sumo ya no da «¡Mecha!»;
+    el sello 8 sí da su logro; en línea, ganar c26 ya no dice «¡Buziraco cayó!».
+  - **En línea**: el remoto saca la estación de cada panel del suelo (`T.sea`), así ve y dibuja lo mismo.
+    `test/netw3-srt.js` (en `todo.sh` como mundo3Srt): los 8 niveles iguales en los dos aparatos, sin errores.
+    Sumo en línea (`MODE=sumo node test/netsrt.js`) y la campaña de antes, OK.
+  - «Cómo se juega»: Sumo, Mundo 3 y sus estaciones, 15 magos, 13 escenarios. Versión 3.0.
+  - Decidido: la Escuela no gana lección de estaciones (el primer nivel del Mundo 3 ya la enseña jugando).
+  - `offline-eq sortilegio` con `BASE=24f2919`: todas las escenas idénticas salvo la portada (otro conteo del
+    vestidor y otros atuendos al azar en la demostración: esperado).
+  - Arreglos tras la prueba completa: en el remoto, el dibujo y la barra de Orochi buscan las cabezas entre las
+    unidades (`W3B.headsOf`; la lista del cuerpo no viaja y tumbaba el dibujo). Las cabezas ya no se bebían solas
+    6 de las 8 tinajas al empezar: solo persiguen la que va rodando (empujada, «caliente» 2,5 s) o la que tienen
+    encima, y las tinajas quedan más abajo. Dos máquinas: c26 en 379 s, 3 vidas.
+  - Portada: el último torneo guardado se completa con lo nuevo (`mergePool`): el Sumo y los mapas nuevos salen
+    marcados; lo que alguien desmarcó sigue desmarcado.
+  - Prueba completa (`BASE=24f2919 bash test/todo.sh`): todo OK salvo mundo3Srt (arreglado arriba, luego OK) y
+    «sin conexión» por la portada (esperado). Celular 844×390: niveles, jefes y cinemáticas se leen bien.

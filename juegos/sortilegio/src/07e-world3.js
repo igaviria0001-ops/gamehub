@@ -246,7 +246,7 @@ const W3 = (() => {
   }
   function onEvent(G, e) {
     if (!G.L || !G.L.world3) return;
-    if (e.type === 'w3seal') { const D = SEALS(); if (!D[e.id]) { D[e.id] = 1; Store.set('w3seals', D); } const n = Object.keys(SEALS()).length; pop(G, e.x, e.y - 70, `¡Sello escondido! (${n}/8)`, '#ff8a7a', { big: true }); if (n >= 8) Progress.unlock && Progress.unlock('w3seals'); }
+    if (e.type === 'w3seal') { const D = SEALS(); if (!D[e.id]) { D[e.id] = 1; Store.set('w3seals', D); } const n = Object.keys(SEALS()).length; pop(G, e.x, e.y - 70, `¡Sello escondido! (${n}/8)`, '#ff8a7a', { big: true }); if (n >= 8 && Progress.unlock) Progress.unlock(G, 'w3seals'); }
     if (G.L.onEvent) G.L.onEvent(G, e);
   }
   Camp.EXT.start.push(start); Camp.EXT.setup.push(setup); Camp.EXT.step.push(step); Camp.EXT.plan.push(plan); Camp.EXT.job.push(job); Camp.EXT.update.push(update); Camp.EXT.event.push(onEvent);
