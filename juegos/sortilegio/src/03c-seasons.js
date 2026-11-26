@@ -31,7 +31,7 @@ const Seasons = (() => {
     const T = G.T, W = T.W;
     const panels = (def.panels || [[0, W, def.start || 'spring']]).map(([x0, x1, s], k) => ({ k, x0, x1, s, cd: 0 }));
     G.sea = { def, panels, rot: def.rotate || 0, rotT: def.rotate || 0, warned: false, up: 0, toriis: [] };
-    G.sea.toriis = (def.toriis || []).map((t, k) => ({ k, x: t.x != null ? t.x : t[0], y: t.y != null ? t.y : t[1], stain: !!t.stain, big: t.big || 0, cd: 0, glow: 0, hitT: 0, p: panelAt(G, t.x != null ? t.x : t[0]) }));
+    G.sea.toriis = (def.toriis || []).map((t, k) => ({ k, x: t.x != null ? t.x : t[0], y: t.y != null ? t.y : t[1], stain: !!t.stain, big: t.big || 0, cd: 0, glow: 0, hitT: 0, p: panelAt(G, t.x != null ? t.x : t[0]), solo: !!t.solo, s: t.s || null, mark: t.mark || null }));
     for (const p of panels) paint(G, p);
   }
   function panelAt(G, x) { const P = G.sea.panels; for (let k = 0; k < P.length; k++) if (x >= P[k].x0 && x < P[k].x1) return k; return x < P[0].x0 ? 0 : P.length - 1; }
@@ -87,6 +87,8 @@ const Seasons = (() => {
         else if (t.hitT <= 0) { t.hitT = 1.5; G.pops.push({ x: t.x, y: t.y - 110, text: 'Manchado: límpialo con LUZ', t: 0, color: '#d8d0ff', small: true }); }
         continue; }
       const s = SEASON_OF_EL[el]; if (!s) continue;
+      // torii suelto (no manda en su panel): guarda su propia estación; el nivel decide qué pasa
+      if (t.solo) { if (t.s !== s) { t.s = s; t.cd = 1; t.glow = 1; G.events.push({ type: 'toriiSolo', k: t.k, s, x: t.x, y: t.y }); } else if (t.hitT <= 0) { t.hitT = 0.6; t.glow = Math.max(t.glow, 0.4); } continue; }
       if (set(G, t.p, s, -1, t.x, t.y)) { t.cd = Z.rot ? 4 : 1.4; t.glow = 1; if (Z.rot) { Z.rotT = Z.rot; Z.warned = false; } }
     }
     // rotación sola (duelo): aviso 3 s antes

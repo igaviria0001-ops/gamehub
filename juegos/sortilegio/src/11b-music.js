@@ -7,6 +7,7 @@
 const Music = (() => {
   let ac = null, out = null, on = Store.get('music', true), level = 0, want = 0, timer = null, next = 0, step = 0, noiseBuf = null, padNodes = null;
   let E8 = 0.19; // duración de una corchea
+  const VOL = 0.66; // volumen de la música (antes 0.42: pasaba desapercibida)
   // estilos por escenario: bambuco (páramo y menú), cumbia (ríos), tambores de volcán, currulao de marimba (Ciudad Perdida)
   const STY = {
     bambuco: { e8: 0.19, n: 6 },
@@ -28,7 +29,7 @@ const Music = (() => {
     [[0, 76, 1], [1, 74, 1], [2, 71, 1], [3, 67, 3]], [[0, 69, 2], [2, 66, 1], [3, 62, 3]], [[0, 67, 1], [1, 69, 1], [2, 71, 1], [3, 72, 1], [4, 71, 1], [5, 69, 1]], [[0, 71, 5], [5, 75, 1]],
   ];
   function start(a, master) {
-    if (ac) return; ac = a; out = ac.createGain(); out.gain.value = on ? 0.42 : 0;
+    if (ac) return; ac = a; out = ac.createGain(); out.gain.value = on ? VOL : 0;
     const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 9000; out.connect(lp); lp.connect(master); out.lp = lp;
     const len = ac.sampleRate; noiseBuf = ac.createBuffer(1, len, ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     // colchón místico (dos sierras desafinadas con filtro que respira)
@@ -105,7 +106,9 @@ const Music = (() => {
   function addStyle(name, def) { EXT[name] = def; }
   // para que un jefe ataque al ritmo: se avisa cada paso que se agenda (con su hora exacta en el reloj del audio)
   function listen(f) { listeners.push(f); return () => { const k = listeners.indexOf(f); if (k >= 0) listeners.splice(k, 1); }; }
-  function setOn(v) { on = !!v; Store.set('music', on); if (out) out.gain.value = on ? 0.42 : 0; }
+  function setOn(v) { on = !!v; Store.set('music', on); if (out) { out.gain.cancelScheduledValues(0); out.gain.value = on ? VOL : 0; } }
+  // cuando alguien habla, la música se hace a un lado (y vuelve sola)
+  function vduck(d) { if (!out || !on || !ac) return; const t = ac.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.setTargetAtTime(VOL * 0.42, t, 0.06); out.gain.setTargetAtTime(VOL, t + d, 0.35); }
   function duck(v) { if (out && out.lp) out.lp.frequency.setTargetAtTime(v ? 600 : 9000, ac.currentTime, 0.2); }
-  return { start, setLevel, setStyle, setOn, duck, addStyle, listen, get on() { return on; }, get style() { return sty; }, get now() { return ac ? ac.currentTime : 0; } };
+  return { start, setLevel, setStyle, setOn, duck, vduck, addStyle, listen, get on() { return on; }, get style() { return sty; }, get now() { return ac ? ac.currentTime : 0; } };
 })();

@@ -176,28 +176,36 @@ const UI = (() => {
   }
   /* ---------- campaña ---------- */
   let campPlayers = Store.get('campPlayers', 2), nextLevel = -1, campWorld = 0;
-  const w2open = () => Camp.best('c10') > 0;
+  const w2open = () => Camp.best('c10') > 0, w3open = () => Camp.best('c18') > 0;
+  // la entrada de un nivel del Mundo 3 (y la presentación de su jefe): sale siempre, y se puede saltar
+  function introFilm() { const G = Game.G; if (G.mode === 'camp' && G.L && G.L.world3 && typeof Film !== 'undefined') Film.play(Film.levelFilm(G.L)); }
   function fillCamp() {
     // en línea: el anfitrión elige el nivel para los dos (cada quien ya eligió su mago); los demás esperan
     const net = !!(netCamp && typeof NetPlay !== 'undefined' && NetPlay.isHost);
     $('#c-players').style.display = net ? 'none' : ''; $('#c-picks').style.display = net ? 'none' : '';
     $('#c-back').dataset.act = net ? 'hubhome' : 'back'; $('#c-back').textContent = net ? 'Volver a la sala' : 'Volver';
     seg('c-players', campPlayers, v => { campPlayers = +v; Store.set('campPlayers', campPlayers); fillCamp(); });
-    if (campWorld === 0 && !fillCamp.seen) { fillCamp.seen = 1; campWorld = w2open() && Camp.LEVELS.slice(0, 10).every(L => Camp.best(L.id)) ? 2 : 1; }
-    if (campWorld === 2 && !w2open()) campWorld = 1;
-    $('#c-world').innerHTML = `<button data-v="1" aria-pressed="${campWorld === 1}">Mundo 1 · Los Tunjos</button><button data-v="2" aria-pressed="${campWorld === 2}" style="${w2open() ? '' : 'opacity:.55'}">${w2open() ? '' : '🔒 '}Mundo 2 · Cielo e Infierno</button>`;
-    $$('#c-world button').forEach(b => b.onclick = () => { if (+b.dataset.v === 2 && !w2open()) { $('#c-detail').textContent = 'El Mundo 2 se abre al vencer a Tragaluz (nivel 10).'; Sound.play('back'); return; } campWorld = +b.dataset.v; Sound.play('select'); fillCamp(); });
-    $('#c-title').textContent = (campWorld === 2 ? 'El Reino de Arriba y el de Abajo' : 'La Travesía de los Tunjos') + (net ? ' · en línea' : '');
+    if (campWorld === 0 && !fillCamp.seen) { fillCamp.seen = 1; campWorld = w3open() && Camp.LEVELS.slice(10, 18).every(L => Camp.best(L.id)) ? 3 : w2open() && Camp.LEVELS.slice(0, 10).every(L => Camp.best(L.id)) ? 2 : 1; }
+    if (campWorld === 2 && !w2open()) campWorld = 1; if (campWorld === 3 && !w3open()) campWorld = w2open() ? 2 : 1;
+    $('#c-world').innerHTML = `<button data-v="1" aria-pressed="${campWorld === 1}">Mundo 1 · Los Tunjos</button><button data-v="2" aria-pressed="${campWorld === 2}" style="${w2open() ? '' : 'opacity:.55'}">${w2open() ? '' : '🔒 '}Mundo 2 · Cielo e Infierno</button><button data-v="3" aria-pressed="${campWorld === 3}" style="${w3open() ? '' : 'opacity:.55'}">${w3open() ? '' : '🔒 '}Mundo 3 · El Pergamino</button>`;
+    $$('#c-world button').forEach(b => b.onclick = () => { if (+b.dataset.v === 2 && !w2open()) { $('#c-detail').textContent = 'El Mundo 2 se abre al vencer a Tragaluz (nivel 10).'; Sound.play('back'); return; } if (+b.dataset.v === 3 && !w3open()) { $('#c-detail').textContent = 'El Mundo 3 se abre al vencer a Buziraco (nivel 18).'; Sound.play('back'); return; } campWorld = +b.dataset.v; Sound.play('select'); fillCamp(); });
+    $('#c-title').textContent = (campWorld === 3 ? 'El Pergamino de las Estaciones' : campWorld === 2 ? 'El Reino de Arriba y el de Abajo' : 'La Travesía de los Tunjos') + (net ? ' · en línea' : '');
     $('#c-picks').innerHTML = [0, 1].map(p => `<span><span class="lbl" style="color:${PLAYER_COLORS[p].main}">${p === 1 && campPlayers === 1 ? 'COMPAÑERO' : 'J' + (p + 1)}</span><button class="btn small" data-cp="${p}" data-d="-1">◀</button> <canvas class="mini" width="72" height="72" data-mp="${p}"></canvas><b style="font-family:Macondo,serif;font-size:17px;color:var(--gold2)">${CHARS[pick[p]].name}</b> <button class="btn small" data-cp="${p}" data-d="1">▶</button></span>`).join('');
     $$('#c-picks canvas.mini').forEach(cv => { const p = +cv.dataset.mp, x = cv.getContext('2d'); x.setTransform(2, 0, 0, 2, 0, 0); ArtMage.portrait(x, pick[p], 18, 18, 17, performance.now() / 1000, skins[p]); x.strokeStyle = PLAYER_COLORS[p].main; x.lineWidth = 1.5; x.beginPath(); x.arc(18, 18, 17, 0, TAU); x.stroke(); });
     $$('#c-picks [data-cp]').forEach(b => b.onclick = () => { const p = +b.dataset.cp, i = CHAR_ORDER.indexOf(pick[p]); pick[p] = CHAR_ORDER[(i + +b.dataset.d + CHAR_ORDER.length) % CHAR_ORDER.length]; Game.cfg.chars = pick.slice(); Store.set('cfg', Game.cfg); Sound.play('select'); fillCamp(); });
     const st = n => '★'.repeat(n) + `<i>${'★'.repeat(3 - n)}</i>`;
-    $('#c-grid').innerHTML = Camp.LEVELS.map((L, i) => { if ((L.world || 1) !== campWorld) return ''; const o = Camp.unlocked(i); const TC = { paramo: ['#1c3a5a', '#24402a'], rio: ['#0c3a40', '#12402a'], volcan: ['#4a1410', '#2a0c10'], ciudad: ['#18401e', '#2a3a1a'], cano: ['#5a1a2a', '#1a4a3a'], cielo: ['#2a62b8', '#b88a3a'], infierno: ['#5a1010', '#2a0a26'] }[L.theme] || ['#2a2050', '#141030']; return `<button class="lvl${o ? '' : ' lock'}${L.boss ? ' boss' : ''}" data-lv="${i}" style="--c1:${TC[0]};--c2:${TC[1]}"><span class="num">${i + 1}</span>${o ? '' : '<span class="lk">🔒</span>'}<small>${i + 1} · ${L.kind}</small><b>${L.name}</b><small>${L.place}</small><span class="st">${o ? st(Camp.best(L.id)) : 'cerrado'}</span></button>`; }).join('');
+    $('#c-grid').innerHTML = Camp.LEVELS.map((L, i) => { if ((L.world || 1) !== campWorld) return ''; const o = Camp.unlocked(i); const TC = { paramo: ['#1c3a5a', '#24402a'], rio: ['#0c3a40', '#12402a'], volcan: ['#4a1410', '#2a0c10'], ciudad: ['#18401e', '#2a3a1a'], cano: ['#5a1a2a', '#1a4a3a'], cielo: ['#2a62b8', '#b88a3a'], infierno: ['#5a1010', '#2a0a26'], miyajima: ['#b8301e', '#2a5a8a'], arashiyama: ['#2e6a30', '#a8a04a'], fushimi: ['#c8401e', '#2a1020'], himeji: ['#e8e2d6', '#4a4e58'], shirakawa: ['#5a7aa8', '#1a2440'], fuji: ['#e8b850', '#5a7ac0'], kioto: ['#c8402a', '#24143a'], izumo: ['#2e3a26', '#0e0b14'] }[L.theme] || ['#2a2050', '#141030']; return `<button class="lvl${o ? '' : ' lock'}${L.boss ? ' boss' : ''}" data-lv="${i}" style="--c1:${TC[0]};--c2:${TC[1]}"><span class="num">${i + 1}</span>${o ? '' : '<span class="lk">🔒</span>'}<small>${i + 1} · ${L.kind}</small><b>${L.name}</b><small>${L.place}</small><span class="st">${o ? st(Camp.best(L.id)) : 'cerrado'}</span></button>`; }).join('');
     const say = i => { const L = Camp.LEVELS[i]; $('#c-detail').textContent = Camp.unlocked(i) ? `${i + 1}. ${L.name}: ${L.text}` : `${i + 1}. ${L.name}: superen el nivel anterior para abrirlo.`; };
-    let first = Camp.LEVELS.findIndex((L, i) => (L.world || 1) === campWorld && Camp.unlocked(i) && !Camp.best(L.id)); if (first < 0) first = campWorld === 2 ? 10 : 0; say(first);
+    let first = Camp.LEVELS.findIndex((L, i) => (L.world || 1) === campWorld && Camp.unlocked(i) && !Camp.best(L.id)); if (first < 0) first = campWorld === 3 ? 18 : campWorld === 2 ? 10 : 0; say(first);
+    // cinemáticas para volver a ver (las que ya se ganaron)
+    const films = []; if (campWorld >= 2 && Camp.best('c18')) films.push(['buziraco', 'La caída de Buziraco']);
+    if (campWorld === 3) { Camp.LEVELS.forEach((L, i) => { if (L.world3 && L.boss && Camp.unlocked(i)) films.push(['lv' + i, L.boss === 'gods' ? 'Raijin y Fujin' : L.boss === 'orochi' ? 'Yamata no Orochi' : 'La Kitsune']); }); if (Camp.best('c26')) films.push(['final', 'El final del pergamino']); }
+    let fl = $('#c-films'); if (!fl) { fl = document.createElement('div'); fl.id = 'c-films'; fl.className = 'row'; fl.style.cssText = 'gap:8px;flex-wrap:wrap;margin:2px 0;font-size:13px'; $('#c-detail').before(fl); }
+    fl.innerHTML = films.length && !net ? '<span class="lbl">CINEMÁTICAS</span>' + films.map(([k, n]) => `<button class="btn small" data-film="${k}">▶ ${n}</button>`).join('') : '';
+    $$('#c-films [data-film]').forEach(b => b.onclick = () => { const k = b.dataset.film; Sound.play('select'); Film.play(k.startsWith('lv') ? Film.levelFilm(Camp.LEVELS[+k.slice(2)]) : k); });
     $$('#c-grid .lvl').forEach(b => { const i = +b.dataset.lv; b.onmouseenter = b.onfocus = () => say(i); b.onclick = () => { if (!Camp.unlocked(i)) { say(i); Sound.play('back'); return; } if (net) { Sound.play('go'); NetGame.again(i); } else startLevel(i); }; });
   }
-  function startLevel(i) { Sound.init(); Sound.play('go'); paused = false; Game.G.paused = false; stack = []; Copa.on = false; Game.start('camp', campPlayers, { level: i, chars: pick.slice() }); show(null, false); }
+  function startLevel(i) { Sound.init(); Sound.play('go'); paused = false; Game.G.paused = false; stack = []; Copa.on = false; Game.start('camp', campPlayers, { level: i, chars: pick.slice() }); show(null, false); introFilm(); }
   /* ---------- cómo se juega ---------- */
   function fillHowto() {
     const row = (a, l) => `<tr><td>${l}</td><td><kbd>${KEYMAP[0][a].map(keyName).join('</kbd> o <kbd>')}</kbd></td><td><kbd>${KEYMAP[1][a].map(keyName).join('</kbd> o <kbd>')}</kbd></td></tr>`;
@@ -292,7 +300,7 @@ const UI = (() => {
     if (r.net && typeof NetPlay !== 'undefined' && NetPlay.on) return netResults(r);
     $('#r-rematch').dataset.act = 'rematch'; $('#r-copaNext').dataset.act = 'copaNext'; $('#r-netpick').hidden = true; ['setupAgain', 'toTitle'].forEach(a => { const e = document.querySelector(`#s-results [data-act="${a}"]`); if (e) e.hidden = false; });
     const w = r.winner;
-    if (r.camp) { campResults(r); vestAfter(); return; }
+    if (r.camp) { const id = Camp.LEVELS[r.camp.level] && Camp.LEVELS[r.camp.level].id, film = r.camp.win && (id === 'c18' ? 'buziraco' : id === 'c26' ? 'final' : null); if (film && typeof Film !== 'undefined' && Film.play(film, () => { campResults(r); vestAfter(); })) return; campResults(r); vestAfter(); return; }
     const hubEv = !!Hub.ev && !r.vsBot && r.mode !== 'school';
     if (hubEv) { Hub.result(w === 0 || w === 1 ? w : -1, { score: r.mode === 'duel' ? r.wins.join(' – ') : r.score.join(' – ') }); Hub.release(); }
     $('#r-hub').hidden = !hubEv; $('#s-results').classList.toggle('hubres', hubEv);
@@ -323,7 +331,8 @@ const UI = (() => {
     $('#r-copa').hidden = true; nextLevel = c.win && c.level + 1 < Camp.LEVELS.length ? c.level + 1 : -1;
     $('#r-copaNext').hidden = nextLevel < 0; $('#r-copaNext').textContent = 'Siguiente nivel'; $('#r-rematch').hidden = false; $('#r-rematch').textContent = c.win ? 'Repetir nivel' : 'Reintentar';
     if (c.win && c.level === 9) { $('#r-title').textContent = '¡Tragaluz cayó! Pero su sombra huyó al cielo: se abre el Mundo 2'; campWorld = 2; }
-    if (c.win && c.level === Camp.LEVELS.length - 1) { $('#r-title').textContent = '¡Buziraco cayó: la luz y la sombra vuelven a su lugar!'; }
+    if (c.win && Camp.LEVELS[c.level].id === 'c18') { $('#r-title').textContent = '¡Buziraco cayó! Pero de su tinta nació el Borrón: se abre el Mundo 3'; campWorld = 3; }
+    if (c.win && Camp.LEVELS[c.level].id === 'c26') { $('#r-title').textContent = '¡El Borrón cayó: el pergamino vuelve a tener sus cuatro estaciones!'; }
     hero(Game.G.chars[0], c.win ? '¡Victoria!' : '', -1, Game.G.chars[1]);
     paused = false; show('results', false); startHero();
   }
@@ -354,7 +363,7 @@ const UI = (() => {
     practice: () => { Sound.init(); setup.players = 1; Game.start('free', 1, { chars: pick.slice(), arena: Game.cfg.arena === 'random' ? 'paramo' : Game.cfg.arena, level: 2 }); stack = []; show(null, false); },
     howto: () => show('howto'), options: () => show('options'), back, go,
     pause: () => pause(true), resume: () => pause(false),
-    rematch: () => { Sound.init(); paused = false; Game.G.paused = false; if ($('#r-rematch').textContent === 'Otra Copa' && UI.current === 'results') { $('#r-rematch').textContent = 'Revancha'; go(); return; } Game.rematch(); show(null, false); },
+    rematch: () => { Sound.init(); paused = false; Game.G.paused = false; if ($('#r-rematch').textContent === 'Otra Copa' && UI.current === 'results') { $('#r-rematch').textContent = 'Revancha'; go(); return; } Game.rematch(); show(null, false); introFilm(); },
     copaNext: () => { Sound.init(); $('#r-rematch').hidden = false; if (nextLevel >= 0 && Game.G.mode === 'camp') { const n = nextLevel; nextLevel = -1; $('#r-copaNext').textContent = 'Siguiente prueba'; startLevel(n); return; } copaEvent(); },
     camp: () => show('camp'), grim: () => show('grim'),
     school: () => { Sound.init(); setup.players = 1; paused = false; Game.G.paused = false; stack = []; Copa.on = false; Game.start('school', 1, { chars: [pick[0], pick[1]], arena: 'paramo', level: 2 }); show(null, false); },
@@ -391,6 +400,8 @@ const UI = (() => {
     const [a, b] = G.mages, d = a && b ? hypot(a.x - b.x, a.y - b.y) : 999;
     let L = 1; if (d < 360 || G.spells.length > 6) L = 2;
     if (G.ring || (G.mode === 'duel' && (G.wins[0] === G.winsNeeded - 1 || G.wins[1] === G.winsNeeded - 1)) || G.mages.some(m => m.emb >= 100)) L = Math.max(L, 3);
+    if (G.mode === 'camp' && G.boss && G.boss.alive) L = Math.max(L, 2);
+    if (G.cs && G.cs.music && Music.style !== G.cs.music) Music.setStyle(G.cs.music);
     Music.setLevel(L);
   }, 250);
   getInsets = insets; isTouch = touch;

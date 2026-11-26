@@ -14,7 +14,7 @@ const Art = (() => {
   function lights(G) {
     const L = [], T = G.T, t = G.time;
     const add = (x, y, r, rgb, a = 1, col = 0.35) => L.push({ x, y, r, rgb, a, col });
-    for (const s of G.sources) { const E = ELEMENTS[s.el]; add(s.x, s.y - 30, s.cd > 0 ? 70 : 150 + Math.sin(t * 2 + s.x) * 10, E.light, s.cd > 0 ? 0.5 : 0.9, 0.3); }
+    for (const s of G.sources) { if (s.cd > 60) continue; const E = ELEMENTS[s.el]; add(s.x, s.y - 30, s.cd > 0 ? 70 : 150 + Math.sin(t * 2 + s.x) * 10, E.light, s.cd > 0 ? 0.5 : 0.9, 0.3); }
     for (const m of G.mages) { if (!m.alive) continue; add(m.x, m.y - 24, 170, [235, 225, 255], 0.85, 0); for (const h of m.hands) add(m.x, m.y - 26, h.hold >= 0 || m.fuse ? 120 : 70, ELEMENTS[h.el].light, 0.55, h.hold >= 0 ? 0.35 : 0.18); if (m.emb >= 100) add(m.x, m.y - 30, 110, [255, 220, 120], 0.6, 0.3); }
     for (const s of G.spells) {
       const E = ELEMENTS[s.el] || ELEMENTS.wind;
@@ -32,7 +32,7 @@ const Art = (() => {
       }
     }
     for (const u of G.units) { if (u.obj === 'turret' && u.alive) add(u.x, u.y - 32, 100, [200, 170, 255], 0.8, 0.3); else if (u.obj === 'tejo') add(u.x, u.y, 120, [255, 210, 120], 0.8, 0.2); else if (u instanceof Creature && u.alive) add(u.x, u.y - 24, 90, ELEMENTS[u.D.el].light, 0.7, 0.3); }
-    ArtSpells2.lights(G, add); ArtEarth.lights(G, add); ArtEpic.lights(G, add); Cine.lights(G, add);
+    ArtSpells2.lights(G, add); ArtEarth.lights(G, add); ArtEpic.lights(G, add); Cine.lights(G, add); if (typeof ArtW3 !== 'undefined') ArtW3.lights(G, add);
     if (G.altar) add(G.altar.x, G.altar.y, G.altar.r * 1.6, [255, 220, 140], 0.75, 0.15);
     for (const r of G.runes || []) add(r.x, r.y - 30, 150, [255, 230, 180], 0.9, 0.2);
     if (G.dummy && G.mode === 'school') add(G.dummy.x, G.dummy.y - 30, 180, [255, 230, 180], 0.9, 0.1);
@@ -54,7 +54,7 @@ const Art = (() => {
     stepFireflies(G, dt);
     const ink = ArtInk.on(G), th = ink ? ArtInk.theme(G, cam) : THEMES[G.A.theme] || THEMES.paramo;
     const W = (x, y) => [sw / 2 + (x - cam.x) * z + cam.sx, sh / 2 + (y - cam.y) * z + cam.sy];
-    const view = { x0: cam.x - sw / 2 / z - 60, x1: cam.x + sw / 2 / z + 60, y0: cam.y - sh / 2 / z - 80, y1: cam.y + sh / 2 / z + 80 };
+    const view = { x0: cam.x - sw / 2 / z - 60, x1: cam.x + sw / 2 / z + 60, y0: cam.y - sh / 2 / z - 80, y1: cam.y + sh / 2 / z + 80 }; G._vx0 = view.x0; G._vx1 = view.x1;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#05060e'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     const wt = () => ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (sw / 2 - cam.x * z + cam.sx), dpr * (sh / 2 - cam.y * z + cam.sy));
     if (ink) ArtInk.backdrop(ctx, G, cam, sw, sh, dpr, wt);
@@ -93,7 +93,7 @@ const Art = (() => {
     // ---- la noche y sus luces ----
     const hw = Math.max(1, Math.round(sw * dpr / 2)), hh = Math.max(1, Math.round(sh * dpr / 2));
     if (dk.width !== hw || dk.height !== hh) { dk.width = hw; dk.height = hh; }
-    const L = lights(G), amb = G.eclipse ? 0.84 : G.L && G.mode === 'camp' && G.L.dark ? 0.62 : Math.min(0.9, th.ambientA + (G.mist || 0) * 0.3 + (G.rain ? 0.1 : 0));
+    const L = lights(G), amb = G.eclipse ? 0.84 : G.L && G.mode === 'camp' && G.L.dark ? (th.nightA || 0.62) : Math.min(0.9, th.ambientA + (G.mist || 0) * 0.3 + (G.rain ? 0.1 : 0));
     dx.setTransform(1, 0, 0, 1, 0, 0); dx.globalCompositeOperation = 'source-over'; dx.clearRect(0, 0, hw, hh); dx.fillStyle = `rgba(${th.ambient.join(',')},${amb})`; dx.fillRect(0, 0, hw, hh);
     dx.globalCompositeOperation = 'destination-out';
     const k2 = dpr / 2;
@@ -103,11 +103,12 @@ const Art = (() => {
     wt(); ctx.globalCompositeOperation = 'lighter';
     for (const l of L) { if (!l.col) continue; if (l.x < view.x0 - l.r || l.x > view.x1 + l.r || l.y < view.y0 - l.r || l.y > view.y1 + l.r) continue; ctx.globalAlpha = l.col * Math.min(1, l.a) * (th.lightK == null ? 1 : th.lightK); ctx.drawImage(colSpr(l.rgb), l.x - l.r, l.y - l.r, l.r * 2, l.r * 2); }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    if (ink && typeof ArtW3 !== 'undefined') ArtW3.sky(ctx, G, dt);
     // ---- viñeta: bordes oscuros que centran la mirada ----
     if (!vig || vig.w !== sw || vig.h !== sh || vig.k !== (th.vig || '')) { vig = document.createElement("canvas"); vig.w = sw; vig.h = sh; vig.k = th.vig || ""; vig.width = 320; vig.height = Math.max(1, Math.round(320 * sh / sw)); const vx = vig.getContext('2d'), g = vx.createRadialGradient(160, vig.height / 2, vig.height * 0.35, 160, vig.height / 2, 200); g.addColorStop(0, `rgba(${th.vig || '4,3,14'},0)`); g.addColorStop(1, `rgba(${th.vig || '4,3,14'},${th.vigA || 0.55})`); vx.fillStyle = g; vx.fillRect(0, 0, 320, vig.height); }
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(vig, 0, 0, ctx.canvas.width, ctx.canvas.height);
     // ---- acabado pro: rayos de luna, motas en primer plano, color y resplandor ----
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); Post.rays(ctx, G, cam, sw, sh, th); Post.bokeh(ctx, G, cam, sw, sh, th); Post.grade(ctx, th, sw, sh); Post.bloom(ctx, th.bloom == null ? 1 : th.bloom); if (ink) { ArtInk.particles(ctx, G, cam, sw, sh, dt); ArtInk.grain(ctx, sw, sh, dpr); } wt();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); Post.rays(ctx, G, cam, sw, sh, th); Post.bokeh(ctx, G, cam, sw, sh, th); Post.grade(ctx, th, sw, sh); Post.bloom(ctx, th.bloom == null ? 1 : th.bloom); if (ink) { ArtInk.particles(ctx, G, cam, sw, sh, dt); if (typeof ArtW3 !== 'undefined') ArtW3.blizzard(ctx, G, sw, sh, dt); ArtInk.grain(ctx, sw, sh, dpr); } wt();
     // ---- lluvia ----
     if (G.rain) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.strokeStyle = 'rgba(170,200,255,0.35)'; ctx.lineWidth = 1.2; ctx.beginPath();
@@ -166,10 +167,11 @@ const Art = (() => {
   }
   // fuente mágica: altar con un orbe que flota
   function source(x, G, s) {
+    if (s.gone || s.cd > 60) return; // (la borró la tinta)
     const E = ELEMENTS[s.el], t = G.time, on = s.cd <= 0, bob = Math.sin(t * 2 + s.x) * 4, Y = s.y - 40 + bob;
     if (on) { for (let k = 0; k < 2; k++) { const p = (t * 0.7 + k / 2 + s.x) % 1; x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = E.c1; x.globalAlpha = 1 - p; x.lineWidth = 2; x.beginPath(); x.ellipse(s.x, s.y, 14 + p * 28, (14 + p * 28) * 0.55, 0, 0, TAU); x.stroke(); x.restore(); } }
     ArtSpells.glow(x, s.x, Y, on ? 46 : 20, E.c1 + (on ? 'cc' : '55'));
-    const r = on ? 12 : 6 + 6 * (1 - s.cd / 9);
+    const r = on ? 12 : Math.max(2, 6 + 6 * (1 - s.cd / 9));
     x.fillStyle = E.c2; x.beginPath(); x.arc(s.x, Y, r, 0, TAU); x.fill(); x.fillStyle = E.c1; x.beginPath(); x.arc(s.x, Y - 1, r * 0.8, 0, TAU); x.fill();
     if (on) HUD.icon(x, s.el, s.x, Y, r * 0.75, E.c0);
     else { x.strokeStyle = E.c0; x.lineWidth = 2; x.beginPath(); x.arc(s.x, Y, r + 5, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - s.cd / 9)); x.stroke(); }

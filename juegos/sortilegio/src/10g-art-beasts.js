@@ -21,6 +21,7 @@ const ArtBeast = (() => {
   }
   /* ====================== CRIATURAS ====================== */
   function creature(x, G, c) {
+    if (typeof ArtW3 !== 'undefined' && ArtW3.looks[c.D.look]) return ArtW3.creature(x, G, c);
     const D = c.D, E = ELEMENTS[D.el], t = c.t, a = c.spawnT > 0 ? 1 - c.spawnT / 0.6 : 1, bob = Math.sin(t * 4) * 3, R = c.r, dir = c.vx >= 0 ? 1 : -1, mv = hypot(c.vx, c.vy);
     x.save(); x.translate(c.x, c.y); x.globalAlpha = a * (c.st.hidden > 0 ? 0.4 : 1);
     if (c.spawnT > 0) { x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = E.c1; x.lineWidth = 2; x.globalAlpha = 1 - a; x.beginPath(); x.ellipse(0, 0, R * (2.4 - a), R * (1.2 - a * 0.5), 0, 0, TAU); x.stroke(); x.restore(); x.scale(0.4 + a * 0.6, 0.4 + a * 0.6); }
@@ -271,6 +272,7 @@ const ArtBeast = (() => {
   function objects(x, G, list) {
     const t = G.time, sh = (X, Y, rx) => { x.fillStyle = rg(x, X, Y, 2, rx, 'rgba(6,4,16,0.55)', 'rgba(6,4,16,0)'); x.beginPath(); x.ellipse(X, Y, rx, rx * 0.4, 0, 0, TAU); x.fill(); };
     for (const o of G.objs) {
+      if (o.w3) continue; // el Mundo 3 los pinta con tinta
       if (o.t === 'brazier') list.push({ y: o.y + 8, draw: x => { sh(o.x, o.y + 5, 28); stonePed(x, o.x, o.y, 11, 22);
         x.beginPath(); x.moveTo(o.x - 24, o.y - 30); x.quadraticCurveTo(o.x - 22, o.y - 16, o.x - 9, o.y - 16); x.lineTo(o.x + 9, o.y - 16); x.quadraticCurveTo(o.x + 22, o.y - 16, o.x + 24, o.y - 30); x.closePath(); fo(x, lg(x, o.x - 24, o.y - 30, o.x + 24, o.y - 16, '#d8a048', '#8a5a1c', '#3a2408'), 1.5);
         x.beginPath(); x.ellipse(o.x, o.y - 30, 24, 7, 0, 0, TAU); fo(x, o.lit ? rg(x, o.x, o.y - 30, 2, 24, '#fff6c0', '#ff9a3a', '#7a2a0a') : '#1c1410', 1.4); x.strokeStyle = '#ffe9a0'; x.lineWidth = 1; for (let k = -2; k <= 2; k++) { x.beginPath(); x.moveTo(o.x + k * 8 - 3, o.y - 21); x.lineTo(o.x + k * 8, o.y - 25); x.lineTo(o.x + k * 8 + 3, o.y - 21); x.stroke(); }
@@ -307,7 +309,7 @@ const ArtBeast = (() => {
         if (u.flash > 0) { x.globalCompositeOperation = 'lighter'; x.fillStyle = `rgba(255,246,200,${u.flash * 5})`; x.beginPath(); x.ellipse(0, -50, 24, 58, 0, 0, TAU); x.fill(); x.globalCompositeOperation = 'source-over'; u.flash -= 1 / 60; }
         bar(x, -128, 50, u.hp / u.maxHp, '#ffe48a'); x.fillStyle = 'rgba(12,8,30,0.85)'; x.beginPath(); x.arc(0, -144, 10, 0, TAU); x.fill(); HUD.icon(x, 'light', 0, -144, 6, '#ffe48a'); x.restore(); } });
     }
-    if (G.boss && G.boss.alive) list.push({ y: G.boss.y + (G.boss.boss === 'condor' ? 40 : 0), draw: x => boss(x, G, G.boss) });
+    if (G.boss && G.boss.alive && !G.boss.w3) list.push({ y: G.boss.y + (G.boss.boss === 'condor' ? 40 : 0), draw: x => boss(x, G, G.boss) });
   }
   /* ---------- árboles del Mundo 2 ---------- */
   function tree(x, G, i, kind) {

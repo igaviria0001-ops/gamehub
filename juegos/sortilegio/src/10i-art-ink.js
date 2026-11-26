@@ -111,7 +111,7 @@ const ArtInk = (() => {
     x.globalAlpha = 1;
   }
   function prerender(G, season) {
-    const key = G.arena + '|' + season + '|' + (LOWFX ? 1 : 0); if (cache[key]) return cache[key];
+    const key = G.arena + '|' + season + '|' + (LOWFX ? 1 : 0) + '|' + (G.cellLook ? G.cellLook.size : 0); if (cache[key]) return cache[key];
     const T = G.T, th = THEMES[G.A.theme], P = Object.assign({}, PAL[season], (th.pal && th.pal[season]) || {}), S = scaleOf(T), F = field(G), { R, lw, lh, KIND, DIST, N1, N2, type } = F, B = T.base0 || T.base;
     const c = mk(T.W * S, T.H * S), x = c.getContext('2d'); x.scale(S, S);
     // 0. papel
@@ -121,7 +121,7 @@ const ArtInk = (() => {
     for (let p = 0; p < lw * lh; p++) {
       const k = KIND[p], n1 = N1[p], n2 = N2[p];
       const pick = arr => { const ix = Math.min(arr.length - 1, Math.floor(n1 * arr.length * 1.15)); return lerp3(arr[ix], arr[(ix + 1) % arr.length], n2 * 0.5); };
-      let col = k === 1 ? lerp3(P.water[0], P.water[1], Math.min(1, DIST[p] / 12) * (0.8 + n2 * 0.2)) : k === 2 ? [14, 11, 14] : k === 3 ? pick(P.path) : k === 4 ? pick(P.stone) : k === 6 ? pick(P.fert) : pick(P.grass);
+      let col = k === 1 ? lerp3(P.water[0], P.water[1], Math.min(1, DIST[p] / 12) * (0.8 + n2 * 0.2)) : k === 2 ? (th.voidSky ? lerp3([178, 200, 232], [246, 226, 206], Math.min(1, (p / lw) / lh * 1.2)) : [14, 11, 14]) : k === 3 ? pick(P.path) : k === 4 ? pick(P.stone) : k === 6 ? pick(P.fert) : pick(P.grass);
       if (k !== 2) col = lerp3(col, [244, 236, 220], 0.04 + 0.09 * (1 - n2));
       const o = p * 4; D[o] = col[0]; D[o + 1] = col[1]; D[o + 2] = col[2]; D[o + 3] = 255;
     }
@@ -138,9 +138,11 @@ const ArtInk = (() => {
     contour(x, F, p => KIND[p] === 1 && DIST[p] === 3, (wx, wy) => fbm2(wx / 60 + 5, wy / 60, 2) * 0.7, `rgb(${P.wInk})`, 0.45, 0.32);
     contour(x, F, p => KIND[p] === 1 && DIST[p] === 6, (wx, wy) => 0.1, `rgb(${P.wInk})`, 0.28, 0.52);
     contour(x, F, p => KIND[p] === 3 && (KIND[p + 1] === 0 || KIND[p - 1] === 0 || KIND[p + lw] === 0 || KIND[p - lw] === 0), (wx, wy) => 0.2, 'rgb(112,84,52)', 0.32, 0.42);
-    contour(x, F, p => KIND[p] === 2 && (KIND[p + 1] !== 2 || KIND[p - 1] !== 2 || KIND[p + lw] !== 2 || KIND[p - lw] !== 2), (wx, wy) => 0.9, `rgb(${INKRGB})`, 0.95, 0);
+    contour(x, F, p => KIND[p] === 2 && (KIND[p + 1] !== 2 || KIND[p - 1] !== 2 || KIND[p + lw] !== 2 || KIND[p - lw] !== 2), (wx, wy) => 0.9, th.voidSky ? 'rgb(150,120,90)' : `rgb(${INKRGB})`, th.voidSky ? 0.55 : 0.95, 0);
     // 2b. el vacío de tinta (lo que borró el Borrón): brillo húmedo y salpicaduras alrededor
-    for (let j = 1; j < lh - 1; j += 2) for (let i = 1; i < lw - 1; i += 2) { const p = j * lw + i; if (KIND[p] !== 2) continue; const wx = i * R, wy = j * R; if (rnd(p, 601) < 0.05) { x.globalAlpha = 0.18; x.drawImage(wash('120,120,150', 1), wx - 14, wy - 6, 28, 12); }
+    // cielo bajo las nubes (sobre el Fuji): mar de nubes blancas y la silueta del monte a lo lejos
+    if (th.voidSky) { for (let k = 0; k < Math.round(T.W * T.H / 9000); k++) { const bx = rnd(k, 901) * T.W, by = rnd(k, 902) * T.H, p = Math.min(lw * lh - 1, ((by / R) | 0) * lw + ((bx / R) | 0)); if (KIND[p] !== 2) continue; const w = 60 + rnd(k, 903) * 140; x.globalAlpha = 0.55 + rnd(k, 904) * 0.35; x.drawImage(wash('255,252,246', 1), bx - w, by - w * 0.3, w * 2, w * 0.6); } x.globalAlpha = 1; }
+    for (let j = 1; j < lh - 1; j += 2) for (let i = 1; i < lw - 1; i += 2) { const p = j * lw + i; if (KIND[p] !== 2 || th.voidSky) continue; const wx = i * R, wy = j * R; if (rnd(p, 601) < 0.05) { x.globalAlpha = 0.18; x.drawImage(wash('120,120,150', 1), wx - 14, wy - 6, 28, 12); }
       if ((KIND[p + 2] !== 2 || KIND[p - 2] !== 2) && rnd(p, 602) < 0.4) { const a = rnd(p, 603) * TAU, d = 6 + rnd(p, 604) * 16; x.globalAlpha = 0.85; x.fillStyle = INK; x.beginPath(); x.arc(wx + Math.cos(a) * d, wy + Math.sin(a) * d, 0.8 + rnd(p, 605) * 2.4, 0, TAU); x.fill(); } }
     x.globalAlpha = 1;
     // 3. detalles por celda
@@ -173,6 +175,13 @@ const ArtInk = (() => {
         for (let k = 0; k < 3; k++) { if (rnd(i, 770 + k) < 0.45) continue; const sx = px + (rnd(i, 771 + k) - 0.5) * 34, sy = py + (rnd(i, 773 + k) - 0.5) * 34, r = 1.2 + rnd(i, 775 + k) * 2.2; x.fillStyle = rgb(lerp3(P.stone[1], [255, 255, 255], 0.2), 0.9); x.beginPath(); x.ellipse(sx, sy, r * 1.2, r * 0.85, 0, 0, TAU); x.fill(); x.strokeStyle = `rgba(${INKRGB},0.55)`; x.lineWidth = 0.7; x.stroke(); }
         if (season === 'autumn' && B[i] === TT.DIRT && rnd(i, 780) < 0.4) leaves(x, i, px, py, fl, 1);
         if (season === 'winter') { x.globalAlpha = 0.55; x.drawImage(wash('248,249,250', 1), px - 22 + (rnd(i, 781) - 0.5) * 20, py - 6 + (rnd(i, 782) - 0.5) * 20, 30 + rnd(i, 783) * 14, 12); x.globalAlpha = 1; }
+      } else if (b === TT.STONE && th.slabs) {
+        // losas de piedra (ishidatami): rectángulos parejos con junta de tinta, unas más claras que otras
+        const r0 = Math.floor(py / CELL), off = (r0 % 2) * CELL / 2;
+        for (let k = 0; k < 2; k++) { const sx = px - CELL / 2 + k * CELL / 2 + off * 0, sy = py - CELL / 2, w = CELL / 2, h = CELL; const v = rnd(i, 850 + k); x.fillStyle = rgb(lerp3(P.stone[0], P.stone[1], v * 0.8), 1); x.fillRect(sx + 1, sy + 1, w - 2, h - 2); x.strokeStyle = `rgba(${INKRGB},0.32)`; x.lineWidth = 1; x.strokeRect(sx + 1, sy + 1, w - 2, h - 2);
+          if (v < 0.25) { x.strokeStyle = `rgba(${INKRGB},0.25)`; x.beginPath(); x.moveTo(sx + 3, sy + 8 + v * 40); x.lineTo(sx + w - 4, sy + 12 + v * 30); x.stroke(); }
+          if (season === 'winter' && rnd(i, 860 + k) < 0.5) { x.globalAlpha = 0.6; x.drawImage(wash('248,249,250', 1), sx - 4, sy + h * 0.3, w + 8, 12); x.globalAlpha = 1; }
+          if (season === 'autumn' && rnd(i, 870 + k) < 0.3) leaves(x, i + k * 7, sx + w / 2, sy + h / 2, PAL.autumn.flower, 1); }
       } else if (b === TT.STONE) {
         const n = 1 + ((rnd(i, 790) * 2) | 0);
         for (let k = 0; k < n; k++) { const sx = px + (n > 1 ? (k - 0.5) * 18 : 0) + (rnd(i, 791 + k) - 0.5) * 6, sy = py + (rnd(i, 793 + k) - 0.5) * 8, w = (n > 1 ? 9 : 17) + rnd(i, 795 + k) * 4, h = 10 + rnd(i, 797 + k) * 5;
@@ -204,7 +213,7 @@ const ArtInk = (() => {
       x.restore();
     }
     // 5. rocas sumi-e (sprites por estación y variante)
-    for (let i = 0; i < T.n; i++) if (B[i] === TT.ROCK) { const v = (rnd(i, 29) * 8) | 0, spr = rockSpr(season, v, P), up = Math.floor(i / T.cols) > 0 && B[i - T.cols] === TT.ROCK, px = Terrain.cx(T, i) + (rnd(i, 30) - 0.5) * 8, py = Terrain.cy(T, i) + (rnd(i, 31) - 0.5) * 6 + (up ? 4 : 0), sc = 0.9 + rnd(i, 32) * 0.3; x.save(); x.translate(px, py); if (rnd(i, 33) < 0.5) x.scale(-sc, sc); else x.scale(sc, sc); x.drawImage(spr, -40, -52, 80, 70); x.restore(); }
+    for (let i = 0; i < T.n; i++) if (B[i] === TT.ROCK && !(G.cellLook && G.cellLook.get(i))) { const v = (rnd(i, 29) * 8) | 0, spr = rockSpr(season, v, P), up = Math.floor(i / T.cols) > 0 && B[i - T.cols] === TT.ROCK, px = Terrain.cx(T, i) + (rnd(i, 30) - 0.5) * 8, py = Terrain.cy(T, i) + (rnd(i, 31) - 0.5) * 6 + (up ? 4 : 0), sc = 0.9 + rnd(i, 32) * 0.3; x.save(); x.translate(px, py); if (rnd(i, 33) < 0.5) x.scale(-sc, sc); else x.scale(sc, sc); x.drawImage(spr, -40, -52, 80, 70); x.restore(); }
     // 6. el papel encima de todo (fibras que atraviesan la pintura)
     x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = 0.3; x.fillStyle = x.createPattern(paper(), 'repeat'); x.fillRect(0, 0, T.W, T.H); x.restore();
     c.S = S; cache[key] = c; return c;
@@ -313,7 +322,8 @@ const ArtInk = (() => {
     return (kas[k] = c);
   }
   function kasumi(ctx, G, P, time) {
-    for (let k = 1; k < P.length; k++) { const bx = P[k][0], spr = kasumiSpr(k * 13 + 7, G.T.H); ctx.save(); ctx.globalAlpha = 0.9; ctx.drawImage(spr, bx - spr.width / 2 + Math.sin(time * 0.3 + k) * 4, 0); ctx.restore(); }
+    // solo arriba y abajo de cada costura (como en los biombos): el centro queda limpio para jugar
+    for (let k = 1; k < P.length; k++) { const bx = P[k][0], H = G.T.H, spr = kasumiSpr(k * 13 + 7, 260), sw = Math.sin(time * 0.3 + k) * 4; ctx.save(); ctx.globalAlpha = 0.78; ctx.drawImage(spr, bx - spr.width / 2 + sw, -40, spr.width, 200); ctx.drawImage(spr, bx - spr.width / 2 - sw, H - 160, spr.width, 200); ctx.restore(); }
   }
 
   /* ---------- árboles por estación (sprites guardados por tipo, estación y variante) ---------- */
@@ -377,16 +387,20 @@ const ArtInk = (() => {
     return (trees[key] = c);
   }
   function tree(x, G, i) {
-    const T = G.T, th = THEMES[G.A.theme], px = Terrain.cx(T, i), py = Terrain.cy(T, i) + 12, list = th.trees || ['pine'], kind = list[Math.floor(rnd(i, 3) * list.length)];
+    // lo que el nivel pide para esa celda (seto podado, bambú…): el Mundo 3 dibuja los que no son árboles
+    const look = G.cellLook && G.cellLook.get(i); if (look && look !== 'bamboo' && typeof ArtW3 !== 'undefined' && ArtW3.cell[look]) return ArtW3.cell[look](x, G, i);
+    const T = G.T, th = THEMES[G.A.theme], px = Terrain.cx(T, i), py = Terrain.cy(T, i) + 12, list = th.trees || ['pine'], kind = look === 'bamboo' ? 'bamboo' : list[Math.floor(rnd(i, 3) * list.length)];
     const s = seenAt(G, px, py), spr = treeSpr(kind, s, (rnd(i, 4) * 3) | 0), sc = (0.82 + rnd(i, 5) * 0.32) * (kind === 'bamboo' ? 1 : 0.95), burn = T.fire[i] > 0;
-    const sway = Math.sin(G.time * 0.9 + i * 0.7) * 0.012 + (G.wind ? G.wind.x * 0.02 : 0);
-    x.save(); x.translate(px, py); x.transform(1, 0, sway, 1, 0, 0); x.scale(sc, sc); if (burn) x.filter = 'brightness(0.55) sepia(0.6)';
+    // doblado por el viento (el bambú se acuesta y deja pasar): se anima hacia lo que dice la cuadrícula
+    let bend = 0; if (T.bent) { const A = G._bendA && G._bendA.length === T.n ? G._bendA : (G._bendA = new Float32Array(T.n)); A[i] += ((T.bent[i] ? 1 : 0) - A[i]) * 0.14; bend = A[i]; }
+    const sway = Math.sin(G.time * 0.9 + i * 0.7) * 0.012 + (G.wind ? G.wind.x * 0.02 : 0) + (bend > 0.01 ? Math.sin(G.time * 7 + i) * 0.04 * bend : 0);
+    x.save(); x.translate(px, py); x.transform(1, 0, sway + bend * 1.15, 1 - bend * 0.42, 0, 0); x.scale(sc, sc); if (burn) x.filter = 'brightness(0.55) sepia(0.6)'; if (bend > 0.5) x.globalAlpha = 1 - (bend - 0.5) * 0.5;
     x.drawImage(spr, -75, -156, 150, 170); x.restore();
   }
 
   /* ---------- torii ---------- */
   function torii(x, G, t) {
-    const sea = Seasons.at(G, t.x, t.y) || 'spring', S = SEASONS[sea], glow = Math.max(0, t.glow || 0), red = '#d0381e', redD = '#8e2212';
+    const sea = (t.solo ? t.s : Seasons.at(G, t.x, t.y)) || 'spring', S = SEASONS[sea], glow = Math.max(0, t.glow || 0), red = '#d0381e', redD = '#8e2212';
     x.save(); x.translate(t.x, t.y); if (t.big) x.scale(t.big, t.big);
     // en el agua: ondas alrededor de los pilares
     { const i = Terrain.idx(G.T, t.x, t.y), b = i >= 0 ? G.T.base[i] : -1; if ((b === TT.SHALLOW || b === TT.DEEP) && G.T.ice[i] <= 0) for (const dx of [-34, 34]) for (let k = 0; k < 2; k++) { const p = (G.time * 0.5 + k / 2 + (dx > 0 ? 0.25 : 0)) % 1; x.globalAlpha = 0.5 * (1 - p); x.strokeStyle = 'rgba(40,70,110,0.9)'; x.lineWidth = 1.2; x.beginPath(); x.ellipse(dx, -2, 9 + p * 16, (9 + p * 16) * 0.38, 0, 0, TAU); x.stroke(); } x.globalAlpha = 1; }
@@ -422,6 +436,7 @@ const ArtInk = (() => {
   }
   // puente bermellón (taiko-bashi): tablas de madera, barandas rojas con su poste y remates negros en las puntas
   function bridgeCell(x, G, i, px, py) {
+    { const look = G.cellLook && G.cellLook.get(i); if (look && typeof ArtW3 !== 'undefined' && ArtW3.cell[look]) return ArtW3.cell[look](x, G, i); }
     const T = G.T, c = i % T.cols, r = (i / T.cols) | 0, isB = (cc, rr) => cc >= 0 && rr >= 0 && cc < T.cols && rr < T.rows && T.base[rr * T.cols + cc] === TT.BRIDGE;
     const horiz = isB(c - 1, r) || isB(c + 1, r) || !(isB(c, r - 1) || isB(c, r + 1)), x0 = px - CELL / 2, y0 = py - CELL / 2, red = '#cf3a1f', s = seenAt(G, px, py);
     x.save();

@@ -54,7 +54,7 @@ const Game = (() => {
   function newRound(first, seed) {
     G.round++; G.seed = seed != null ? seed : (Math.random() * 1e9) | 0; G.rng = makeRng(G.seed);
     if (G.mode === 'camp') Camp.build(G, Camp.LEVELS[G.campLevel]); else Arena.build(G, G.arenaId);
-    G.spells = []; G.fx = []; G.events = []; G.pops = []; G.time = 0; G.frame = 0; G.slow = 0; G.ring = null; G.mistWarned = false;
+    if (typeof Voice !== 'undefined') Voice.clearSubs(); G.spells = []; G.fx = []; G.events = []; G.pops = []; G.cellLook = null; G._bendA = null; G.w3 = null; G.time = 0; G.frame = 0; G.slow = 0; G.ring = null; G.mistWarned = false;
     if (typeof Cine !== 'undefined') Cine.clear();
     G.wind = null; G.current = null; G.rain = false; G.embMul = 1;
     const prev = G.mages;

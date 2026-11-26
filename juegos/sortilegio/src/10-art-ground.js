@@ -364,7 +364,11 @@ const ArtGround = (() => {
     const c0 = Math.max(0, Math.floor(view.x0 / CELL) - 1), c1 = Math.min(T.cols - 1, Math.ceil(view.x1 / CELL) + 1), r0 = Math.max(0, Math.floor(view.y0 / CELL) - 1), r1 = Math.min(T.rows - 1, Math.ceil(view.y1 / CELL) + 3);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const i = r * T.cols + c;
-      if (T.base[i] === TT.BUSH) { const th = THEMES[G.A.theme] || THEMES.paramo; list.push({ y: r * CELL + CELL * 0.7, draw: x => th.ink ? ArtInk.tree(x, G, i) : (th.tree === 'jungle' ? jungle(x, G, i) : th.tree === 'bush' ? shrub(x, G, i) : th.tree === 'gold' || th.tree === 'dead' ? ArtBeast.tree(x, G, i, th.tree) : frailejon(x, G, i)) }); }
+      if (T.base[i] === TT.ROCK && G.cellLook) { const lk = G.cellLook.get(i); if (lk && typeof ArtW3 !== 'undefined' && ArtW3.cell[lk]) list.push({ y: r * CELL + CELL * 0.92, draw: x => ArtW3.cell[lk](x, G, i) }); }
+      if (T.base[i] === TT.BUSH) { const th = THEMES[G.A.theme] || THEMES.paramo;
+        // bosque de bambú cerrado: adentro basta uno de cada dos (los dibujos se tapan entre sí y así va más liviano)
+        if (th.bamboo && (c + r) % 2 && !(T.bent && T.bent[i]) && c > 0 && r > 0 && c < T.cols - 1 && r < T.rows - 1 && T.base[i - 1] === TT.BUSH && T.base[i + 1] === TT.BUSH && T.base[i - T.cols] === TT.BUSH && T.base[i + T.cols] === TT.BUSH) continue;
+        list.push({ y: r * CELL + CELL * 0.7, draw: x => th.ink ? ArtInk.tree(x, G, i) : (th.tree === 'jungle' ? jungle(x, G, i) : th.tree === 'bush' ? shrub(x, G, i) : th.tree === 'gold' || th.tree === 'dead' ? ArtBeast.tree(x, G, i, th.tree) : frailejon(x, G, i)) }); }
       if (T.wall[i] > 0) list.push({ y: r * CELL + CELL - 2, draw: x => wall(x, G, i) });
       if (T.fire[i] > 0) list.push({ y: r * CELL + CELL * 0.62, draw: x => flames(x, G, i) });
     }

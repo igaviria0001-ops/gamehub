@@ -9,16 +9,19 @@ const Sound = (() => {
     if (ac) { if (ac.state === 'suspended') ac.resume().catch(() => {}); return; }
     try {
       ac = new (window.AudioContext || window.webkitAudioContext)();
-      master = ac.createGain(); master.gain.value = on ? 0.85 : 0;
-      const comp = ac.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4;
-      master.connect(comp); comp.connect(ac.destination);
-      sfx = ac.createGain(); sfx.gain.value = 0.9; sfx.connect(master);
+      master = ac.createGain(); master.gain.value = on ? 1 : 0;
+      // todo más fuerte: compresor suave, ganancia de compensación (+8 dB) y un limitador al final para que nunca se rompa
+      const comp = ac.createDynamicsCompressor(); comp.threshold.value = -22; comp.knee.value = 10; comp.ratio.value = 3.5; comp.attack.value = 0.006; comp.release.value = 0.22;
+      const make = ac.createGain(); make.gain.value = 2.5;
+      const lim = ac.createDynamicsCompressor(); lim.threshold.value = -2.5; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.12;
+      master.connect(comp); comp.connect(make); make.connect(lim); lim.connect(ac.destination);
+      sfx = ac.createGain(); sfx.gain.value = 1.15; sfx.connect(master);
       const len = ac.sampleRate * 2; noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     } catch (e) { ac = null; }
     if (ac && typeof Music !== 'undefined') Music.start(ac, master);
   }
-  function setOn(v) { on = !!v; Store.set('sound', on); if (master) master.gain.value = on ? 0.85 : 0; }
+  function setOn(v) { on = !!v; Store.set('sound', on); if (master) master.gain.value = on ? 1 : 0; }
   function noise(freq, q, dur, vol, type = 'bandpass', sweep = 1, delay = 0, attack = 0.01) {
     if (!ac || !on) return;
     const t = ac.currentTime + delay, src = ac.createBufferSource(); src.buffer = noiseBuf;
@@ -47,6 +50,25 @@ const Sound = (() => {
       case 'shadow': tone(150, 0.3 * q, 0.16, 'sawtooth', 70); noise(500, 1.2, 0.3 * q, 0.12, 'lowpass', 0.4); tone(311, 0.25, 0.04, 'sine', 233, 0.05); break;
     }
   }
+  // sonidos del Mundo 3 (pergamino, estaciones, criaturas japonesas)
+  const SFX3 = {
+    season(e) { noise(700, 0.8, 0.9, 0.16, 'bandpass', 3, 0, 0.2); const N = { spring: [784, 988, 1175], summer: [523, 659, 784], autumn: [440, 523, 659], winter: [1047, 1319, 1568] }[e.s] || [659]; chime(N, 0.09, 0.05, 'sine'); },
+    toriiClean() { chime([1047, 1319, 1568, 2093], 0.07, 0.06, 'sine'); noise(7000, 1, 0.5, 0.05, 'highpass', 0.6); },
+    toriiSolo(e) { SFX3.season(e); tone(196, 0.5, 0.08, 'sine'); },
+    inkSplash() { noise(400, 0.8, 0.5, 0.3, 'lowpass', 0.3); tone(110, 0.6, 0.2, 'sawtooth', 40); noise(1500, 1.5, 0.3, 0.1, 'bandpass', 0.4, 0.1); },
+    w3seal() { chime([523, 784, 1047, 1568, 2093], 0.08, 0.07, 'triangle'); tone(262, 0.8, 0.08, 'sine'); },
+    farolOut() { noise(2400, 1.2, 0.5, 0.12, 'highpass', 0.4); tone(330, 0.4, 0.05, 'sine', 160); },
+    brazierLit() { noise(900, 0.7, 0.4, 0.2, 'lowpass', 2.5, 0, 0.03); chime([392, 494, 587], 0.06, 0.04, 'sine'); },
+    yoroiWake() { tone(70, 0.5, 0.3, 'sawtooth', 50); noise(600, 2, 0.4, 0.15, 'bandpass', 0.5); for (let k = 0; k < 3; k++) noise(3000, 6, 0.05, 0.08, 'bandpass', 1, 0.1 + k * 0.08); },
+    yukiBlink() { noise(5000, 1, 0.6, 0.08, 'highpass', 0.3); tone(1568, 0.5, 0.03, 'sine', 784); },
+    tenguCut() { noise(2500, 3, 0.15, 0.15, 'bandpass', 0.4); tone(880, 0.15, 0.06, 'square', 220); },
+    gust3() { noise(500, 0.9, 2.4, 0.2, 'bandpass', 2.4, 0, 0.5); noise(1600, 1.4, 2, 0.07, 'bandpass', 0.6, 0.3, 0.4); },
+    bigGust() { noise(300, 0.7, 4, 0.35, 'bandpass', 3, 0, 0.6); tone(55, 3, 0.2, 'sine', 40); },
+    stallBurn() { noise(1200, 0.6, 0.9, 0.22, 'lowpass', 2.5, 0, 0.05); noise(4000, 2, 0.4, 0.06, 'bandpass', 0.6, 0.1); },
+    ropeCut() { noise(2000, 3, 0.1, 0.14, 'bandpass', 0.5); tone(90, 0.8, 0.3, 'sine', 40, 0.3); noise(400, 0.6, 0.8, 0.25, 'lowpass', 0.4, 0.35); },
+    grow() { noise(2600, 4, 0.3, 0.08, 'bandpass', 0.7); chime([392, 523, 659, 784], 0.07, 0.04, 'triangle'); },
+    firework(e) { const d = 0.1 + Math.random() * 0.2; noise(5000, 0.6, 0.06, 0.04, 'highpass', 1, 0); tone(70, 0.6, 0.12, 'sine', 35, d); noise(900, 0.5, 0.9, 0.12, 'lowpass', 0.3, d); for (let k = 0; k < 5; k++) noise(6000, 4, 0.04, 0.03, 'bandpass', 1, d + 0.2 + Math.random() * 0.5); },
+  };
   function play(name, e = {}) {
     if (!ac || !on) return;
     const now = ac.currentTime; if (lastT[name] && now - lastT[name] < 0.03) return; lastT[name] = now;
@@ -128,7 +150,10 @@ const Sound = (() => {
   // la voz de un mago (en línea también: cada aparato la arma con los eventos que llegan)
   function onEvent(G, e) {
     if (typeof Voice !== 'undefined' && Voice.on && e.who >= 0 && G && !G.attract) { const m = G.mages && G.mages[e.who], c = m && m.cid; if (c) { if (e.type === 'cast' && e.fusion && !e.gran && Math.random() < 0.45) Voice.shout(c, 'fusion'); else if (e.type === 'granStart') Voice.shout(c, 'gran'); else if (e.type === 'down') Voice.shout(c, 'fall'); else if (e.type === 'matchWin') Voice.shout(c, 'win'); } }
+    if (e.type === 'say' && typeof Voice !== 'undefined' && G && !G.attract) Voice.say(e.who, e.text);
+    if (typeof ArtW3 !== 'undefined' && G && !G.attract) ArtW3.onEvent(G, e);
     if (!ac || !on) return;
+    if (SFX3[e.type]) return SFX3[e.type](e);
     switch (e.type) {
       case 'cast': if (e.fusion === 'wind+earth') play('sandstorm'); if (e.fusion) play('fusion'); else cast(e.el, e.level === 2 ? 1.6 : 1); if (e.fusion) cast(e.fusion.split('+')[1], 1.3); break;
       case 'hurt': if (!e.dot) play('hurt'); break;

@@ -37,10 +37,11 @@ class Creature extends Unit {
     if (this.spawnT > 0) return 0;
     const D = this.D; let d = dmg;
     if (D.weak) { const ok = src.el === D.weak || (src.fk && src.fk.includes(D.weak)); d *= ok ? 1.6 : (D.soft || 0.2); if (ok && !src.dot) this.weakHit = 0.3; }
+    if (D.hurtK) d *= D.hurtK(G, this, src);
     if (src.by >= 0) this.lastBy = src.by;
     this.hp -= d; this.flash = 0.12;
     G.events.push({ type: 'hurt', x: this.x, y: this.y, dmg: d, el: src.el, dot: !!src.dot, who: -1, unit: this });
-    if (this.hp <= 0 && this.alive) { this.alive = false; G.events.push({ type: 'creatureDown', kind: this.kind, by: this.lastBy != null ? this.lastBy : -1, x: this.x, y: this.y, pts: D.pts || 0, unit: this }); G.fx.push({ type: 'boom', x: this.x, y: this.y - 10, r: 50, el: D.el }); }
+    if (this.hp <= 0 && this.alive) { this.alive = false; if (D.onDie) D.onDie(G, this); G.events.push({ type: 'creatureDown', kind: this.kind, by: this.lastBy != null ? this.lastBy : -1, x: this.x, y: this.y, pts: D.pts || 0, unit: this }); G.fx.push({ type: 'boom', x: this.x, y: this.y - 10, r: 50, el: D.el }); }
     return d;
   }
   update(G, dt) {
@@ -58,7 +59,8 @@ class Creature extends Unit {
           if (D.shoots === 'bolt') Camp.foeCast(G, near.x + near.vx * 0.5, near.y + near.vy * 0.5, Object.assign({}, SPELLS.bolt[1], { range: 1, delay: 0.85, r: 44, dmg: 11, stun: 0.3 }), 'bolt');
           else { const sh = D.shoots === 'shadow'; G.spells.push({ t: 'proj', id: -70, age: 0, S: sh ? { dmg: 7, hex: 2.2, speed: 380, r: 12, life: 1.6 } : { dmg: 7, speed: 420, r: 11, life: 1.5 }, by: -1, team: this.team, el: D.shoots, x: this.x + Math.cos(a) * 24, y: this.y + Math.sin(a) * 24, vx: Math.cos(a) * (sh ? 380 : 420), vy: Math.sin(a) * (sh ? 380 : 420), r: sh ? 12 : 11, life: 1.6, dmg: sh ? 7 : 7, power: 1, size: 1 }); G.events.push({ type: 'cast', who: -1, el: D.shoots, kind: 'proj', x: this.x, y: this.y, level: 1 }); } } }
       if (D.charge) { this.chT = (this.chT == null ? 3 : this.chT) - dt; if (this.rush > 0) { this.rush -= dt; tx = this.rdx; ty = this.rdy; sp = 640; } else if (this.wind > 0) { this.wind -= dt; sp = 0; if (this.wind <= 0) { this.rush = 0.5; G.events.push({ type: 'dash', who: -1, x: this.x, y: this.y }); } } else if (this.chT <= 0 && nd < 520 && nd > 120) { this.chT = 4.2; this.wind = 0.7; this.rdx = tx; this.rdy = ty; G.events.push({ type: 'bossWarn', x: this.x, y: this.y, el: 'fire' }); } }
-      if (nd < this.r + near.r + 4 && (!this.biteT || G.time - this.biteT > 0.8)) { this.biteT = G.time; const dd = near.hurt(G, D.bite * (G.biteMul || 1) * (this.rush > 0 ? 1.4 : 1), { by: -1, el: D.el }); near.knock(near.x - this.x, near.y - this.y, this.rush > 0 ? 520 : 260); if (D.burns) near.burn(G, 1.5, -1); if (dd > 0 && D.dazzles && near.st) near.st.blind = Math.max(near.st.blind, D.dazzles); if (dd > 0 && D.hexes && near.st) near.st.hex = Math.max(near.st.hex, D.hexes); }
+      if (D.tick && D.tick(G, this, dt, near, nd) === false) return;
+      if (nd < this.r + near.r + 4 && (!this.biteT || G.time - this.biteT > 0.8)) { this.biteT = G.time; if (D.onBite) D.onBite(G, this, near); const dd = near.hurt(G, D.bite * (G.biteMul || 1) * (this.rush > 0 ? 1.4 : 1), { by: -1, el: D.el }); near.knock(near.x - this.x, near.y - this.y, this.rush > 0 ? 520 : 260); if (D.burns) near.burn(G, 1.5, -1); if (dd > 0 && D.dazzles && near.st) near.st.blind = Math.max(near.st.blind, D.dazzles); if (dd > 0 && D.hexes && near.st) near.st.hex = Math.max(near.st.hex, D.hexes); }
     } else if (near && nd < 220) { const fl = D.flee || 1; tx = this.x - near.x; ty = this.y - near.y; const l = hypot(tx, ty) || 1; tx = tx / l + Math.cos(this.t) * 0.4; ty = ty / l + Math.sin(this.t) * 0.4; sp *= fl; }
     else if (G.rng() < dt * 0.6) this.dir += (G.rng() - 0.5) * 2.4;
     if (this.st.root > 0) sp = 0; if (this.st.slow > 0) sp *= this.st.slowF; if (this.st.chill > 0) sp *= 0.6;

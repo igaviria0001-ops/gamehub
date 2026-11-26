@@ -10,6 +10,8 @@
    defienden, salida. Jefes: Madremonte, Mohán y Tragaluz.
    ========================================================================= */
 const Camp = (() => {
+  // ganchos para los mundos que viven en otros archivos (Mundo 3): cada uno recibe lo mismo que el código de aquí
+  const EXT = { start: [], setup: [], step: [], plan: [], job: [], draw: [], event: [], update: [], boss: [], spawn: [] };
   // ---- ayudas para pintar niveles ----
   const all = (T, type) => T.base.fill(type);
   const rect = (T, x0, y0, x1, y1, type) => { for (let r = 0; r < T.rows; r++) for (let c = 0; c < T.cols; c++) { const x = c * CELL + 20, y = r * CELL + 20; if (x >= x0 && x <= x1 && y >= y0 && y <= y1) T.base[r * T.cols + c] = type; } };
@@ -192,11 +194,13 @@ const Camp = (() => {
     for (const m of G.mages) { m.team = 0; m.spawn = m.spawn || [m.x, m.y]; }
     if (L.mist) { G.mist = 1; G.A.event = null; }
     G.ring = null;
+    for (const f of EXT.start) f(G, L);
     for (const d of L.objs) {
       const o = Object.assign({}, d);
       if (o.t === 'stone') { const u = Modes.pushable(G, o.x, o.y, 'stone', 22); o.u = u; }
       if (o.t === 'door' || o.t === 'bridge') { o.cells = cellsRect(G.T, ...o.rect); o.open = false; for (const i of o.cells) G.T.base[i] = o.t === 'door' ? TT.ROCK : o.under || TT.DEEP; }
       if (o.t === 'prism') o.power = 0;
+      for (const f of EXT.setup) f(G, o);
       if (o.t === 'obelisk') { const u = new Unit(o.x, o.y, 22, 9); Object.assign(u, { obj: 'obelisk', idx: -1, hp: 90 * (G.players === 1 ? 0.8 : 1), maxHp: 90 * (G.players === 1 ? 0.8 : 1), knockMul: 0, keep: true, el: 'shadow', denyT: -9 });
         u.hurt = function (G2, dmg, src = {}) { if (!this.alive) return 0; if (src.el !== 'light') { if (G2.time - this.denyT > 2.5 && !src.dot) { this.denyT = G2.time; G2.pops.push({ x: this.x, y: this.y - 90, text: 'Solo la LUZ lo rompe', t: 0, color: '#ffe9a0', small: true }); } return 0; } this.hp -= dmg; this.flash = 0.12; G2.events.push({ type: 'hurt', x: this.x, y: this.y - 30, dmg, el: 'light', who: -1, unit: this }); if (this.hp <= 0) { this.alive = false; this.hp = 0; G2.fx.push({ type: 'boom', x: this.x, y: this.y - 30, r: 110, el: 'shadow' }); G2.fx.push({ type: 'flashRing', x: this.x, y: this.y, el: 'light', r: 150 }); G2.pops.push({ x: this.x, y: this.y - 90, text: '¡Obelisco roto!', t: 0, color: '#ffe9a0', big: true }); G2.events.push({ type: 'seal', x: this.x, y: this.y }); } return dmg; };
         o.u = u; o.sp = 5; G.units.push(u); }
@@ -207,6 +211,7 @@ const Camp = (() => {
       if (o.t === 'totem') o.power = 0;
       G.objs.push(o);
     }
+    if (L.setup) L.setup(G);
     if (L.boss) spawnBoss(G, L.boss);
     G.T.ver++;
   }
@@ -224,6 +229,7 @@ const Camp = (() => {
     buziraco: { name: 'Buziraco', hp: 920, r: 54, shield: 150, look: 'buziraco' },
   };
   function spawnBoss(G, k) {
+    for (const f of EXT.spawn) if (f(G, k)) return; // los jefes de otros mundos se arman en su archivo
     const D = BOSS[k], W = G.T.W, H = G.T.H;
     const b = new Unit(k === 'mohan' ? 850 : W * 0.66, H / 2, D.r, 9); Object.assign(b, { boss: k, D, idx: -1, hp: D.hp * (G.players === 1 ? 0.75 : 1), maxHp: D.hp * (G.players === 1 ? 0.75 : 1), shield: D.shield || 0, maxShield: D.shield || 0, t: 0, cd: 2.5, phase: 0, knockMul: 0.08, el: { mohan: 'water', tragaluz: 'bolt', condor: 'wind', buziraco: 'shadow' }[k] || 'plant' });
     if (k === 'condor') { b.x = W / 2 + 330; b.y = H / 2; b.orb = 0; b.glare = 0; b.grounded = 0; b.fly = 1; }
@@ -321,6 +327,7 @@ const Camp = (() => {
   }
   // táctica de cada jefe (la usa la máquina compañera): qué elementos hacen falta y qué preferir
   function bossPlan(G, m, B) {
+    for (const f of EXT.boss) { const r = f(G, m, B); if (r !== undefined) return r; }
     if (B.boss === 'madremonte') return B.shield > 0 ? { need: ['fire'], prefer: 'fire' } : { prefer: 'bolt' };
     if (B.boss === 'mohan') return B.st.frozen > 0 ? {} : { need: ['water', 'wind'], fuse: true, fuseR: 240 };
     if (B.boss === 'tragaluz') return !B.exposed ? { need: ['fire'], lightJob: true } : {};
@@ -329,7 +336,8 @@ const Camp = (() => {
     return null;
   }
   function levelPlan(G, m) {
-    if (!G.objs) return null; const els = m.hands.map(h => h.el);
+    if (!G.objs) return null;
+    for (const f of EXT.plan) { const r = f(G, m); if (r) return r; } const els = m.hands.map(h => h.el);
     const ob = G.objs.filter(o => o.t === 'obelisk' && o.u.alive).sort((a, b) => hypot(a.x - m.x, a.y - m.y) - hypot(b.x - m.x, b.y - m.y))[0];
     if (ob) return { need: ['light'], prefer: 'light', target: ob.u };
     if (G.objs.some(o => o.t === 'prism' && o.power <= 0) && !els.includes('light')) return { need: ['light'] };
@@ -349,6 +357,7 @@ const Camp = (() => {
     // objetos (y puntos a los que la mira ayuda a apuntar)
     for (const o of G.objs) objStep(G, o, dt);
     G.aimSpots = G.objs.filter(o => (o.t === 'brazier' && !o.lit) || (o.t === 'prism' && o.power <= 0) || (o.t === 'sprout' && !o.grown) || o.t === 'totem' || (o.t === 'seal' && !o.done)).map(o => ({ x: o.x, y: o.y, vx: 0, vy: 0, r: 20, st: { hidden: 0 }, spot: true }));
+    for (const f of EXT.update) f(G, dt);
     if (L.script) L.script.call(L, G, dt);
     // puntos de control
     if (L.checkpoints) for (const c of L.checkpoints) if (G.mages.some(m => m.alive && hypot(m.x - c[0], m.y - c[1]) < 160)) { if (!G.cs['cp' + c[1]]) { G.cs['cp' + c[1]] = 1; G.checkpoint = c.slice(); G.pops.push({ x: c[0], y: c[1] - 60, text: 'Punto de control', t: 0, color: '#9fe07a', small: true }); } }
@@ -368,6 +377,7 @@ const Camp = (() => {
   }
   function objStep(G, o, dt) {
     const T = G.T;
+    for (const f of EXT.step) f(G, o, dt);
     if (o.t === 'brazier' && !o.lit) {
       let fire = false; Terrain.forCircle(T, o.x, o.y, 44, i => { if (T.fire[i] > 0 || T.lava[i] > 0) fire = true; });
       for (const s of G.spells) { if (s.dead) continue; const near = hypot(s.x - o.x, s.y - o.y) < 56; if (near && (s.el === 'fire' || s.t === 'firenado' || (s.t === 'lob' && s.kind === 'meteor'))) fire = true; if (s.t === 'beam' && s.fired && s.x1 != null) { const t = clamp(((o.x - s.x) * (s.x1 - s.x) + (o.y - s.y) * (s.y1 - s.y)) / ((s.x1 - s.x) ** 2 + (s.y1 - s.y) ** 2 || 1), 0, 1); if (hypot(o.x - (s.x + (s.x1 - s.x) * t), o.y - (s.y + (s.y1 - s.y) * t)) < 50) fire = true; } }
@@ -416,6 +426,7 @@ const Camp = (() => {
     }
   }
   function onEvent(G, e) {
+    for (const f of EXT.event) f(G, e);
     if (e.type === 'seedLand') G.cs.seed = [e.x, e.y];
     if (e.type === 'lightLine') for (const o of G.objs) if (o.t === 'prism') for (const [x0, y0, x1, y1] of e.segs) { const dx = x1 - x0, dy = y1 - y0, tt = clamp(((o.x - x0) * dx + (o.y - y0) * dy) / (dx * dx + dy * dy || 1), 0, 1); if (hypot(o.x - (x0 + dx * tt), o.y - (y0 + dy * tt)) < 50) o.zapped = true; }
     if (e.type === 'zapLine') for (const o of G.objs) if (o.t === 'totem') { const dx = e.x1 - e.x0, dy = e.y1 - e.y0, tt = clamp(((o.x - e.x0) * dx + (o.y - e.y0) * dy) / (dx * dx + dy * dy || 1), 0, 1); if (hypot(o.x - (e.x0 + dx * tt), o.y - (e.y0 + dy * tt)) < 50) o.zapped = true; }
@@ -439,7 +450,7 @@ const Camp = (() => {
     }
   }
   /* ---------- dibujo de los objetos ---------- */
-  function draw(x, G, list) { return ArtBeast.objects(x, G, list); }
+  function draw(x, G, list) { for (const f of EXT.draw) f(x, G, list); return ArtBeast.objects(x, G, list); }
   function drawOld(x, G, list) {
     const t = G.time;
     for (const o of G.objs) {
@@ -494,7 +505,7 @@ const Camp = (() => {
     // vidas compartidas
     for (let k = 0; k < (G.L.boss ? 6 : 5); k++) { const X = cx - 200 * u + 18 * u + k * 15 * u, Y = ty + 70 * u; x.fillStyle = k < G.lives ? '#ff7a8a' : 'rgba(255,255,255,0.15)'; x.font = fontB(13 * u, 900); x.fillText('♥', X, Y); }
     if (L.limit) { const left = Math.max(0, L.limit - G.roundT); x.font = fontB(13 * u, 900); x.fillStyle = left < 30 ? '#ff9a7a' : '#e8dcff'; x.fillText(`${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`, cx + 170 * u, ty + 70 * u); }
-    if (G.boss && G.boss.alive) { const b = G.boss, bw = 360 * u, bx = cx - bw / 2, by = sh - 40 * u - (getInsets().bottom || 0) * (isTouch() ? 1.6 : 0); x.fillStyle = 'rgba(14,10,34,0.7)'; HUD.rr(x, bx - 8, by - 22 * u, bw + 16, 40 * u, 10 * u); x.fill(); x.font = fontT(15 * u); x.fillStyle = '#ffd9a0'; x.fillText(BOSS[b.boss].name, cx, by - 10 * u); x.fillStyle = 'rgba(0,0,0,0.5)'; x.fillRect(bx, by, bw, 9 * u); x.fillStyle = '#ff6a5a'; x.fillRect(bx, by, bw * b.hp / b.maxHp, 9 * u); if (b.maxShield) { x.fillStyle = '#5aa84a'; x.fillRect(bx, by - 2 * u, bw * Math.max(0, b.shield) / b.maxShield, 3 * u); } if (b.boss === 'tragaluz' && !b.exposed) { x.font = fontB(11 * u, 900); x.fillStyle = '#c9b8ff'; x.fillText('cubierto de niebla', cx, by + 18 * u); } }
+    if (G.boss && G.boss.alive && !(G.boss.w3 && typeof ArtW3B !== 'undefined' && ArtW3B.hud(x, G, sw, sh, u))) { const b = G.boss, bw = 360 * u, bx = cx - bw / 2, by = sh - 40 * u - (getInsets().bottom || 0) * (isTouch() ? 1.6 : 0); x.fillStyle = 'rgba(14,10,34,0.7)'; HUD.rr(x, bx - 8, by - 22 * u, bw + 16, 40 * u, 10 * u); x.fill(); x.font = fontT(15 * u); x.fillStyle = '#ffd9a0'; x.fillText(BOSS[b.boss].name, cx, by - 10 * u); x.fillStyle = 'rgba(0,0,0,0.5)'; x.fillRect(bx, by, bw, 9 * u); x.fillStyle = '#ff6a5a'; x.fillRect(bx, by, bw * b.hp / b.maxHp, 9 * u); if (b.maxShield) { x.fillStyle = '#5aa84a'; x.fillRect(bx, by - 2 * u, bw * Math.max(0, b.shield) / b.maxShield, 3 * u); } if (b.boss === 'tragaluz' && !b.exposed) { x.font = fontB(11 * u, 900); x.fillStyle = '#c9b8ff'; x.fillText('cubierto de niebla', cx, by + 18 * u); } }
   }
   // estrellas: 1 por pasar, +1 si gastaron 1 vida o menos, +1 si fue a tiempo
   function stars(G) { const lost = (G.L.boss ? 6 : 5) - Math.max(0, G.lives); return 1 + (lost <= 1 ? 1 : 0) + (G.roundT <= G.L.par ? 1 : 0); }
@@ -504,5 +515,6 @@ const Camp = (() => {
   function recordStars(i, s) { const L = LEVELS[i]; if (!L) return null; const D = save(), prev = D[L.id] || 0; s = Math.max(0, Math.min(3, s | 0)); if (s > prev) { D[L.id] = s; Store.set('camp', D); } return { stars: s, best: Math.max(s, prev), newBest: s > prev }; }
   const unlocked = i => i === 0 || (save()[LEVELS[i - 1].id] || 0) > 0;
   const total = () => LEVELS.reduce((a, L) => a + (save()[L.id] || 0), 0);
-  return { LEVELS, BOSS, bossPlan, levelPlan, foeCast, build, setup, update, onEvent, resonance, draw, hud, stars, record, recordStars, unlocked, total, best: id => save()[id] || 0 };
+  const extJob = (G, m, els) => { for (const f of EXT.job) { const r = f(G, m, els); if (r) return r; } return null; };
+  return { EXT, extJob, LEVELS, BOSS, bossPlan, levelPlan, foeCast, build, setup, update, onEvent, resonance, draw, hud, stars, record, recordStars, unlocked, total, best: id => save()[id] || 0 };
 })();

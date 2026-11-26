@@ -104,7 +104,7 @@ const NetGame = (() => {
   function again(level) { NetPlay.again(c => Object.assign({}, c, level !== undefined ? { level } : {})); }
 
   /* ---------- terreno ---------- */
-  const SY = Terrain.SYNC, INT = new Set(['base', 'fireO', 'vineO', 'elecO', 'pitO', 'crys', 'sea', 'snow']);
+  const SY = Terrain.SYNC, INT = new Set(['base', 'fireO', 'vineO', 'elecO', 'pitO', 'crys', 'sea', 'snow', 'bent']);
   let shadow = null, tdAcc = 0, lastSimT = 0, kfSeed = null, tdN = 0, tdLast = 0, kfAsk = 0, kfMiss = 0, kfSent = 0;
   function copyT(T) { const S = { n: T.n, cols: T.cols, bridgeUnder: T.bridgeUnder, ver: 0 }; for (const f of SY) S[f] = T[f].slice(); return S; }
   function keyframe(G) {
@@ -170,7 +170,7 @@ const NetGame = (() => {
   }
 
   // objetos de la campaña: solo lo que cambia (lo demás lo arma el remoto con el mismo nivel)
-  const OBJ_DYN = ['lit', 'pressed', 'open', 'power', 'grown', 'done', 'blocked', 'moving', 'x', 'y', 'hp', 'wet', 'wetT', 'zapped', 'sp', 'hitT', 'glow'];
+  const OBJ_DYN = ['lit', 'pressed', 'open', 'power', 'grown', 'done', 'blocked', 'moving', 'x', 'y', 'hp', 'wet', 'wetT', 'zapped', 'sp', 'hitT', 'glow', /* Mundo 3 */ 'spin', 'ang', 'full', 'gone', 'got', 'burnt', 'cut', 'ok', 'igT', 'outT', 'v', 'wait'];
   function encObj(o) { const q = {}; for (const k of OBJ_DYN) { const v = o[k]; if (v === undefined || v === null) continue; q[k] = typeof v === 'number' ? r2(v) : typeof v === 'boolean' ? (v ? 1 : 0) : undefined; if (q[k] === undefined) delete q[k]; } if (o.u) q.u = codeOf(o.u); return q; }
   /* ---------- aplicar (remoto) ---------- */
   const lerp = (a, b, k) => a + (b - a) * k;

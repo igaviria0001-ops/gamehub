@@ -115,6 +115,8 @@ class Bot {
       this.thinkT = P.think * (0.7 + G.rng() * 0.6);
       let goalX = null, goalY = null;
       if (this.goal && this.goal.s.cd > 0) this.goal = null;
+      // en la campaña: si no llega a la fuente en un buen rato (no hay camino), se busca otra
+      if (this.goal && G.mode === 'camp') { if (this.goal.t0 == null) this.goal.t0 = G.time; if (G.time - this.goal.t0 > 9) { this.badSrc = this.goal.s; this.badT = G.time; this.goal = null; } }
       if (this.goal) { goalX = this.goal.s.x; goalY = this.goal.s.y; }
       else if (this.absorbT <= 0) { this.absorbT = 3 + G.rng() * 3; if (G.rng() < P.absorb && m.hp > m.maxHp * 0.35) this.pickSource(G, m, f); }
       // en la campaña: camino de verdad (rodear ríos de lava, vacíos y rocas) hacia la meta lejana
@@ -147,7 +149,7 @@ class Bot {
     // ---- lanzar ----
     if (!this.plan && this.castT <= 0 && f && G.state === 'play') {
       if (f.spot && this.job && this.job.fuse) { if (hypot(f.x - m.x, f.y - m.y) < 260 && m.hands[0].cd <= 0 && m.hands[1].cd <= 0) this.plan = { keys: [0, 1], hold: 0.12, t: 0, lead: 0, jit: 0 }; }
-      else if (f.spot) { const k = this.job && this.job.any ? m.hands.findIndex(h => h.cd <= 0) : m.hands.findIndex(h => h.el === (this.job && this.job.o.t === 'totem' ? 'bolt' : this.job && this.job.o.t === 'prism' ? 'light' : 'fire') && h.cd <= 0); if (k >= 0 && hypot(f.x - m.x, f.y - m.y) < 300) this.plan = { keys: [k], hold: 0.06, t: 0, lead: 0, jit: 0 }; }
+      else if (f.spot) { const k = this.job && this.job.any ? m.hands.findIndex(h => h.cd <= 0) : m.hands.findIndex(h => h.el === (this.job && this.job.el ? this.job.el : this.job && this.job.o.t === 'totem' ? 'bolt' : this.job && this.job.o.t === 'prism' ? 'light' : 'fire') && h.cd <= 0); if (k >= 0 && hypot(f.x - m.x, f.y - m.y) < 300) this.plan = { keys: [k], hold: 0.06, t: 0, lead: 0, jit: 0 }; }
       else this.chooseCast(G, m, f);
     }
     return I;
@@ -178,6 +180,7 @@ class Bot {
         if (o.t === 'rocks' && G.T.wall[Terrain.idx(G.T, o.x, 510)] > 0 && G.objs.some(c => c.t === 'canoe' && c.blocked)) job = { o: { x: o.x, y: 510, t: 'rocks' }, d: 190, any: true };
         if (o.t === 'seal' && !o.done && fuseKey(els[0], els[1]) === o.need) job = { o, d: 120, fuse: true };
       }
+      { const xj = Camp.extJob && Camp.extJob(G, m, els); if (xj) job = xj; }
       const pal = G.mages.find(x => x !== m && x.alive && !x.ctrl);
       const exitO = G.objs && G.objs.find(o => o.t === 'exit' && o.open);
       this.prefer = null; this.fuseOnly = false;
@@ -219,10 +222,20 @@ class Bot {
   clearWalk(G, m, x0, y0, x1, y1, bad) { let ok = true; for (const o of [-12, 12]) { const l = hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / l * o, ny = (x1 - x0) / l * o; Terrain.forLine(G.T, x0 + nx, y0 + ny, x1 + nx, y1 + ny, i => { if (bad(i)) { ok = false; return false; } }); } return ok; }
   // ir a beber un elemento que hace falta (sin soltar los que también hacen falta)
   seek(G, m, el, keep = []) {
-    let s = null, sd = 1e9; for (const q of G.sources) { if (q.cd > 0 || q.el !== el) continue; const d = hypot(q.x - m.x, q.y - m.y); if (d < sd) { sd = d; s = q; } }
+    // en la campaña cuenta lo que se puede caminar (una fuente al otro lado del agua no sirve aunque esté cerca)
+    const R = G.mode === 'camp' ? this.reach(G, m) : null;
+    let s = null, sd = 1e9; for (const q of G.sources) { if (q.cd > 0 || q.el !== el) continue; let d = hypot(q.x - m.x, q.y - m.y); if (R && !R[Terrain.idx(G.T, q.x, q.y)]) d += 5000; if (q === this.badSrc && G.time - this.badT < 20) d += 8000; if (d < sd) { sd = d; s = q; } }
     if (!s) return false;
     const ks = [0, 1].filter(k => !keep.includes(m.hands[k].el)); if (!ks.length) return false;
     const k = ks.sort((a, b) => m.hands[a].uses - m.hands[b].uses)[0]; this.goal = { s, k }; return true;
+  }
+  // hasta dónde se puede caminar desde aquí (inundación por la cuadrícula; se guarda medio segundo)
+  reach(G, m) {
+    const T = G.T, s0 = Terrain.idx(T, m.x, m.y); if (s0 < 0) return null; if (this.rch && this.rch.at > G.time - 0.5 && this.rch.n === T.n && this.rch.s0 === s0) return this.rch.v;
+    const bad = i => { const b = T.base[i]; return Terrain.solid(T, i) || b === TT.CHASM || Terrain.isLava(T, i) || (b === TT.DEEP && T.ice[i] <= 0 && !m.tr.waterSpeed && !(T.bridgeUnder === TT.DEEP && b === TT.BRIDGE)); };
+    const v = new Uint8Array(T.n), q = [s0]; v[s0] = 1;
+    for (let h = 0; h < q.length; h++) { const i = q[h], c = i % T.cols, r = (i / T.cols) | 0; for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const c2 = c + dc, r2 = r + dr; if (c2 < 0 || r2 < 0 || c2 >= T.cols || r2 >= T.rows) continue; const j = r2 * T.cols + c2; if (v[j]) continue; v[j] = 1; if (!bad(j)) q.push(j); } }
+    this.rch = { at: G.time, n: T.n, s0, v }; return v;
   }
   pickSource(G, m, f) {
     let best = null, bv = 0;

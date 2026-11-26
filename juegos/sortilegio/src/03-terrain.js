@@ -13,16 +13,16 @@ const TT = { GRASS: 0, DIRT: 1, STONE: 2, DEEP: 3, LAVA: 4, CHASM: 5, ROCK: 6, F
 const Terrain = (() => {
   function make(W, H) {
     const cols = Math.ceil(W / CELL), rows = Math.ceil(H / CELL), n = cols * rows, F = () => new Float32Array(n);
-    return { W, H, cols, rows, n, base: new Uint8Array(n), fire: F(), fireO: new Int8Array(n).fill(-1), ash: F(), wet: F(), ice: F(), vine: F(), vineO: new Int8Array(n), mud: F(), lava: F(), wall: F(), wallT: F(), elec: F(), elecO: new Int8Array(n), cool: F(), pit: F(), pitO: new Int8Array(n).fill(-1), crys: new Uint8Array(n), sea: new Uint8Array(n), snow: new Uint8Array(n), leaf: F(), tick: 0, burning: 0, ver: 0 };
+    return { W, H, cols, rows, n, base: new Uint8Array(n), fire: F(), fireO: new Int8Array(n).fill(-1), ash: F(), wet: F(), ice: F(), vine: F(), vineO: new Int8Array(n), mud: F(), lava: F(), wall: F(), wallT: F(), elec: F(), elecO: new Int8Array(n), cool: F(), pit: F(), pitO: new Int8Array(n).fill(-1), crys: new Uint8Array(n), sea: new Uint8Array(n), snow: new Uint8Array(n), leaf: F(), bent: new Uint8Array(n), tick: 0, burning: 0, ver: 0 };
   }
   const idx = (T, x, y) => { const c = Math.floor(x / CELL), r = Math.floor(y / CELL); return c < 0 || r < 0 || c >= T.cols || r >= T.rows ? -1 : r * T.cols + c; };
   const cx = (T, i) => (i % T.cols) * CELL + CELL / 2, cy = (T, i) => Math.floor(i / T.cols) * CELL + CELL / 2;
   const isWater = (T, i) => (T.base[i] === TT.DEEP || T.base[i] === TT.SHALLOW) && T.ice[i] <= 0;
   const isLava = (T, i) => (T.base[i] === TT.LAVA && T.cool[i] <= 0) || T.lava[i] > 0;
   // ¿tapa el paso y los proyectiles?
-  const solid = (T, i) => i < 0 || T.base[i] === TT.ROCK || T.base[i] === TT.BUSH || T.wall[i] > 0;
+  const solid = (T, i) => i < 0 || T.base[i] === TT.ROCK || (T.base[i] === TT.BUSH && !(T.bent && T.bent[i])) || T.wall[i] > 0;
   const solidAt = (T, x, y) => solid(T, idx(T, x, y));
-  const burnable = (T, i) => T.fire[i] <= 0 && T.wet[i] <= 0 && T.ice[i] <= 0 && ((T.base[i] === TT.GRASS && T.ash[i] <= 0) || T.base[i] === TT.BUSH || (T.base[i] === TT.BRIDGE && !T.noBurnBridge) || T.vine[i] > 0 || T.leaf[i] > 0);
+  const burnable = (T, i) => T.fire[i] <= 0 && !(T.dryOnly && T.dryOnly[i] && T.sea[i] !== 2) && T.wet[i] <= 0 && T.ice[i] <= 0 && ((T.base[i] === TT.GRASS && T.ash[i] <= 0) || T.base[i] === TT.BUSH || (T.base[i] === TT.BRIDGE && !T.noBurnBridge) || T.vine[i] > 0 || T.leaf[i] > 0);
   function forCircle(T, x, y, r, fn) {
     const c0 = Math.max(0, Math.floor((x - r) / CELL)), c1 = Math.min(T.cols - 1, Math.floor((x + r) / CELL));
     const r0 = Math.max(0, Math.floor((y - r) / CELL)), r1 = Math.min(T.rows - 1, Math.floor((y + r) / CELL));
@@ -147,6 +147,6 @@ const Terrain = (() => {
       if (T.wallT[i] > 0) { T.wallT[i] -= dt; if (T.wallT[i] <= 0) { T.wallT[i] = 0; if (T.wall[i] > 0) { T.wall[i] = 0; T.ver++; } } }
     }
   }
-  const SYNC = ['base', 'fire', 'fireO', 'ash', 'wet', 'ice', 'vine', 'vineO', 'mud', 'lava', 'wall', 'wallT', 'elec', 'elecO', 'cool', 'pit', 'pitO', 'crys', 'sea', 'snow', 'leaf'];
+  const SYNC = ['base', 'fire', 'fireO', 'ash', 'wet', 'ice', 'vine', 'vineO', 'mud', 'lava', 'wall', 'wallT', 'elec', 'elecO', 'cool', 'pit', 'pitO', 'crys', 'sea', 'snow', 'leaf', 'bent'];
   return { decay, SYNC, make, idx, cx, cy, solid, solidAt, isWater, isLava, burnable, forCircle, forLine, ignite, wet, cool, freeze, electrify, addWall, hitWall, under, update };
 })();

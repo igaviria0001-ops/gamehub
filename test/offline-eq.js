@@ -18,6 +18,8 @@ const srv = http.createServer((q, s) => { const f = path.join(TMP, decodeURIComp
 // ---------- lo que se inyecta en las dos versiones antes de que cargue nada ----------
 const INIT = () => {
   let s = 12345;
+  // las voces (Sortilegio) son solo adorno y gastan azar según cuánto dura cada frase: se apagan en las dos para comparar el juego
+  try { localStorage.setItem('srt_voice', 'false'); } catch (e) {}
   window.__rlog = null; const who = () => { const L = String(new Error().stack).split('\n').slice(2, 5).map(l => (l.match(/at (\S+)/) || [])[1] || '?'); return L.join('<'); };
   Math.random = () => { if (window.__rlog) window.__rlog.push(who()); s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   window.__seed = n => { s = n | 0; };
@@ -87,7 +89,7 @@ const SC = {
     { name: '2 humanos blancos (bucle real)', kind: 'frame', secs: 20 * S, keys: [...K1, ...K2], setup: `VTO.Game.setArena('cartagena'); VTO.Game.start('targets', 2); VTO.UI.show(null, false);` },
     { name: '1 humano escuela (bucle real)', kind: 'frame', secs: 15 * S, keys: K1, setup: `VTO.Game.setArena('cocora'); VTO.Game.start('school', 1); VTO.UI.show(null, false);` },
   ] },
-  sortilegio: { ready: () => typeof Game !== 'undefined' && !!Game.G && typeof CHARS !== 'undefined', root: 'Game.G', ign: /\.G$|^\.cam|^\.net$|^\.sea$|^\.T\.(snow|leaf|sea|base0)$/, scenes: [ // G.net (nuevo) es false sin conexión · G.sea y T.snow/leaf/sea/base0 son del Mundo 3 (vacíos fuera de él)
+  sortilegio: { ready: () => typeof Game !== 'undefined' && !!Game.G && typeof CHARS !== 'undefined', root: 'Game.G', ign: /\.G$|^\.cam|^\.net$|^\.sea$|^\.T\.(snow|leaf|sea|base0|bent)$|^\.(cellLook|_bendA|w3|_vx0|_vx1)$/, scenes: [ // G.net (nuevo) es false sin conexión · G.sea y T.snow/leaf/sea/base0 son del Mundo 3 (vacíos fuera de él)
     ...['duel', 'tejo', 'hunt', 'altar'].flatMap((m, i) => ['paramo', 'rio'].map((a, j) => ({ name: `máquinas ${m} ${a}`, kind: 'fast', secs: 70 * S, step: 'Game.advance(0.5)', dt: 0.5,
       setup: `const C = Object.keys(CHARS); Game.start('${m}', 0, { chars: [C[${i}], C[${i + j + 3}]], arena: '${a}', level: 2 }); UI.show(null, false);` }))),
     { name: '2 humanos duelo (bucle real)', kind: 'frame', secs: 25 * S, keys: [...K1, ...K2], setup: `const C = Object.keys(CHARS); Game.start('duel', 2, { chars: [C[0], C[1]], arena: 'paramo' }); UI.show(null, false);` },
