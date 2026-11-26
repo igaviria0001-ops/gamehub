@@ -2147,7 +2147,7 @@ const ARENA_ORDER = ['paramo', 'rio', 'volcan', 'ciudad', 'cano'];
 const Arena = {
   build(G, id) {
     const A = ARENAS[id] || ARENAS.paramo; G.arena = A.id; G.A = A;
-    G.T = Terrain.make(A.W, A.H); A.paint(G.T);
+    G.T = Terrain.make(A.W, A.H); A.paint(G.T); if (A.bridgeUnder != null) G.T.bridgeUnder = A.bridgeUnder; if (A.noBurnBridge) G.T.noBurnBridge = true;
     G.sources = A.sources.map(s => Object.assign({ cd: 0, glow: 0 }, s));
     // 2.0: una fuente de LUZ y otra de SOMBRA, en espejo; se intercambian cada ronda (para que a nadie le quede siempre la misma cerca)
     if (!A.extra && !A.noExtra) { const T = G.T, cx = A.W * 0.37, cy = A.H * 0.27; let best = null, bd = 1e12;
@@ -2332,6 +2332,95 @@ const Seasons = (() => {
     theme: 'miyajima', event: 'tide',
     seasons: { rotate: 25, start: 'spring', toriis: [{ x: 760, y: 470, big: 1.4 }] },
   };
+})();
+
+/* ===== 03e-arenas4.js ===== */
+/* =========================================================================
+   ESCENARIOS NUEVOS (3.0) para el duelo y los demás modos: cuatro del
+   Mundo 2 y tres más del Mundo 3 (con Itsukushima, cuatro). Todos
+   simétricos al girarlos media vuelta, como los de siempre.
+   · Islas del cielo — tres islas y puentes de luz sobre el vacío; tormenta.
+   · Templo del sol — patio dorado con columnas y guardianes que despiertan.
+   · Coliseo de ceniza — arena redonda con fosos de lava; lluvia de rocas.
+   · Puente de huesos — un puente largo sobre el abismo con plataformas.
+   · Arashiyama — bosque de bambú con calles; las estaciones rotan.
+   · Fushimi Inari — de noche, entre toriis y zorros de piedra que disparan.
+   · Shirakawa-go — aldea nevada con casas de techo de paja y arrozales.
+   ========================================================================= */
+(() => {
+  const P = (T, fn) => { for (let r = 0; r < T.rows; r++) for (let c = 0; c < T.cols; c++) { const v = fn(c * CELL + CELL / 2, r * CELL + CELL / 2, c, r); if (v != null) T.base[r * T.cols + c] = v; } };
+  const sym = (T, list, type) => list.forEach(([x, y]) => { for (const [px, py] of [[x, y], [T.W - x, T.H - y]]) { const i = Terrain.idx(T, px, py); if (i >= 0) T.base[i] = type; } });
+  const blob = (T, x, y, r, type) => { Terrain.forCircle(T, x, y, r, i => { T.base[i] = type; }); Terrain.forCircle(T, T.W - x, T.H - y, r, i => { T.base[i] = type; }); };
+  const ell = (T, x, y, rx, ry, type, both = true) => P(T, (px, py) => { const a = ((px - x) / rx) ** 2 + ((py - y) / ry) ** 2 < 1, b = both && ((px - (T.W - x)) / rx) ** 2 + ((py - (T.H - y)) / ry) ** 2 < 1; return a || b ? type : null; });
+  const altar = (T, x, y) => Terrain.forCircle(T, x, y, 34, i => { T.base[i] = TT.STONE; });
+  const border = (T, wob = 0.9) => P(T, (x, y, c, r) => { const e = Math.min(c, r, T.cols - 1 - c, T.rows - 1 - r); if (e === 0) return TT.ROCK; if (e === 1 && noise2(c * 0.7 + r * 0.31, r * 0.7 - c * 0.17) > wob) return TT.ROCK; return null; });
+  const lineSym = (T, x0, y0, x1, y1, w, type) => { for (const [a, b, c, d] of [[x0, y0, x1, y1], [T.W - x0, T.H - y0, T.W - x1, T.H - y1]]) { const n = Math.ceil(hypot(c - a, d - b) / 12); for (let s = 0; s <= n; s++) Terrain.forCircle(T, a + (c - a) * s / n, b + (d - b) * s / n, w, i => { T.base[i] = type; }); } };
+  const src = list => list.flatMap(([x, y, el]) => [{ x, y, el }, { x: 1520 - x, y: 880 - y, el }]);
+
+  /* ---------- Islas del cielo ---------- */
+  ARENAS.islas = { id: 'islas', name: 'Islas del cielo', sub: 'Puentes de luz sobre el vacío, y la tormenta', W: 1520, H: 880, world: 2, bridgeUnder: TT.CHASM, noBurnBridge: true,
+    spawns: [[260, 440], [1260, 440]], sources: src([[300, 230, 'light'], [300, 660, 'wind'], [620, 440, 'bolt'], [140, 440, 'water']]),
+    paint(T) { P(T, () => TT.CHASM); ell(T, 330, 440, 270, 330, TT.GRASS); P(T, (x, y) => (((x - 760) / 170) ** 2 + ((y - 440) / 210) ** 2 < 1 ? TT.STONE : null));
+      lineSym(T, 560, 300, 640, 360, 22, TT.BRIDGE); lineSym(T, 560, 600, 640, 540, 22, TT.BRIDGE);
+      for (const s of this.sources) altar(T, s.x, s.y); sym(T, [[230, 170], [420, 760], [200, 330], [470, 560]], TT.BUSH); blob(T, 450, 300, 20, TT.ROCK); },
+    theme: 'cielo', event: 'storm' };
+  /* ---------- Templo del sol ---------- */
+  ARENAS.templo = { id: 'templo', name: 'Templo del sol', sub: 'Patio dorado; los guardianes despiertan', W: 1520, H: 880, world: 2,
+    spawns: [[250, 440], [1270, 440]], sources: src([[360, 200, 'light'], [360, 680, 'fire'], [640, 300, 'earth'], [150, 300, 'shadow']]),
+    statues: [[560, 640], [960, 240]],
+    paint(T) { P(T, () => TT.CHASM); P(T, (x, y) => (((x - 760) / 720) ** 2 + ((y - 440) / 420) ** 2 < 1 ? TT.STONE : null)); P(T, (x, y) => (((x - 760) / 600) ** 2 + ((y - 440) / 330) ** 2 < 1 ? TT.GRASS : null));
+      P(T, (x, y) => (Math.abs(y - 440) < 30 && x > 120 && x < 1400 ? TT.STONE : null)); P(T, (x, y) => (((x - 760) / 120) ** 2 + ((y - 440) / 120) ** 2 < 1 ? TT.STONE : null));
+      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + 0.2; Terrain.forCircle(T, 760 + Math.cos(a) * 250, 440 + Math.sin(a) * 200, 16, i => { T.base[i] = TT.ROCK; }); }
+      for (const s of this.sources) altar(T, s.x, s.y); for (const [x, y] of this.statues) { const i = Terrain.idx(T, x, y); if (i >= 0) T.base[i] = TT.ROCK; const j = Terrain.idx(T, 1520 - x, 880 - y); if (j >= 0) T.base[j] = TT.ROCK; }
+      sym(T, [[260, 230], [300, 650], [500, 150], [480, 720]], TT.BUSH); },
+    theme: 'cielo', event: 'guardians' };
+  /* ---------- Coliseo de ceniza ---------- */
+  ARENAS.coliseo = { id: 'coliseo', name: 'Coliseo de ceniza', sub: 'Fosos de lava y lluvia de rocas ardientes', W: 1520, H: 880, world: 2,
+    spawns: [[300, 440], [1220, 440]], sources: src([[420, 220, 'light'], [420, 660, 'water'], [700, 160, 'fire'], [220, 440, 'shadow']]),
+    paint(T) { P(T, () => TT.ROCK); P(T, (x, y) => (((x - 760) / 700) ** 2 + ((y - 440) / 400) ** 2 < 1 ? TT.DIRT : null)); P(T, (x, y) => (((x - 760) / 160) ** 2 + ((y - 440) / 110) ** 2 < 1 ? TT.STONE : null));
+      blob(T, 560, 260, 54, TT.LAVA); blob(T, 560, 620, 54, TT.LAVA); blob(T, 760, 130, 40, TT.LAVA);
+      for (const [x, y] of [[360, 330], [360, 550], [660, 440]]) blob(T, x, y, 20, TT.ROCK);
+      for (const s of this.sources) altar(T, s.x, s.y); },
+    theme: 'infierno', event: 'eruption' };
+  /* ---------- Puente de huesos ---------- */
+  ARENAS.huesos = { id: 'huesos', name: 'Puente de huesos', sub: 'Un puente sobre el abismo y sus plataformas', W: 1520, H: 880, world: 2,
+    spawns: [[220, 440], [1300, 440]], sources: src([[210, 230, 'light'], [210, 650, 'fire'], [560, 220, 'earth'], [560, 660, 'shadow']]),
+    paint(T) { P(T, () => TT.CHASM); ell(T, 230, 440, 200, 330, TT.DIRT); P(T, (x, y) => (Math.abs(y - 440) < 62 ? TT.STONE : null)); ell(T, 560, 220, 120, 90, TT.DIRT); ell(T, 560, 660, 120, 90, TT.DIRT); P(T, (x, y) => (((x - 760) / 160) ** 2 + ((y - 440) / 150) ** 2 < 1 ? TT.DIRT : null));
+      lineSym(T, 560, 290, 600, 400, 20, TT.STONE); lineSym(T, 560, 590, 600, 480, 20, TT.STONE);
+      for (const s of this.sources) altar(T, s.x, s.y); blob(T, 300, 300, 18, TT.ROCK); blob(T, 760, 360, 14, TT.ROCK); },
+    theme: 'infierno', event: 'mist' };
+
+  /* ---------- Arashiyama (Mundo 3) ---------- */
+  ARENAS.arashiyama = { id: 'arashiyama', name: 'Arashiyama', sub: 'Bosque de bambú: en verano arde', W: 1520, H: 880, world: 3, noExtra: true,
+    spawns: [[220, 440], [1300, 440]], sources: src([[260, 200, 'plant'], [260, 680, 'fire'], [620, 440, 'wind'], [520, 120, 'water']]),
+    paint(T) { P(T, () => TT.GRASS);
+      // manchas de bambú con calles entre ellas (en espejo)
+      for (const [x, y, rx, ry] of [[420, 300, 70, 110], [420, 600, 70, 100], [700, 210, 60, 90], [140, 120, 80, 60], [660, 690, 50, 70]]) ell(T, x, y, rx, ry, TT.BUSH);
+      P(T, (x, y) => (Math.abs(y - 440 - Math.sin(x / 140) * 50) < 34 ? TT.DIRT : null));
+      for (const s of this.sources) altar(T, s.x, s.y); border(T, 0.85); },
+    theme: 'arashiyama', event: 'mist', seasons: { rotate: 25, start: 'summer', toriis: [{ x: 760, y: 440 }] } };
+  /* ---------- Fushimi Inari (Mundo 3, de noche) ---------- */
+  ARENAS.fushimi = { id: 'fushimi', name: 'Fushimi Inari', sub: 'Mil toriis y zorros de piedra, de noche', W: 1520, H: 880, world: 3, noExtra: true,
+    spawns: [[230, 440], [1290, 440]], sources: src([[300, 180, 'fire'], [300, 700, 'water'], [640, 300, 'wind'], [560, 760, 'plant']]),
+    statues: [[600, 560], [920, 320]],
+    paint(T) { P(T, () => TT.GRASS); P(T, (x, y) => (Math.abs(y - 440) < 46 ? TT.STONE : null)); P(T, (x, y) => (Math.abs(x - 760) < 40 ? TT.STONE : null));
+      ell(T, 760, 440, 150, 110, TT.STONE, false);
+      for (const [x, y] of [[420, 360], [420, 520], [560, 360], [560, 520]]) blob(T, x, y, 12, TT.ROCK);
+      for (const s of this.sources) altar(T, s.x, s.y); for (const [x, y] of this.statues) { const i = Terrain.idx(T, x, y); if (i >= 0) T.base[i] = TT.ROCK; const j = Terrain.idx(T, 1520 - x, 880 - y); if (j >= 0) T.base[j] = TT.ROCK; }
+      sym(T, [[140, 140], [180, 760], [460, 120], [470, 760], [660, 140], [380, 680]], TT.BUSH); border(T, 0.85); },
+    looks(G) { const T = G.T, R = []; for (let i = 0; i < T.n; i++) { const x = Terrain.cx(T, i), y = Terrain.cy(T, i); if (T.base[i] === TT.ROCK && x > 40 && y > 40 && x < T.W - 40 && y < T.H - 40) R.push(i); } for (const i of R) G.cellLook.set(i, 'fox'); },
+    theme: 'fushimi', event: 'guardians', seasons: { rotate: 25, start: 'autumn', toriis: [{ x: 400, y: 440 }, { x: 1120, y: 440 }] } };
+  /* ---------- Shirakawa-go (Mundo 3) ---------- */
+  ARENAS.shirakawa = { id: 'shirakawa', name: 'Shirakawa-go', sub: 'Aldea nevada de techos de paja', W: 1520, H: 880, world: 3, noExtra: true,
+    spawns: [[220, 440], [1300, 440]], sources: src([[240, 200, 'fire'], [240, 680, 'water'], [600, 440, 'wind'], [520, 780, 'plant']]),
+    paint(T) { P(T, () => TT.GRASS); P(T, (x, y) => (Math.abs(y - 440) < 30 ? TT.DIRT : null));
+      for (const [x, y] of [[440, 240], [440, 640]]) { P(T, (px, py) => (Math.abs(px - x) < 80 && Math.abs(py - y) < 40 ? TT.ROCK : null)); P(T, (px, py) => (Math.abs(px - (1520 - x)) < 80 && Math.abs(py - (880 - y)) < 40 ? TT.ROCK : null)); }
+      for (const [x, y] of [[680, 160], [680, 720]]) { P(T, (px, py) => (Math.abs(px - x) < 70 && Math.abs(py - y) < 45 ? TT.SHALLOW : null)); P(T, (px, py) => (Math.abs(px - (1520 - x)) < 70 && Math.abs(py - (880 - y)) < 45 ? TT.SHALLOW : null)); }
+      for (const s of this.sources) altar(T, s.x, s.y); sym(T, [[140, 140], [150, 760], [300, 340], [300, 540]], TT.BUSH); border(T, 0.85); },
+    looks(G) { const T = G.T; for (let i = 0; i < T.n; i++) { const x = Terrain.cx(T, i), y = Terrain.cy(T, i); if (T.base[i] === TT.ROCK && x > 60 && y > 60 && x < T.W - 60 && y < T.H - 60) G.cellLook.set(i, 'gassho'); } },
+    theme: 'shirakawa', event: 'mist', seasons: { rotate: 25, start: 'winter', toriis: [{ x: 760, y: 440 }] } };
+
+  ARENA_ORDER.push('miyajima', 'arashiyama', 'fushimi', 'shirakawa', 'islas', 'templo', 'coliseo', 'huesos');
 })();
 
 /* ===== 04-mage.js ===== */
@@ -3843,6 +3932,9 @@ class Bot {
       }
       if (job && (!f || hypot(f.x - m.x, f.y - m.y) > 260 || job.fuse || (BP && BP.lightJob))) { f = spot(job.o); modeGoal = [job.o.x - job.d * 0.7, job.o.y]; this.job = job; }
       else { this.job = null; if (exitO && (!f || hypot(f.x - m.x, f.y - m.y) > 240) && (!pal || hypot(pal.x - exitO.x, pal.y - exitO.y) < 420)) modeGoal = [exitO.x, exitO.y]; else if (pal && hypot(pal.x - m.x, pal.y - m.y) > 300 && !BP) modeGoal = [pal.x - 80, pal.y + 40]; }
+    } else if (G.mode === 'sumo' && G.dohyo) {
+      // sumo: no dejarse sacar (volver al centro) y empujar al otro hacia la cuerda
+      const D = G.dohyo, dm = hypot(m.x - D.x, (m.y - D.y) * D.r / D.ry); if (dm > D.r * 0.45) modeGoal = [D.x + (m.x - D.x) * 0.2, D.y + (m.y - D.y) * 0.2]; else if (foeMage) { const a = Math.atan2(foeMage.y - D.y, foeMage.x - D.x); modeGoal = [foeMage.x - Math.cos(a) * 110, foeMage.y - Math.sin(a) * 110]; }
     } else if (G.mode === 'altar' && G.altar) {
       const A = G.altar; modeGoal = [A.x + Math.cos(G.time + m.idx * 3) * 40, A.y + Math.sin(G.time + m.idx * 3) * 25];
     }
@@ -3993,16 +4085,17 @@ const MODES = {
   tejo: { name: 'Tejo encantado', short: 'Mete el tejo en el bocín del rival a punta de hechizos', icon: 'tejo' },
   hunt: { name: 'Cacería de espantos', short: 'Cada espanto cae solo con su contrario: cambia de manos', icon: 'hunt' },
   altar: { name: 'El Altar', short: 'Suma quien esté solo dentro del círculo sagrado', icon: 'altar' },
+  sumo: { name: 'Sumo mágico', short: 'Saca al otro del dohyō a punta de empujones mágicos', icon: 'altar' },
   copa: { name: 'Copa del Páramo', short: 'Cinco pruebas al azar', icon: 'copa' },
   free: { name: 'Práctica libre', short: 'Prueba hechizos sin presión', icon: 'free' },
   school: { name: 'Escuela de magia', short: 'Lecciones cortas', icon: 'school' },
 };
-const MODE_ORDER = ['duel', 'tejo', 'hunt', 'altar', 'copa'];
+const MODE_ORDER = ['duel', 'tejo', 'hunt', 'altar', 'sumo', 'copa'];
 const Modes = (() => {
-  const ROUND_T = 75, MIST_T = 45, TEJO_T = 150, HUNT_T = 120, ALTAR_GOAL = 100;
+  const ROUND_T = 75, MIST_T = 45, TEJO_T = 150, HUNT_T = 120, ALTAR_GOAL = 100, SUMO_T = 120, SUMO_GOAL = 3;
   const rounds = mode => mode === 'duel';
   function setup(G) {
-    G.roundT = 0; G.ring = null; G.goals = null; G.score = G.mages.map(() => 0); G.runes = []; G.runeT = 9; G.respawn = G.mages.map(() => 0); G.tejo = null; G.altar = null; G.huntN = 0;
+    G.roundT = 0; G.ring = null; G.goals = null; G.score = G.mages.map(() => 0); G.runes = []; G.runeT = 9; G.respawn = G.mages.map(() => 0); G.tejo = null; G.altar = null; G.huntN = 0; G.dohyo = null;
     const T = G.T, W = T.W, H = T.H;
     if (G.mode === 'tejo') {
       G.goals = [{ x: 105, y: H / 2, r: 62 }, { x: W - 105, y: H / 2, r: 62 }];
@@ -4013,6 +4106,12 @@ const Modes = (() => {
       T.ver++;
     }
     if (G.mode === 'hunt') { for (let k = 0; k < 5; k++) spawnSpirit(G); G.huntN = 0; }
+    // Sumo mágico: el dohyō en el centro (se despeja), casi sin daño y con empujones mucho más fuertes
+    if (G.mode === 'sumo') {
+      const r = Math.min(290, H * 0.36); G.dohyo = { x: W / 2, y: H / 2, r, ry: r * 0.7, wait: 0 };
+      Terrain.forCircle(T, W / 2, H / 2, r + 70, i => { const b = T.base[i]; if (b === TT.ROCK || b === TT.BUSH || b === TT.DEEP || b === TT.CHASM || b === TT.LAVA || b === TT.SHALLOW) T.base[i] = TT.DIRT; T.wall[i] = 0; }); T.base0 = T.base.slice(); T.ver++;
+      sumoPlace(G); for (const m of G.mages) { m.dmgMul = (m.dmgMul || 1) * 0.2; m.knockMul *= 1.75; }
+    }
     if (G.mode === 'altar') {
       G.altarSpots = [[W / 2, H / 2], [W * 0.3, H * 0.3], [W * 0.7, H * 0.7], [W * 0.3, H * 0.72], [W * 0.7, H * 0.28]];
       G.altar = { x: W / 2, y: H / 2, r: 108, t: 20, k: 0, owner: -1 };
@@ -4048,6 +4147,9 @@ const Modes = (() => {
       else { x.moveTo(r.x, Y - 9); x.lineTo(r.x, Y + 9); x.moveTo(r.x - 8, Y); x.lineTo(r.x + 8, Y); }
       x.stroke(); x.restore(); } });
   }
+  // fuera del dohyō: la misma elipse que se dibuja (la cuerda), con un pelito de margen
+  function sumoOut(D, x, y) { const a = (x - D.x) / (D.r + 6), b = (y - D.y) / (D.ry + 6); return a * a + b * b > 1; }
+  function sumoPlace(G) { const D = G.dohyo; G.mages.forEach((m, k) => { m.x = D.x + (k ? 1 : -1) * D.r * 0.5; m.y = D.y; m.vx = m.vy = 0; m.spawn = [m.x, m.y]; m.face = k ? Math.PI : 0; }); }
   function newTejo(G) { G.tejo = pushable(G, G.T.W / 2, G.T.H / 2, 'tejo'); }
   // algo que se empuja a punta de hechizos (el tejo, las piedras de la campaña)
   function pushable(G, x, y, obj, r = 20) {
@@ -4143,6 +4245,13 @@ const Modes = (() => {
       if (alive < 5 && G.rng() < dt * 1.5) spawnSpirit(G);
       if (G.roundT >= HUNT_T) return Game.endRound(best(G.score), 'time');
     }
+    if (G.mode === 'sumo' && G.dohyo) {
+      const D = G.dohyo;
+      if (D.wait > 0) { D.wait -= dt; if (D.wait <= 0) { for (const m of G.mages) { if (!m.alive) Game.revive(m); m.hp = m.maxHp; m.iframes = 1; } sumoPlace(G); G.spells = []; } return; }
+      for (const m of G.mages) { if (!m.alive) continue; if (sumoOut(D, m.x, m.y)) { const k = 1 - m.idx; G.score[k]++; D.wait = 1.6; G.slow = Math.max(G.slow, 0.7); G.events.push({ type: 'goal', who: k, x: m.x, y: m.y }); G.fx.push({ type: 'boom', x: m.x, y: m.y, r: 90, el: 'wind' }); G.pops.push({ x: m.x, y: m.y - 70, text: '¡FUERA DEL DOHYŌ!', t: 0, color: PLAYER_COLORS[k].main, big: true, gran: true }); break; } }
+      { const k = G.score.findIndex(v => v >= SUMO_GOAL); if (k >= 0) return Game.endRound(k, 'score'); }
+      if (G.roundT >= SUMO_T && (G.score[0] !== G.score[1] || G.roundT >= SUMO_T + 45)) return Game.endRound(best(G.score), 'time');
+    }
     if (G.mode === 'altar') {
       const A = G.altar; A.t -= dt;
       if (A.t <= 0) { A.k = (A.k + 1 + G.rng.int(G.altarSpots.length - 1)) % G.altarSpots.length; [A.x, A.y] = G.altarSpots[A.k]; A.t = 20; G.events.push({ type: 'altarMove', x: A.x, y: A.y }); }
@@ -4172,6 +4281,13 @@ const Modes = (() => {
       for (let j = 0; j < 4; j++) { const a = j / 4 * TAU + 0.4; x.fillStyle = '#f2f2f2'; x.beginPath(); x.moveTo(g.x + Math.cos(a) * g.r * 0.55, g.y + Math.sin(a) * g.r * 0.34 - 6); x.lineTo(g.x + Math.cos(a) * g.r * 0.55 + 7, g.y + Math.sin(a) * g.r * 0.34 + 3); x.lineTo(g.x + Math.cos(a) * g.r * 0.55 - 7, g.y + Math.sin(a) * g.r * 0.34 + 3); x.fill(); x.fillStyle = '#e83a2a'; x.fillRect(g.x + Math.cos(a) * g.r * 0.55 - 1.5, g.y + Math.sin(a) * g.r * 0.34 - 3, 3, 3); }
       x.font = fontB(14, 900); x.textAlign = 'center'; x.fillStyle = col; x.fillText(`BOCÍN J${k + 1}`, g.x, g.y + g.r * 0.62 + 30);
     }
+    if (G.mode === 'sumo' && G.dohyo) { // el dohyō: arcilla clara, cuerda de paja (tawara) y las dos líneas de salida
+      const D = G.dohyo; x.save(); x.fillStyle = 'rgba(200,170,120,0.55)'; x.beginPath(); x.ellipse(D.x, D.y, D.r, D.ry, 0, 0, TAU); x.fill();
+      for (let k = 0; k < 48; k++) { const a = k / 48 * TAU, px = D.x + Math.cos(a) * D.r, py = D.y + Math.sin(a) * D.ry; x.fillStyle = k % 2 ? '#c8a860' : '#a88a48'; x.beginPath(); x.ellipse(px, py, 11, 6, a, 0, TAU); x.fill(); x.strokeStyle = 'rgba(60,40,20,0.6)'; x.lineWidth = 1; x.stroke(); }
+      x.strokeStyle = '#f4f0e6'; x.lineWidth = 5; for (const s of [-1, 1]) { x.beginPath(); x.moveTo(D.x + s * D.r * 0.18, D.y - 14); x.lineTo(D.x + s * D.r * 0.18, D.y + 14); x.stroke(); }
+      for (let k = 0; k < 4; k++) { const a = Math.PI / 4 + k * Math.PI / 2; x.fillStyle = ['#2a4a8a', '#c8281e', '#f4f0e6', '#1d1817'][k]; x.beginPath(); x.arc(D.x + Math.cos(a) * (D.r + 28), D.y + Math.sin(a) * (D.ry + 28), 9, 0, TAU); x.fill(); }
+      x.restore();
+    }
     if (G.mode === 'altar' && G.altar) {
       const A = G.altar, col = A.owner >= 0 ? PLAYER_COLORS[A.owner].main : A.owner === -2 ? '#ff8a8a' : '#e8c46e';
       x.save(); x.globalCompositeOperation = 'lighter'; x.fillStyle = col + '22'; x.beginPath(); x.ellipse(A.x, A.y, A.r, A.r * 0.62, 0, 0, TAU); x.fill(); x.restore();
@@ -4191,7 +4307,7 @@ const Modes = (() => {
     x.restore();
     ArtSpells.glow(x, u.x, u.y - 6, 40, 'rgba(255,210,100,0.5)');
   }
-  return { RUNES, drawRunes, pushable, setup, update, onDown, onCreatureDown, drawUnder, drawTejo, ROUND_T, MIST_T, TEJO_T, HUNT_T, ALTAR_GOAL, rounds };
+  return { RUNES, drawRunes, pushable, setup, update, onDown, onCreatureDown, drawUnder, drawTejo, ROUND_T, MIST_T, TEJO_T, HUNT_T, ALTAR_GOAL, SUMO_T, SUMO_GOAL, rounds };
 })();
 
 /* ===== 07b-events.js ===== */
@@ -5832,6 +5948,7 @@ const Game = (() => {
     G.usePresage = !G.attract && G.mode === 'duel' && Store.get('presage', true) && G.round > 1;
     Events.setup(G);
     Seasons.setup(G, G.mode === 'camp' ? Camp.LEVELS[G.campLevel].seasons : G.A.seasons);
+    if (G.mode !== 'camp' && G.A.looks) { G.cellLook = new Map(); G.A.looks(G); } // lo que el escenario pide dibujar distinto (zorros de piedra, casas)
     Modes.setup(G);
     if (G.mode === 'camp') Camp.setup(G);
     if (G.mode === 'school') Progress.schoolSetup(G);
@@ -8627,7 +8744,7 @@ const Art = (() => {
     // lo alto, ordenado por profundidad
     const list = [];
     for (const s of G.sources) list.push({ y: s.y + 4, draw: x => source(x, G, s) });
-    for (const s of G.statues || []) list.push({ y: s.y + 14, draw: x => ArtGround.statue(x, G, s) });
+    for (const s of G.statues || []) { if (G.cellLook && G.cellLook.get(Terrain.idx(G.T, s.x, s.y))) continue; list.push({ y: s.y + 14, draw: x => ArtGround.statue(x, G, s) }); }
     for (const m of G.mages) if (m.alive) list.push({ y: m.y, draw: x => ArtMage.draw(x, G, m) });
     for (const u of G.units) { if (u instanceof Creature && u.alive) list.push({ y: u.y, draw: x => ArtCreature.draw(x, G, u) }); else if (u.obj === 'tejo' || u.obj === 'stone') list.push({ y: u.y, draw: x => Modes.drawTejo(x, G, u) }); else if (u.obj === 'dummy') list.push({ y: u.y, draw: x => dummy(x, G, u) }); }
     ArtGround.tallItems(G, view, list);
@@ -8991,8 +9108,8 @@ const HUD = (() => {
         x.fillStyle = k < G.wins[p] ? PLAYER_COLORS[p].main : 'rgba(255,255,255,0.18)'; x.beginPath(); x.arc(X, Y, 4.5 * u, 0, TAU); x.fill();
       }
       x.font = fontB(9 * u, 900); x.fillStyle = 'rgba(230,220,255,0.6)'; x.fillText(`RONDA ${G.round}` + (G.presage ? ' · ' + PRESAGES[G.presage].name.toUpperCase() : ''), cx, ty + 62 * u);
-    } else if (G.mode === 'tejo' || G.mode === 'hunt' || G.mode === 'altar') {
-      const lim = G.mode === 'tejo' ? Modes.TEJO_T : G.mode === 'hunt' ? Modes.HUNT_T : 180, left = Math.max(0, lim - G.roundT);
+    } else if (G.mode === 'tejo' || G.mode === 'hunt' || G.mode === 'altar' || G.mode === 'sumo') {
+      const lim = G.mode === 'tejo' ? Modes.TEJO_T : G.mode === 'hunt' ? Modes.HUNT_T : G.mode === 'sumo' ? Modes.SUMO_T : 180, left = Math.max(0, lim - G.roundT);
       x.fillStyle = 'rgba(14,10,34,0.62)'; rr(x, cx - 96 * u, ty, 192 * u, 58 * u, 14 * u); x.fill(); x.strokeStyle = 'rgba(232,196,110,0.5)'; x.lineWidth = 1.5; x.stroke();
       x.textAlign = 'center'; x.textBaseline = 'middle';
       if (G.mode === 'altar') {
@@ -10492,6 +10609,25 @@ const ArtW3 = (() => {
   cell.machiya = (x, G, i) => block(x, G, i, 'machiya', 42,
     (px, y, H, c, r) => { x.fillStyle = lg(x, 0, y, 0, y + H, '#4a3424', '#2e2016'); x.fillRect(px, y, CELL, H); x.fillStyle = 'rgba(255,190,110,0.85)'; for (let k = 0; k < 5; k++) x.fillRect(px + 3 + k * 8, y + 10, 3, H - 16); x.strokeStyle = '#1d1410'; x.lineWidth = 2; for (let k = 0; k <= 5; k++) { x.beginPath(); x.moveTo(px + k * 8 + 1, y + 8); x.lineTo(px + k * 8 + 1, y + H - 4); x.stroke(); } if ((c * 7 + r) % 5 === 0) { x.fillStyle = '#2a3a6a'; x.fillRect(px + 6, y + 1, 28, 12); x.fillStyle = '#e8e0c8'; x.font = fontB(9, 900); x.textAlign = 'center'; x.fillText('○', px + 20, y + 10); } },
     (px, ty, c, r, up) => { x.fillStyle = lg(x, 0, ty, 0, ty + CELL, '#42465a', '#2a2c38'); x.fillRect(px, ty, CELL, CELL); x.strokeStyle = 'rgba(10,10,16,0.6)'; x.lineWidth = 1; for (let k = 0; k < 4; k++) { x.beginPath(); x.moveTo(px, ty + 6 + k * 10); x.lineTo(px + CELL, ty + 6 + k * 10); x.stroke(); } if (!up) { x.fillStyle = '#1e2028'; x.fillRect(px, ty - 3, CELL, 5); } }, 0.7);
+  // casa de techo de paja (gasshō) en bloque, para el escenario de duelo de Shirakawa-go
+  cell.gassho = (x, G, i) => block(x, G, i, 'gassho', 40,
+    (px, y, H, c, r) => { x.fillStyle = lg(x, 0, y, 0, y + H, '#6a4a30', '#3e2a1a'); x.fillRect(px, y, CELL, H); if ((c + r) % 2 === 0) { x.fillStyle = 'rgba(255,200,110,0.9)'; x.fillRect(px + 12, y + 10, 16, 18); x.strokeStyle = '#2a1a10'; x.lineWidth = 1.2; x.strokeRect(px + 12, y + 10, 16, 18); x.beginPath(); x.moveTo(px + 20, y + 10); x.lineTo(px + 20, y + 28); x.stroke(); } },
+    (px, ty, c, r, up) => { x.fillStyle = lg(x, 0, ty, 0, ty + CELL, '#9a7a4a', '#6a5030'); x.fillRect(px, ty, CELL, CELL); x.strokeStyle = 'rgba(60,40,20,0.4)'; x.lineWidth = 1; for (let k = 0; k < 6; k++) { x.beginPath(); x.moveTo(px + k * 7, ty); x.lineTo(px + k * 7 + 3, ty + CELL); x.stroke(); } if (!up) { x.fillStyle = '#3a2a1e'; x.fillRect(px, ty - 4, CELL, 6); } }, 0.85);
+  // zorro de piedra (kitsune) con babero rojo; si es un guardián despierto, le brillan los ojos
+  cell.fox = (x, G, i) => {
+    const T = G.T, px = Terrain.cx(T, i), py = Terrain.cy(T, i) + 14, s = (G.statues || []).find(q => hypot(q.x - px, q.y - py + 14) < 34), gl = s ? s.glow : 0, sea = seaOf(G, px, py);
+    x.save(); x.translate(px, py); shadow(x, 0, 2, 24, 0.4);
+    x.beginPath(); x.rect(-16, -14, 32, 14); fi(x, lg(x, 0, -14, 0, 0, '#a8a49a', '#6e6a62'), 1.3);
+    x.beginPath(); x.moveTo(-10, -14); x.quadraticCurveTo(-14, -40, -4, -52); x.lineTo(6, -52); x.quadraticCurveTo(14, -40, 10, -14); x.closePath(); fi(x, lg(x, -10, -52, 10, -14, '#c8c4ba', '#8a867c'), 1.4);
+    x.beginPath(); x.moveTo(-8, -50); x.lineTo(-6, -66); x.lineTo(-1, -54); x.moveTo(4, -54); x.lineTo(8, -66); x.lineTo(9, -50); x.fillStyle = '#b8b4aa'; x.fill(); x.strokeStyle = INK; x.lineWidth = 1; x.stroke();
+    x.beginPath(); x.moveTo(1, -52); x.lineTo(14, -48); x.lineTo(2, -44); x.closePath(); fi(x, '#bcb8ae', 1);
+    x.beginPath(); x.moveTo(-9, -40); x.quadraticCurveTo(0, -30, 9, -40); x.lineTo(7, -32); x.quadraticCurveTo(0, -26, -7, -32); x.closePath(); fi(x, '#c8281e', 1, 0.7);
+    stroke(x, [[10, -16], [20, -30], [16, -46]], 6, '#9a968c', 0.9);
+    for (const sd of [-1, 1]) { x.fillStyle = gl > 0.2 ? `rgba(255,${120 + gl * 100},60,${0.5 + gl * 0.5})` : INK; x.beginPath(); x.ellipse(sd * 3 + 3, -50, 1.8, 1, 0, 0, TAU); x.fill(); }
+    if (gl > 0.2) glow(x, 4, -50, 18 + gl * 10, 'rgba(255,150,60,0.7)');
+    if (sea === 'winter') { x.fillStyle = 'rgba(250,251,253,0.95)'; x.beginPath(); x.ellipse(0, -54, 10, 4, 0, 0, TAU); x.fill(); x.fillRect(-16, -16, 32, 4); }
+    x.restore();
+  };
   // hoja de loto: el camino que abre la primavera (hojas redondas que se mecen y flores rosas)
   cell.lotus = (x, G, i) => {
     const T = G.T, px = Terrain.cx(T, i), py = Terrain.cy(T, i), t = G.time;
@@ -10741,7 +10877,7 @@ const ArtW3 = (() => {
 /* ---------- temas de los niveles del Mundo 3: cada lugar con su luz, sus árboles y su música ---------- */
 (() => {
   const B = THEMES.wa, mk = o => Object.assign({}, B, o, { sea: Object.assign({}, B.sea, o.sea || {}) });
-  const night = (amb, fog) => ({ ambient: amb, nightA: 0.58, lightK: 0.55, bloom: 0.22, rays: 0.12, fog, fogK: 0.22, vig: '10,10,24', vigA: 0.55, grade: ['rgba(120,140,255,0.10)', 'rgba(30,20,60,0.18)'] });
+  const night = (amb, fog) => ({ ambient: amb, ambientA: 0.42, nightA: 0.58, lightK: 0.55, bloom: 0.22, rays: 0.12, fog, fogK: 0.22, vig: '10,10,24', vigA: 0.55, grade: ['rgba(120,140,255,0.10)', 'rgba(30,20,60,0.18)'] });
   THEMES.arashiyama = mk({ trees: ['bamboo'], bamboo: true, music: 'bamboo', rays: 0.55, rayRgb: [230, 255, 210], grade: ['rgba(200,255,190,0.10)', 'rgba(40,90,60,0.14)'], fogK: 0.22, fog: [236, 248, 232] });
   THEMES.himeji = mk({ trees: ['pine', 'sakura', 'pine'], music: 'himeji', rays: 0.4, slabs: true });
   THEMES.shirakawa = mk(Object.assign(night([16, 24, 52], [220, 232, 255]), { trees: ['pine'], music: 'yuki', sea: { winter: { grade: ['rgba(170,200,255,0.14)', 'rgba(20,30,70,0.2)'], ambient: [16, 24, 52] }, summer: { grade: ['rgba(255,200,140,0.12)', 'rgba(40,30,60,0.14)'], ambient: [30, 20, 40] } } }));
@@ -12001,7 +12137,8 @@ const UI = (() => {
   function seg(id, val, onPick) { $$(`#${id} button`).forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.v === String(val))); b.onclick = () => { Sound.play('select'); onPick(b.dataset.v); seg(id, b.dataset.v, onPick); }; }); }
   function fillSetup() {
     fillCard(0); fillCard(1);
-    $('#o-arena').innerHTML = ARENA_ORDER.map(a => `<button data-v="${a}">${ARENAS[a].name}</button>`).join('') + (ARENA_ORDER.length > 1 ? '<button data-v="random">Al azar</button>' : '');
+    // escenarios agrupados por mundo
+    $('#o-arena').innerHTML = [1, 2, 3].map(w => { const L = ARENA_ORDER.filter(a => (ARENAS[a].world || 1) === w); return L.length ? `<span class="lbl" style="align-self:center;opacity:.75;padding:0 4px">${['', 'Mundo 1', 'Mundo 2', 'Mundo 3'][w]}</span>` + L.map(a => `<button data-v="${a}">${ARENAS[a].name}</button>`).join('') : ''; }).join('') + (ARENA_ORDER.length > 1 ? '<button data-v="random">Al azar</button>' : '');
     $('#o-mode').innerHTML = MODE_ORDER.map(k => `<button data-v="${k}">${MODES[k].name}</button>`).join('');
     const modeTxt = () => { $('#o-modeTxt').textContent = MODES[setup.mode].short; $('#o-winsw').hidden = setup.mode !== 'duel'; };
     seg('o-mode', setup.mode, v => { setup.mode = v; Game.cfg.mode = v; Store.set('cfg', Game.cfg); modeTxt(); }); modeTxt();
@@ -12032,7 +12169,7 @@ const UI = (() => {
     Sound.init(); Sound.play('go');
     paused = false; Game.G.paused = false; stack = [];
     if (setup.mode === 'copa') {
-      const modes = ['duel', 'tejo', 'hunt', 'altar'].sort(() => Math.random() - 0.5); modes.push(['duel', 'tejo', 'hunt', 'altar'][Math.floor(Math.random() * 4)]);
+      const modes = ['duel', 'tejo', 'hunt', 'altar', 'sumo'].sort(() => Math.random() - 0.5);
       const ar = ARENA_ORDER.slice().sort(() => Math.random() - 0.5);
       Copa.on = true; Copa.k = 0; Copa.pts = [0, 0]; Copa.list = modes.map((m, i) => ({ mode: m, arena: ar[i % ar.length] }));
       copaEvent(); return;
@@ -12372,14 +12509,14 @@ const NetGame = (() => {
 
   /* ---------- arranque (sala de espera común) ---------- */
   NetPlay.onStart(o => { o.seats.forEach((s, i) => { if (s && /^#[0-9a-f]{6}$/i.test(s.color)) { const n = parseInt(s.color.slice(1), 16), dk = '#' + [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => Math.round(v * 0.55).toString(16).padStart(2, '0')).join(''); PLAYER_COLORS[i] = { main: s.color, dark: dk, name: s.name }; } }); });
-  const MODES_NET = ['duel', 'altar', 'hunt', 'tejo', 'camp'];
+  const MODES_NET = ['duel', 'altar', 'hunt', 'tejo', 'sumo', 'camp'];
   NetPlay.gate({
     me(li, id) { const c = CHARS[id] ? id : Game.cfg.chars[li] || CHAR_ORDER[li % CHAR_ORDER.length]; let skin = 0; try { skin = Vestidor.V.eq(li, 'skin', c); } catch (e) { /* nada */ } return { cid: c, skin }; },
     // elegir mago antes de cada partida en línea (con su retrato y su atuendo puesto)
     pick: { key: 'cid', what: 'tu mago', list: () => CHAR_ORDER.map(k => ({ id: k, name: CHARS[k].name, sub: CHARS[k].title + ' · ' + CHARS[k].hands.map(e => ELEMENTS[e].name.toLowerCase()).join(' y '), c1: ELEMENTS[CHARS[k].hands[0]].c1, c2: ELEMENTS[CHARS[k].hands[1]].c2 })),
       art(cv, id, li) { let skin = 0; try { skin = Vestidor.V.eq(li, 'skin', id); } catch (e) { /* nada */ } ArtMage.portrait(cv.getContext('2d'), id, cv.width / 2, cv.height / 2, cv.width / 2, 0.6, skin); } },
     make(want, ev) {
-      const S = NetPlay.seats, n = S.length; let mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel'; if ((mode === 'tejo' || mode === 'camp') && n !== 2) mode = 'duel';
+      const S = NetPlay.seats, n = S.length; let mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel'; if ((mode === 'tejo' || mode === 'camp' || mode === 'sumo') && n !== 2) mode = 'duel';
       const arena = ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
       const chars = S.map((s, i) => { const w = want[i] || {}; return CHARS[w.cid] ? w.cid : CHAR_ORDER[i % CHAR_ORDER.length]; });
       const skins = S.map((s, i) => { const k = (want[i] || {}).skin; return typeof k === 'number' && k >= 0 && k < 9 ? k : NetPlay.okId(k) || 0; });
@@ -12429,7 +12566,7 @@ const NetGame = (() => {
   }
 
   /* ---------- instantánea (anfitrión) ---------- */
-  const GF = ['lives', 'cs', 'checkpoint', 'countT', 'introT', 'introMax', 'roundT', 'winsNeeded', 'wins', 'score', 'respawn', 'presage', 'mist', 'rain', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'ring', 'altar', 'goals', 'tejoWait', 'huntWait', 'huntN', 'runeT', 'runes', 'statues', 'banner', 'ev', 'mistWarned', 'roundWinner', 'roundWhy', 'granFx', 'koCam'];
+  const GF = ['lives', 'cs', 'checkpoint', 'countT', 'introT', 'introMax', 'roundT', 'winsNeeded', 'wins', 'score', 'respawn', 'presage', 'mist', 'rain', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'ring', 'altar', 'goals', 'dohyo', 'tejoWait', 'huntWait', 'huntN', 'runeT', 'runes', 'statues', 'banner', 'ev', 'mistWarned', 'roundWinner', 'roundWhy', 'granFx', 'koCam'];
   // lo que casi nunca cambia viaja aparte y solo cuando cambia (y una vez por segundo): la instantánea cabe en un paquete
   const GS = new Set(['introMax', 'winsNeeded', 'wins', 'score', 'presage', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'statues', 'mistWarned', 'roundWinner', 'roundWhy', 'goals', 'huntN']);
   const MF = ['x', 'y', 'vx', 'vy', 'face', 'hp', 'maxHp', 'alive', 'emb', 'embFlash', 'flash', 'walk', 'moving', 'castT', 'castHand', 'castEl', 'fuse', 'granCharge', 'granGlow', 'granEls', 'absorbing', 'racha', 'rachaT', 'iframes', 'hitT', 'impulse', 'lockOn', 'pin', 'hands', 'st', 'buff', 'dash', 'stillT', 'invuln', 'lock', 'kt', 'dmgMul']; // (el atuendo viene en la cfg)

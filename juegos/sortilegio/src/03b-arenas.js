@@ -140,7 +140,7 @@ const ARENA_ORDER = ['paramo', 'rio', 'volcan', 'ciudad', 'cano'];
 const Arena = {
   build(G, id) {
     const A = ARENAS[id] || ARENAS.paramo; G.arena = A.id; G.A = A;
-    G.T = Terrain.make(A.W, A.H); A.paint(G.T);
+    G.T = Terrain.make(A.W, A.H); A.paint(G.T); if (A.bridgeUnder != null) G.T.bridgeUnder = A.bridgeUnder; if (A.noBurnBridge) G.T.noBurnBridge = true;
     G.sources = A.sources.map(s => Object.assign({ cd: 0, glow: 0 }, s));
     // 2.0: una fuente de LUZ y otra de SOMBRA, en espejo; se intercambian cada ronda (para que a nadie le quede siempre la misma cerca)
     if (!A.extra && !A.noExtra) { const T = G.T, cx = A.W * 0.37, cy = A.H * 0.27; let best = null, bd = 1e12;

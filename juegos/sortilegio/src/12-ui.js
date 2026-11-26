@@ -129,7 +129,8 @@ const UI = (() => {
   function seg(id, val, onPick) { $$(`#${id} button`).forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.v === String(val))); b.onclick = () => { Sound.play('select'); onPick(b.dataset.v); seg(id, b.dataset.v, onPick); }; }); }
   function fillSetup() {
     fillCard(0); fillCard(1);
-    $('#o-arena').innerHTML = ARENA_ORDER.map(a => `<button data-v="${a}">${ARENAS[a].name}</button>`).join('') + (ARENA_ORDER.length > 1 ? '<button data-v="random">Al azar</button>' : '');
+    // escenarios agrupados por mundo
+    $('#o-arena').innerHTML = [1, 2, 3].map(w => { const L = ARENA_ORDER.filter(a => (ARENAS[a].world || 1) === w); return L.length ? `<span class="lbl" style="align-self:center;opacity:.75;padding:0 4px">${['', 'Mundo 1', 'Mundo 2', 'Mundo 3'][w]}</span>` + L.map(a => `<button data-v="${a}">${ARENAS[a].name}</button>`).join('') : ''; }).join('') + (ARENA_ORDER.length > 1 ? '<button data-v="random">Al azar</button>' : '');
     $('#o-mode').innerHTML = MODE_ORDER.map(k => `<button data-v="${k}">${MODES[k].name}</button>`).join('');
     const modeTxt = () => { $('#o-modeTxt').textContent = MODES[setup.mode].short; $('#o-winsw').hidden = setup.mode !== 'duel'; };
     seg('o-mode', setup.mode, v => { setup.mode = v; Game.cfg.mode = v; Store.set('cfg', Game.cfg); modeTxt(); }); modeTxt();
@@ -160,7 +161,7 @@ const UI = (() => {
     Sound.init(); Sound.play('go');
     paused = false; Game.G.paused = false; stack = [];
     if (setup.mode === 'copa') {
-      const modes = ['duel', 'tejo', 'hunt', 'altar'].sort(() => Math.random() - 0.5); modes.push(['duel', 'tejo', 'hunt', 'altar'][Math.floor(Math.random() * 4)]);
+      const modes = ['duel', 'tejo', 'hunt', 'altar', 'sumo'].sort(() => Math.random() - 0.5);
       const ar = ARENA_ORDER.slice().sort(() => Math.random() - 0.5);
       Copa.on = true; Copa.k = 0; Copa.pts = [0, 0]; Copa.list = modes.map((m, i) => ({ mode: m, arena: ar[i % ar.length] }));
       copaEvent(); return;

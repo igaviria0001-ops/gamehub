@@ -254,8 +254,8 @@ const HUD = (() => {
         x.fillStyle = k < G.wins[p] ? PLAYER_COLORS[p].main : 'rgba(255,255,255,0.18)'; x.beginPath(); x.arc(X, Y, 4.5 * u, 0, TAU); x.fill();
       }
       x.font = fontB(9 * u, 900); x.fillStyle = 'rgba(230,220,255,0.6)'; x.fillText(`RONDA ${G.round}` + (G.presage ? ' · ' + PRESAGES[G.presage].name.toUpperCase() : ''), cx, ty + 62 * u);
-    } else if (G.mode === 'tejo' || G.mode === 'hunt' || G.mode === 'altar') {
-      const lim = G.mode === 'tejo' ? Modes.TEJO_T : G.mode === 'hunt' ? Modes.HUNT_T : 180, left = Math.max(0, lim - G.roundT);
+    } else if (G.mode === 'tejo' || G.mode === 'hunt' || G.mode === 'altar' || G.mode === 'sumo') {
+      const lim = G.mode === 'tejo' ? Modes.TEJO_T : G.mode === 'hunt' ? Modes.HUNT_T : G.mode === 'sumo' ? Modes.SUMO_T : 180, left = Math.max(0, lim - G.roundT);
       x.fillStyle = 'rgba(14,10,34,0.62)'; rr(x, cx - 96 * u, ty, 192 * u, 58 * u, 14 * u); x.fill(); x.strokeStyle = 'rgba(232,196,110,0.5)'; x.lineWidth = 1.5; x.stroke();
       x.textAlign = 'center'; x.textBaseline = 'middle';
       if (G.mode === 'altar') {

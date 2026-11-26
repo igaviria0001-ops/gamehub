@@ -73,7 +73,7 @@ const Art = (() => {
     // lo alto, ordenado por profundidad
     const list = [];
     for (const s of G.sources) list.push({ y: s.y + 4, draw: x => source(x, G, s) });
-    for (const s of G.statues || []) list.push({ y: s.y + 14, draw: x => ArtGround.statue(x, G, s) });
+    for (const s of G.statues || []) { if (G.cellLook && G.cellLook.get(Terrain.idx(G.T, s.x, s.y))) continue; list.push({ y: s.y + 14, draw: x => ArtGround.statue(x, G, s) }); }
     for (const m of G.mages) if (m.alive) list.push({ y: m.y, draw: x => ArtMage.draw(x, G, m) });
     for (const u of G.units) { if (u instanceof Creature && u.alive) list.push({ y: u.y, draw: x => ArtCreature.draw(x, G, u) }); else if (u.obj === 'tejo' || u.obj === 'stone') list.push({ y: u.y, draw: x => Modes.drawTejo(x, G, u) }); else if (u.obj === 'dummy') list.push({ y: u.y, draw: x => dummy(x, G, u) }); }
     ArtGround.tallItems(G, view, list);

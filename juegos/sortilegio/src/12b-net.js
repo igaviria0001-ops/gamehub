@@ -85,14 +85,14 @@ const NetGame = (() => {
 
   /* ---------- arranque (sala de espera común) ---------- */
   NetPlay.onStart(o => { o.seats.forEach((s, i) => { if (s && /^#[0-9a-f]{6}$/i.test(s.color)) { const n = parseInt(s.color.slice(1), 16), dk = '#' + [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => Math.round(v * 0.55).toString(16).padStart(2, '0')).join(''); PLAYER_COLORS[i] = { main: s.color, dark: dk, name: s.name }; } }); });
-  const MODES_NET = ['duel', 'altar', 'hunt', 'tejo', 'camp'];
+  const MODES_NET = ['duel', 'altar', 'hunt', 'tejo', 'sumo', 'camp'];
   NetPlay.gate({
     me(li, id) { const c = CHARS[id] ? id : Game.cfg.chars[li] || CHAR_ORDER[li % CHAR_ORDER.length]; let skin = 0; try { skin = Vestidor.V.eq(li, 'skin', c); } catch (e) { /* nada */ } return { cid: c, skin }; },
     // elegir mago antes de cada partida en línea (con su retrato y su atuendo puesto)
     pick: { key: 'cid', what: 'tu mago', list: () => CHAR_ORDER.map(k => ({ id: k, name: CHARS[k].name, sub: CHARS[k].title + ' · ' + CHARS[k].hands.map(e => ELEMENTS[e].name.toLowerCase()).join(' y '), c1: ELEMENTS[CHARS[k].hands[0]].c1, c2: ELEMENTS[CHARS[k].hands[1]].c2 })),
       art(cv, id, li) { let skin = 0; try { skin = Vestidor.V.eq(li, 'skin', id); } catch (e) { /* nada */ } ArtMage.portrait(cv.getContext('2d'), id, cv.width / 2, cv.height / 2, cv.width / 2, 0.6, skin); } },
     make(want, ev) {
-      const S = NetPlay.seats, n = S.length; let mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel'; if ((mode === 'tejo' || mode === 'camp') && n !== 2) mode = 'duel';
+      const S = NetPlay.seats, n = S.length; let mode = MODES_NET.includes(ev.mode) ? ev.mode : 'duel'; if ((mode === 'tejo' || mode === 'camp' || mode === 'sumo') && n !== 2) mode = 'duel';
       const arena = ARENAS[ev.map] ? ev.map : ARENA_ORDER[Math.floor(Math.random() * ARENA_ORDER.length)];
       const chars = S.map((s, i) => { const w = want[i] || {}; return CHARS[w.cid] ? w.cid : CHAR_ORDER[i % CHAR_ORDER.length]; });
       const skins = S.map((s, i) => { const k = (want[i] || {}).skin; return typeof k === 'number' && k >= 0 && k < 9 ? k : NetPlay.okId(k) || 0; });
@@ -142,7 +142,7 @@ const NetGame = (() => {
   }
 
   /* ---------- instantánea (anfitrión) ---------- */
-  const GF = ['lives', 'cs', 'checkpoint', 'countT', 'introT', 'introMax', 'roundT', 'winsNeeded', 'wins', 'score', 'respawn', 'presage', 'mist', 'rain', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'ring', 'altar', 'goals', 'tejoWait', 'huntWait', 'huntN', 'runeT', 'runes', 'statues', 'banner', 'ev', 'mistWarned', 'roundWinner', 'roundWhy', 'granFx', 'koCam'];
+  const GF = ['lives', 'cs', 'checkpoint', 'countT', 'introT', 'introMax', 'roundT', 'winsNeeded', 'wins', 'score', 'respawn', 'presage', 'mist', 'rain', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'ring', 'altar', 'goals', 'dohyo', 'tejoWait', 'huntWait', 'huntN', 'runeT', 'runes', 'statues', 'banner', 'ev', 'mistWarned', 'roundWinner', 'roundWhy', 'granFx', 'koCam'];
   // lo que casi nunca cambia viaja aparte y solo cuando cambia (y una vez por segundo): la instantánea cabe en un paquete
   const GS = new Set(['introMax', 'winsNeeded', 'wins', 'score', 'presage', 'current', 'wind', 'dry', 'embMul', 'eclipse', 'statues', 'mistWarned', 'roundWinner', 'roundWhy', 'goals', 'huntN']);
   const MF = ['x', 'y', 'vx', 'vy', 'face', 'hp', 'maxHp', 'alive', 'emb', 'embFlash', 'flash', 'walk', 'moving', 'castT', 'castHand', 'castEl', 'fuse', 'granCharge', 'granGlow', 'granEls', 'absorbing', 'racha', 'rachaT', 'iframes', 'hitT', 'impulse', 'lockOn', 'pin', 'hands', 'st', 'buff', 'dash', 'stillT', 'invuln', 'lock', 'kt', 'dmgMul']; // (el atuendo viene en la cfg)

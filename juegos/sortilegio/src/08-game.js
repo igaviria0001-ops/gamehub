@@ -70,6 +70,7 @@ const Game = (() => {
     G.usePresage = !G.attract && G.mode === 'duel' && Store.get('presage', true) && G.round > 1;
     Events.setup(G);
     Seasons.setup(G, G.mode === 'camp' ? Camp.LEVELS[G.campLevel].seasons : G.A.seasons);
+    if (G.mode !== 'camp' && G.A.looks) { G.cellLook = new Map(); G.A.looks(G); } // lo que el escenario pide dibujar distinto (zorros de piedra, casas)
     Modes.setup(G);
     if (G.mode === 'camp') Camp.setup(G);
     if (G.mode === 'school') Progress.schoolSetup(G);

@@ -195,6 +195,9 @@ class Bot {
       }
       if (job && (!f || hypot(f.x - m.x, f.y - m.y) > 260 || job.fuse || (BP && BP.lightJob))) { f = spot(job.o); modeGoal = [job.o.x - job.d * 0.7, job.o.y]; this.job = job; }
       else { this.job = null; if (exitO && (!f || hypot(f.x - m.x, f.y - m.y) > 240) && (!pal || hypot(pal.x - exitO.x, pal.y - exitO.y) < 420)) modeGoal = [exitO.x, exitO.y]; else if (pal && hypot(pal.x - m.x, pal.y - m.y) > 300 && !BP) modeGoal = [pal.x - 80, pal.y + 40]; }
+    } else if (G.mode === 'sumo' && G.dohyo) {
+      // sumo: no dejarse sacar (volver al centro) y empujar al otro hacia la cuerda
+      const D = G.dohyo, dm = hypot(m.x - D.x, (m.y - D.y) * D.r / D.ry); if (dm > D.r * 0.45) modeGoal = [D.x + (m.x - D.x) * 0.2, D.y + (m.y - D.y) * 0.2]; else if (foeMage) { const a = Math.atan2(foeMage.y - D.y, foeMage.x - D.x); modeGoal = [foeMage.x - Math.cos(a) * 110, foeMage.y - Math.sin(a) * 110]; }
     } else if (G.mode === 'altar' && G.altar) {
       const A = G.altar; modeGoal = [A.x + Math.cos(G.time + m.idx * 3) * 40, A.y + Math.sin(G.time + m.idx * 3) * 25];
     }

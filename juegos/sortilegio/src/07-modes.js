@@ -12,16 +12,17 @@ const MODES = {
   tejo: { name: 'Tejo encantado', short: 'Mete el tejo en el bocín del rival a punta de hechizos', icon: 'tejo' },
   hunt: { name: 'Cacería de espantos', short: 'Cada espanto cae solo con su contrario: cambia de manos', icon: 'hunt' },
   altar: { name: 'El Altar', short: 'Suma quien esté solo dentro del círculo sagrado', icon: 'altar' },
+  sumo: { name: 'Sumo mágico', short: 'Saca al otro del dohyō a punta de empujones mágicos', icon: 'altar' },
   copa: { name: 'Copa del Páramo', short: 'Cinco pruebas al azar', icon: 'copa' },
   free: { name: 'Práctica libre', short: 'Prueba hechizos sin presión', icon: 'free' },
   school: { name: 'Escuela de magia', short: 'Lecciones cortas', icon: 'school' },
 };
-const MODE_ORDER = ['duel', 'tejo', 'hunt', 'altar', 'copa'];
+const MODE_ORDER = ['duel', 'tejo', 'hunt', 'altar', 'sumo', 'copa'];
 const Modes = (() => {
-  const ROUND_T = 75, MIST_T = 45, TEJO_T = 150, HUNT_T = 120, ALTAR_GOAL = 100;
+  const ROUND_T = 75, MIST_T = 45, TEJO_T = 150, HUNT_T = 120, ALTAR_GOAL = 100, SUMO_T = 120, SUMO_GOAL = 3;
   const rounds = mode => mode === 'duel';
   function setup(G) {
-    G.roundT = 0; G.ring = null; G.goals = null; G.score = G.mages.map(() => 0); G.runes = []; G.runeT = 9; G.respawn = G.mages.map(() => 0); G.tejo = null; G.altar = null; G.huntN = 0;
+    G.roundT = 0; G.ring = null; G.goals = null; G.score = G.mages.map(() => 0); G.runes = []; G.runeT = 9; G.respawn = G.mages.map(() => 0); G.tejo = null; G.altar = null; G.huntN = 0; G.dohyo = null;
     const T = G.T, W = T.W, H = T.H;
     if (G.mode === 'tejo') {
       G.goals = [{ x: 105, y: H / 2, r: 62 }, { x: W - 105, y: H / 2, r: 62 }];
@@ -32,6 +33,12 @@ const Modes = (() => {
       T.ver++;
     }
     if (G.mode === 'hunt') { for (let k = 0; k < 5; k++) spawnSpirit(G); G.huntN = 0; }
+    // Sumo mágico: el dohyō en el centro (se despeja), casi sin daño y con empujones mucho más fuertes
+    if (G.mode === 'sumo') {
+      const r = Math.min(290, H * 0.36); G.dohyo = { x: W / 2, y: H / 2, r, ry: r * 0.7, wait: 0 };
+      Terrain.forCircle(T, W / 2, H / 2, r + 70, i => { const b = T.base[i]; if (b === TT.ROCK || b === TT.BUSH || b === TT.DEEP || b === TT.CHASM || b === TT.LAVA || b === TT.SHALLOW) T.base[i] = TT.DIRT; T.wall[i] = 0; }); T.base0 = T.base.slice(); T.ver++;
+      sumoPlace(G); for (const m of G.mages) { m.dmgMul = (m.dmgMul || 1) * 0.2; m.knockMul *= 1.75; }
+    }
     if (G.mode === 'altar') {
       G.altarSpots = [[W / 2, H / 2], [W * 0.3, H * 0.3], [W * 0.7, H * 0.7], [W * 0.3, H * 0.72], [W * 0.7, H * 0.28]];
       G.altar = { x: W / 2, y: H / 2, r: 108, t: 20, k: 0, owner: -1 };
@@ -67,6 +74,9 @@ const Modes = (() => {
       else { x.moveTo(r.x, Y - 9); x.lineTo(r.x, Y + 9); x.moveTo(r.x - 8, Y); x.lineTo(r.x + 8, Y); }
       x.stroke(); x.restore(); } });
   }
+  // fuera del dohyō: la misma elipse que se dibuja (la cuerda), con un pelito de margen
+  function sumoOut(D, x, y) { const a = (x - D.x) / (D.r + 6), b = (y - D.y) / (D.ry + 6); return a * a + b * b > 1; }
+  function sumoPlace(G) { const D = G.dohyo; G.mages.forEach((m, k) => { m.x = D.x + (k ? 1 : -1) * D.r * 0.5; m.y = D.y; m.vx = m.vy = 0; m.spawn = [m.x, m.y]; m.face = k ? Math.PI : 0; }); }
   function newTejo(G) { G.tejo = pushable(G, G.T.W / 2, G.T.H / 2, 'tejo'); }
   // algo que se empuja a punta de hechizos (el tejo, las piedras de la campaña)
   function pushable(G, x, y, obj, r = 20) {
@@ -162,6 +172,13 @@ const Modes = (() => {
       if (alive < 5 && G.rng() < dt * 1.5) spawnSpirit(G);
       if (G.roundT >= HUNT_T) return Game.endRound(best(G.score), 'time');
     }
+    if (G.mode === 'sumo' && G.dohyo) {
+      const D = G.dohyo;
+      if (D.wait > 0) { D.wait -= dt; if (D.wait <= 0) { for (const m of G.mages) { if (!m.alive) Game.revive(m); m.hp = m.maxHp; m.iframes = 1; } sumoPlace(G); G.spells = []; } return; }
+      for (const m of G.mages) { if (!m.alive) continue; if (sumoOut(D, m.x, m.y)) { const k = 1 - m.idx; G.score[k]++; D.wait = 1.6; G.slow = Math.max(G.slow, 0.7); G.events.push({ type: 'goal', who: k, x: m.x, y: m.y }); G.fx.push({ type: 'boom', x: m.x, y: m.y, r: 90, el: 'wind' }); G.pops.push({ x: m.x, y: m.y - 70, text: '¡FUERA DEL DOHYŌ!', t: 0, color: PLAYER_COLORS[k].main, big: true, gran: true }); break; } }
+      { const k = G.score.findIndex(v => v >= SUMO_GOAL); if (k >= 0) return Game.endRound(k, 'score'); }
+      if (G.roundT >= SUMO_T && (G.score[0] !== G.score[1] || G.roundT >= SUMO_T + 45)) return Game.endRound(best(G.score), 'time');
+    }
     if (G.mode === 'altar') {
       const A = G.altar; A.t -= dt;
       if (A.t <= 0) { A.k = (A.k + 1 + G.rng.int(G.altarSpots.length - 1)) % G.altarSpots.length; [A.x, A.y] = G.altarSpots[A.k]; A.t = 20; G.events.push({ type: 'altarMove', x: A.x, y: A.y }); }
@@ -191,6 +208,13 @@ const Modes = (() => {
       for (let j = 0; j < 4; j++) { const a = j / 4 * TAU + 0.4; x.fillStyle = '#f2f2f2'; x.beginPath(); x.moveTo(g.x + Math.cos(a) * g.r * 0.55, g.y + Math.sin(a) * g.r * 0.34 - 6); x.lineTo(g.x + Math.cos(a) * g.r * 0.55 + 7, g.y + Math.sin(a) * g.r * 0.34 + 3); x.lineTo(g.x + Math.cos(a) * g.r * 0.55 - 7, g.y + Math.sin(a) * g.r * 0.34 + 3); x.fill(); x.fillStyle = '#e83a2a'; x.fillRect(g.x + Math.cos(a) * g.r * 0.55 - 1.5, g.y + Math.sin(a) * g.r * 0.34 - 3, 3, 3); }
       x.font = fontB(14, 900); x.textAlign = 'center'; x.fillStyle = col; x.fillText(`BOCÍN J${k + 1}`, g.x, g.y + g.r * 0.62 + 30);
     }
+    if (G.mode === 'sumo' && G.dohyo) { // el dohyō: arcilla clara, cuerda de paja (tawara) y las dos líneas de salida
+      const D = G.dohyo; x.save(); x.fillStyle = 'rgba(200,170,120,0.55)'; x.beginPath(); x.ellipse(D.x, D.y, D.r, D.ry, 0, 0, TAU); x.fill();
+      for (let k = 0; k < 48; k++) { const a = k / 48 * TAU, px = D.x + Math.cos(a) * D.r, py = D.y + Math.sin(a) * D.ry; x.fillStyle = k % 2 ? '#c8a860' : '#a88a48'; x.beginPath(); x.ellipse(px, py, 11, 6, a, 0, TAU); x.fill(); x.strokeStyle = 'rgba(60,40,20,0.6)'; x.lineWidth = 1; x.stroke(); }
+      x.strokeStyle = '#f4f0e6'; x.lineWidth = 5; for (const s of [-1, 1]) { x.beginPath(); x.moveTo(D.x + s * D.r * 0.18, D.y - 14); x.lineTo(D.x + s * D.r * 0.18, D.y + 14); x.stroke(); }
+      for (let k = 0; k < 4; k++) { const a = Math.PI / 4 + k * Math.PI / 2; x.fillStyle = ['#2a4a8a', '#c8281e', '#f4f0e6', '#1d1817'][k]; x.beginPath(); x.arc(D.x + Math.cos(a) * (D.r + 28), D.y + Math.sin(a) * (D.ry + 28), 9, 0, TAU); x.fill(); }
+      x.restore();
+    }
     if (G.mode === 'altar' && G.altar) {
       const A = G.altar, col = A.owner >= 0 ? PLAYER_COLORS[A.owner].main : A.owner === -2 ? '#ff8a8a' : '#e8c46e';
       x.save(); x.globalCompositeOperation = 'lighter'; x.fillStyle = col + '22'; x.beginPath(); x.ellipse(A.x, A.y, A.r, A.r * 0.62, 0, 0, TAU); x.fill(); x.restore();
@@ -210,5 +234,5 @@ const Modes = (() => {
     x.restore();
     ArtSpells.glow(x, u.x, u.y - 6, 40, 'rgba(255,210,100,0.5)');
   }
-  return { RUNES, drawRunes, pushable, setup, update, onDown, onCreatureDown, drawUnder, drawTejo, ROUND_T, MIST_T, TEJO_T, HUNT_T, ALTAR_GOAL, rounds };
+  return { RUNES, drawRunes, pushable, setup, update, onDown, onCreatureDown, drawUnder, drawTejo, ROUND_T, MIST_T, TEJO_T, HUNT_T, ALTAR_GOAL, SUMO_T, SUMO_GOAL, rounds };
 })();

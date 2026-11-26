@@ -191,6 +191,25 @@ const ArtW3 = (() => {
   cell.machiya = (x, G, i) => block(x, G, i, 'machiya', 42,
     (px, y, H, c, r) => { x.fillStyle = lg(x, 0, y, 0, y + H, '#4a3424', '#2e2016'); x.fillRect(px, y, CELL, H); x.fillStyle = 'rgba(255,190,110,0.85)'; for (let k = 0; k < 5; k++) x.fillRect(px + 3 + k * 8, y + 10, 3, H - 16); x.strokeStyle = '#1d1410'; x.lineWidth = 2; for (let k = 0; k <= 5; k++) { x.beginPath(); x.moveTo(px + k * 8 + 1, y + 8); x.lineTo(px + k * 8 + 1, y + H - 4); x.stroke(); } if ((c * 7 + r) % 5 === 0) { x.fillStyle = '#2a3a6a'; x.fillRect(px + 6, y + 1, 28, 12); x.fillStyle = '#e8e0c8'; x.font = fontB(9, 900); x.textAlign = 'center'; x.fillText('○', px + 20, y + 10); } },
     (px, ty, c, r, up) => { x.fillStyle = lg(x, 0, ty, 0, ty + CELL, '#42465a', '#2a2c38'); x.fillRect(px, ty, CELL, CELL); x.strokeStyle = 'rgba(10,10,16,0.6)'; x.lineWidth = 1; for (let k = 0; k < 4; k++) { x.beginPath(); x.moveTo(px, ty + 6 + k * 10); x.lineTo(px + CELL, ty + 6 + k * 10); x.stroke(); } if (!up) { x.fillStyle = '#1e2028'; x.fillRect(px, ty - 3, CELL, 5); } }, 0.7);
+  // casa de techo de paja (gasshō) en bloque, para el escenario de duelo de Shirakawa-go
+  cell.gassho = (x, G, i) => block(x, G, i, 'gassho', 40,
+    (px, y, H, c, r) => { x.fillStyle = lg(x, 0, y, 0, y + H, '#6a4a30', '#3e2a1a'); x.fillRect(px, y, CELL, H); if ((c + r) % 2 === 0) { x.fillStyle = 'rgba(255,200,110,0.9)'; x.fillRect(px + 12, y + 10, 16, 18); x.strokeStyle = '#2a1a10'; x.lineWidth = 1.2; x.strokeRect(px + 12, y + 10, 16, 18); x.beginPath(); x.moveTo(px + 20, y + 10); x.lineTo(px + 20, y + 28); x.stroke(); } },
+    (px, ty, c, r, up) => { x.fillStyle = lg(x, 0, ty, 0, ty + CELL, '#9a7a4a', '#6a5030'); x.fillRect(px, ty, CELL, CELL); x.strokeStyle = 'rgba(60,40,20,0.4)'; x.lineWidth = 1; for (let k = 0; k < 6; k++) { x.beginPath(); x.moveTo(px + k * 7, ty); x.lineTo(px + k * 7 + 3, ty + CELL); x.stroke(); } if (!up) { x.fillStyle = '#3a2a1e'; x.fillRect(px, ty - 4, CELL, 6); } }, 0.85);
+  // zorro de piedra (kitsune) con babero rojo; si es un guardián despierto, le brillan los ojos
+  cell.fox = (x, G, i) => {
+    const T = G.T, px = Terrain.cx(T, i), py = Terrain.cy(T, i) + 14, s = (G.statues || []).find(q => hypot(q.x - px, q.y - py + 14) < 34), gl = s ? s.glow : 0, sea = seaOf(G, px, py);
+    x.save(); x.translate(px, py); shadow(x, 0, 2, 24, 0.4);
+    x.beginPath(); x.rect(-16, -14, 32, 14); fi(x, lg(x, 0, -14, 0, 0, '#a8a49a', '#6e6a62'), 1.3);
+    x.beginPath(); x.moveTo(-10, -14); x.quadraticCurveTo(-14, -40, -4, -52); x.lineTo(6, -52); x.quadraticCurveTo(14, -40, 10, -14); x.closePath(); fi(x, lg(x, -10, -52, 10, -14, '#c8c4ba', '#8a867c'), 1.4);
+    x.beginPath(); x.moveTo(-8, -50); x.lineTo(-6, -66); x.lineTo(-1, -54); x.moveTo(4, -54); x.lineTo(8, -66); x.lineTo(9, -50); x.fillStyle = '#b8b4aa'; x.fill(); x.strokeStyle = INK; x.lineWidth = 1; x.stroke();
+    x.beginPath(); x.moveTo(1, -52); x.lineTo(14, -48); x.lineTo(2, -44); x.closePath(); fi(x, '#bcb8ae', 1);
+    x.beginPath(); x.moveTo(-9, -40); x.quadraticCurveTo(0, -30, 9, -40); x.lineTo(7, -32); x.quadraticCurveTo(0, -26, -7, -32); x.closePath(); fi(x, '#c8281e', 1, 0.7);
+    stroke(x, [[10, -16], [20, -30], [16, -46]], 6, '#9a968c', 0.9);
+    for (const sd of [-1, 1]) { x.fillStyle = gl > 0.2 ? `rgba(255,${120 + gl * 100},60,${0.5 + gl * 0.5})` : INK; x.beginPath(); x.ellipse(sd * 3 + 3, -50, 1.8, 1, 0, 0, TAU); x.fill(); }
+    if (gl > 0.2) glow(x, 4, -50, 18 + gl * 10, 'rgba(255,150,60,0.7)');
+    if (sea === 'winter') { x.fillStyle = 'rgba(250,251,253,0.95)'; x.beginPath(); x.ellipse(0, -54, 10, 4, 0, 0, TAU); x.fill(); x.fillRect(-16, -16, 32, 4); }
+    x.restore();
+  };
   // hoja de loto: el camino que abre la primavera (hojas redondas que se mecen y flores rosas)
   cell.lotus = (x, G, i) => {
     const T = G.T, px = Terrain.cx(T, i), py = Terrain.cy(T, i), t = G.time;
@@ -440,7 +459,7 @@ const ArtW3 = (() => {
 /* ---------- temas de los niveles del Mundo 3: cada lugar con su luz, sus árboles y su música ---------- */
 (() => {
   const B = THEMES.wa, mk = o => Object.assign({}, B, o, { sea: Object.assign({}, B.sea, o.sea || {}) });
-  const night = (amb, fog) => ({ ambient: amb, nightA: 0.58, lightK: 0.55, bloom: 0.22, rays: 0.12, fog, fogK: 0.22, vig: '10,10,24', vigA: 0.55, grade: ['rgba(120,140,255,0.10)', 'rgba(30,20,60,0.18)'] });
+  const night = (amb, fog) => ({ ambient: amb, ambientA: 0.42, nightA: 0.58, lightK: 0.55, bloom: 0.22, rays: 0.12, fog, fogK: 0.22, vig: '10,10,24', vigA: 0.55, grade: ['rgba(120,140,255,0.10)', 'rgba(30,20,60,0.18)'] });
   THEMES.arashiyama = mk({ trees: ['bamboo'], bamboo: true, music: 'bamboo', rays: 0.55, rayRgb: [230, 255, 210], grade: ['rgba(200,255,190,0.10)', 'rgba(40,90,60,0.14)'], fogK: 0.22, fog: [236, 248, 232] });
   THEMES.himeji = mk({ trees: ['pine', 'sakura', 'pine'], music: 'himeji', rays: 0.4, slabs: true });
   THEMES.shirakawa = mk(Object.assign(night([16, 24, 52], [220, 232, 255]), { trees: ['pine'], music: 'yuki', sea: { winter: { grade: ['rgba(170,200,255,0.14)', 'rgba(20,30,70,0.2)'], ambient: [16, 24, 52] }, summer: { grade: ['rgba(255,200,140,0.12)', 'rgba(40,30,60,0.14)'], ambient: [30, 20, 40] } } }));
