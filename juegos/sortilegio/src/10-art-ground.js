@@ -274,7 +274,7 @@ const ArtGround = (() => {
     const c0 = Math.max(0, Math.floor(view.x0 / CELL) - 1), c1 = Math.min(T.cols - 1, Math.ceil(view.x1 / CELL) + 1), r0 = Math.max(0, Math.floor(view.y0 / CELL) - 1), r1 = Math.min(T.rows - 1, Math.ceil(view.y1 / CELL) + 1);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const i = r * T.cols + c, px = c * CELL + CELL / 2, py = r * CELL + CELL / 2, b = T.base[i];
-      if ((b === TT.DEEP || b === TT.SHALLOW) && T.ice[i] <= 0) {
+      if ((b === TT.DEEP || b === TT.SHALLOW) && T.ice[i] <= 0 && !th.ink) {
         const w = Math.sin(time * 1.3 + c * 0.9 + r * 1.7);
         if (w > 0.35) { x.strokeStyle = `rgba(210,240,255,${(w - 0.35) * 0.6})`; x.lineWidth = 1.5; x.beginPath(); x.moveTo(px - 10 + Math.sin(time + r) * 4, py + (rnd(i, 3) - 0.5) * 20); x.lineTo(px + 8 + Math.sin(time + r) * 4, py + (rnd(i, 3) - 0.5) * 20); x.stroke(); }
         // reflejo de luna que respira y cáusticas suaves
@@ -306,7 +306,8 @@ const ArtGround = (() => {
       } else if (b === TT.BRIDGE && th.bridge === 'bone') {
         x.fillStyle = '#1c1216'; x.fillRect(px - CELL / 2, py - CELL / 2 + 3, CELL, CELL - 6);
         for (let k = 0; k < 4; k++) { const bx = px - CELL / 2 + k * 10 + 1; x.fillStyle = k % 2 ? '#d8ccb4' : '#c4b89e'; rr2(x, bx, py - CELL / 2 + 2, 8, CELL - 4, 3); x.fill(); x.fillStyle = 'rgba(60,40,30,0.35)'; x.fillRect(bx + 5.5, py - CELL / 2 + 5, 1.5, CELL - 10); x.fillStyle = '#efe6d2'; x.beginPath(); x.arc(bx + 4, py - CELL / 2 + 3, 4.2, 0, TAU); x.arc(bx + 4, py + CELL / 2 - 3, 4.2, 0, TAU); x.fill(); }
-      } else if (b === TT.BRIDGE) {
+      } else if (b === TT.BRIDGE && th.bridge === 'ink') ArtInk.bridgeCell(x, G, i, px, py);
+      else if (b === TT.BRIDGE) {
         x.fillStyle = '#3a2614'; x.fillRect(px - CELL / 2, py - CELL / 2 + 2, CELL, CELL - 4);
         for (let k = 0; k < 4; k++) { x.fillStyle = k % 2 ? '#8a5e36' : '#9a6a3e'; x.fillRect(px - CELL / 2 + k * 10 + 0.5, py - CELL / 2 + 3, 9, CELL - 6); }
       }
@@ -329,7 +330,8 @@ const ArtGround = (() => {
         x.globalAlpha = a * 0.5; x.drawImage(blob('70,140,210', 0.7), px - CELL * 0.85 * ws + jx, py - CELL * 0.62 * ws + jy, CELL * 1.7 * ws, CELL * 1.24 * ws); x.globalAlpha = 1;
         if (rnd(i, 9) < 0.35) { const sh = 0.5 + 0.5 * Math.sin(time * 1.5 + i); x.strokeStyle = `rgba(220,240,255,${a * 0.5 * sh})`; x.lineWidth = 1.4; x.beginPath(); x.moveTo(px - 8, py - 3); x.lineTo(px + 6, py - 5); x.stroke(); }
       }
-      if (T.ice[i] > 0) {
+      if (T.ice[i] > 0 && th.ink) { if (!(T.sea[i] === 4 && (b === TT.DEEP || b === TT.SHALLOW) && (!T.base0 || T.base0[i] === b))) ArtInk.iceCell(x, i, px, py, Math.min(0.95, T.ice[i] / 1.5), time); }
+      else if (T.ice[i] > 0) {
         const a = Math.min(0.95, T.ice[i] / 1.5), jx = (rnd(i, 44) - 0.5) * 12, jy = (rnd(i, 45) - 0.5) * 9, ws = 1 + rnd(i, 46) * 0.25;
         x.globalAlpha = a * 0.55; x.drawImage(blob('205,240,255', 0.9), px - CELL * ws + jx, py - CELL * 0.9 * ws + jy, CELL * 2 * ws, CELL * 1.8 * ws);
         // placa de hielo: borde nítido con grietas y un brillo en diagonal (se lee como hielo, no como niebla)
@@ -362,7 +364,7 @@ const ArtGround = (() => {
     const c0 = Math.max(0, Math.floor(view.x0 / CELL) - 1), c1 = Math.min(T.cols - 1, Math.ceil(view.x1 / CELL) + 1), r0 = Math.max(0, Math.floor(view.y0 / CELL) - 1), r1 = Math.min(T.rows - 1, Math.ceil(view.y1 / CELL) + 3);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const i = r * T.cols + c;
-      if (T.base[i] === TT.BUSH) { const th = THEMES[G.A.theme] || THEMES.paramo; list.push({ y: r * CELL + CELL * 0.7, draw: x => (th.tree === 'jungle' ? jungle(x, G, i) : th.tree === 'bush' ? shrub(x, G, i) : th.tree === 'gold' || th.tree === 'dead' ? ArtBeast.tree(x, G, i, th.tree) : frailejon(x, G, i)) }); }
+      if (T.base[i] === TT.BUSH) { const th = THEMES[G.A.theme] || THEMES.paramo; list.push({ y: r * CELL + CELL * 0.7, draw: x => th.ink ? ArtInk.tree(x, G, i) : (th.tree === 'jungle' ? jungle(x, G, i) : th.tree === 'bush' ? shrub(x, G, i) : th.tree === 'gold' || th.tree === 'dead' ? ArtBeast.tree(x, G, i, th.tree) : frailejon(x, G, i)) }); }
       if (T.wall[i] > 0) list.push({ y: r * CELL + CELL - 2, draw: x => wall(x, G, i) });
       if (T.fire[i] > 0) list.push({ y: r * CELL + CELL * 0.62, draw: x => flames(x, G, i) });
     }

@@ -87,7 +87,7 @@ const SC = {
     { name: '2 humanos blancos (bucle real)', kind: 'frame', secs: 20 * S, keys: [...K1, ...K2], setup: `VTO.Game.setArena('cartagena'); VTO.Game.start('targets', 2); VTO.UI.show(null, false);` },
     { name: '1 humano escuela (bucle real)', kind: 'frame', secs: 15 * S, keys: K1, setup: `VTO.Game.setArena('cocora'); VTO.Game.start('school', 1); VTO.UI.show(null, false);` },
   ] },
-  sortilegio: { ready: () => typeof Game !== 'undefined' && !!Game.G && typeof CHARS !== 'undefined', root: 'Game.G', ign: /\.G$|^\.cam|^\.net$/, scenes: [ // G.net (nuevo) es false sin conexión
+  sortilegio: { ready: () => typeof Game !== 'undefined' && !!Game.G && typeof CHARS !== 'undefined', root: 'Game.G', ign: /\.G$|^\.cam|^\.net$|^\.sea$|^\.T\.(snow|leaf|sea|base0)$/, scenes: [ // G.net (nuevo) es false sin conexión · G.sea y T.snow/leaf/sea/base0 son del Mundo 3 (vacíos fuera de él)
     ...['duel', 'tejo', 'hunt', 'altar'].flatMap((m, i) => ['paramo', 'rio'].map((a, j) => ({ name: `máquinas ${m} ${a}`, kind: 'fast', secs: 70 * S, step: 'Game.advance(0.5)', dt: 0.5,
       setup: `const C = Object.keys(CHARS); Game.start('${m}', 0, { chars: [C[${i}], C[${i + j + 3}]], arena: '${a}', level: 2 }); UI.show(null, false);` }))),
     { name: '2 humanos duelo (bucle real)', kind: 'frame', secs: 25 * S, keys: [...K1, ...K2], setup: `const C = Object.keys(CHARS); Game.start('duel', 2, { chars: [C[0], C[1]], arena: 'paramo' }); UI.show(null, false);` },

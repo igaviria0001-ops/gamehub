@@ -143,13 +143,14 @@ const Arena = {
     G.T = Terrain.make(A.W, A.H); A.paint(G.T);
     G.sources = A.sources.map(s => Object.assign({ cd: 0, glow: 0 }, s));
     // 2.0: una fuente de LUZ y otra de SOMBRA, en espejo; se intercambian cada ronda (para que a nadie le quede siempre la misma cerca)
-    if (!A.extra) { const T = G.T, cx = A.W * 0.37, cy = A.H * 0.27; let best = null, bd = 1e12;
+    if (!A.extra && !A.noExtra) { const T = G.T, cx = A.W * 0.37, cy = A.H * 0.27; let best = null, bd = 1e12;
       for (let i = 0; i < T.n; i++) { const b = T.base[i]; if (b !== TT.GRASS && b !== TT.DIRT && b !== TT.STONE) continue; const px = Terrain.cx(T, i), py = Terrain.cy(T, i); if (px < 110 || py < 110 || px > A.W - 110 || py > A.H - 110) continue;
         if (A.sources.some(q => hypot(q.x - px, q.y - py) < 190) || A.spawns.some(q => hypot(q[0] - px, q[1] - py) < 210) || hypot(A.W - 2 * px, A.H - 2 * py) < 260) continue;
         let ok = true; Terrain.forCircle(T, px, py, 50, j => { const bj = T.base[j]; if (bj !== TT.GRASS && bj !== TT.DIRT && bj !== TT.STONE) ok = false; }); if (!ok) continue;
         const d = dist2(px, py, cx, cy); if (d < bd) { bd = d; best = [px, py]; } }
       A.extra = best || false; }
-    if (A.extra) { const [ex, ey] = A.extra, sw = (G.round || 0) % 2 === 1; G.sources.push({ x: ex, y: ey, el: sw ? 'light' : 'shadow', cd: 0, glow: 0 }, { x: A.W - ex, y: A.H - ey, el: sw ? 'shadow' : 'light', cd: 0, glow: 0 }); }
+    if (A.extra && !A.noExtra) { const [ex, ey] = A.extra, sw = (G.round || 0) % 2 === 1; G.sources.push({ x: ex, y: ey, el: sw ? 'light' : 'shadow', cd: 0, glow: 0 }, { x: A.W - ex, y: A.H - ey, el: sw ? 'shadow' : 'light', cd: 0, glow: 0 }); }
+    G.T.base0 = G.T.base.slice();
     G.T.ver++;
   },
   // un punto seguro (pisable) cerca de x, y

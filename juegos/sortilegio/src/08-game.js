@@ -69,6 +69,7 @@ const Game = (() => {
     G.units = G.mages.slice();
     G.usePresage = !G.attract && G.mode === 'duel' && Store.get('presage', true) && G.round > 1;
     Events.setup(G);
+    Seasons.setup(G, G.mode === 'camp' ? Camp.LEVELS[G.campLevel].seasons : G.A.seasons);
     Modes.setup(G);
     if (G.mode === 'camp') Camp.setup(G);
     if (G.mode === 'school') Progress.schoolSetup(G);
@@ -123,6 +124,7 @@ const Game = (() => {
     Terrain.update(G, dt);
     for (const s of G.sources) { if (s.cd > 0) s.cd -= dt; }
     Events.update(G, dt);
+    if (G.sea) Seasons.update(G, dt);
     Modes.update(G, dt);
     handleEvents();
   }
@@ -169,7 +171,7 @@ const Game = (() => {
       if (e.type === 'quake') cam.shake = Math.max(cam.shake, 12);
       if (e.type === 'hurt' && !e.dot && e.dmg >= 15) cam.shake = Math.max(cam.shake, 6);
       if (e.type === 'hurt' && !e.dot && !G.attract && e.unit && e.unit.isMage && e.dmg >= 12) G.hitStop = Math.max(G.hitStop || 0, e.dmg >= 22 ? 0.085 : 0.045);
-      if (e.type === 'arenaEvent' && !G.attract && e.ev !== 'breath') G.pops.push({ x: 0, y: 0, text: { mist: '¡Baja la neblina!', storm: '¡Tormenta en el río!', eruption: '¡Erupción!', guardians: '¡Despiertan los guardianes!', flood: '¡Crece el caño!', breath: '' }[e.ev], t: 0, color: '#ffd9a0', big: true, screen: true });
+      if (e.type === 'arenaEvent' && !G.attract && e.ev !== 'breath') G.pops.push({ x: 0, y: 0, text: { mist: '¡Baja la neblina!', storm: '¡Tormenta en el río!', eruption: '¡Erupción!', guardians: '¡Despiertan los guardianes!', flood: '¡Crece el caño!', breath: '' , tide: '¡Sube la marea!' }[e.ev], t: 0, color: '#ffd9a0', big: true, screen: true });
       if (e.type === 'mist') G.pops.push({ x: G.T.W / 2, y: G.T.H / 2, text: '¡La Bruma se cierra!', t: 0, color: '#c9b8ff', big: true, screen: true });
       if (e.type === 'embReady' && G.mages[e.who] && !G.mages[e.who].ctrl && (!netOn() || NetPlay.mine.includes(e.who))) G.pops.push({ x: e.x, y: e.y - 80, text: '¡Embrujo listo!', t: 0, color: '#ffe9a0', small: true });
   }

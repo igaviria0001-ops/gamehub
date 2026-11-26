@@ -20,6 +20,7 @@ class Unit {
     if (src.el === 'fire' || src.el === 'lava') dmg *= this.fireRes;
     if (this.st.frozen > 0 && !src.dot && src.el !== 'water') { dmg *= 1.5; this.st.frozen = 0; G.events.push({ type: 'shatter', x: this.x, y: this.y }); Combos.add(G, src.by, 'rompehielo', this); }
     if (this.dmgMul) dmg *= this.dmgMul;
+    if (G.sea && src.el) dmg *= Seasons.mult(G, this.x, this.y, src.el); // Mundo 3: la estación del sitio donde pega
     { const bm = src.by >= 0 ? G.mages[src.by] : null; if (bm && bm.dmgOut && bm !== this) dmg *= bm.dmgOut; } // la máquina en niveles bajos pega más suave
     // maleficio: el siguiente golpe (no el daño continuo) duele más, y se gasta
     if (this.st.hex > 0 && !src.dot) { dmg *= src.by >= 0 && G.mages[src.by] && G.mages[src.by].tr.hexDmg || HEX_MUL; this.st.hex = 0; G.fx.push({ type: 'flashRing', x: this.x, y: this.y - 20, el: 'shadow', r: 60 }); }
@@ -173,6 +174,7 @@ class Mage extends Unit {
       else if (b === TT.SHALLOW && T.ice[ci] <= 0) { spd *= this.tr.waterSpeed || 0.86; this.soak(G, 1.2); }
       else if (T.wet[ci] > 0) this.soak(G, 0.6);
       if (T.mud[ci] > 0) { spd *= this.tr.waterSpeed ? 0.8 : 0.45; noDash = true; }
+      if (T.snow[ci] && !this.tr.iceWalk) spd *= 0.88; // nieve honda fuera de los caminos
       if (T.vine[ci] > 0 && !G.ally(T.vineO[ci], this)) { spd *= 0.5; this.hurt(G, 6 * dt, { by: T.vineO[ci], el: 'plant', dot: 1 }); }
       if (T.fire[ci] > 0 && !G.ally(T.fireO[ci], this)) { this.hurt(G, 6 * dt, { by: T.fireO[ci], el: 'fire', dot: 1 }); this.burn(G, 1.0, T.fireO[ci]); }
       if (T.elec[ci] > 0 && !(this.tr.elecImmune && T.elecO[ci] === this.idx) && !(G.coop && G.ally(T.elecO[ci], this))) { this.hurt(G, 14 * dt, { by: T.elecO[ci], el: 'bolt', dot: 1 }); if (this.st.wet > 0) this.slow(0.2, 0.6); }

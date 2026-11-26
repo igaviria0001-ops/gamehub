@@ -183,6 +183,7 @@ const Camp = (() => {
     G.arena = 'camp-' + L.id; ArtGround.cache[G.arena] = null; G.T = Terrain.make(L.W, L.H); G.T.bridgeUnder = L.theme === 'cielo' || L.theme === 'infierno' ? TT.CHASM : TT.DEEP; G.T.noBurnBridge = L.theme === 'cielo'; L.paint(G.T);
     G.sources = L.sources.map(s => Object.assign({ cd: 0, glow: 0 }, s));
     for (const s of G.sources) Terrain.forCircle(G.T, s.x, s.y, 34, i => { if (G.T.base[i] !== TT.DEEP) G.T.base[i] = TT.STONE; });
+    G.T.base0 = G.T.base.slice();
     G.T.ver++;
   }
   function setup(G) {
@@ -391,7 +392,7 @@ const Camp = (() => {
     if (o.t === 'obelisk' && o.u.alive) { o.sp -= dt; if (o.sp <= 0) { o.sp = 12; if (G.units.filter(u => u instanceof Creature && u.alive).length < 4) wave(G, ['diablillo'], [[o.x + 60, o.y + 30]]); } }
     if ((o.t === 'door' || o.t === 'bridge') && !o.open && o.cond(G)) {
       o.open = true; for (const i of o.cells) { T.base[i] = o.t === 'door' ? TT.STONE : TT.BRIDGE; G.fx.push({ type: o.t === 'door' ? 'rubble' : 'rise', x: Terrain.cx(T, i), y: Terrain.cy(T, i), soft: 1, el: o.under ? 'light' : undefined }); }
-      T.ver++; ArtGround.cache[G.arena] = null; G.events.push({ type: 'doorOpen', x: Terrain.cx(T, o.cells[0]), y: Terrain.cy(T, o.cells[0]) }); G.pops.push({ x: Terrain.cx(T, o.cells[0]), y: Terrain.cy(T, o.cells[0]) - 50, text: o.t === 'door' ? '¡Se abrió!' : o.under ? '¡Puente de luz!' : '¡Bajó el puente!', t: 0, color: '#9fe07a', big: true });
+      T.ver++; ArtGround.cache[G.arena] = null; if (ArtInk.on(G)) { T.base0 = T.base.slice(); ArtInk.invalidate(G); } G.events.push({ type: 'doorOpen', x: Terrain.cx(T, o.cells[0]), y: Terrain.cy(T, o.cells[0]) }); G.pops.push({ x: Terrain.cx(T, o.cells[0]), y: Terrain.cy(T, o.cells[0]) - 50, text: o.t === 'door' ? '¡Se abrió!' : o.under ? '¡Puente de luz!' : '¡Bajó el puente!', t: 0, color: '#9fe07a', big: true });
     }
     if (o.t === 'sprout' && !o.grown) {
       if (o.wetT > 0) o.wetT -= dt; for (const s of G.spells) if (!s.dead && (s.el === 'water' || s.t === 'wave' || s.t === 'storm') && hypot(s.x + (s.t === 'wave' ? Math.cos(s.ang) * s.d : 0) - o.x, s.y + (s.t === 'wave' ? Math.sin(s.ang) * s.d : 0) - o.y) < 60) o.wetT = 9;

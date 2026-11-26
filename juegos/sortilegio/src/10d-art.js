@@ -52,17 +52,21 @@ const Art = (() => {
   function render(G, ctx, cam, sw, sh, dpr) {
     const z = cam.z, now = performance.now() / 1000, dt = Math.min(0.05, now - lastT); lastT = now;
     stepFireflies(G, dt);
-    const th = THEMES[G.A.theme] || THEMES.paramo;
+    const ink = ArtInk.on(G), th = ink ? ArtInk.theme(G, cam) : THEMES[G.A.theme] || THEMES.paramo;
     const W = (x, y) => [sw / 2 + (x - cam.x) * z + cam.sx, sh / 2 + (y - cam.y) * z + cam.sy];
     const view = { x0: cam.x - sw / 2 / z - 60, x1: cam.x + sw / 2 / z + 60, y0: cam.y - sh / 2 / z - 80, y1: cam.y + sh / 2 / z + 80 };
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#05060e'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     const wt = () => ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (sw / 2 - cam.x * z + cam.sx), dpr * (sh / 2 - cam.y * z + cam.sy));
-    if (th.sky) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); Post.backdrop(ctx, G, cam, sw, sh, th); }
+    if (ink) ArtInk.backdrop(ctx, G, cam, sw, sh, dpr, wt);
+    else if (th.sky) { ctx.setTransform(dpr, 0, 0, dpr, 0, 0); Post.backdrop(ctx, G, cam, sw, sh, th); }
     wt();
-    const img = ArtGround.prerender(G); ctx.imageSmoothingEnabled = true; ctx.drawImage(img, 0, 0, G.T.W, G.T.H);
-    Post.water(ctx, G, cam, sw, sh, dpr, img); wt();
-    ArtGround.overlays(ctx, G, view, G.time);
-    Post.lava(ctx, G, cam, sw, sh, dpr, img); wt();
+    if (ink) { ctx.imageSmoothingEnabled = true; ArtInk.ground(ctx, G, view, G.time); ArtGround.overlays(ctx, G, view, G.time); ArtInk.worldBurst(ctx, G, dt); }
+    else {
+      const img = ArtGround.prerender(G); ctx.imageSmoothingEnabled = true; ctx.drawImage(img, 0, 0, G.T.W, G.T.H);
+      Post.water(ctx, G, cam, sw, sh, dpr, img); wt();
+      ArtGround.overlays(ctx, G, view, G.time);
+      Post.lava(ctx, G, cam, sw, sh, dpr, img); wt();
+    }
     Modes.drawUnder(ctx, G);
     Cine.under(ctx, G);
     ArtSpells.under(ctx, G); ArtSpells2.under(ctx, G); ArtEarth.under(ctx, G); ArtEpic.under(ctx, G);
@@ -75,6 +79,7 @@ const Art = (() => {
     ArtGround.tallItems(G, view, list);
     Modes.drawRunes(G, list);
     if (G.mode === 'camp') Camp.draw(ctx, G, list);
+    if (G.sea) ArtInk.items(G, list);
     ArtSpells.items(G, list); ArtSpells2.items(G, list); ArtEarth.items(G, list);
     list.sort((a, b) => a.y - b.y);
     Post.shadows(ctx, G, th);
@@ -99,10 +104,10 @@ const Art = (() => {
     for (const l of L) { if (!l.col) continue; if (l.x < view.x0 - l.r || l.x > view.x1 + l.r || l.y < view.y0 - l.r || l.y > view.y1 + l.r) continue; ctx.globalAlpha = l.col * Math.min(1, l.a) * (th.lightK == null ? 1 : th.lightK); ctx.drawImage(colSpr(l.rgb), l.x - l.r, l.y - l.r, l.r * 2, l.r * 2); }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     // ---- viñeta: bordes oscuros que centran la mirada ----
-    if (!vig || vig.w !== sw || vig.h !== sh) { vig = document.createElement('canvas'); vig.w = sw; vig.h = sh; vig.width = 320; vig.height = Math.max(1, Math.round(320 * sh / sw)); const vx = vig.getContext('2d'), g = vx.createRadialGradient(160, vig.height / 2, vig.height * 0.35, 160, vig.height / 2, 200); g.addColorStop(0, 'rgba(4,3,14,0)'); g.addColorStop(1, 'rgba(4,3,14,0.55)'); vx.fillStyle = g; vx.fillRect(0, 0, 320, vig.height); }
+    if (!vig || vig.w !== sw || vig.h !== sh || vig.k !== (th.vig || '')) { vig = document.createElement("canvas"); vig.w = sw; vig.h = sh; vig.k = th.vig || ""; vig.width = 320; vig.height = Math.max(1, Math.round(320 * sh / sw)); const vx = vig.getContext('2d'), g = vx.createRadialGradient(160, vig.height / 2, vig.height * 0.35, 160, vig.height / 2, 200); g.addColorStop(0, `rgba(${th.vig || '4,3,14'},0)`); g.addColorStop(1, `rgba(${th.vig || '4,3,14'},${th.vigA || 0.55})`); vx.fillStyle = g; vx.fillRect(0, 0, 320, vig.height); }
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(vig, 0, 0, ctx.canvas.width, ctx.canvas.height);
     // ---- acabado pro: rayos de luna, motas en primer plano, color y resplandor ----
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); Post.rays(ctx, G, cam, sw, sh, th); Post.bokeh(ctx, G, cam, sw, sh, th); Post.grade(ctx, th, sw, sh); Post.bloom(ctx, th.bloom == null ? 1 : th.bloom); wt();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); Post.rays(ctx, G, cam, sw, sh, th); Post.bokeh(ctx, G, cam, sw, sh, th); Post.grade(ctx, th, sw, sh); Post.bloom(ctx, th.bloom == null ? 1 : th.bloom); if (ink) { ArtInk.particles(ctx, G, cam, sw, sh, dt); ArtInk.grain(ctx, sw, sh, dpr); } wt();
     // ---- lluvia ----
     if (G.rain) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.strokeStyle = 'rgba(170,200,255,0.35)'; ctx.lineWidth = 1.2; ctx.beginPath();

@@ -104,7 +104,7 @@ const NetGame = (() => {
   function again(level) { NetPlay.again(c => Object.assign({}, c, level !== undefined ? { level } : {})); }
 
   /* ---------- terreno ---------- */
-  const SY = Terrain.SYNC, INT = new Set(['base', 'fireO', 'vineO', 'elecO', 'pitO', 'crys']);
+  const SY = Terrain.SYNC, INT = new Set(['base', 'fireO', 'vineO', 'elecO', 'pitO', 'crys', 'sea', 'snow']);
   let shadow = null, tdAcc = 0, lastSimT = 0, kfSeed = null, tdN = 0, tdLast = 0, kfAsk = 0, kfMiss = 0, kfSent = 0;
   function copyT(T) { const S = { n: T.n, cols: T.cols, bridgeUnder: T.bridgeUnder, ver: 0 }; for (const f of SY) S[f] = T[f].slice(); return S; }
   function keyframe(G) {

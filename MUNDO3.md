@@ -45,3 +45,26 @@ Metas de dificultad (jugador normal + compañero, 10 intentos): c19–c20 ganar 
   (tamaño, palanca flotante o fija, vibración; guardado en `touchCfg`). Prueba nueva `juegos/sortilegio/test/stick.js`
   (dedo perdido, 4 dedos, vuelta rápida, segundo dedo, palanca fija, tamaños; 844×390 y 587×262): OK. También pasan
   `touch.js`, `boot.js`, `test/netsrt.js`; `offline-eq sortilegio` idéntico salvo el número de versión en la portada.
+- **26 nov ~15:30** — Fase 3 (en curso), **motor de estaciones y estilo tinta**:
+  - `03-terrain.js`: celdas nuevas `sea` (estación: 0 ninguna, 1 primavera, 2 verano, 3 otoño, 4 invierno), `snow`, `leaf`
+    (también en `Terrain.SYNC`, así viajan en línea). Factores por estación `SEA_FIRE/SEA_WET/SEA_VINE` (×1 fuera del
+    Mundo 3: nada cambia). La hojarasca arde y el fuego corre ×3 sobre ella; la nieve se derrite como el hielo.
+  - `03c-seasons.js` (`Seasons`): paneles con estación, toriis (se cambian golpeando un PILAR con planta/fuego/viento/agua
+    o cargando una mano a su lado; la LUZ limpia los manchados), rotación sola en duelo (`rotate`, aviso 3 s antes),
+    el invierno mantiene el agua congelada, `Seasons.mult` (+20 % / −15 % según la estación donde pega, en `Unit.hurt`).
+    Se arma en `newRound` con `G.A.seasons` (duelo) o `L.seasons` (campaña).
+  - `10i-art-ink.js` (`ArtInk`): suelo por estación pintado una vez (33–90 ms por estación en PC, se guarda por
+    escenario): papel de fibra, aguadas, orillas redondeadas (máscara desenfocada), contornos de pincel en tres grosores,
+    doble y triple línea de orilla, hierba de trazos, pétalos, hojarasca, nieve con sombras azules, hielo con grietas,
+    rocas sumi-e (sprites por estación), pilas de piedra para las fuentes. Cada cuadro: paneles según `T.sea` (el remoto
+    en línea ve lo mismo) con la PINCELADA que repinta (frente diagonal ondulado, 0,9 s), árboles por estación (pino,
+    cerezo, arce, bambú) que cambian cuando pasa la pincelada (`seenAt`), toriis bermellón (el gran torii ×1,4 con ondas
+    en el agua), puentes bermellón, nubes doradas (kasumi) entre paneles, lo que cambia el suelo (marea, vacío del
+    Borrón), partículas de la estación, mesa y rodillos del pergamino alrededor (solo si se ven), grano de papel (alta).
+    Temas `THEMES.wa` / `THEMES.miyajima` con luz y color por estación.
+  - `03d-arenas3.js`: primer escenario del Mundo 3, **Itsukushima** (`miyajima`, aún no está en `ARENA_ORDER`): canal
+    del mar en diagonal, gran torii en el agua baja, dos puentes, 8 fuentes (sin las extra de luz/sombra) y la **marea**
+    (`07b-events.js`: la orilla se inunda hasta dos celdas; `T.base0` guarda el suelo original).
+  - Pruebas: `test/ink.js` (capturas de las 4 estaciones y lo que tarda pintar cada una), `test/perfink.js` (cuadros por
+    segundo contra un duelo normal: ligera más rápido, media ~15 % más lento en la nube sin tarjeta gráfica).
+    `offline-eq sortilegio` idéntico (se ignoran los campos nuevos, vacíos fuera del Mundo 3); `test/netsrt.js` OK.
