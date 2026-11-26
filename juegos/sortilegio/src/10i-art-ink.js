@@ -545,6 +545,7 @@ const ArtInk = (() => {
     autumn: { grade: ['rgba(255,170,90,0.18)', 'rgba(120,60,40,0.12)'], fog: [255, 236, 210], rayRgb: [255, 210, 160] },
     winter: { grade: ['rgba(200,220,255,0.16)', 'rgba(70,90,150,0.16)'], fog: [236, 244, 255], rays: 0.3, rayRgb: [230, 240, 255], ambient: [40, 50, 80], ambientA: 0.1, vig: '40,50,70' },
   };
-  THEMES.miyajima = Object.assign({}, base, { trees: ['pine', 'sakura', 'pine', 'maple'] });
+  base.music = 'wa';
+  THEMES.miyajima = Object.assign({}, base, { trees: ['pine', 'sakura', 'pine', 'maple'], music: 'miyajima' });
   THEMES.wa = base;
 })();

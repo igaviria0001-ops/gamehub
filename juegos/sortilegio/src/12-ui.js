@@ -231,6 +231,7 @@ const UI = (() => {
     fillKeys();
     seg('o-sound', Sound.on ? 1 : 0, v => Sound.setOn(v === '1'));
     seg('o-music', Music.on ? 1 : 0, v => Music.setOn(v === '1'));
+    seg('o-voice', !Voice.on ? '0' : String([0.45, 0.8, 1].reduce((a, b) => Math.abs(b - Voice.vol) < Math.abs(a - Voice.vol) ? b : a)), v => { if (v === '0') Voice.setOn(false); else { Voice.setVol(+v); Voice.setOn(true); Voice.say('sumi', '¡Así me oyes!', { sub: false }); } });
     seg('o-quality', Game.quality, v => Game.setQuality(v, true));
     seg('o-fsauto', FS.auto ? 1 : 0, v => { FS.auto = v === '1'; }); fsLabel();
   }

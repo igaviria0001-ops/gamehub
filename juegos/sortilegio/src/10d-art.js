@@ -149,6 +149,7 @@ const Art = (() => {
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     Cine.screen(ctx, G, sw, sh, W);
+    Voice.drawSubs(ctx, sw, sh, dt);
     HUD.draw(ctx, G, sw, sh);
   }
   // espantapájaros de la Escuela

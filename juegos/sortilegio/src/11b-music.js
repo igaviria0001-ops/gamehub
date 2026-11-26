@@ -16,6 +16,9 @@ const Music = (() => {
   };
   const MELC = [[[0, 69, 2], [2, 72, 1], [3, 74, 1], [4, 76, 2], [6, 74, 2]], [[0, 72, 2], [2, 71, 1], [3, 67, 1], [4, 71, 4]], [[0, 69, 1], [1, 72, 1], [2, 74, 2], [4, 72, 2], [6, 69, 2]], [[0, 68, 4], [4, 71, 2], [6, 76, 2]], [[0, 76, 2], [2, 74, 1], [3, 72, 1], [4, 74, 2], [6, 72, 2]], [[0, 71, 2], [2, 67, 2], [4, 71, 2], [6, 74, 2]], [[0, 72, 1], [1, 71, 1], [2, 69, 2], [4, 65, 2], [6, 69, 2]], [[0, 68, 2], [2, 71, 2], [4, 69, 4]]];
   let sty = 'bambuco', wantSty = 'bambuco';
+  // estilos que se agregan desde otros archivos (Mundo 2 y Mundo 3): cada uno trae su paso, su largo y su tempo
+  const EXT = {}, listeners = [];
+  const api = () => ({ ac, out, noise: noiseBuf, mtof, step, level, E8 });
   function tom(t, f, vol) { const o = ac.createOscillator(); o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.55, t + 0.15); const g = ac.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2); o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.22); nz(t, f * 6, 1.5, 0.03, vol * 0.3, 'bandpass'); }
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
   const CH = [[64, 67, 71, 76], [62, 66, 69, 74], [64, 67, 72, 76], [63, 66, 69, 71]];
@@ -60,7 +63,8 @@ const Music = (() => {
     if (!ac) return;
     level += Math.sign(want - level) * (want !== level ? 1 : 0); // cambia en el siguiente paso
     while (next < ac.currentTime + 0.12) {
-      if (step % STY[sty].n === 0 && wantSty !== sty) { sty = wantSty; step = 0; }
+      if (step % (EXT[sty] || STY[sty]).n === 0 && wantSty !== sty) { sty = wantSty; step = 0; }
+      const X = EXT[sty]; if (X) { E8 = X.e8; const k = X.step(api(), next, step, level) || 1; for (const f of listeners) f(next, step, sty, level); step++; next += E8 * k * (level >= 3 ? 0.94 : 1); continue; }
       const S = STY[sty]; E8 = S.e8;
       const bar = Math.floor(step / S.n), e = step % S.n, ch = bar % 4, t = next, L = level, C = S.CH || CH, Bs = S.BASS || BASS, tr = S.tr || 0;
       if (sty === 'cumbia') {
@@ -97,8 +101,11 @@ const Music = (() => {
     }
   }
   function setLevel(n) { want = clamp(n, 0, 3); }
-  function setStyle(theme) { wantSty = { rio: 'cumbia', cano: 'cumbia', volcan: 'volcan', ciudad: 'currulao', cielo: 'currulao', infierno: 'volcan' }[theme] || 'bambuco'; }
+  function setStyle(theme) { const th = typeof THEMES !== 'undefined' && THEMES[theme]; wantSty = th && th.music && EXT[th.music] ? th.music : EXT[theme] ? theme : { rio: 'cumbia', cano: 'cumbia', volcan: 'volcan', ciudad: 'currulao', cielo: 'currulao', infierno: 'volcan' }[theme] || 'bambuco'; }
+  function addStyle(name, def) { EXT[name] = def; }
+  // para que un jefe ataque al ritmo: se avisa cada paso que se agenda (con su hora exacta en el reloj del audio)
+  function listen(f) { listeners.push(f); return () => { const k = listeners.indexOf(f); if (k >= 0) listeners.splice(k, 1); }; }
   function setOn(v) { on = !!v; Store.set('music', on); if (out) out.gain.value = on ? 0.42 : 0; }
   function duck(v) { if (out && out.lp) out.lp.frequency.setTargetAtTime(v ? 600 : 9000, ac.currentTime, 0.2); }
-  return { start, setLevel, setStyle, setOn, duck, get on() { return on; } };
+  return { start, setLevel, setStyle, setOn, duck, addStyle, listen, get on() { return on; }, get style() { return sty; }, get now() { return ac ? ac.currentTime : 0; } };
 })();

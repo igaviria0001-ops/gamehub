@@ -125,7 +125,9 @@ const Sound = (() => {
       case 'vs': noise(900, 0.6, 0.5, 0.18, 'bandpass', 3, 0, 0.05); tone(70, 1.1, 0.42, 'sine', 32, 0.42); noise(500, 0.5, 1, 0.28, 'lowpass', 0.3, 0.42); chime([392, 523, 784, 1047], 0.08, 0.07, 'triangle'); break;
     }
   }
+  // la voz de un mago (en línea también: cada aparato la arma con los eventos que llegan)
   function onEvent(G, e) {
+    if (typeof Voice !== 'undefined' && Voice.on && e.who >= 0 && G && !G.attract) { const m = G.mages && G.mages[e.who], c = m && m.cid; if (c) { if (e.type === 'cast' && e.fusion && !e.gran && Math.random() < 0.45) Voice.shout(c, 'fusion'); else if (e.type === 'granStart') Voice.shout(c, 'gran'); else if (e.type === 'down') Voice.shout(c, 'fall'); else if (e.type === 'matchWin') Voice.shout(c, 'win'); } }
     if (!ac || !on) return;
     switch (e.type) {
       case 'cast': if (e.fusion === 'wind+earth') play('sandstorm'); if (e.fusion) play('fusion'); else cast(e.el, e.level === 2 ? 1.6 : 1); if (e.fusion) cast(e.fusion.split('+')[1], 1.3); break;
@@ -140,5 +142,5 @@ const Sound = (() => {
       case 'fall': play('fall'); break; case 'counter': play('counter'); break; case 'ram': play('ram'); break; case 'rune': play('rune'); break; case 'runeSpawn': play('runeSpawn'); break; case 'shieldHit': play('shieldHit'); break; case 'arenaEvent': play('mist'); break; case 'statueShot': cast('earth', 1.4); break; case 'bushGone': play('bushGone'); break; case 'quake': play('boom'); break; case 'intro': play('vs'); break; case 'retarget': if (!G.attract) play('retarget'); break; case 'ray': play('ray', e); break; case 'blink': play('blink'); break; case 'mirage': play('mirage'); break; case 'decoyPop': play('decoyPop'); break; case 'wispGo': play('wispGo'); break; case 'bossWarn': play('bossWarn'); break; case 'bossExposed': play('bossExposed'); break;
     }
   }
-  return { init, play, onEvent, setOn, get on() { return on; }, get ac() { return ac; } };
+  return { init, play, onEvent, setOn, get on() { return on; }, get ac() { return ac; }, get master() { return master; } };
 })();
