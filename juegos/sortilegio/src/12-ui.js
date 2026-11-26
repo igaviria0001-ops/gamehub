@@ -222,6 +222,10 @@ const UI = (() => {
   }
   function fillOptions() {
     seg('o-presage', Store.get('presage', true) ? 1 : 0, v => Store.set('presage', v === '1'));
+    $$('.tctl').forEach(e => { e.style.display = Touch.enabled ? '' : 'none'; });
+    seg('o-tsize', Touch.cfg.size, v => Touch.setCfg('size', v));
+    seg('o-tfix', Touch.cfg.fixed ? 1 : 0, v => Touch.setCfg('fixed', v === '1'));
+    seg('o-tvib', Touch.cfg.vib ? 1 : 0, v => Touch.setCfg('vib', v === '1'));
     seg('o-lvl2', Game.cfg.level, v => { Game.cfg.level = +v; Store.set('cfg', Game.cfg); });
     const adv = Store.get('adv', [0, 0]); for (let i = 0; i < 2; i++) seg('o-adv' + i, adv[i] || 0, v => { const A = Store.get('adv', [0, 0]).slice(); A[i] = +v; Store.set('adv', A); });
     fillKeys();
