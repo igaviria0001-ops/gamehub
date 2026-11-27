@@ -422,5 +422,5 @@ const ArtW3B2 = (() => {
     if (u.flash > 0) { x.globalCompositeOperation = 'lighter'; x.fillStyle = `rgba(255,250,235,${u.flash * 4})`; x.beginPath(); x.arc(0, -20, 22, 0, TAU); x.fill(); }
     x.restore();
   }
-  return { kitsune, god, orochi, head, borron, copy, jar, FUR, SCALES, TIGER, GRAIN, tex, flame, curl };
+  return { kitsune, god, orochi, head, borron, copy, jar, FUR, SCALES, TIGER, GRAIN, OSC, tex, flame, curl, neck, cloud, glow };
 })();

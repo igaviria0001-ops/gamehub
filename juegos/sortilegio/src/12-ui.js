@@ -253,12 +253,12 @@ const UI = (() => {
     if (v) show('pause', false); else show(null, false);
   }
   // en línea: arranca la partida que mandó el anfitrión (2 a 4 magos)
-  function netStart(c) { Sound.init(); paused = false; Game.G.paused = false; stack = []; Copa.on = false; if (c.mode !== 'camp') netCamp = null; Game.start(c.mode, c.chars.length, { net: true, chars: c.chars.slice(), skins: c.skins.slice(), arena: c.arena, wins: c.wins, level: c.mode === 'camp' ? c.level : 2 }); show(null, false); }
+  function netStart(c) { Sound.init(); paused = false; Game.G.paused = false; stack = []; Copa.on = false; if (c.mode !== 'camp') netCamp = null; Game.start(c.mode, c.chars.length, { net: true, chars: c.chars.slice(), skins: c.skins.slice(), arena: c.arena, wins: c.wins, level: c.mode === 'camp' ? c.level : 2 }); show(null, false); introFilm(); }
   // en línea, campaña en equipo: el anfitrión elige el nivel en su pantalla de la Travesía (los que él tiene abiertos)
   let netCamp = null, netNextLv = -1;
   function netCampPick(c) {
     netCamp = c; Sound.init(); paused = false; stack = [];
-    if (NetPlay.isHost) { const L = Camp.LEVELS, first = L.findIndex((Lv, i) => Camp.unlocked(i) && !Camp.best(Lv.id)); campWorld = first >= 10 ? 2 : 1; show('camp', false); }
+    if (NetPlay.isHost) { const L = Camp.LEVELS, first = L.findIndex((Lv, i) => Camp.unlocked(i) && !Camp.best(Lv.id)); campWorld = first >= 18 ? 3 : first >= 10 ? 2 : 1; show('camp', false); }
     else { if (!Game.G.attract) Game.startAttract(); show(null, false); NetPlay.notice('El anfitrión elige el nivel…', 'Campaña en equipo: lo que ganen queda guardado también en tu aparato.'); }
   }
   function netCampResults(r) {
@@ -281,7 +281,8 @@ const UI = (() => {
   }
   // en línea: resultados con los nombres de la sala; todos vuelven a la sala, el anfitrión lanza la revancha
   function netResults(r) {
-    if (r.camp) return netCampResults(r);
+    // en línea también sale la cinemática del final de cada mundo (la ven todos; la salta el anfitrión)
+    if (r.camp) { const id = Camp.LEVELS[r.camp.level] && Camp.LEVELS[r.camp.level].id, film = r.camp.win && (id === 'c18' ? 'buziraco' : id === 'c26' ? 'final' : null); if (film && typeof Film !== 'undefined' && Film.play(film, () => netCampResults(r))) return; return netCampResults(r); }
     const w = r.winner, N = r.names.length, mine = NetPlay.mine, host = NetPlay.isHost, esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const nm = i => esc(r.names[i].split(' · ')[0]), col = i => (PLAYER_COLORS[i] || PLAYER_COLORS[0]).main;
     $('#r-hub').hidden = false; $('#r-hub').textContent = 'Volver a la sala'; $('#r-hub').dataset.act = 'hubhome'; $('#s-results').classList.add('hubres');

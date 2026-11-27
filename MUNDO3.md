@@ -156,3 +156,18 @@ Metas de dificultad (jugador normal + compañero, 10 intentos): c19–c20 ganar 
     (sombra, color, luz) y hojas que caen, corteza con vetas y nudo, bambú con brillo y nudos claros.
   - Pruebas: `juegos/sortilegio/test/bossgal3.js` (galería de jefes) y `treegal.js` (árboles); offline-eq idéntico
     con `BASE=f73e610`; films, spells, c21 con dos máquinas (88 s) y netw3 OK.
+- **26 nov (noche, 2)** — Cinemáticas mejores y en línea. Versión 3.2.
+  - **En línea** (`10l-film.js`): ya salen también en línea, en todos los aparatos (entrada de cada nivel del Mundo 3
+    desde `netStart`, presentación de jefes, y la caída de Buziraco y el final desde `netResults`). Solo el anfitrión
+    la salta: al terminar o saltarla manda `{t:'filmEnd'}` y se cierra en los demás; el remoto no tiene botón ni doble
+    toque y ve «El anfitrión puede saltarla». Si un remoto llega tarde (el anfitrión ya la cerró hace < 9 s), no la ve
+    solo. `test/netw3-srt.js` lo comprueba (la ven los dos, el remoto no puede saltarla, se cierra en los dos).
+  - **Más cine**: acabado en todas (viñeta, grano de película, velo de luz). La caída de Buziraco usa el dibujo real
+    del jefe, sobre el abismo con grietas de lava, humo y brasas, y se agrieta de luz; el Borrón sale del charco de
+    tinta. El paisaje del pergamino se pinta de verdad: cielo por estación, sol con resplandor, cordilleras en aguada,
+    Fuji con nieve que escurre, nubes doradas con remolinos, mar con olas seigaiha y reflejo, torii con su reflejo,
+    pagoda, los árboles del juego por estación, pájaros y lo que cae en cada panel. Sumi con textura y copete de
+    pincel. Tarjeta de cada nivel con colinas, árboles y estación. Túnel de toriis lacados con faroles y niebla;
+    biombo de pan de oro con brillo, viento y rayo; tormenta de Orochi con lluvia, relámpagos, montes, río y cuellos
+    con escamas. Final con los dos magos de cuerpo entero (con su atuendo), fuegos artificiales y estaciones que caen.
+  - Arreglo: en línea, la Travesía del anfitrión abre en la pestaña del Mundo 3 si ya va por ahí.

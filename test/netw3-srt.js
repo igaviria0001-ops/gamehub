@@ -28,6 +28,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await fh.evaluate(lv => { const w = document.querySelector('#c-world button[data-v="3"]'); if (w) w.click(); }, lv); await wait(300);
     await fh.evaluate(lv => { const e = document.querySelector(`#c-grid .lvl[data-lv="${lv}"]`); if (e) e.click(); else UI.startLevel && UI.startLevel(lv); }, lv);
     const both = (await inLvl(fh, lv)) && (await inLvl(fc, lv));
+    // la cinemática de entrada: la ven los dos; el remoto no la puede saltar; cuando el anfitrión la salta, se cierra en los dos
+    let film = null; for (let i = 0; i < 20; i++) { const a = await fh.evaluate(() => typeof Film !== 'undefined' && Film.on), c = await fc.evaluate(() => typeof Film !== 'undefined' && Film.on); if (a && c) { film = { both: true }; break; } await wait(250); }
+    if (film) { await fc.evaluate(() => Film.end(true)); await wait(300); film.clientCantSkip = await fc.evaluate(() => Film.on); await fh.evaluate(() => Film.end(true)); await wait(1500); film.closedOnClient = !(await fc.evaluate(() => Film.on)); if (!film.clientCantSkip || !film.closedOnClient) allOk = false; }
+    else { film = { both: false }; allOk = false; }
     for (let i = 0; i < 60; i++) { if (await fh.evaluate(() => Game.G.state === 'play')) break; await wait(300); }
     await wait(2500);
     // cambiar un torii en el anfitrión (como si le pegaran con planta)
@@ -36,7 +40,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(2500);
     const vh = await view(fh), vc = await view(fc);
     const same = vh.id === vc.id && vh.w3 === vc.w3 && JSON.stringify(vh.boss) === JSON.stringify(vc.boss) && vh.tor === vc.tor && vh.sea === vc.sea;
-    rows.push({ lv, both, hit, host: vh, remoto: vc, same }); if (!both || !same) allOk = false;
+    rows.push({ lv, both, film, hit, same }); if (!both || !same) allOk = false;
     await H.screenshot({ path: OUT + `netw3-${lv}-host.png` }); await C.screenshot({ path: OUT + `netw3-${lv}-remoto.png` });
     await fh.evaluate(() => { const G = Game.G; G.lives = 5; Game.endRound(0, 'win'); });
     for (let i = 0; i < 60; i++) { await wait(400); if (await fh.evaluate(() => !document.getElementById('s-results').hidden)) break; }
